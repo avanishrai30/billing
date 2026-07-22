@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/aiavro_billing_system.html"
+    }
+  ]
+}
