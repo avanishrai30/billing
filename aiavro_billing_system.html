@@ -130,37 +130,54 @@
     .brand-section {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 35px;
-      padding-left: 8px;
+      gap: 14px;
+      margin-bottom: 28px;
+      padding: 4px 6px;
     }
 
     .aiavro-logo-wrapper {
-      width: 44px;
-      height: 44px;
+      width: 57px;
+      height: 57px;
+      min-width: 57px;
       flex-shrink: 0;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+      box-shadow: none !important;
       transition: var(--transition);
     }
 
     .aiavro-logo-wrapper:hover {
-      transform: rotate(15deg) scale(1.1);
+      transform: scale(1.05);
     }
 
-    .aiavro-logo-svg {
+    .aiavro-logo-wrapper img {
       width: 100%;
       height: 100%;
-      display: block;
+      max-width: 57px;
+      max-height: 57px;
+      object-fit: contain;
+    }
+
+    .brand-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
     }
 
     .brand-name {
       font-family: 'Outfit', sans-serif;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 800;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.4px;
       line-height: 1.2;
+      color: var(--text-primary);
+      margin: 0;
+      word-break: break-word;
     }
 
     .brand-subtitle {
@@ -168,7 +185,10 @@
       color: var(--accent-green);
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
+      letter-spacing: 1px;
+      line-height: 1.25;
+      margin-top: 2px;
+      word-break: break-word;
     }
 
     .nav-menu {
@@ -1363,7 +1383,8 @@
 
     .modal-backdrop.active {
       opacity: 1;
-      pointer-events: all;
+      pointer-events: auto !important;
+      z-index: 1000 !important;
     }
 
     .modal-card {
@@ -1674,27 +1695,41 @@
     .invoice-brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
-    .invoice-logo {
-      width: 46px;
-      height: 46px;
+    .invoice-logo, #inv-header-logo-img {
+      width: 58px !important;
+      height: 58px !important;
+      min-width: 58px !important;
+      object-fit: contain !important;
+      border: none !important;
+      background: transparent !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      flex-shrink: 0;
     }
 
     .invoice-brand-title {
       font-family: 'Outfit', sans-serif;
-      font-size: 20px;
+      font-size: 17px;
       font-weight: 800;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.3px;
       color: #0f172a;
+      line-height: 1.25;
+      margin: 0;
     }
 
     .invoice-brand-sub {
-      font-size: 10px;
+      font-size: 10.5px;
       color: var(--accent-green);
       font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.35;
+      margin-top: 2px;
+      display: block;
     }
 
     .invoice-seller-details {
@@ -2263,24 +2298,52 @@
       }
     }
 
-    /* PRINTER OPTIMIZED CSS */
+    /* PRINTER OPTIMIZED CSS (SUPPORTING 58MM THERMAL & A4) */
     @media print {
-      body { background-color: white !important; color: black !important; }
-      .app-container { display: block !important; }
-      aside, main > header, .modal-header, .modal-footer, .alerts-container, .modal-backdrop { display: none !important; }
+      body { background-color: white !important; color: black !important; margin: 0 !important; padding: 0 !important; }
+      aside, main > header, .modal-header, .modal-footer, .alerts-container, .invoice-print-toolbar, #print-customizer-panel { display: none !important; }
+      
       .modal-backdrop {
-        position: relative !important;
+        position: static !important;
         background: none !important;
         backdrop-filter: none !important;
         display: block !important;
         width: 100% !important;
         height: auto !important;
         opacity: 1 !important;
-        pointer-events: all !important;
+        pointer-events: auto !important;
         z-index: auto !important;
       }
-      .modal-card { border: none !important; box-shadow: none !important; max-width: 100% !important; transform: none !important; overflow: visible !important; max-height: none !important; }
-      .invoice-view-container { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; font-size: 11px !important; }
+      .modal-card { border: none !important; box-shadow: none !important; max-width: 100% !important; transform: none !important; overflow: visible !important; max-height: none !important; background: transparent !important; padding: 0 !important; }
+      .modal-body { padding: 0 !important; background: transparent !important; }
+
+      /* 58mm POS Thermal Printing */
+      body.print-mode-receipt58 #invoice-print-container { display: none !important; }
+      body.print-mode-receipt58 #receipt-58mm-container {
+        display: block !important;
+        width: 58mm !important;
+        max-width: 58mm !important;
+        margin: 0 auto !important;
+        padding: 2mm 1mm !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        color: #000000 !important;
+        background: #ffffff !important;
+      }
+
+      /* A4 Tax Invoice Printing */
+      body.print-mode-a4 #receipt-58mm-container { display: none !important; }
+      body.print-mode-a4 #invoice-print-container {
+        display: block !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        font-size: 11px !important;
+      }
+      
       .invoice-table th, .invoice-payment-method-box, .invoice-upi-pay-wrapper { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
@@ -2291,28 +2354,26 @@
   <div id="login-screen-overlay" class="login-screen-overlay">
     <div class="login-card">
       <div class="login-logo">
-        <img src="transparent logo aiavro Background Removed.png" alt="AIAVRO Logo">
+        <img id="login-brand-logo-img" src="transparent logo aiavro Background Removed.png" alt="Brand Logo">
       </div>
-      <h2 class="login-title">AIAVRO Business OS</h2>
+      <h2 class="login-title" id="login-brand-name">AIAVRO Business OS</h2>
       <p class="login-subtitle">Sign in with your credentials to continue</p>
       
       <div class="login-error" id="login-error-msg"></div>
       
       <form id="login-form" onsubmit="triggerLogin(event)">
         <div class="login-form-group">
-          <label class="login-label">Username</label>
-          <input type="text" id="login-username" class="login-input" placeholder="Enter your username" required autocomplete="username">
+          <label class="login-label">Username / Employee ID</label>
+          <input type="text" id="login-username" class="login-input" placeholder="e.g. admin" required autocomplete="username" autofocus>
         </div>
         <div class="login-form-group">
           <label class="login-label">Password</label>
-          <input type="password" id="login-password" class="login-input" placeholder="••••••••" required autocomplete="current-password">
+          <input type="password" id="login-password" class="login-input" placeholder="Enter password" required autocomplete="current-password">
         </div>
         <button type="submit" class="login-btn">Authenticate & Enter</button>
       </form>
-
-      <div style="margin-top:18px; text-align:center; font-size:12px; color:var(--text-muted); line-height:1.6; padding:10px 0">
-        Don't have credentials? Contact your <strong style="color:var(--text-primary)">Administrator</strong> to create your account.<br>
-        <span style="font-size:11px; opacity:0.6; margin-top:4px; display:block">AIAVRO Business OS · Secure Local Auth</span>
+      <div style="margin-top:16px; font-size:11px; text-align:center; color:var(--text-muted)">
+        Default Credentials: User: <strong>admin</strong> | Password: <strong>AIAVRO-RESET-2026</strong>
       </div>
     </div>
   </div>
@@ -2325,12 +2386,12 @@
     <!-- Sidebar Navigation -->
     <aside>
       <div class="brand-section">
-        <div class="aiavro-logo-wrapper" style="background: none; box-shadow: none; width: auto; height: 50px;">
-          <img src="transparent logo aiavro Background Removed.png" alt="AIAVRO Logo" style="height: 100%; width: auto; object-fit: contain;">
+        <div class="aiavro-logo-wrapper">
+          <img id="sidebar-brand-logo-img" src="transparent logo aiavro Background Removed.png" alt="Brand Logo">
         </div>
         <div class="brand-info">
-          <h1 class="brand-name" style="font-family:'Outfit'; font-size:20px; font-weight:800; color:var(--text-primary)">AIAVRO</h1>
-          <span class="brand-subtitle">Billing System</span>
+          <h1 class="brand-name" id="sidebar-brand-name">AIAVRO</h1>
+          <span class="brand-subtitle" id="sidebar-brand-subtitle">Billing System</span>
         </div>
       </div>
 
@@ -2459,6 +2520,20 @@
         </div>
         
         <div class="header-actions">
+          <!-- Hardware & Bluetooth Barcode Scanner Status Widget -->
+          <div style="display:flex; align-items:center; gap:8px; background:var(--bg-primary); padding:6px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);" id="scanner-hardware-widget">
+            <div style="display:flex; align-items:center; gap:6px">
+              <span id="scanner-status-dot" style="width:10px; height:10px; border-radius:50%; background:#10b981; display:inline-block; box-shadow:0 0 6px rgba(16,185,129,0.6)" title="Hardware Barcode Listener Active"></span>
+              <span style="font-size:11px; font-weight:700; color:var(--text-primary)" id="scanner-status-text">Scanner: Auto-Sync Ready</span>
+            </div>
+            <button type="button" class="secondary-btn" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:4px" onclick="connectBluetoothScanner()" title="Pair Wireless Bluetooth Barcode Scanner">
+              <span>📶</span> Pair Bluetooth
+            </button>
+            <button type="button" class="secondary-btn" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:4px" onclick="openScannerConfigModal()" title="Barcode Scanner Settings & Test Scan">
+              <span>⚙️</span> Setup
+            </button>
+          </div>
+
           <!-- Fast Business Selector -->
           <div style="display:flex; flex-direction:column; gap:4px">
             <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted)">Seller Outlet</span>
@@ -2778,11 +2853,20 @@
           <!-- Left side: Products search and Grid -->
           <div class="pos-products-panel">
             
-            <!-- Real-time camera scanner panel -->
-            <div class="pos-camera-drawer" id="pos-camera-scanner-drawer">
-              <span style="font-size:12px; font-weight:800; color:var(--accent-green)">📷 ACTIVE WEBCAM SCANNER VIEW</span>
-              <div class="camera-viewport" id="pos-interactive-camera-box"></div>
-              <button class="secondary-btn" style="margin:5px auto 0; padding:4px 10px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="closeCameraPOSScanner()">Close Camera Stream</button>
+            <!-- Hardware Barcode Scanner Status Bar -->
+            <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-primary); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:14px">
+              <div style="display:flex; align-items:center; gap:8px">
+                <span style="font-size:16px">⚡</span>
+                <div>
+                  <span style="font-size:12px; font-weight:800; color:var(--text-primary)">Hardware & Bluetooth Barcode Auto-Sync</span>
+                  <span style="font-size:11px; color:var(--text-muted); display:block">Scan any product barcode with your USB or Bluetooth scanner to add items to cart.</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px">
+                <button type="button" class="secondary-btn" style="padding:6px 12px; font-size:11px; display:flex; align-items:center; gap:4px" onclick="openScannerConfigModal()">
+                  <span>⚙️</span> Scanner Setup
+                </button>
+              </div>
             </div>
 
             <div class="pos-filters-row">
@@ -2793,10 +2877,10 @@
               
               <!-- Fast Scanners tools -->
               <div style="display:flex; align-items:center; gap:8px">
-                <button class="primary-btn" onclick="openCameraPOSScanner()" style="padding: 10px; border-radius: var(--radius-sm)">
-                  📷 Live Camera Scan
+                <button class="primary-btn" onclick="openScannerConfigModal()" style="padding: 10px; border-radius: var(--radius-sm)">
+                  ⚡ Barcode Scanner
                 </button>
-                <input type="text" id="pos-barcode-scanner-mock" placeholder="Hardware Scan Input..." style="width:140px; padding: 10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:12px" onkeydown="handleBarcodeScanMock(event)" title="Press Enter to add barcode SKU">
+                <input type="text" id="pos-barcode-scanner-mock" placeholder="Manual Barcode Input..." style="width:150px; padding: 10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:12px" onkeydown="handleBarcodeScanMock(event)" title="Press Enter to add barcode SKU">
               </div>
             </div>
 
@@ -2984,9 +3068,9 @@
               </div>
               <div class="product-center-grid">
                 
-                <div style="background:var(--bg-panel); border:1px solid var(--border-color); border-radius:6px; padding:10px 8px; text-align:center; cursor:pointer" class="action-card-btn" onclick="focusBarcodeScanInput()">
-                  <div style="font-size:20px; margin-bottom:4px">📷</div>
-                  <span style="font-size:11px; font-weight:700; color:var(--text-primary); display:block; margin-bottom:6px">Scan Barcode</span>
+                <div style="background:var(--bg-panel); border:1px solid var(--border-color); border-radius:6px; padding:10px 8px; text-align:center; cursor:pointer" class="action-card-btn" onclick="openScannerConfigModal()">
+                  <div style="font-size:20px; margin-bottom:4px">⚡</div>
+                  <span style="font-size:11px; font-weight:700; color:var(--text-primary); display:block; margin-bottom:6px">Hardware Barcode Scanner</span>
                   <input type="text" id="inventory-barcode-scan-lookup" placeholder="Type or scan..." style="width:100%; padding:5px; font-size:10px; border:1px solid var(--border-color); border-radius:4px; text-align:center; background:var(--bg-primary); color:var(--text-primary); outline:none" onkeydown="handleInventoryBarcodeLookup(event)" onclick="event.stopPropagation()">
                 </div>
 
@@ -3273,6 +3357,73 @@
       <!-- ==================== SYSTEM BACKUPS VIEW ==================== -->
       <div id="view-settings" class="app-view">
         
+        <!-- Brand Logo & Billing Profile Setup Panel -->
+        <div class="panel" style="margin-bottom:24px; border-top:4px solid var(--accent-blue)">
+          <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
+            <div>
+              <h3 class="panel-title" style="margin:0">🏷️ Brand Logo & Business Billing Profile Setup</h3>
+              <p style="margin:4px 0 0 0; font-size:12px; color:var(--text-muted)">Customize your company name, brand logo, GSTIN, phone, and address for live invoice generation</p>
+            </div>
+            <span class="status-badge paid" style="font-size:11px">Live Customization</span>
+          </div>
+
+          <form onsubmit="saveQuickBrandSetup(event)" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px">
+            
+            <!-- Logo Upload Container -->
+            <div style="grid-column:1 / -1; display:flex; align-items:center; gap:20px; background:var(--bg-primary); padding:16px; border-radius:var(--radius-sm); border:1px dashed var(--border-color)">
+              <div style="width:64px; height:64px; display:flex; align-items:center; justify-content:center; flex-shrink:0">
+                <img id="quick-biz-logo-preview" src="transparent logo aiavro Background Removed.png" alt="Brand Logo" style="max-width:100%; max-height:100%; object-fit:contain">
+              </div>
+              <div style="flex-grow:1">
+                <label style="font-weight:800; font-size:13px; margin-bottom:4px; display:block">Upload Custom Brand / Store Logo</label>
+                <input type="file" id="quick-biz-logo-file" accept="image/*" onchange="handleBizLogoSelect(event, 'quick-biz-logo-preview', 'quick-biz-logo')" style="font-size:12px">
+                <input type="hidden" id="quick-biz-logo">
+                <span style="font-size:11px; color:var(--text-muted); display:block; margin-top:4px">Upload PNG, JPG, or SVG image file (Replaces default AIAVRO logo on dashboard & invoices).</span>
+              </div>
+              <button type="button" class="secondary-btn" style="padding:6px 12px; font-size:12px" onclick="resetBizLogoToDefault('quick-biz-logo-preview', 'quick-biz-logo', 'quick-biz-logo-file')">Reset Logo</button>
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:700">Business / Store Name</label>
+              <input type="text" id="quick-biz-name" placeholder="e.g. My Organics & Dairy Store" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:700">Tagline / Subtitle</label>
+              <input type="text" id="quick-biz-subtitle" placeholder="e.g. Pure Organic Produce" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:700">GSTIN / Tax ID Number</label>
+              <input type="text" id="quick-biz-gstin" placeholder="e.g. 27ABCDE1234F1Z5" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:700">Contact Phone</label>
+              <input type="text" id="quick-biz-phone" placeholder="+91 XXXXX XXXXX" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:700">Support Email</label>
+              <input type="email" id="quick-biz-email" placeholder="contact@mystore.com" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12px; font-weight:700">Payment UPI ID (for Invoice QR Code)</label>
+              <input type="text" id="quick-biz-upi" placeholder="e.g. storename@upi" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+            </div>
+
+            <div class="form-group" style="grid-column:1 / -1">
+              <label style="font-size:12px; font-weight:700">Business Address Location</label>
+              <input type="text" id="quick-biz-address" placeholder="Store Address, City, Pincode" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+            </div>
+
+            <div style="grid-column:1 / -1; display:flex; justify-content:flex-end; gap:12px; margin-top:8px">
+              <button type="submit" class="primary-btn" style="padding:8px 20px">Save Billing Profile & Brand Logo</button>
+            </div>
+          </form>
+        </div>
+
         <div class="panel">
           <div class="panel-header">
             <h3 class="panel-title">System Settings, Data Backups & Reset</h3>
@@ -3502,7 +3653,7 @@
                 <label>Scan / Type Product Barcode</label>
                 <div style="display:flex; gap:8px">
                   <input type="text" id="purchase-barcode-scanner" placeholder="Scan barcode SKU to add to sheet..." style="flex:1" onkeydown="handlePurchaseBarcodeKeydown(event)">
-                  <button type="button" class="secondary-btn" onclick="openPurchaseCameraScanner()" style="padding:10px" title="Scan with Webcam/Camera">📷</button>
+                  <button type="button" class="secondary-btn" onclick="openScannerConfigModal()" style="padding:10px" title="Barcode Scanner Setup & Settings">⚡</button>
                   <button type="button" class="primary-btn" onclick="triggerPurchaseBarcodeLookup()" style="padding:10px 15px">Lookup</button>
                 </div>
               </div>
@@ -3749,17 +3900,152 @@
 
   <!-- ==================== GLOBAL INVOICE DIALOG ==================== -->
   <div class="modal-backdrop" id="invoice-modal">
-    <div class="modal-card" style="max-width:760px">
+    <div class="modal-card" style="max-width:780px">
       <div class="modal-header">
-        <h3>AIAVRO Billing Suite - Perfect Invoice Vector</h3>
+        <h3>🧾 AIAVRO Billing - Receipt & Invoice Print Center</h3>
         <button class="modal-close-btn" onclick="closeInvoiceModal()">&times;</button>
       </div>
-      <div class="modal-body" style="background-color:#f1f5f9; padding: 24px">
+      <div class="modal-body" style="background-color:#f1f5f9; padding: 20px">
         
+        <!-- PRINT FORMAT SELECTOR & CONTENT CUSTOMIZER TOOLBAR -->
+        <div class="invoice-print-toolbar" style="background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:12px 16px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+            
+            <!-- Format Mode Switcher -->
+            <div style="display:flex; align-items:center; gap:8px">
+              <span style="font-size:11px; font-weight:800; text-transform:uppercase; color:var(--text-muted)">Print Layout:</span>
+              <div style="display:inline-flex; background:#f1f5f9; border-radius:8px; padding:3px; border:1px solid #cbd5e1">
+                <button type="button" class="print-format-btn active" id="btn-format-receipt" onclick="setInvoicePrintFormat('receipt58')" style="padding:6px 12px; font-size:12px; font-weight:800; border-radius:6px; border:none; cursor:pointer; background:var(--accent-green); color:#ffffff; transition:all 0.2s">
+                  🧾 58mm Thermal Receipt (Mall / POS Counter)
+                </button>
+                <button type="button" class="print-format-btn" id="btn-format-a4" onclick="setInvoicePrintFormat('a4')" style="padding:6px 12px; font-size:12px; font-weight:800; border-radius:6px; border:none; cursor:pointer; background:transparent; color:var(--text-primary); transition:all 0.2s">
+                  📄 Full A4 Tax Invoice (B2B / Internal Record)
+                </button>
+              </div>
+            </div>
+
+            <!-- Toggle Customizer Button -->
+            <button type="button" class="secondary-btn" style="padding:6px 12px; font-size:11px; display:flex; align-items:center; gap:6px; font-weight:700" onclick="togglePrintCustomizerPanel()">
+              ⚙️ Add / Remove Print Elements
+            </button>
+          </div>
+
+          <!-- Collapsible Element Checkboxes -->
+          <div id="print-customizer-panel" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px">
+            <label style="font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text-primary)">
+              <input type="checkbox" id="chk-print-logo" checked onchange="updatePrintPreviewOptions()">
+              <span>Show Brand Logo</span>
+            </label>
+            <label style="font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text-primary)">
+              <input type="checkbox" id="chk-print-seller" checked onchange="updatePrintPreviewOptions()">
+              <span>Show Store Address & GSTIN</span>
+            </label>
+            <label style="font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text-primary)">
+              <input type="checkbox" id="chk-print-buyer" checked onchange="updatePrintPreviewOptions()">
+              <span>Show Customer Info</span>
+            </label>
+            <label style="font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text-primary)">
+              <input type="checkbox" id="chk-print-hsn" checked onchange="updatePrintPreviewOptions()">
+              <span>Show HSN / Tax Rates</span>
+            </label>
+            <label style="font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text-primary)">
+              <input type="checkbox" id="chk-print-savings" checked onchange="updatePrintPreviewOptions()">
+              <span>Show Savings Banner</span>
+            </label>
+            <label style="font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text-primary)">
+              <input type="checkbox" id="chk-print-payment" checked onchange="updatePrintPreviewOptions()">
+              <span>Show Payment Method & UPI QR</span>
+            </label>
+            <label style="font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text-primary)">
+              <input type="checkbox" id="chk-print-terms" checked onchange="updatePrintPreviewOptions()">
+              <span>Show Terms & Declarations</span>
+            </label>
+            <label style="font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text-primary)">
+              <input type="checkbox" id="chk-print-signatory" checked onchange="updatePrintPreviewOptions()">
+              <span>Show Signatory Seal / Stamp</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 58MM POS THERMAL RECEIPT CONTAINER (MALL & RETAIL COUNTER STYLE) -->
+        <div class="receipt-58mm-container" id="receipt-58mm-container" style="display:none; width:58mm; max-width:270px; margin:0 auto; background:#ffffff; border:1px solid #cbd5e1; padding:12px 10px; font-family:'Courier New', Courier, monospace, sans-serif; font-size:11px; color:#000000; box-shadow:0 4px 14px rgba(0,0,0,0.08); border-radius:4px">
+          
+          <!-- Header -->
+          <div style="text-align:center; margin-bottom:8px" id="rec-58mm-header-section">
+            <div id="rec-58mm-logo-box" style="margin-bottom:4px">
+              <img id="rec-58mm-logo" src="" alt="Logo" style="height:36px; width:auto; object-fit:contain">
+            </div>
+            <h3 id="rec-58mm-store-name" style="font-size:14px; font-weight:900; margin:0; text-transform:uppercase; font-family:sans-serif">AIAVRO</h3>
+            <div id="rec-58mm-seller-info" style="font-size:10px; line-height:1.3; margin-top:2px"></div>
+          </div>
+
+          <div style="border-top:1px dashed #000; margin:6px 0"></div>
+
+          <!-- Receipt Meta -->
+          <div style="font-size:10.5px; line-height:1.35; margin-bottom:6px" id="rec-58mm-meta-section">
+            <div style="display:flex; justify-content:space-between"><span>RECEIPT:</span><strong id="rec-58mm-id">#0001</strong></div>
+            <div style="display:flex; justify-content:space-between"><span>DATE:</span><span id="rec-58mm-date">26/05/2026</span></div>
+          </div>
+
+          <!-- Buyer Info (Optional) -->
+          <div id="rec-58mm-buyer-section" style="font-size:10px; border-top:1px dashed #000; padding-top:4px; margin-bottom:6px"></div>
+
+          <div style="border-top:1px dashed #000; margin:6px 0"></div>
+
+          <!-- Items Table -->
+          <table style="width:100%; border-collapse:collapse; font-size:10.5px; text-align:left">
+            <thead>
+              <tr style="border-bottom:1px dashed #000">
+                <th style="padding:2px 0">ITEM</th>
+                <th style="padding:2px 0; text-align:center">QTY</th>
+                <th style="padding:2px 0; text-align:right">PRICE</th>
+              </tr>
+            </thead>
+            <tbody id="rec-58mm-items-body"></tbody>
+          </table>
+
+          <div style="border-top:1px dashed #000; margin:6px 0"></div>
+
+          <!-- Calculations -->
+          <div style="font-size:10.5px; line-height:1.4">
+            <div style="display:flex; justify-content:space-between"><span>Subtotal:</span><span id="rec-58mm-subtotal">₹0.00</span></div>
+            <div id="rec-58mm-discount-row" style="display:flex; justify-content:space-between"><span>Discount:</span><span id="rec-58mm-discount">-₹0.00</span></div>
+            <div id="rec-58mm-tax-row" style="display:flex; justify-content:space-between"><span>GST Tax:</span><span id="rec-58mm-tax">₹0.00</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px; font-weight:900; margin-top:4px; border-top:1px solid #000; border-bottom:1px solid #000; padding:4px 0">
+              <span>NET TOTAL:</span>
+              <span id="rec-58mm-grandtotal">₹0.00</span>
+            </div>
+          </div>
+
+          <!-- Savings Banner -->
+          <div id="rec-58mm-savings-banner" style="text-align:center; font-weight:800; font-size:10px; margin:8px 0; padding:4px; border:1px solid #000">
+            *** YOU SAVED ₹0.00 ***
+          </div>
+
+          <!-- Payment Info -->
+          <div id="rec-58mm-payment-section" style="text-align:center; font-size:10px; margin-top:6px">
+            <div id="rec-58mm-pay-mode">PAID VIA: CASH</div>
+            <div id="rec-58mm-upi-qr" style="margin-top:6px; display:none; flex-direction:column; align-items:center">
+              <canvas id="rec-58mm-qrcode-canvas" style="width:70px; height:70px"></canvas>
+            </div>
+          </div>
+
+          <!-- Terms / Notes -->
+          <div id="rec-58mm-terms-section" style="font-size:9px; text-align:center; margin-top:8px; border-top:1px dashed #000; padding-top:6px"></div>
+
+          <!-- Footer -->
+          <div style="text-align:center; margin-top:10px; font-size:9.5px">
+            -----------------------------------<br>
+            <strong>THANK YOU! VISIT AGAIN!</strong><br>
+            <span style="font-size:8.5px">Powered by AIAVRO Billing OS</span>
+          </div>
+
+        </div>
+
         <div class="invoice-view-container" id="invoice-print-container">
           <div class="invoice-header-grid">
             <div class="invoice-brand">
-              <img src="transparent logo aiavro Background Removed.png" alt="AIAVRO Logo" style="height: 50px; width: auto; object-fit: contain; margin-right: 10px;">
+              <img id="inv-header-logo-img" src="transparent logo aiavro Background Removed.png" alt="Brand Logo" style="height: 50px; width: auto; object-fit: contain; margin-right: 10px;">
               <div>
                 <h2 class="invoice-brand-title" id="inv-seller-brand">AIAVRO BILLING SYSTEM</h2>
                 <span class="invoice-brand-sub" id="inv-seller-subtitle">Fresh Organic Farmer Outlet</span>
@@ -4096,6 +4382,18 @@
         <form id="business-form" onsubmit="saveBusinessForm(event)" class="form-grid">
           <input type="hidden" id="biz-form-id">
           
+          <div class="form-group full-width" style="display:flex; align-items:center; gap:16px; background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); border:1px dashed var(--border-color)">
+            <div style="width:54px; height:54px; display:flex; align-items:center; justify-content:center; flex-shrink:0">
+              <img id="biz-logo-preview" src="transparent logo aiavro Background Removed.png" style="max-width:100%; max-height:100%; object-fit:contain">
+            </div>
+            <div style="flex-grow:1">
+              <label style="font-weight:700; font-size:12px; margin-bottom:2px; display:block">Custom Brand Logo</label>
+              <input type="file" id="biz-form-logo-file" accept="image/*" onchange="handleBizLogoSelect(event, 'biz-logo-preview', 'biz-form-logo')" style="font-size:11px">
+              <input type="hidden" id="biz-form-logo">
+            </div>
+            <button type="button" class="secondary-btn" style="padding:4px 8px; font-size:11px" onclick="resetBizLogoToDefault('biz-logo-preview', 'biz-form-logo', 'biz-form-logo-file')">Reset Logo</button>
+          </div>
+
           <div class="form-group">
             <label>Business / Farm Name</label>
             <input type="text" id="biz-form-name" placeholder="e.g. AIAVRO Dairy Farms" required>
@@ -4529,6 +4827,80 @@
     </div>
   </div>
 
+  <!-- ==================== BARCODE SCANNER HARDWARE & BLUETOOTH SETUP MODAL ==================== -->
+  <div class="modal-backdrop" id="scanner-config-modal">
+    <div class="modal-card" style="max-width:650px">
+      <div class="modal-header">
+        <h3>⚡ Barcode Scanner Setup (Wired USB, Bluetooth & Mobile)</h3>
+        <button class="modal-close-btn" onclick="closeScannerConfigModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:20px">
+        
+        <!-- Live Status Banner -->
+        <div style="background:var(--bg-primary); padding:16px; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between">
+          <div style="display:flex; align-items:center; gap:12px">
+            <span style="font-size:24px">🔌</span>
+            <div>
+              <h4 style="margin:0; font-size:14px; font-weight:800" id="modal-scanner-status-title">Universal Hardware Listener Active</h4>
+              <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted)">Wired USB & Bluetooth HID scanners are automatically ready across POS checkout & stock management.</p>
+            </div>
+          </div>
+          <span class="status-badge paid" id="modal-scanner-badge" style="font-size:11px">🟢 Ready</span>
+        </div>
+
+        <!-- Connection Options Grid -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+          
+          <!-- Wired USB & Bluetooth HID -->
+          <div style="border:1px solid var(--border-color); padding:16px; border-radius:var(--radius-sm); background:var(--bg-primary)">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+              <span style="font-size:18px">⌨️</span>
+              <h4 style="margin:0; font-size:13px; font-weight:800">Wired USB & Bluetooth HID</h4>
+            </div>
+            <p style="font-size:11px; color:var(--text-muted); line-height:1.4; margin-bottom:12px">
+              Plug in any USB barcode scanner or pair your Bluetooth scanner in Keyboard HID mode. No drivers required—works out of the box!
+            </p>
+            <span style="font-size:10px; font-weight:800; color:var(--accent-green)">✅ Always Listening & Auto-Syncing</span>
+          </div>
+
+          <!-- Web Bluetooth SPP / GATT -->
+          <div style="border:1px solid var(--border-color); padding:16px; border-radius:var(--radius-sm); background:var(--bg-primary)">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+              <span style="font-size:18px">📶</span>
+              <h4 style="margin:0; font-size:13px; font-weight:800">Direct Web Bluetooth API</h4>
+            </div>
+            <p style="font-size:11px; color:var(--text-muted); line-height:1.4; margin-bottom:12px">
+              Directly pair wireless Bluetooth scanners via Chrome/Edge Web Bluetooth API for serial data stream synchronization.
+            </p>
+            <button class="primary-btn" style="padding:6px 12px; font-size:11px; width:100%" onclick="connectBluetoothScanner()">
+              Pair Bluetooth Scanner Now
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Test Scan & Chime Settings -->
+        <div style="border-top:1px solid var(--border-color); padding-top:16px">
+          <h4 style="margin:0 0 10px 0; font-size:13px; font-weight:800">🎯 Live Test Scan & Audio Feedback Settings</h4>
+          
+          <div style="display:flex; gap:16px; align-items:center; margin-bottom:14px; flex-wrap:wrap">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer">
+              <input type="checkbox" id="scanner-chime-toggle" checked onchange="scannerConfig.chimeEnabled = this.checked">
+              <span>Enable Audio Scan Chime Beep (Web Audio)</span>
+            </label>
+            <button class="secondary-btn" style="padding:4px 8px; font-size:11px" onclick="playBarcodeChime('success')">🔊 Test Sound</button>
+          </div>
+
+          <div style="display:flex; gap:10px">
+            <input type="text" id="scanner-test-input" placeholder="Scan any physical barcode here to test..." style="flex:1; padding:10px; font-size:13px; border:1px solid var(--border-color); border-radius:var(--radius-sm)" onkeydown="if(event.key==='Enter'){ handleUniversalBarcodeScan(this.value.trim(), 'test'); this.value=''; }">
+            <button class="primary-btn" onclick="handleUniversalBarcodeScan(document.getElementById('scanner-test-input').value.trim(), 'test'); document.getElementById('scanner-test-input').value='';">Test Scan</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
 
   <!-- ==================== REMOTE SCANNER PAIRING MODAL ==================== -->
   <div class="modal-backdrop" id="remote-scanner-modal">
@@ -4663,7 +5035,7 @@
       {
         id: "biz-1",
         name: "AIAVRO Organic Farms",
-        subtitle: "Pristine Dairy & Cold Pressed Oils",
+        subtitle: "Billing System",
         owner: "Avanish Kumar",
         gstin: "27AIAVRO1111A1Z0",
         phone: "+91 98765 43210",
@@ -4763,6 +5135,11 @@
         bizList = DEFAULT_BUSINESSES;
         localStorage.setItem("aiavro_businesses", JSON.stringify(bizList));
       }
+      bizList.forEach(b => {
+        if (b.subtitle === "Pristine Dairy & Cold Pressed Oils") {
+          b.subtitle = "Billing System";
+        }
+      });
       state.businesses = bizList;
 
       // 2. Validate & Parse Products
@@ -6198,6 +6575,125 @@
       });
     }
 
+    /* ==================== BRAND PROFILE & LOGO SETUP ==================== */
+    function handleBizLogoSelect(e, targetPreviewId = 'biz-logo-preview', targetInputId = 'biz-form-logo') {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        triggerAlert("Image size should be under 2MB for optimal performance.", "warning");
+      }
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const base64Logo = evt.target.result;
+        const hiddenInput = document.getElementById(targetInputId);
+        if (hiddenInput) hiddenInput.value = base64Logo;
+        
+        const previewImg = document.getElementById(targetPreviewId);
+        if (previewImg) previewImg.src = base64Logo;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetBizLogoToDefault(targetPreviewId = 'biz-logo-preview', targetInputId = 'biz-form-logo', fileInputId = 'biz-form-logo-file') {
+      const defaultLogo = "transparent logo aiavro Background Removed.png";
+      const hiddenInput = document.getElementById(targetInputId);
+      if (hiddenInput) hiddenInput.value = "";
+      
+      const previewImg = document.getElementById(targetPreviewId);
+      if (previewImg) previewImg.src = defaultLogo;
+
+      const fileInput = document.getElementById(fileInputId);
+      if (fileInput) fileInput.value = "";
+    }
+
+    function updateActiveBrandUI() {
+      const activeBiz = state.businesses.find(b => b.id === state.activeBusinessId) || state.businesses[0] || (typeof DEFAULT_BUSINESSES !== 'undefined' ? DEFAULT_BUSINESSES[0] : null);
+      if (!activeBiz) return;
+
+      const defaultLogo = "transparent logo aiavro Background Removed.png";
+      const logoUrl = activeBiz.logo || defaultLogo;
+      const brandName = activeBiz.name || "AIAVRO";
+      const subtitle = activeBiz.subtitle || "Billing System";
+
+      // 1. Sidebar Brand Logo & Text
+      const sidebarLogoImg = document.getElementById("sidebar-brand-logo-img");
+      if (sidebarLogoImg) sidebarLogoImg.src = logoUrl;
+
+      const sidebarName = document.getElementById("sidebar-brand-name");
+      if (sidebarName) {
+        sidebarName.innerText = brandName;
+        if (brandName.length > 22) {
+          sidebarName.style.fontSize = "14px";
+        } else if (brandName.length > 15) {
+          sidebarName.style.fontSize = "15px";
+        } else {
+          sidebarName.style.fontSize = "16px";
+        }
+      }
+
+      const sidebarSubtitle = document.getElementById("sidebar-brand-subtitle");
+      if (sidebarSubtitle) sidebarSubtitle.innerText = subtitle;
+
+      // 2. Login Screen Logo & Text
+      const loginLogoImg = document.getElementById("login-brand-logo-img");
+      if (loginLogoImg) loginLogoImg.src = logoUrl;
+
+      const loginName = document.getElementById("login-brand-name");
+      if (loginName) loginName.innerText = `${brandName} Billing OS`;
+
+      // 3. Settings Quick Setup Inputs
+      const quickName = document.getElementById("quick-biz-name");
+      if (quickName) quickName.value = activeBiz.name || '';
+
+      const quickSubtitle = document.getElementById("quick-biz-subtitle");
+      if (quickSubtitle) quickSubtitle.value = activeBiz.subtitle || '';
+
+      const quickGstin = document.getElementById("quick-biz-gstin");
+      if (quickGstin) quickGstin.value = activeBiz.gstin || '';
+
+      const quickPhone = document.getElementById("quick-biz-phone");
+      if (quickPhone) quickPhone.value = activeBiz.phone || '';
+
+      const quickEmail = document.getElementById("quick-biz-email");
+      if (quickEmail) quickEmail.value = activeBiz.email || '';
+
+      const quickAddress = document.getElementById("quick-biz-address");
+      if (quickAddress) quickAddress.value = activeBiz.address || '';
+
+      const quickUpi = document.getElementById("quick-biz-upi");
+      if (quickUpi) quickUpi.value = activeBiz.upiId || '';
+
+      const quickLogoPreview = document.getElementById("quick-biz-logo-preview");
+      if (quickLogoPreview) quickLogoPreview.src = logoUrl;
+
+      const quickLogoInput = document.getElementById("quick-biz-logo");
+      if (quickLogoInput) quickLogoInput.value = activeBiz.logo || '';
+    }
+
+    function saveQuickBrandSetup(e) {
+      e.preventDefault();
+      const activeBiz = state.businesses.find(b => b.id === state.activeBusinessId) || state.businesses[0];
+      if (!activeBiz) return;
+
+      const newLogo = document.getElementById("quick-biz-logo").value;
+      activeBiz.name = document.getElementById("quick-biz-name").value;
+      activeBiz.subtitle = document.getElementById("quick-biz-subtitle").value;
+      activeBiz.gstin = document.getElementById("quick-biz-gstin").value;
+      activeBiz.phone = document.getElementById("quick-biz-phone").value;
+      activeBiz.email = document.getElementById("quick-biz-email").value;
+      activeBiz.address = document.getElementById("quick-biz-address").value;
+      activeBiz.upiId = document.getElementById("quick-biz-upi").value;
+      if (newLogo !== undefined) {
+        activeBiz.logo = newLogo;
+      }
+
+      saveStateToLocalStorage();
+      updateActiveBrandUI();
+      renderBusinessesListDropdowns();
+      if (state.activeView === 'businesses') renderBusinessesCards();
+      triggerAlert(`Billing Profile & Brand Logo updated for '${activeBiz.name}'!`, "success");
+    }
+
     function changeActiveBusiness(bizId) {
       state.activeBusinessId = bizId || "";
       const bizObj = state.businesses.find(b => b.id === bizId);
@@ -6211,6 +6707,8 @@
       
       const globalSelect = document.getElementById("global-business-select");
       if (globalSelect) globalSelect.value = bizId;
+
+      updateActiveBrandUI();
 
       saveStateToLocalStorage();
       triggerAlert(`Active store mode set to: ${name}`, "success");
@@ -6799,12 +7297,12 @@
         card.innerHTML = `
           ${isActive ? '<span class="status-badge in-stock" style="position:absolute; top:15px; right:15px">Active Outlet</span>' : ''}
           <div style="display:flex; align-items:center; gap:12px; margin-bottom:15px">
-            <div style="width:42px; height:42px; background:#001845; border-radius:10px; display:grid; place-items:center; flex-shrink:0">
+            ${biz.logo ? `<img src="${biz.logo}" alt="Store Logo" style="width:48px; height:48px; object-fit:contain; flex-shrink:0">` : `<div style="width:42px; height:42px; background:#001845; border-radius:10px; display:grid; place-items:center; flex-shrink:0">
               <svg viewBox="0 0 100 100" style="width:24px; height:24px">
                 <circle cx="50" cy="50" r="30" fill="none" stroke="#ffffff" stroke-width="5" />
                 <circle cx="43" cy="50" r="23" fill="none" stroke="#ffffff" stroke-width="5" />
               </svg>
-            </div>
+            </div>`}
             <div>
               <h4 style="font-family:\'Outfit\'; font-size:16px; font-weight:800; margin:0">${biz.name}</h4>
               <small style="color:var(--accent-green); font-weight:700">${biz.subtitle || 'Store Outlet'}</small>
@@ -6849,6 +7347,8 @@
       form.reset();
       document.getElementById("biz-form-id").value = "";
 
+      const defaultLogo = "transparent logo aiavro Background Removed.png";
+
       if (bizId) {
         title.innerText = "Edit Store Outlet Profile";
         const biz = state.businesses.find(b => b.id === bizId);
@@ -6863,9 +7363,13 @@
           document.getElementById("biz-form-address").value = biz.address;
           document.getElementById("biz-form-upi").value = biz.upiId || '';
           document.getElementById("biz-form-terms").value = biz.terms || '';
+          document.getElementById("biz-form-logo").value = biz.logo || '';
+          document.getElementById("biz-logo-preview").src = biz.logo || defaultLogo;
         }
       } else {
         title.innerText = "Register New Store Outlet Profile";
+        document.getElementById("biz-form-logo").value = '';
+        document.getElementById("biz-logo-preview").src = defaultLogo;
       }
     }
 
@@ -6888,16 +7392,17 @@
       const ifsc = "";
       const upiId = document.getElementById("biz-form-upi").value;
       const terms = document.getElementById("biz-form-terms").value;
+      const logo = document.getElementById("biz-form-logo").value || "";
 
       if (id) {
         const idx = state.businesses.findIndex(b => b.id === id);
         if (idx !== -1) {
-          state.businesses[idx] = { ...state.businesses[idx], id, name, subtitle, owner, gstin, phone, email, address, bankName, accountNo, ifsc, upiId, terms };
+          state.businesses[idx] = { ...state.businesses[idx], id, name, subtitle, owner, gstin, phone, email, address, bankName, accountNo, ifsc, upiId, terms, logo: logo || state.businesses[idx].logo || "" };
           triggerAlert(`Store Outlet '${name}' details updated!`, "success");
         }
       } else {
         const newId = "biz-" + Date.now();
-        state.businesses.push({ id: newId, name, subtitle, owner, gstin, phone, email, address, bankName, accountNo, ifsc, upiId, terms });
+        state.businesses.push({ id: newId, name, subtitle, owner, gstin, phone, email, address, bankName, accountNo, ifsc, upiId, terms, logo });
         triggerAlert(`New Store Outlet '${name}' registered!`, "success");
       }
 
@@ -7275,80 +7780,12 @@
       renderPOSProducts();
     }
 
-    /* Webcam scanner controllers using html5-qrcode */
     function openCameraPOSScanner() {
-      const drawer = document.getElementById("pos-camera-scanner-drawer");
-      drawer.classList.add("active");
-
-      // Stop previous scanner if existing
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear();
-      }
-      lastPOSScannedSKU = null;
-      lastPOSScannedTime = 0;
-
-      html5QrcodeScanner = new Html5Qrcode("pos-interactive-camera-box");
-      const config = { fps: 15, qrbox: { width: 250, height: 150 } };
-
-      html5QrcodeScanner.start(
-        { facingMode: "environment" }, // Rear phone camera fallback
-        config,
-        (decodedText, decodedResult) => {
-          // Success callback (Scanned product barcode SKU)
-          const sku = decodedText.trim();
-          const now = Date.now();
-          if (sku === lastPOSScannedSKU && (now - lastPOSScannedTime) < 2500) {
-            // Ignore scan to prevent continuous counting
-            return;
-          }
-          lastPOSScannedSKU = sku;
-          lastPOSScannedTime = now;
-
-          const matched = state.products.find(p => p.sku === sku);
-          if (matched) {
-            if (matched.status === 'inactive') {
-              triggerAlert(`BLOCKED! Product '${matched.name}' is inactive.`, "danger");
-              return;
-            }
-            if (matched.status === 'pending_review') {
-              triggerAlert(`BLOCKED! Product '${matched.name}' is in Onboarding Queue (Pending Review).`, "warning");
-              return;
-            }
-            playPOSBeep();
-            
-            const expiry = getExpiryMetrics(matched.doe);
-            if (!expiry.ok) {
-              triggerAlert(`BLOCKED! Scanned item ${matched.name} is expired!`, "danger");
-              return;
-            }
-
-            addItemToPOSCart(matched.id);
-            triggerAlert(`Scanned Barcode: Added ${matched.name} to checkout basket!`, "success");
-          } else {
-            triggerAlert(`Barcode Scanned (${decodedText}) but not found in farm products list.`, "warning");
-          }
-        },
-        (errorMessage) => {
-          // Silent log error
-        }
-      ).catch(err => {
-        console.error("Camera scanner fail", err);
-        triggerAlert("Could not initialize device webcam/phone camera. Check permission settings.", "danger");
-      });
+      openScannerConfigModal();
     }
 
     function closeCameraPOSScanner() {
-      const drawer = document.getElementById("pos-camera-scanner-drawer");
-      drawer.classList.remove("active");
-      
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.stop().then(() => {
-          html5QrcodeScanner.clear();
-          html5QrcodeScanner = null;
-        }).catch(err => {
-          console.error("Error stopping camera scan", err);
-        });
-      }
+      closeScannerConfigModal();
     }
 
     function handleBarcodeScanMock(e) {
@@ -7700,6 +8137,88 @@
 
     /* ==================== INVOICES LOG ACTIONS PREVIEWS ==================== */
     let currentViewingInvoiceId = "";
+    let currentInvoicePrintFormat = 'receipt58'; // 'receipt58' or 'a4'
+
+    function setInvoicePrintFormat(format) {
+      currentInvoicePrintFormat = format;
+      const btnReceipt = document.getElementById("btn-format-receipt");
+      const btnA4 = document.getElementById("btn-format-a4");
+      
+      const containerA4 = document.getElementById("invoice-print-container");
+      const container58 = document.getElementById("receipt-58mm-container");
+
+      if (format === 'receipt58') {
+        if (btnReceipt) { btnReceipt.style.background = "var(--accent-green)"; btnReceipt.style.color = "#ffffff"; }
+        if (btnA4) { btnA4.style.background = "transparent"; btnA4.style.color = "var(--text-primary)"; }
+        if (containerA4) containerA4.style.display = "none";
+        if (container58) container58.style.display = "block";
+        document.body.classList.remove("print-mode-a4");
+        document.body.classList.add("print-mode-receipt58");
+      } else {
+        if (btnA4) { btnA4.style.background = "var(--accent-green)"; btnA4.style.color = "#ffffff"; }
+        if (btnReceipt) { btnReceipt.style.background = "transparent"; btnReceipt.style.color = "var(--text-primary)"; }
+        if (container58) container58.style.display = "none";
+        if (containerA4) containerA4.style.display = "block";
+        document.body.classList.remove("print-mode-receipt58");
+        document.body.classList.add("print-mode-a4");
+      }
+      updatePrintPreviewOptions();
+    }
+
+    function togglePrintCustomizerPanel() {
+      const panel = document.getElementById("print-customizer-panel");
+      if (panel) {
+        panel.style.display = panel.style.display === "none" ? "grid" : "none";
+      }
+    }
+
+    function updatePrintPreviewOptions() {
+      const showLogo = document.getElementById("chk-print-logo") ? document.getElementById("chk-print-logo").checked : true;
+      const showSeller = document.getElementById("chk-print-seller") ? document.getElementById("chk-print-seller").checked : true;
+      const showBuyer = document.getElementById("chk-print-buyer") ? document.getElementById("chk-print-buyer").checked : true;
+      const showSavings = document.getElementById("chk-print-savings") ? document.getElementById("chk-print-savings").checked : true;
+      const showPayment = document.getElementById("chk-print-payment") ? document.getElementById("chk-print-payment").checked : true;
+      const showTerms = document.getElementById("chk-print-terms") ? document.getElementById("chk-print-terms").checked : true;
+      const showSignatory = document.getElementById("chk-print-signatory") ? document.getElementById("chk-print-signatory").checked : true;
+
+      // A4 Invoice Elements
+      const a4Logo = document.getElementById("inv-header-logo-img");
+      if (a4Logo) a4Logo.style.display = showLogo ? "block" : "none";
+      
+      const a4SellerBox = document.getElementById("inv-seller-details") ? document.getElementById("inv-seller-details").parentElement : null;
+      if (a4SellerBox) a4SellerBox.style.display = showSeller ? "block" : "none";
+
+      const a4BuyerBox = document.getElementById("inv-buyer-details") ? document.getElementById("inv-buyer-details").parentElement : null;
+      if (a4BuyerBox) a4BuyerBox.style.display = showBuyer ? "block" : "none";
+
+      const a4PayWidget = document.getElementById("invoice-pay-details-widget");
+      if (a4PayWidget) a4PayWidget.style.display = showPayment ? "block" : "none";
+
+      const a4TermsBox = document.querySelector(".invoice-terms-box");
+      if (a4TermsBox) a4TermsBox.style.display = showTerms ? "block" : "none";
+
+      const a4SealBox = document.getElementById("inv-seal-box") ? document.getElementById("inv-seal-box").parentElement : null;
+      if (a4SealBox) a4SealBox.style.display = showSignatory ? "block" : "none";
+
+      // 58mm Thermal Receipt Elements
+      const rec58LogoBox = document.getElementById("rec-58mm-logo-box");
+      if (rec58LogoBox) rec58LogoBox.style.display = showLogo ? "block" : "none";
+
+      const rec58Seller = document.getElementById("rec-58mm-seller-info");
+      if (rec58Seller) rec58Seller.style.display = showSeller ? "block" : "none";
+
+      const rec58Buyer = document.getElementById("rec-58mm-buyer-section");
+      if (rec58Buyer) rec58Buyer.style.display = showBuyer ? "block" : "none";
+
+      const rec58Savings = document.getElementById("rec-58mm-savings-banner");
+      if (rec58Savings) rec58Savings.style.display = showSavings ? "block" : "none";
+
+      const rec58Payment = document.getElementById("rec-58mm-payment-section");
+      if (rec58Payment) rec58Payment.style.display = showPayment ? "block" : "none";
+
+      const rec58Terms = document.getElementById("rec-58mm-terms-section");
+      if (rec58Terms) rec58Terms.style.display = showTerms ? "block" : "none";
+    }
 
     function openInvoicePreviewModal(invoiceId) {
       currentViewingInvoiceId = invoiceId;
@@ -7729,6 +8248,12 @@
       const biz = state.businesses.find(b => b.id === inv.businessId) || DEFAULT_BUSINESSES[0];
       const cust = state.customers.find(c => c.id === inv.customerId) || DEFAULT_CUSTOMERS[2];
 
+      // Populate A4 Tax Invoice Data
+      const invLogoImg = document.getElementById("inv-header-logo-img");
+      if (invLogoImg) {
+        invLogoImg.src = biz.logo || "transparent logo aiavro Background Removed.png";
+      }
+
       document.getElementById("inv-seller-brand").innerText = biz.name;
       document.getElementById("inv-seller-subtitle").innerText = biz.subtitle;
       document.getElementById("inv-meta-id").innerText = inv.id;
@@ -7753,8 +8278,6 @@
 
       inv.items.forEach((item, index) => {
         const total = item.price * item.quantity;
-        
-        // Proportional discount allocation for precise tax calculations
         const discountAmount = inv.discount || 0;
         const subtotal = inv.subtotal || total;
         const itemDiscount = subtotal > 0 ? (discountAmount * (total / subtotal)) : 0;
@@ -7791,10 +8314,72 @@
         Payment Method: <strong>${inv.paymentMode.toUpperCase()}</strong>
       `;
 
+      // Populate 58mm Thermal Receipt Data
+      const recLogo = document.getElementById("rec-58mm-logo");
+      if (recLogo) recLogo.src = biz.logo || "transparent logo aiavro Background Removed.png";
+      
+      const recStoreName = document.getElementById("rec-58mm-store-name");
+      if (recStoreName) recStoreName.innerText = biz.name;
+
+      const recSellerInfo = document.getElementById("rec-58mm-seller-info");
+      if (recSellerInfo) {
+        recSellerInfo.innerHTML = `${biz.address}<br>GSTIN: <strong>${biz.gstin}</strong> | Ph: ${biz.phone}`;
+      }
+
+      document.getElementById("rec-58mm-id").innerText = inv.id;
+      document.getElementById("rec-58mm-date").innerText = new Date(inv.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+      const recBuyerInfo = document.getElementById("rec-58mm-buyer-section");
+      if (recBuyerInfo) {
+        recBuyerInfo.innerHTML = `BUYER: <strong>${cust.name}</strong> (${cust.phone})`;
+      }
+
+      const recItemsBody = document.getElementById("rec-58mm-items-body");
+      if (recItemsBody) {
+        recItemsBody.innerHTML = "";
+        inv.items.forEach(item => {
+          const itemTotal = item.price * item.quantity;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td style="padding:3px 0">
+              <strong>${item.name}</strong><br>
+              <span style="font-size:9px; color:#444">${item.unit}</span>
+            </td>
+            <td style="padding:3px 0; text-align:center">${item.quantity}</td>
+            <td style="padding:3px 0; text-align:right">₹${itemTotal.toFixed(2)}</td>
+          `;
+          recItemsBody.appendChild(tr);
+        });
+      }
+
+      document.getElementById("rec-58mm-subtotal").innerText = `₹${inv.subtotal.toFixed(2)}`;
+      document.getElementById("rec-58mm-discount").innerText = `-₹${inv.discount.toFixed(2)}`;
+      document.getElementById("rec-58mm-tax").innerText = `₹${inv.tax.toFixed(2)}`;
+      document.getElementById("rec-58mm-grandtotal").innerText = `₹${inv.grandtotal.toFixed(2)}`;
+
+      const recSavings = document.getElementById("rec-58mm-savings-banner");
+      if (recSavings) {
+        if (inv.discount > 0) {
+          recSavings.style.display = "block";
+          recSavings.innerText = `*** YOU SAVED ₹${inv.discount.toFixed(2)} ON THIS BILL! ***`;
+        } else {
+          recSavings.style.display = "none";
+        }
+      }
+
+      const recPayMode = document.getElementById("rec-58mm-pay-mode");
+      if (recPayMode) recPayMode.innerHTML = `PAID VIA: <strong>${inv.paymentMode.toUpperCase()}</strong>`;
+
+      const recTerms = document.getElementById("rec-58mm-terms-section");
+      if (recTerms) recTerms.innerText = biz.terms || "Thank you for shopping!";
+
       // UPI QR Code
       const qrWidget = document.getElementById("invoice-upi-qr-widget");
+      const recUpiQr = document.getElementById("rec-58mm-upi-qr");
+
       if (inv.paymentMode === 'upi' && biz.upiId && inv.status === 'paid') {
         qrWidget.style.display = "flex";
+        if (recUpiQr) recUpiQr.style.display = "flex";
         document.getElementById("invoice-upi-id-label").innerText = `UPI ID: ${biz.upiId}`;
         const upiUri = `upi://pay?pa=${biz.upiId}&pn=${encodeURIComponent(biz.name)}&am=${inv.grandtotal}&cu=INR&tn=Invoice-${inv.id}`;
 
@@ -7803,9 +8388,21 @@
           width: 80,
           margin: 1
         });
+
+        const recCanvas = document.getElementById("rec-58mm-qrcode-canvas");
+        if (recCanvas) {
+          QRCode.toCanvas(recCanvas, upiUri, {
+            width: 70,
+            margin: 1
+          });
+        }
       } else {
         qrWidget.style.display = "none";
+        if (recUpiQr) recUpiQr.style.display = "none";
       }
+
+      // Default to 58mm Thermal format for fast store counter printing
+      setInvoicePrintFormat(currentInvoicePrintFormat);
     }
 
     function closeInvoiceModal() {
@@ -8876,6 +9473,173 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       state.scannerSessionId = null;
     }
 
+    /* ==================== UNIVERSAL HARDWARE & BLUETOOTH BARCODE ENGINE ==================== */
+    let hardwareBarcodeBuffer = "";
+    let lastKeyTime = 0;
+    let bluetoothDevice = null;
+    let scannerConfig = {
+      chimeEnabled: true,
+      autoAddToCart: true
+    };
+
+    function openScannerConfigModal() {
+      const modal = document.getElementById("scanner-config-modal");
+      if (modal) modal.classList.add("active");
+    }
+
+    function closeScannerConfigModal() {
+      const modal = document.getElementById("scanner-config-modal");
+      if (modal) modal.classList.remove("active");
+    }
+
+    function playBarcodeChime(type = 'success') {
+      if (!scannerConfig.chimeEnabled) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'success') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.12);
+        } else {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, ctx.currentTime);
+          gain.gain.setValueAtTime(0.25, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.25);
+        }
+      } catch (err) {
+        console.warn("Audio chime error:", err);
+      }
+    }
+
+    // Global Keydown Listener for Wired USB & Bluetooth HID Scanners
+    window.addEventListener("keydown", (e) => {
+      // Ignore modifier keys
+      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
+
+      const now = Date.now();
+      const timeDiff = now - lastKeyTime;
+      lastKeyTime = now;
+
+      if (e.key === "Enter") {
+        if (hardwareBarcodeBuffer.length >= 3 && timeDiff < 100) {
+          e.preventDefault();
+          const scannedCode = hardwareBarcodeBuffer.trim();
+          hardwareBarcodeBuffer = "";
+          handleUniversalBarcodeScan(scannedCode, 'hardware');
+          return;
+        }
+        hardwareBarcodeBuffer = "";
+      } else if (e.key.length === 1) {
+        if (timeDiff > 120) {
+          hardwareBarcodeBuffer = e.key;
+        } else {
+          hardwareBarcodeBuffer += e.key;
+        }
+      }
+    });
+
+    function handleUniversalBarcodeScan(barcode, source = 'scanner') {
+      if (!barcode) return;
+      console.log(`[Universal Scanner Engine] Code: ${barcode} (Source: ${source})`);
+
+      // 1. If Product Creation/Edit Modal is open -> Auto fill SKU/Barcode
+      const prodModal = document.getElementById("product-modal");
+      if (prodModal && prodModal.classList.contains("active")) {
+        const skuInput = document.getElementById("prod-sku");
+        if (skuInput) {
+          skuInput.value = barcode;
+          triggerAlert(`Barcode '${barcode}' filled into Product SKU field!`, "success");
+          playBarcodeChime('success');
+          return;
+        }
+      }
+
+      // 2. If Purchase Entry View is active -> Add to Purchase Entry
+      if (state.activeView === 'purchase') {
+        const purInput = document.getElementById("purchase-barcode-scanner");
+        if (purInput) {
+          purInput.value = barcode;
+          handlePurchaseBarcodeKeydown({ key: 'Enter', target: purInput, preventDefault: () => {} });
+          playBarcodeChime('success');
+          return;
+        }
+      }
+
+      // 3. Lookup product in catalog
+      const matchedProd = state.products.find(p => p.sku === barcode || p.barcode === barcode);
+
+      if (matchedProd) {
+        playBarcodeChime('success');
+        if (state.activeView === 'billing') {
+          addToCart(matchedProd.id);
+          triggerAlert(`⚡ Scanned & Added to POS Cart: ${matchedProd.name} (₹${matchedProd.price})`, "success");
+        } else if (state.activeView === 'inventory') {
+          const invSearch = document.getElementById("inventory-search");
+          if (invSearch) {
+            invSearch.value = barcode;
+            runInventoryFilter();
+          }
+          triggerAlert(`Found in Inventory: ${matchedProd.name}`, "info");
+        } else {
+          // Switch to POS and add item
+          switchView('billing');
+          addToCart(matchedProd.id);
+          triggerAlert(`⚡ Auto-switched to POS & Added: ${matchedProd.name}`, "success");
+        }
+      } else {
+        // Unknown barcode scanned
+        playBarcodeChime('error');
+        promptOnboardingForUnknownBarcode(barcode);
+      }
+    }
+
+    async function connectBluetoothScanner() {
+      if (!navigator.bluetooth) {
+        triggerAlert("Web Bluetooth API not supported by browser. Wired USB & Bluetooth HID scanners work automatically!", "info");
+        return;
+      }
+      try {
+        triggerAlert("Requesting Bluetooth Barcode Scanner device...", "info");
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true
+        });
+
+        if (bluetoothDevice) {
+          const statusDot = document.getElementById("scanner-status-dot");
+          if (statusDot) statusDot.style.background = "#3b82f6";
+          const statusText = document.getElementById("scanner-status-text");
+          if (statusText) statusText.innerText = `Bluetooth: ${bluetoothDevice.name || 'Scanner Connected'}`;
+
+          const modalTitle = document.getElementById("modal-scanner-status-title");
+          if (modalTitle) modalTitle.innerText = `Bluetooth Connected: ${bluetoothDevice.name || 'Wireless Scanner'}`;
+          
+          triggerAlert(`Bluetooth Scanner '${bluetoothDevice.name || 'Device'}' linked!`, "success");
+
+          bluetoothDevice.addEventListener('gattserverdisconnected', () => {
+            if (statusDot) statusDot.style.background = "#10b981";
+            if (statusText) statusText.innerText = "Scanner: Auto-Sync Ready";
+            triggerAlert("Bluetooth scanner disconnected. Reverted to HID mode.", "warning");
+          });
+        }
+      } catch (err) {
+        if (err.name !== 'NotFoundError') {
+          triggerAlert("Note: Standard Bluetooth scanners pair directly to OS/computer in HID mode and work automatically without browser pairing.", "info");
+        }
+      }
+    }
+
     /* ==================== INVENTORY QUICK BARCODE LOOKUP ==================== */
     /* ==================== INVENTORY QUICK BARCODE LOOKUP & ONBOARDING QUEUE ==================== */
     function renderOnboardingQueue() {
@@ -8927,63 +9691,11 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
     let cameraScanCallbackContext = 'inventory'; // 'inventory' or 'purchase'
 
     function focusBarcodeScanInput() {
-      cameraScanCallbackContext = 'inventory';
-      const modal = document.getElementById("inventory-camera-modal");
-      if (!modal) return;
-      modal.classList.add("active");
-
-      if (inventoryCameraScanner) {
-        inventoryCameraScanner.clear();
-      }
-
-      inventoryCameraScanner = new Html5Qrcode("inventory-camera-box");
-      inventoryCameraScanner.start(
-        { facingMode: "environment" },
-        { fps: 15, qrbox: { width: 300, height: 150 } },
-        (barcode) => {
-          playPOSBeep();
-          closeInventoryCameraModal();
-          if (cameraScanCallbackContext === 'purchase') {
-            processScannedPurchaseBarcode(barcode);
-          } else {
-            processScannedInventoryBarcode(barcode);
-          }
-        },
-        (err) => {}
-      ).catch(err => {
-        console.error("Inventory camera scanner start error", err);
-        triggerAlert("Could not start camera feed. Please check webcam permissions.", "danger");
-      });
+      openScannerConfigModal();
     }
 
     function openPurchaseCameraScanner() {
-      cameraScanCallbackContext = 'purchase';
-      const modal = document.getElementById("inventory-camera-modal");
-      if (!modal) return;
-      modal.classList.add("active");
-
-      if (inventoryCameraScanner) {
-        inventoryCameraScanner.clear();
-      }
-
-      inventoryCameraScanner = new Html5Qrcode("inventory-camera-box");
-      inventoryCameraScanner.start(
-        { facingMode: "environment" },
-        { fps: 15, qrbox: { width: 300, height: 150 } },
-        (barcode) => {
-          playPOSBeep();
-          closeInventoryCameraModal();
-          if (cameraScanCallbackContext === 'purchase') {
-            processScannedPurchaseBarcode(barcode);
-          } else {
-            processScannedInventoryBarcode(barcode);
-          }
-        },
-        (err) => {}
-      ).catch(err => {
-        console.error("Purchase camera scanner start error", err);
-        triggerAlert("Could not start camera feed. Please check webcam permissions.", "danger");
-      });
+      openScannerConfigModal();
     }
 
     function processScannedPurchaseBarcode(barcode) {
