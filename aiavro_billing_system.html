@@ -8896,32 +8896,47 @@
             <button class="secondary-btn" style="padding:6px 12px; font-size:11px; border-color:${isActive ? 'var(--accent-gold)' : 'var(--accent-green)'}; color:${isActive ? 'var(--accent-gold)' : 'var(--accent-green)'}" onclick="toggleBusinessStatus(\'${biz.id}\')">${isActive ? 'Suspend Store' : 'Activate Store'}</button>
             <button class="secondary-btn" style="padding:6px 12px; font-size:11px; border-color:var(--accent-blue); color:var(--accent-blue)" onclick="quickAssignStaffToStore(\'${biz.id}\')">+ Assign Staff</button>
             <button class="secondary-btn" style="padding:6px 12px; font-size:11px" onclick="openBusinessModal(\'${biz.id}\')">Edit Details</button>
-            ${state.businesses.length > 1 && !isSelected ? `<button class="secondary-btn" style="padding:6px 12px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="deleteBusiness(\'${biz.id}\')">Delete</button>` : ''}
+            <button class="secondary-btn" style="padding:6px 12px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="deleteBusiness(\'${biz.id}\')">Delete Store</button>
           </div>
         `;
         grid.appendChild(card);
       });
     }
 
-    function toggleBusinessStatus(bizId) {
+    async function toggleBusinessStatus(bizId) {
       const biz = state.businesses.find(b => b.id === bizId);
       if (!biz) return;
       
       const newStatus = (biz.status === 'inactive') ? 'active' : 'inactive';
-      
-      if (newStatus === 'inactive' && state.activeBusinessId === bizId) {
-        state.activeBusinessId = "";
-        const sidebarLabel = document.getElementById("sidebar-active-business");
-        if (sidebarLabel) sidebarLabel.innerText = "All Outlets Consolidated";
-        const globalSelect = document.getElementById("global-business-select");
-        if (globalSelect) globalSelect.value = "";
+      const updatedBiz = { ...biz, status: newStatus };
+
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/businesses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(updatedBiz)
+        });
+        const result = await res.json();
+        if (result.success) {
+          if (newStatus === 'inactive' && state.activeBusinessId === bizId) {
+            state.activeBusinessId = "";
+            const sidebarLabel = document.getElementById("sidebar-active-business");
+            if (sidebarLabel) sidebarLabel.innerText = "All Outlets Consolidated";
+            const globalSelect = document.getElementById("global-business-select");
+            if (globalSelect) globalSelect.value = "";
+          }
+          triggerAlert(`Store outlet '${biz.name}' status set to: ${newStatus.toUpperCase()}`, "info");
+          await syncStateWithServer();
+        } else {
+          triggerAlert(result.message || "Failed to toggle status", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error connecting to server gateway.", "danger");
       }
-      
-      biz.status = newStatus;
-      saveStateToLocalStorage();
-      renderBusinessesCards();
-      renderBusinessesListDropdowns();
-      triggerAlert(`Store outlet '${biz.name}' status set to: ${newStatus.toUpperCase()}`, "info");
     }
 
     function openBusinessModal(bizId = null) {
@@ -8961,7 +8976,7 @@
       document.getElementById("business-modal").classList.remove("active");
     }
 
-    function saveBusinessForm(e) {
+    async function saveBusinessForm(e) {
       e.preventDefault();
       const id = document.getElementById("biz-form-id").value;
       const name = document.getElementById("biz-form-name").value;
@@ -8978,38 +8993,78 @@
       const terms = document.getElementById("biz-form-terms").value;
       const logo = document.getElementById("biz-form-logo").value || "";
 
-      if (id) {
-        const idx = state.businesses.findIndex(b => b.id === id);
-        if (idx !== -1) {
-          state.businesses[idx] = { ...state.businesses[idx], id, name, subtitle, owner, gstin, phone, email, address, bankName, accountNo, ifsc, upiId, terms, logo: logo || state.businesses[idx].logo || "" };
-          triggerAlert(`Store Outlet '${name}' details updated!`, "success");
+      // Find existing status to preserve
+      const existingBiz = id ? state.businesses.find(b => b.id === id) : null;
+      const status = existingBiz ? (existingBiz.status || 'active') : 'active';
+
+      const bizData = { 
+        id: id || undefined, 
+        name, subtitle, owner, gstin, phone, email, address, 
+        bankName, accountNo, ifsc, upiId, terms, 
+        logo: logo || (existingBiz ? existingBiz.logo : ""),
+        status
+      };
+
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/businesses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(bizData)
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert(`Store Outlet details saved successfully!`, "success");
+          closeBusinessModal();
+          await syncStateWithServer();
+          
+          const activeExists = state.businesses.some(b => b.id === state.activeBusinessId);
+          if (!activeExists && state.businesses.length > 0) {
+            changeActiveBusiness(state.businesses[0].id);
+          } else {
+            changeActiveBusiness(state.activeBusinessId);
+          }
+        } else {
+          triggerAlert(result.message || "Failed to save business profile", "danger");
         }
-      } else {
-        const newId = "biz-" + Date.now();
-        state.businesses.push({ id: newId, name, subtitle, owner, gstin, phone, email, address, bankName, accountNo, ifsc, upiId, terms, logo });
-        triggerAlert(`New Store Outlet '${name}' registered!`, "success");
-      }
-
-      saveStateToLocalStorage();
-      closeBusinessModal();
-      renderBusinessesListDropdowns();
-      renderBusinessesCards();
-
-      const activeExists = state.businesses.some(b => b.id === state.activeBusinessId);
-      if (!activeExists && state.businesses.length > 0) {
-        changeActiveBusiness(state.businesses[0].id);
-      } else {
-        changeActiveBusiness(state.activeBusinessId);
+      } catch (err) {
+        triggerAlert("Error connecting to server gateway.", "danger");
       }
     }
 
-    function deleteBusiness(id) {
+    async function deleteBusiness(id) {
+      if (state.businesses.length <= 1) {
+        triggerAlert("Error: At least one business outlet must exist in the enterprise system.", "danger");
+        return;
+      }
+
+      if (id === state.activeBusinessId) {
+        triggerAlert("Error: You cannot delete the active store outlet you are currently operating in. Switch active outlets first!", "danger");
+        return;
+      }
+
       if (confirm("Are you sure you want to completely remove this business profile?")) {
-        state.businesses = state.businesses.filter(b => b.id !== id);
-        saveStateToLocalStorage();
-        triggerAlert("Farm business profile removed!", "warning");
-        renderBusinessesListDropdowns();
-        renderBusinessesCards();
+        try {
+          const token = localStorage.getItem("aiavro_jwt_token");
+          const res = await fetch(`${state.backendUrl}/api/businesses/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const result = await res.json();
+          if (result.success) {
+            triggerAlert("Farm business profile removed!", "warning");
+            await syncStateWithServer();
+          } else {
+            triggerAlert(result.message || "Failed to delete business profile", "danger");
+          }
+        } catch (err) {
+          triggerAlert("Error connecting to server gateway.", "danger");
+        }
       }
     }
 

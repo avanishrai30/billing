@@ -751,6 +751,87 @@ app.get('/api/businesses', verifyJWT, async (req, res) => {
   }
 });
 
+// REST API - Create / Modify business configuration
+app.post('/api/businesses', verifyJWT, async (req, res) => {
+  const biz = req.body;
+  if (!biz.name) {
+    return res.status(400).json({ success: false, message: "Business name is required" });
+  }
+
+  // Ensure only OWNER or super admin can modify business configurations
+  if (req.user.role !== 'OWNER' && req.user.category !== 'super admin' && req.user.role !== 'Super Admin') {
+    return res.status(403).json({ success: false, message: "Forbidden: Only Super Admin can manage outlet configurations" });
+  }
+
+  try {
+    const docId = biz.id || "biz-" + Date.now();
+    const docStatus = biz.status || "active";
+    
+    const storeObj = {
+      id: docId,
+      name: biz.name,
+      code: biz.code || `ST-${biz.name.substring(0, 3).toUpperCase()}`,
+      address: biz.address || "",
+      status: docStatus,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Upsert into both businesses and stores to keep collections synchronized
+    await db.collection('businesses').updateOne(
+      { id: docId },
+      { $set: { 
+          id: docId,
+          name: biz.name,
+          subtitle: biz.subtitle || "",
+          owner: biz.owner || "",
+          gstin: biz.gstin || "",
+          phone: biz.phone || "",
+          email: biz.email || "",
+          address: biz.address || "",
+          bankName: biz.bankName || "",
+          accountNo: biz.accountNo || "",
+          ifsc: biz.ifsc || "",
+          upiId: biz.upiId || "",
+          terms: biz.terms || "",
+          logo: biz.logo || "",
+          status: docStatus
+        } 
+      },
+      { upsert: true }
+    );
+
+    await db.collection('stores').updateOne(
+      { id: docId },
+      { $set: storeObj },
+      { upsert: true }
+    );
+
+    res.json({ success: true, message: "Business profile saved successfully", business: biz });
+  } catch (err) {
+    console.error("Failed to save business configuration:", err);
+    res.status(500).json({ success: false, message: "Failed to save business profile" });
+  }
+});
+
+// REST API - Delete business configuration
+app.delete('/api/businesses/:id', verifyJWT, async (req, res) => {
+  const bizId = req.params.id;
+
+  // Ensure only OWNER or super admin can delete business configurations
+  if (req.user.role !== 'OWNER' && req.user.category !== 'super admin' && req.user.role !== 'Super Admin') {
+    return res.status(403).json({ success: false, message: "Forbidden: Only Super Admin can delete outlet configurations" });
+  }
+
+  try {
+    await db.collection('businesses').deleteOne({ id: bizId });
+    await db.collection('stores').deleteOne({ id: bizId });
+    res.json({ success: true, message: "Business profile deleted successfully" });
+  } catch (err) {
+    console.error("Failed to delete business configuration:", err);
+    res.status(500).json({ success: false, message: "Failed to delete business profile" });
+  }
+});
+
 // REST API - Fetch all user accounts
 app.get('/api/users', verifyJWT, async (req, res) => {
   try {
