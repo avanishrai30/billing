@@ -3358,6 +3358,16 @@
           <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px">
             Configure multiple store outlets under your enterprise. Easily assign dedicated store outlets to employees, track localized sales performance, monitor store-wise stock assets, and seamlessly switch active outlets.
           </p>
+          
+          <!-- Enterprise Bulk Control Panel -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:var(--bg-primary); padding:12px 16px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:20px">
+            <span style="font-size:12px; font-weight:700; color:var(--text-muted); display:flex; align-items:center; gap:6px">⚡ ENTERPRISE OUTLET CONTROLS:</span>
+            <div style="display:flex; gap:10px">
+              <button class="secondary-btn" style="padding:6px 12px; font-size:12px; border-color:var(--accent-green); color:var(--accent-green); font-weight:700" onclick="toggleAllBusinessesStatus('active')">🟢 Activate All Outlets</button>
+              <button class="secondary-btn" style="padding:6px 12px; font-size:12px; border-color:var(--accent-danger); color:var(--accent-danger); font-weight:700" onclick="toggleAllBusinessesStatus('inactive')">⊘ Suspend All Outlets</button>
+            </div>
+          </div>
+
           <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:20px" id="businesses-card-grid"></div>
         </div>
 
@@ -7950,15 +7960,24 @@
       }
 
       state.businesses.forEach(biz => {
+        const isActive = biz.status !== 'inactive';
+
         const opt1 = document.createElement("option");
         opt1.value = biz.id;
-        opt1.innerText = getStoreDisplayName(biz);
+        opt1.innerText = getStoreDisplayName(biz) + (isActive ? "" : " (⊘ Suspended)");
+        if (!isActive) {
+          opt1.style.color = "var(--accent-danger)";
+        }
         if (biz.id === state.activeBusinessId) opt1.selected = true;
         globalSelect.appendChild(opt1);
 
         const opt2 = document.createElement("option");
         opt2.value = biz.id;
-        opt2.innerText = getStoreDisplayName(biz);
+        opt2.innerText = getStoreDisplayName(biz) + (isActive ? "" : " (⊘ Suspended)");
+        if (!isActive) {
+          opt2.disabled = true;
+          opt2.style.color = "var(--accent-danger)";
+        }
         if (biz.id === state.activeBusinessId) opt2.selected = true;
         posSelect.appendChild(opt2);
       });
@@ -8946,19 +8965,30 @@
 
         const card = document.createElement("div");
         card.className = `panel`;
-        card.style.borderColor = isSelected ? 'var(--accent-blue)' : 'var(--border-color)';
         card.style.position = 'relative';
+        card.style.transition = 'all 0.3s ease';
+        
+        if (isSelected) {
+          card.style.borderColor = 'var(--accent-blue)';
+          card.style.boxShadow = '0 0 14px rgba(59,130,246,0.2)';
+        } else if (isActive) {
+          card.style.borderColor = 'var(--accent-green)';
+          card.style.boxShadow = '0 0 10px rgba(16,185,129,0.08)';
+        } else {
+          card.style.borderColor = 'var(--border-color)';
+          card.style.opacity = '0.75';
+        }
         
         let statusBadge = '';
         if (isActive) {
-          statusBadge = `<span class="status-badge in-stock" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap">Active Outlet</span>`;
+          statusBadge = `<span class="status-badge in-stock" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap; font-weight:800">Active</span>`;
         } else {
-          statusBadge = `<span class="status-badge out-of-stock" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap; border-color:var(--accent-danger); color:var(--accent-danger)">⊘ Suspended</span>`;
+          statusBadge = `<span class="status-badge out-of-stock" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap; border-color:var(--accent-danger); color:var(--accent-danger); font-weight:800">⊘ Suspended</span>`;
         }
 
         let selectedBadge = '';
         if (isSelected) {
-          selectedBadge = `<span class="status-badge paid" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap">Selected Filter</span>`;
+          selectedBadge = `<span class="status-badge paid" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap; font-weight:800">Active POS Outlet</span>`;
         }
 
         card.innerHTML = `
@@ -9047,6 +9077,48 @@
       } catch (err) {
         triggerAlert("Error connecting to server gateway.", "danger");
       }
+    }
+
+    async function toggleAllBusinessesStatus(newStatus) {
+      if (state.businesses.length === 0) return;
+      let successCount = 0;
+      let failCount = 0;
+      const token = localStorage.getItem("aiavro_jwt_token");
+
+      for (const biz of state.businesses) {
+        if (biz.status !== newStatus) {
+          try {
+            const updatedBiz = { ...biz, status: newStatus };
+            const res = await fetch(`${state.backendUrl}/api/businesses`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(updatedBiz)
+            });
+            const result = await res.json();
+            if (result.success) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch (e) {
+            failCount++;
+          }
+        }
+      }
+
+      if (newStatus === 'inactive') {
+        state.activeBusinessId = "";
+        const sidebarLabel = document.getElementById("sidebar-active-business");
+        if (sidebarLabel) sidebarLabel.innerText = "All Outlets Consolidated";
+        const globalSelect = document.getElementById("global-business-select");
+        if (globalSelect) globalSelect.value = "";
+      }
+
+      triggerAlert(`Bulk operation completed. Activated/Suspended outlets successfully!`, "success");
+      await syncStateWithServer();
     }
 
     function openBusinessModal(bizId = null) {
