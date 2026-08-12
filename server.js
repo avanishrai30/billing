@@ -193,39 +193,82 @@ async function initDB() {
     await db.collection('product_barcodes').createIndex({ barcode: 1 });
     await db.collection('product_barcodes').createIndex({ productId: 1 });
 
+    // Migration: Clean up duplicates in businesses collection (keep one per unique id)
+    try {
+      const allBizs = await db.collection('businesses').find({}).toArray();
+      const seenBizIds = new Set();
+      for (const biz of allBizs) {
+        if (!biz.id || seenBizIds.has(biz.id)) {
+          console.log(`[Database Migration] Removing duplicate/invalid business: ${biz.name} (${biz.id || 'no-id'})`);
+          await db.collection('businesses').deleteOne({ _id: biz._id });
+        } else {
+          seenBizIds.add(biz.id);
+        }
+      }
+
+      // Clean up duplicates in stores collection
+      const allStores = await db.collection('stores').find({}).toArray();
+      const seenStoreIds = new Set();
+      for (const store of allStores) {
+        if (!store.id || seenStoreIds.has(store.id)) {
+          console.log(`[Database Migration] Removing duplicate/invalid store: ${store.name} (${store.id || 'no-id'})`);
+          await db.collection('stores').deleteOne({ _id: store._id });
+        } else {
+          seenStoreIds.add(store.id);
+        }
+      }
+
+      // Create unique index on id to enforce database-level unique constraints
+      await db.collection('businesses').createIndex({ id: 1 }, { unique: true });
+      await db.collection('stores').createIndex({ id: 1 }, { unique: true });
+      console.log("[Database] Unique indexes on business and store IDs registered.");
+    } catch (migErr) {
+      console.error("[Database Migration] Error during index/cleanup setup:", migErr);
+    }
+
     console.log("[Database] Collections indexes registered.");
 
-    // Seed default stores
+    // Seed default stores (idempotently using updateOne with upsert)
     const defaultStores = [
       { id: "store-wf", name: "Whitefield Store", code: "ST-WF", address: "Whitefield Retail Hub, Sector 2, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() },
       { id: "store-hsr", name: "HSR Layout Store", code: "ST-HSR", address: "HSR Layout, Sector 6, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() },
       { id: "store-kor", name: "Koramangala Store", code: "ST-KO", address: "Koramangala 4th Block, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() }
     ];
 
-    const storeCount = await db.collection('stores').countDocuments();
-    if (storeCount === 0) {
-      await db.collection('stores').insertMany(defaultStores);
-      console.log("[Database] Seeded 3 default store locations.");
-      
-      // Seed these stores as active businesses as well
-      const defaultBusinesses = defaultStores.map((s, idx) => ({
-        id: s.id,
-        name: s.name,
-        subtitle: "Organic Farms Outlet",
-        owner: "VC Organic Admin",
-        gstin: `27AIAVRO111${idx}A1Z0`,
-        phone: "+91 98765 43210",
-        email: "support@vcorganics.com",
-        address: s.address,
-        bankName: "HDFC Farmers Cooperative Bank",
-        accountNo: `5020001234567${idx}`,
-        ifsc: "HDFC0001234",
-        upiId: "vcorganics@upi",
-        terms: "1. Fresh Organic Products.\n2. Returns within 24h for perishables."
-      }));
-      await db.collection('businesses').insertMany(defaultBusinesses);
-      console.log("[Database] Seeded business outlet configurations.");
+    for (const store of defaultStores) {
+      await db.collection('stores').updateOne(
+        { id: store.id },
+        { $setOnInsert: store },
+        { upsert: true }
+      );
     }
+
+    // Seed default businesses (idempotently using updateOne with upsert)
+    const defaultBusinesses = defaultStores.map((s, idx) => ({
+      id: s.id,
+      name: s.name,
+      subtitle: "Organic Farms Outlet",
+      owner: "VC Organic Admin",
+      gstin: `27AIAVRO111${idx}A1Z0`,
+      phone: "+91 98765 43210",
+      email: "support@vcorganics.com",
+      address: s.address,
+      bankName: "HDFC Farmers Cooperative Bank",
+      accountNo: `5020001234567${idx}`,
+      ifsc: "HDFC0001234",
+      upiId: "vcorganics@upi",
+      terms: "1. Fresh Organic Products.\n2. Returns within 24h for perishables.",
+      status: "active"
+    }));
+
+    for (const biz of defaultBusinesses) {
+      await db.collection('businesses').updateOne(
+        { id: biz.id },
+        { $setOnInsert: biz },
+        { upsert: true }
+      );
+    }
+    console.log("[Database] Seeded business outlet configurations idempotently.");
 
     // Seed default Owner & Super Admin accounts (hash with bcrypt 12 rounds)
     const userCount = await db.collection('users').countDocuments();

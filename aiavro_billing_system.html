@@ -4652,39 +4652,39 @@
 
           <div class="form-group">
             <label>Sub-title / Tagline</label>
-            <input type="text" id="biz-form-subtitle" placeholder="e.g. Premium Produce" required>
+            <input type="text" id="biz-form-subtitle" placeholder="e.g. Premium Produce">
           </div>
 
           <div class="form-group">
             <label>Farm Owner Name</label>
-            <input type="text" id="biz-form-owner" placeholder="Owner's Name" required>
+            <input type="text" id="biz-form-owner" placeholder="Owner's Name">
           </div>
 
           <div class="form-group">
             <label>GSTIN / Tax ID Number</label>
-            <input type="text" id="biz-form-gstin" placeholder="e.g. 27AAAAA1111A1Z1" required>
+            <input type="text" id="biz-form-gstin" placeholder="e.g. 27AAAAA1111A1Z1">
           </div>
 
           <div class="form-group">
             <label>Contact Phone</label>
-            <input type="text" id="biz-form-phone" placeholder="+91 XXXXX XXXXX" required>
+            <input type="text" id="biz-form-phone" placeholder="+91 XXXXX XXXXX">
           </div>
 
           <div class="form-group">
             <label>Email Address</label>
-            <input type="email" id="biz-form-email" placeholder="sales@farm.com" required>
+            <input type="email" id="biz-form-email" placeholder="sales@farm.com">
           </div>
 
           <div class="form-group full-width">
             <label>Farm Address Location</label>
-            <input type="text" id="biz-form-address" placeholder="Address, City, State" required>
+            <input type="text" id="biz-form-address" placeholder="Address, City, State">
           </div>
 
 
 
           <div class="form-group">
             <label>Payment UPI ID (Triggers QR)</label>
-            <input type="text" id="biz-form-upi" placeholder="e.g. 9876543210@ybl" required>
+            <input type="text" id="biz-form-upi" placeholder="e.g. 9876543210@ybl">
           </div>
 
           <div class="form-group full-width">
@@ -4694,7 +4694,7 @@
 
           <div class="modal-footer full-width" style="border:none; padding:15px 0 0 0">
             <button type="button" class="secondary-btn" onclick="closeBusinessModal()">Cancel</button>
-            <button type="submit" class="primary-btn">Save Business</button>
+            <button type="submit" class="primary-btn" id="biz-form-submit-btn">Save Business</button>
           </div>
         </form>
       </div>
@@ -5844,88 +5844,95 @@
 
       initSyncSocket();
 
-      try {
-        const headers = { 'Authorization': `Bearer ${token}` };
+      const headers = { 'Authorization': `Bearer ${token}` };
 
-        // Fetch businesses first to populate selectors
-        const resBiz = await fetch(`${state.backendUrl}/api/businesses`, { headers });
-        if (resBiz.ok) {
-          state.businesses = await resBiz.json();
-          if (!state.activeBusinessId && state.businesses.length > 0) {
-            state.activeBusinessId = state.businesses[0].id;
-          }
+      // Helper function to safely fetch endpoint and return parsed JSON
+      const safeFetch = async (url) => {
+        try {
+          const res = await fetch(url, { headers });
+          if (res.ok) return await res.json();
+        } catch (e) {
+          console.warn(`[Sync] Failed to fetch: ${url}`, e);
         }
+        return null;
+      };
 
-        // Fetch products
-        const resProds = await fetch(`${state.backendUrl}/api/products`, { headers });
-        if (resProds.ok) state.products = await resProds.json();
-
-        // Fetch customers
-        const resCusts = await fetch(`${state.backendUrl}/api/customers`, { headers });
-        if (resCusts.ok) state.customers = await resCusts.json();
-
-        // Fetch invoices
-        const resInvs = await fetch(`${state.backendUrl}/api/invoices`, { headers });
-        if (resInvs.ok) state.invoices = await resInvs.json();
-
-        // Fetch purchases
-        const resPurchases = await fetch(`${state.backendUrl}/api/purchases`, { headers });
-        if (resPurchases.ok) state.purchases = await resPurchases.json();
-
-        // Fetch suppliers
-        const resSups = await fetch(`${state.backendUrl}/api/suppliers`, { headers });
-        if (resSups.ok) {
-          state.suppliers = await resSups.json();
-          populatePurchaseSupplierDropdown();
+      // Fetch businesses
+      const bizData = await safeFetch(`${state.backendUrl}/api/businesses`);
+      if (bizData) {
+        state.businesses = bizData;
+        if (!state.activeBusinessId && state.businesses.length > 0) {
+          state.activeBusinessId = state.businesses[0].id;
         }
-
-        // Fetch stores
-        const resStores = await fetch(`${state.backendUrl}/api/stores`, { headers });
-        if (resStores.ok) {
-          state.stores = await resStores.json();
-          state.customStoreLocations = state.stores;
-        }
-
-        // Fetch users if Super Admin or Admin
-        const category = getUserCategory(state.currentUser);
-        if (category === 'super admin' || category === 'admin') {
-          const resUsers = await fetch(`${state.backendUrl}/api/users`, { headers });
-          if (resUsers.ok) state.users = await resUsers.json();
-
-          const resAudit = await fetch(`${state.backendUrl}/api/audit-logs`, { headers });
-          if (resAudit.ok) state.auditLogs = await resAudit.json();
-        }
-
-        // Fetch store-wise inventory log details
-        const resInv = await fetch(`${state.backendUrl}/api/inventory`, { headers });
-        if (resInv.ok) {
-          state.inventory = await resInv.json();
-          updateLocalProductStockFromInventory();
-        }
-
-        // Fetch inventory logs
-        const resLogs = await fetch(`${state.backendUrl}/api/inventory/logs`, { headers });
-        if (resLogs.ok) state.inventoryLogs = await resLogs.json();
-
-        // Re-render UI grids with server data
-        renderPOSProducts();
-        renderCustomersTable();
-        renderInvoicesTable();
-        renderBusinessesListDropdowns();
-        renderBusinessesCards();
-        updateActiveBrandUI();
-        populateUserFormStoreDropdown();
-        populateInvoiceStoreDropdown();
-        populateAuditStoreDropdown();
-        
-        const usersTableBody = document.getElementById("users-table-tbody");
-        if (usersTableBody && typeof renderUsersTable === 'function') renderUsersTable();
-        
-        const auditLogsTbody = document.getElementById("audit-logs-tbody");
-        if (auditLogsTbody && typeof renderAuditLogsTable === 'function') renderAuditLogsTable();
-      } catch (err) {
-        console.error("Failed to sync database state with server:", err);
       }
+
+      // Fetch products
+      const prodData = await safeFetch(`${state.backendUrl}/api/products`);
+      if (prodData) state.products = prodData;
+
+      // Fetch customers
+      const custData = await safeFetch(`${state.backendUrl}/api/customers`);
+      if (custData) state.customers = custData;
+
+      // Fetch invoices
+      const invData = await safeFetch(`${state.backendUrl}/api/invoices`);
+      if (invData) state.invoices = invData;
+
+      // Fetch purchases
+      const purchaseData = await safeFetch(`${state.backendUrl}/api/purchases`);
+      if (purchaseData) state.purchases = purchaseData;
+
+      // Fetch suppliers
+      const supData = await safeFetch(`${state.backendUrl}/api/suppliers`);
+      if (supData) {
+        state.suppliers = supData;
+        populatePurchaseSupplierDropdown();
+      }
+
+      // Fetch stores
+      const storeData = await safeFetch(`${state.backendUrl}/api/stores`);
+      if (storeData) {
+        state.stores = storeData;
+        state.customStoreLocations = storeData;
+      }
+
+      // Fetch users and audit logs if Admin or Super Admin
+      const category = getUserCategory(state.currentUser);
+      if (category === 'super admin' || category === 'admin') {
+        const userData = await safeFetch(`${state.backendUrl}/api/users`);
+        if (userData) state.users = userData;
+
+        const auditData = await safeFetch(`${state.backendUrl}/api/audit-logs`);
+        if (auditData) state.auditLogs = auditData;
+      }
+
+      // Fetch store-wise inventory
+      const inventoryData = await safeFetch(`${state.backendUrl}/api/inventory`);
+      if (inventoryData) {
+        state.inventory = inventoryData;
+        updateLocalProductStockFromInventory();
+      }
+
+      // Fetch inventory logs
+      const invLogsData = await safeFetch(`${state.backendUrl}/api/inventory/logs`);
+      if (invLogsData) state.inventoryLogs = invLogsData;
+
+      // Re-render UI grids with whatever data is loaded
+      renderPOSProducts();
+      renderCustomersTable();
+      renderInvoicesTable();
+      renderBusinessesListDropdowns();
+      renderBusinessesCards();
+      updateActiveBrandUI();
+      populateUserFormStoreDropdown();
+      populateInvoiceStoreDropdown();
+      populateAuditStoreDropdown();
+      
+      const usersTableBody = document.getElementById("users-table-tbody");
+      if (usersTableBody && typeof renderUsersTable === 'function') renderUsersTable();
+      
+      const auditLogsTbody = document.getElementById("audit-logs-tbody");
+      if (auditLogsTbody && typeof renderAuditLogsTable === 'function') renderAuditLogsTable();
     }
 
     function updateLocalProductStockFromInventory() {
@@ -8067,6 +8074,12 @@
         activeBiz.logo = logoHiddenValue;
       }
 
+      const submitBtn = document.querySelector("#view-settings form button[type='submit']");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Saving to server...";
+      }
+
       // Persist to backend API
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
@@ -8091,6 +8104,11 @@
         updateActiveBrandUI();
         renderBusinessesListDropdowns();
         triggerAlert(`Saved locally. Server sync failed: ${err.message}`, "warning");
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Save Billing Profile & Brand Logo";
+        }
       }
     }
 
@@ -8904,29 +8922,33 @@
         
         let statusBadge = '';
         if (isActive) {
-          statusBadge = `<span class="status-badge in-stock" style="position:absolute; top:15px; right:15px">Active Outlet</span>`;
+          statusBadge = `<span class="status-badge in-stock" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap">Active Outlet</span>`;
         } else {
-          statusBadge = `<span class="status-badge out-of-stock" style="position:absolute; top:15px; right:15px; border-color:var(--accent-danger); color:var(--accent-danger)">⊘ Suspended</span>`;
+          statusBadge = `<span class="status-badge out-of-stock" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap; border-color:var(--accent-danger); color:var(--accent-danger)">⊘ Suspended</span>`;
         }
 
         let selectedBadge = '';
         if (isSelected) {
-          selectedBadge = `<span class="status-badge paid" style="position:absolute; top:15px; right:125px">Selected Filter</span>`;
+          selectedBadge = `<span class="status-badge paid" style="margin:0; font-size:10px; padding:2px 8px; white-space:nowrap">Selected Filter</span>`;
         }
 
         card.innerHTML = `
-          ${statusBadge}
-          ${selectedBadge}
-          <div style="display:flex; align-items:center; gap:12px; margin-bottom:15px">
-            ${biz.logo ? `<img src="${biz.logo}" alt="Store Logo" style="width:48px; height:48px; object-fit:contain; flex-shrink:0">` : `<div style="width:42px; height:42px; background:#001845; border-radius:10px; display:grid; place-items:center; flex-shrink:0">
-              <svg viewBox="0 0 100 100" style="width:24px; height:24px">
-                <circle cx="50" cy="50" r="30" fill="none" stroke="#ffffff" stroke-width="5" />
-                <circle cx="43" cy="50" r="23" fill="none" stroke="#ffffff" stroke-width="5" />
-              </svg>
-            </div>`}
-            <div>
-              <h4 style="font-family:\'Outfit\'; font-size:16px; font-weight:800; margin:0">${biz.name}</h4>
-              <small style="color:var(--accent-green); font-weight:700">${biz.subtitle || 'Store Outlet'}</small>
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:15px">
+            <div style="display:flex; align-items:center; gap:12px">
+              ${biz.logo ? `<img src="${biz.logo}" alt="Store Logo" style="width:48px; height:48px; object-fit:contain; flex-shrink:0">` : `<div style="width:42px; height:42px; background:#001845; border-radius:10px; display:grid; place-items:center; flex-shrink:0">
+                <svg viewBox="0 0 100 100" style="width:24px; height:24px">
+                  <circle cx="50" cy="50" r="30" fill="none" stroke="#ffffff" stroke-width="5" />
+                  <circle cx="43" cy="50" r="23" fill="none" stroke="#ffffff" stroke-width="5" />
+                </svg>
+              </div>`}
+              <div>
+                <h4 style="font-family:\'Outfit\'; font-size:16px; font-weight:800; margin:0; line-height:1.2">${biz.name}</h4>
+                <small style="color:var(--accent-green); font-weight:700">${biz.subtitle || 'Store Outlet'}</small>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0">
+              ${statusBadge}
+              ${selectedBadge}
             </div>
           </div>
 
@@ -9056,11 +9078,41 @@
       const existingBiz = id ? state.businesses.find(b => b.id === id) : null;
       const status = existingBiz ? (existingBiz.status || 'active') : 'active';
 
+      const submitBtn = document.getElementById("biz-form-submit-btn");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Saving...";
+      }
+
+      // Handle logo: upload via /api/upload if it's base64, otherwise keep existing
+      let finalLogo = logo;
+      if (logo && logo.startsWith('data:image')) {
+        try {
+          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=logos`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem("aiavro_jwt_token")}`
+            },
+            body: JSON.stringify({
+              fileName: `brand-logo-${id || Date.now()}.png`,
+              base64Data: logo
+            })
+          });
+          const uploadResult = await uploadRes.json();
+          if (uploadResult.success && uploadResult.imagePath) {
+            finalLogo = uploadResult.imagePath;
+          }
+        } catch (uploadErr) {
+          console.warn('Logo upload in form failed:', uploadErr);
+        }
+      }
+
       const bizData = { 
         id: id || undefined, 
         name, subtitle, owner, gstin, phone, email, address, 
         bankName, accountNo, ifsc, upiId, terms, 
-        logo: logo || (existingBiz ? existingBiz.logo : ""),
+        logo: finalLogo || (existingBiz ? existingBiz.logo : ""),
         status
       };
 
@@ -9091,6 +9143,11 @@
         }
       } catch (err) {
         triggerAlert("Error connecting to server gateway.", "danger");
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Save Business";
+        }
       }
     }
 
