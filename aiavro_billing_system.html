@@ -5559,107 +5559,11 @@
     let lastPOSScannedTime = 0;
 
     /* INITIAL SEED DATA WITH DATE PARAMETERS */
-    const DEFAULT_SUPPLIERS = [
-      { id: "sup-1", name: "Golden Ghee Co.", address: "Dairy Industrial Estate, Anand, Gujarat", email: "contact@goldenghee.com", contact: "+91 98222 11111", gst: "24GGCO9999K1Z1" },
-      { id: "sup-2", name: "Agro Farms", address: "National Highway 4, Pune, MH", email: "info@agrofarms.co.in", contact: "+91 98333 22222", gst: "27AGROFARMS88Z" },
-      { id: "sup-3", name: "Wild Spreads Ltd.", address: "Forest Reserve Road, Dehradun, UK", email: "sales@wildspreads.com", contact: "+91 98444 33333", gst: "05WILDSP9999J5Z" },
-      { id: "sup-4", name: "Direct Farmer Market", address: "Local Counter Delivery, APMC Market Yard", email: "direct@farmermarket.org", contact: "+91 98555 44444", gst: "" }
-    ];
-
-    const DEFAULT_BUSINESSES = [
-      {
-        id: "biz-1",
-        name: "AIAVRO Organic Farms",
-        subtitle: "Billing System",
-        owner: "Avanish Kumar",
-        gstin: "27AIAVRO1111A1Z0",
-        phone: "+91 98765 43210",
-        email: "support@aiavro.com",
-        address: "Green Valley Agro Cluster, Sector 4, Maharashtra, 411001",
-        bankName: "HDFC Farmers Cooperative Bank",
-        accountNo: "50200012345678",
-        ifsc: "HDFC0001234",
-        upiId: "avanish@upi",
-        terms: "1. Handcrafted organically. Certified organic by AGC.\n2. Invoices are standard digital GST documents.\n3. Return of perishable dairy items is subject to quality verification."
-      },
-      {
-        id: "biz-2",
-        name: "Golden Ghee Agro-Cooperative",
-        subtitle: "Traditional Wood-Churned Foods",
-        owner: "Coop-Farmer Syndicate",
-        gstin: "27GOLDEN9999K3Z2",
-        phone: "+91 88888 77777",
-        email: "wholesale@goldenghee.org",
-        address: "Farmgate Collection Depot, Village Wardha, Maharashtra, 442001",
-        bankName: "State Bank of India Rural",
-        accountNo: "30045678901",
-        ifsc: "SBIN0000456",
-        upiId: "goldenghee@sbi",
-        terms: "1. Special bulk trade rates applied.\n2. Complete payments before truck dispatch.\n3. Store wood pressed oils in dark, cool setups."
-      }
-    ];
-
-    const DEFAULT_PRODUCTS = [
-      { id: "prod-1", name: "A2 Gir Cow Desi Ghee", category: "Dairy & Ghee", emoji: "🐄", sku: "8901234567011", barcode: "8901234567011", unit: "1 Liter Jars", cost: 600, price: 850, stock: 75, reorder: 15, dom: "2026-01-01", doe: "2027-01-01", gst: 12, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 200, store: "Main Store", status: "active", image: "/uploads/products/a2-gir-cow-ghee.jpg" },
-      { id: "prod-2", name: "A2 Buffalo Desi Ghee", category: "Dairy & Ghee", emoji: "🥛", sku: "8901234567012", barcode: "8901234567012", unit: "1 Liter Jars", cost: 500, price: 720, stock: 50, reorder: 12, dom: "2026-02-15", doe: "2027-02-15", gst: 12, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 150, store: "Main Store", status: "active", image: "/uploads/products/a2-buffalo-ghee.jpg" },
-      { id: "prod-3", name: "Fresh White Organic Butter", category: "Dairy & Ghee", emoji: "🧈", sku: "8901234567021", barcode: "8901234567021", unit: "250g Leaf-Wrap", cost: 140, price: 210, stock: 40, reorder: 15, dom: "2026-05-10", doe: "2026-06-25", gst: 12, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", image: "/uploads/products/organic-butter.jpg" },
-      { id: "prod-4", name: "Cold Pressed Virgin Coconut Oil", category: "Cold Pressed Oils", emoji: "🥥", sku: "8901234567031", barcode: "8901234567031", unit: "500ml Bottle", cost: 190, price: 310, stock: 65, reorder: 20, dom: "2026-01-10", doe: "2027-10-10", gst: 5, brand: "AIAVRO", supplier: "Agro Farms", maxStock: 200, store: "Main Store", status: "active", image: "/uploads/products/virgin-coconut-oil.jpg" },
-      { id: "prod-5", name: "Wood Pressed Mustard Oil", category: "Cold Pressed Oils", emoji: "🌱", sku: "8901234567032", barcode: "8901234567032", unit: "1 Liter Bottle", cost: 150, price: 230, stock: 35, reorder: 10, dom: "2025-12-01", doe: "2026-12-01", gst: 5, brand: "AIAVRO", supplier: "Agro Farms", maxStock: 120, store: "Main Store", status: "active", image: "/uploads/products/mustard-oil.jpg" },
-      { id: "prod-6", name: "Raw Honey (Wild Forest)", category: "Organic Spreads", emoji: "🍯", sku: "8901234567041", barcode: "8901234567041", unit: "500g Honeycomb", cost: 260, price: 420, stock: 8, reorder: 10, dom: "2026-01-05", doe: "2028-01-05", gst: 5, brand: "AIAVRO", supplier: "Wild Spreads Ltd.", maxStock: 50, store: "Main Store", status: "active", image: "/uploads/products/raw-honey.jpg" },
-      { id: "prod-7", name: "Organic A2 Fresh Yogurt", category: "Dairy & Ghee", emoji: "🥣", sku: "8901234567061", barcode: "8901234567061", unit: "500g Cup", cost: 80, price: 120, stock: 15, reorder: 5, dom: "2026-05-01", doe: "2026-05-20", gst: 5, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 80, store: "Main Store", status: "active", image: "/uploads/products/a2-fresh-yogurt.jpg" },
-      { id: "prod-8", name: "Loose Organic Paneer", category: "Loose & Fresh Items", emoji: "🧀", sku: "8901234567071", barcode: "8901234567071", unit: "per kg", cost: 220, price: 320, stock: 25, reorder: 8, dom: "2026-08-10", doe: "", gst: 5, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-paneer.jpg" },
-      { id: "prod-9", name: "Loose Fresh Buffalo Milk", category: "Loose & Fresh Items", emoji: "🥛", sku: "8901234567081", barcode: "8901234567081", unit: "per Liter", cost: 50, price: 75, stock: 40, reorder: 10, dom: "2026-08-10", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-buffalo-milk.jpg" },
-      { id: "prod-10", name: "Farm Fresh Whipping Cream", category: "Dairy & Ghee", emoji: "🧁", sku: "8901234567091", barcode: "8901234567091", unit: "250ml Cup", cost: 70, price: 110, stock: 20, reorder: 5, dom: "2026-05-05", doe: "2026-05-22", gst: 12, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 80, store: "Main Store", status: "active", image: "/uploads/products/whipping-cream.jpg" },
-      { id: "prod-11", name: "Loose Fresh Cow Milk", category: "Loose & Fresh Items", emoji: "🐄", sku: "8901234567101", barcode: "8901234567101", unit: "per Liter", cost: 45, price: 65, stock: 50, reorder: 15, dom: "2026-08-11", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-cow-milk.jpg" },
-      { id: "prod-12", name: "Loose Homemade Dahi (Curd)", category: "Loose & Fresh Items", emoji: "🥣", sku: "8901234567102", barcode: "8901234567102", unit: "per kg", cost: 50, price: 80, stock: 30, reorder: 10, dom: "2026-08-11", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-curd-dahi.jpg" },
-      { id: "prod-13", name: "Loose Farm Fresh Butter", category: "Loose & Fresh Items", emoji: "🧈", sku: "8901234567103", barcode: "8901234567103", unit: "per kg", cost: 300, price: 450, stock: 15, reorder: 5, dom: "2026-08-11", doe: "", gst: 5, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-farm-butter.jpg" },
-      { id: "prod-14", name: "Loose Fresh Malai (Cream)", category: "Loose & Fresh Items", emoji: "🍶", sku: "8901234567104", barcode: "8901234567104", unit: "per kg", cost: 250, price: 350, stock: 10, reorder: 4, dom: "2026-08-11", doe: "", gst: 5, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-fresh-cream.jpg" },
-      { id: "prod-15", name: "Loose Buttermilk (Chaas)", category: "Loose & Fresh Items", emoji: "🥤", sku: "8901234567105", barcode: "8901234567105", unit: "per Liter", cost: 25, price: 40, stock: 60, reorder: 20, dom: "2026-08-11", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-buttermilk.jpg" },
-      { id: "prod-16", name: "Loose A2 Full Cream Milk", category: "Loose & Fresh Items", emoji: "🥛", sku: "8901234567106", barcode: "8901234567106", unit: "per Liter", cost: 60, price: 90, stock: 35, reorder: 10, dom: "2026-08-11", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-a2-milk.jpg" }
-    ];
-
-    const DEFAULT_CUSTOMERS = [
-      { id: "cust-1", name: "Ramesh Agro-Distribution", phone: "+91 99999 88888", email: "ramesh@distributors.com", gstin: "27RAMESH1234J1Z4", address: "Apna Bazaar Market No 2, Pune, MH, 411002" },
-      { id: "cust-2", name: "Kiran Organic Retail Store", phone: "+91 98888 77777", email: "kiran@organicretail.com", gstin: "", address: "Shop 14, Main Highstreet Road, Mumbai, MH, 400050" },
-      { id: "cust-3", name: "Walk-in Retail Buyer (Cash)", phone: "+91 90000 00000", email: "", gstin: "", address: "Local Counter Checkout" }
-    ];
-
-    const DEFAULT_INVOICES = [
-      {
-        id: "AIAVRO-2026-0001",
-        businessId: "biz-1",
-        customerId: "cust-1",
-        date: "2026-05-24T14:35:00",
-        items: [
-          { productId: "prod-1", name: "A2 Gir Cow Desi Ghee", price: 850, quantity: 12, unit: "1 Liter Jars" },
-          { productId: "prod-3", name: "Fresh White Organic Butter", price: 210, quantity: 8, unit: "250g Leaf-Wrap" }
-        ],
-        subtotal: 11880,
-        discount: 500,
-        tax: 541.9,
-        roundoff: -2,
-        grandtotal: 11378,
-        paymentMode: "bank",
-        status: "paid"
-      },
-      {
-        id: "AIAVRO-2026-0002",
-        businessId: "biz-1",
-        customerId: "cust-2",
-        date: "2026-05-25T11:15:00",
-        items: [
-          { productId: "prod-4", name: "Cold Pressed Virgin Coconut Oil", price: 310, quantity: 15, unit: "500ml Bottle" },
-          { productId: "prod-6", name: "Raw Honey (Wild Forest)", price: 420, quantity: 5, unit: "500g Honeycomb" }
-        ],
-        subtotal: 6750,
-        discount: 0,
-        tax: 321.43,
-        roundoff: 0,
-        grandtotal: 6750,
-        paymentMode: "upi",
-        status: "paid"
-      }
-    ];
+    const DEFAULT_SUPPLIERS = [];
+    const DEFAULT_BUSINESSES = [];
+    const DEFAULT_PRODUCTS = [];
+    const DEFAULT_CUSTOMERS = [];
+    const DEFAULT_INVOICES = [];
 
     /* ==================== CORE INITIALIZATION ==================== */
     window.addEventListener("DOMContentLoaded", () => {
@@ -7296,7 +7200,7 @@
       reader.readAsDataURL(file);
     }
 
-    function savePasswordChange() {
+    async function savePasswordChange() {
       const errEl = document.getElementById('account-pw-error');
       errEl.style.display = 'none';
 
@@ -7320,29 +7224,28 @@
         return;
       }
 
-      // Find current user in directory
-      const user = state.currentUser;
-      const idx = state.users.findIndex(u => u.id === user.id || u.username === user.username);
-      if (idx === -1) {
-        errEl.textContent = 'Could not find your account in the user directory. Contact admin.';
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/users/change-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw })
+        });
+        const result = await res.json();
+        if (result.success) {
+          closeAccountModal();
+          triggerAlert('✅ Password changed successfully! Use your new password on your next sign in.', 'success');
+        } else {
+          errEl.textContent = result.message || 'Failed to update password.';
+          errEl.style.display = 'block';
+        }
+      } catch (err) {
+        errEl.textContent = 'Error connecting to API server gateway.';
         errEl.style.display = 'block';
-        return;
       }
-
-      // Verify current password
-      if (!verifyPassword(currentPw, state.users[idx].password)) {
-        errEl.textContent = '❌ Current password is incorrect.';
-        errEl.style.display = 'block';
-        return;
-      }
-
-      // Update password
-      state.users[idx].password = hashPasswordSync(newPw);
-      logActivity('update', `Password updated for user account: ${user.name} (@${user.username})`);
-      localStorage.setItem('aiavro_users', JSON.stringify(state.users));
-      
-      closeAccountModal();
-      triggerAlert('✅ Password changed successfully! Use your new password on your next sign in.', 'success');
     }
 
     /* ==================== AUDITOR TAX & GST REPORT LEDGER ==================== */
@@ -10665,16 +10568,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
     }
 
     function wipeEntireDatabaseAndReset() {
-      if (confirm("DANGER! This action will fully wipe and remove the existence data of your farm businesses, transactions, custom products and client files, then load a completely clean slate with default fresh farmer data. Do you wish to proceed?")) {
-        localStorage.removeItem("aiavro_businesses");
-        localStorage.removeItem("aiavro_products");
-        localStorage.removeItem("aiavro_customers");
-        localStorage.removeItem("aiavro_invoices");
-        
-        loadDatabaseState();
-        triggerAlert("System Database completely wiped and refreshed!", "success");
-        switchView('dashboard');
-      }
+      triggerAlert("Action blocked: Database wipes are restricted to system administrators via cloud shell database controls.", "danger");
     }
 
     function exportDataBackup() {

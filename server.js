@@ -9,6 +9,9 @@ const jwt = require('jsonwebtoken');
 const sharp = require('sharp');
 const bcrypt = require('bcryptjs');
 const PDFDocument = require('pdfkit');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { z } = require('zod');
 require('dotenv').config();
 
 const app = express();
@@ -22,12 +25,16 @@ const io = socketIo(server, {
 
 const PORT = process.env.PORT || 8181;
 const JWT_SECRET = process.env.JWT_SECRET || 'vc_organic_master_jwt_secret_2026';
-const UPLOAD_ROOT = process.env.UPLOAD_PATH || (fs.existsSync('/opt/vc-organic') ? '/opt/vc-organic/uploads' : path.join(__dirname, 'uploads'));
+const UPLOAD_ROOT = process.env.UPLOAD_PATH || (fs.existsSync('/opt/vc-organics') ? '/opt/vc-organics/uploads' : path.join(__dirname, 'uploads'));
 
 // Create organized upload directory subfolders
 const UPLOAD_SUBDIRS = {
   products: path.join(UPLOAD_ROOT, 'products'),
   invoices: path.join(UPLOAD_ROOT, 'invoices'),
+  'purchase-bills': path.join(UPLOAD_ROOT, 'purchase-bills'),
+  users: path.join(UPLOAD_ROOT, 'users'),
+  stores: path.join(UPLOAD_ROOT, 'stores'),
+  temp: path.join(UPLOAD_ROOT, 'temp'),
   logos: path.join(UPLOAD_ROOT, 'logos'),
   employees: path.join(UPLOAD_ROOT, 'employees')
 };
@@ -36,8 +43,41 @@ Object.values(UPLOAD_SUBDIRS).forEach(dir => {
   fs.mkdirSync(dir, { recursive: true });
 });
 
-app.use(cors());
+// Security Hardening with Helmet (disabling CSP to prevent breaking SPA inline styles/scripts)
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+
+// Strictly configure CORS origins
+const allowedOrigins = ['https://billing.vcorganics.com'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Allow mobile/CURL/local files
+    if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true
+}));
+
 app.use(express.json({ limit: '15mb' }));
+
+// Rate limiting setup
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { success: false, message: "Too many login attempts, please try again after 15 minutes." }
+});
+app.use('/api/auth/', authLimiter);
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: "Too many image uploads, please try again after 15 minutes." }
+});
+app.use('/api/upload', uploadLimiter);
 
 // Serve uploaded assets directly
 app.use('/uploads', express.static(UPLOAD_ROOT, {
@@ -65,14 +105,39 @@ async function initDB() {
     console.log(`[Database] Connected to self-hosted MongoDB: ${db.databaseName}`);
 
     // Create Indexes
-    await db.collection('products').createIndex({ barcode: 1 });
-    await db.collection('products').createIndex({ sku: 1 }, { unique: true });
-    await db.collection('customers').createIndex({ phone: 1 });
-    await db.collection('invoices').createIndex({ invoiceNumber: 1 }, { unique: true });
-    await db.collection('inventory').createIndex({ productId: 1, storeId: 1 }, { unique: true });
+    // 1. users indexes
     await db.collection('users').createIndex({ username: 1 }, { unique: true });
+    await db.collection('users').createIndex({ email: 1 }, { unique: true, sparse: true });
+    await db.collection('users').createIndex({ phone: 1 });
+    await db.collection('users').createIndex({ role: 1 });
+
+    // 2. stores indexes
+    await db.collection('stores').createIndex({ code: 1 }, { unique: true });
+
+    // 3. products indexes
+    await db.collection('products').createIndex({ sku: 1 }, { unique: true });
+    await db.collection('products').createIndex({ barcode: 1 }, { unique: true, sparse: true });
+    await db.collection('products').createIndex({ name: "text" });
+
+    // 4. product_images indexes
+    await db.collection('product_images').createIndex({ id: 1 }, { unique: true });
+    await db.collection('product_images').createIndex({ productId: 1 });
+
+    // 5. customers indexes
+    await db.collection('customers').createIndex({ phone: 1 });
+    await db.collection('customers').createIndex({ email: 1 });
+    await db.collection('customers').createIndex({ gstin: 1 });
+
+    // 6. inventory compound index
+    await db.collection('inventory').createIndex({ productId: 1, storeId: 1 }, { unique: true });
+
+    // 7. invoices indexes
+    await db.collection('invoices').createIndex({ invoiceNumber: 1 }, { unique: true });
+
+    // 8. product_barcodes (variant mappings)
     await db.collection('product_barcodes').createIndex({ barcode: 1 });
     await db.collection('product_barcodes').createIndex({ productId: 1 });
+
     console.log("[Database] Collections indexes registered.");
 
     // Seed default stores
@@ -114,7 +179,7 @@ async function initDB() {
         id: "usr-owner",
         name: "VC Organic Owner",
         username: "owner",
-        password: bcrypt.hashSync("ChangeOnFirstLogin", 12),
+        passwordHash: bcrypt.hashSync("ChangeOnFirstLogin", 12),
         role: "OWNER",
         category: "super admin",
         assignedStoreId: "all",
@@ -126,7 +191,7 @@ async function initDB() {
         id: "usr-super-admin",
         name: "Raja Super Admin",
         username: "raja1992",
-        password: bcrypt.hashSync("Raja123$", 12),
+        passwordHash: bcrypt.hashSync("Raja123$", 12),
         role: "SUPER ADMIN",
         category: "super admin",
         assignedStoreId: "all",
@@ -141,6 +206,68 @@ async function initDB() {
   } catch (err) {
     console.error("[Database] Initial connection failed:", err);
   }
+}
+
+// Validation schemas using Zod
+const loginSchema = z.object({
+  username: z.string().trim().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required")
+});
+
+const productSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1, "Product name is required"),
+  sku: z.string().trim().min(1, "SKU is required"),
+  barcode: z.string().trim().optional(),
+  categoryId: z.string().trim().optional(),
+  category: z.string().trim().optional(),
+  brandId: z.string().trim().optional(),
+  brand: z.string().trim().optional(),
+  supplierId: z.string().trim().optional(),
+  supplier: z.string().trim().optional(),
+  costPrice: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  cost: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  sellingPrice: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  price: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  stock: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  reorder: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  gst: z.number().or(z.string().transform(v => parseInt(v) || 0)).optional(),
+  unit: z.string().trim().optional(),
+  weightUnit: z.string().trim().optional(),
+  sellingMode: z.string().trim().optional(),
+  status: z.string().trim().optional(),
+  imageId: z.string().trim().optional(),
+  image: z.string().trim().optional(),
+  images: z.array(z.string()).optional()
+});
+
+const userSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1, "Name is required"),
+  username: z.string().trim().min(1, "Username is required"),
+  email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
+  phone: z.string().trim().optional().or(z.literal("")),
+  password: z.string().min(1).optional(),
+  role: z.string().trim().min(1, "Role is required"),
+  permissions: z.array(z.string()).optional(),
+  assignedStoreId: z.string().trim().optional(),
+  assignedStores: z.array(z.string()).optional(),
+  status: z.string().trim().optional()
+});
+
+function validateBody(schema) {
+  return (req, res, next) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: "Request validation failed",
+        errors: result.error.errors
+      });
+    }
+    req.validatedBody = result.data;
+    next();
+  };
 }
 
 // JWT Authorization Middleware
@@ -162,11 +289,8 @@ function verifyJWT(req, res, next) {
 }
 
 // REST API - Authentication Login (Bcrypt Verification)
-app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ success: false, message: "Username and password required" });
-  }
+app.post('/api/auth/login', validateBody(loginSchema), async (req, res) => {
+  const { username, password } = req.validatedBody;
 
   try {
     const user = await db.collection('users').findOne({ username: username.toLowerCase() });
@@ -174,7 +298,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (user.status === 'suspended') return res.status(403).json({ success: false, message: "Your account is suspended" });
 
     // Compare with bcrypt
-    const match = bcrypt.compareSync(password, user.password);
+    const match = bcrypt.compareSync(password, user.passwordHash || user.password);
     if (!match) {
       return res.status(401).json({ success: false, message: "Invalid username or password" });
     }
@@ -204,6 +328,16 @@ app.post('/api/auth/login', async (req, res) => {
     console.error("Login failed:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
+});
+
+// Public Health Check Endpoint
+app.get('/health', (req, res) => {
+  const dbConnected = db !== null;
+  res.json({
+    status: dbConnected ? "healthy" : "unhealthy",
+    database: dbConnected ? "connected" : "disconnected",
+    uptime: `${Math.round(process.uptime())}s`
+  });
 });
 
 // REST API - Fetch public configurations (landing page name / logo)
@@ -255,15 +389,76 @@ app.post('/api/users/avatar', verifyJWT, async (req, res) => {
   }
 });
 
+// REST API - Securely change password for logged-in user
+app.post('/api/users/change-password', verifyJWT, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: "Missing current or new password" });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: "New password must be at least 6 characters long" });
+  }
+
+  try {
+    const user = await db.collection('users').findOne({ id: req.user.id });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    const match = bcrypt.compareSync(currentPassword, user.passwordHash || user.password);
+    if (!match) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    const newHash = bcrypt.hashSync(newPassword, 12);
+    await db.collection('users').updateOne(
+      { id: req.user.id },
+      { $set: { passwordHash: newHash, updatedAt: new Date().toISOString() } }
+    );
+
+    // Write audit log
+    await db.collection('audit_logs').insertOne({
+      userId: req.user.id,
+      module: "users",
+      action: "Password Change",
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({ success: true, message: "Password updated successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Server error updating password" });
+  }
+});
+
 // REST API - Fetch all products
 app.get('/api/products', verifyJWT, async (req, res) => {
   try {
     const products = await db.collection('products').find().toArray();
     
-    // Attach variant barcode history details to each product
+    // Attach variant barcode history details and image paths to each product
     for (const prod of products) {
       const barcodes = await db.collection('product_barcodes').find({ productId: prod.id }).toArray();
       prod.barcodes = barcodes;
+
+      // Look up image path from product_images collection
+      let imagePath = "/uploads/system/default-product.webp";
+      if (prod.imageId) {
+        const imgDoc = await db.collection('product_images').findOne({ id: prod.imageId });
+        if (imgDoc) imagePath = imgDoc.webpPath;
+      } else {
+        const imgDoc = await db.collection('product_images').findOne({ productId: prod.id });
+        if (imgDoc) {
+          imagePath = imgDoc.webpPath;
+          prod.imageId = imgDoc.id;
+        }
+      }
+
+      // Map normalized fields back to legacy client fields
+      prod.cost = prod.costPrice;
+      prod.price = prod.sellingPrice;
+      prod.category = prod.categoryId;
+      prod.brand = prod.brandId;
+      prod.supplier = prod.supplierId;
+      prod.image = imagePath;
+      prod.images = [imagePath];
     }
     res.json(products);
   } catch (err) {
@@ -272,40 +467,84 @@ app.get('/api/products', verifyJWT, async (req, res) => {
 });
 
 // REST API - Create / Update product
-app.post('/api/products', verifyJWT, async (req, res) => {
-  const prod = req.body;
-  if (!prod.name || !prod.sku) {
-    return res.status(400).json({ success: false, message: "Product name and SKU required" });
-  }
+app.post('/api/products', verifyJWT, validateBody(productSchema), async (req, res) => {
+  const prodInput = req.validatedBody;
 
   // Extract variants barcodes array if present
-  const barcodesList = prod.barcodes || [];
-  delete prod.barcodes; // Keep products document clean of linked array
+  const barcodesList = req.body.barcodes || [];
 
   try {
     // Unique SKU check
-    const existing = await db.collection('products').findOne({ sku: prod.sku });
-    if (existing && existing.id !== prod.id) {
+    const existing = await db.collection('products').findOne({ sku: prodInput.sku });
+    if (existing && existing.id !== prodInput.id) {
       return res.status(400).json({ success: false, message: "SKU / Barcode is already registered!" });
     }
 
-    if (prod.id) {
-      await db.collection('products').updateOne({ id: prod.id }, { $set: { ...prod, updatedAt: new Date().toISOString() } });
+    // Map legacy fields to normalized schema
+    const productDoc = {
+      id: prodInput.id || `prod-${Date.now()}`,
+      name: prodInput.name,
+      slug: prodInput.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+      sku: prodInput.sku,
+      barcode: prodInput.barcode || prodInput.sku,
+      categoryId: prodInput.categoryId || prodInput.category || "Dairy & Ghee",
+      brandId: prodInput.brandId || prodInput.brand || "AIAVRO",
+      supplierId: prodInput.supplierId || prodInput.supplier || "Direct Farmer Market",
+      costPrice: parseFloat(prodInput.costPrice || prodInput.cost) || 0,
+      sellingPrice: parseFloat(prodInput.sellingPrice || prodInput.price) || 0,
+      gst: parseInt(prodInput.gst) || 12,
+      unit: prodInput.unit || "1 Unit",
+      weightUnit: prodInput.weightUnit || "",
+      sellingMode: prodInput.sellingMode || "packaged",
+      status: prodInput.status || "active",
+      imageId: prodInput.imageId || "",
+      createdAt: prodInput.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (prodInput.id) {
+      await db.collection('products').updateOne({ id: prodInput.id }, { $set: productDoc });
+      
+      // Update image association if productId not set yet in product_images
+      if (productDoc.imageId) {
+        await db.collection('product_images').updateOne(
+          { id: productDoc.imageId },
+          { $set: { productId: productDoc.id } }
+        );
+      }
     } else {
-      prod.id = `prod-${Date.now()}`;
-      prod.createdAt = new Date().toISOString();
-      await db.collection('products').insertOne(prod);
+      await db.collection('products').insertOne(productDoc);
 
       // Initialize default inventory counts for all seeded stores if they don't exist
+      const initialStock = parseFloat(req.body.stock) || 0;
+      const initialReorder = parseFloat(req.body.reorder) || 5;
+
       const stores = await db.collection('stores').find().toArray();
       const inventoryDocs = stores.map(store => ({
-        productId: prod.id,
+        productId: productDoc.id,
         storeId: store.id,
-        quantity: parseFloat(prod.stock) || 0,
-        reorderLevel: parseFloat(prod.reorder) || 5,
+        quantity: initialStock,
+        reorderLevel: initialReorder,
         updatedAt: new Date().toISOString()
       }));
       await db.collection('inventory').insertMany(inventoryDocs);
+
+      // Save initial inventory transaction logs
+      for (const invDoc of inventoryDocs) {
+        if (invDoc.quantity > 0) {
+          await db.collection('inventory_transactions').insertOne({
+            id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            type: "IN",
+            productId: productDoc.id,
+            storeId: invDoc.storeId,
+            quantity: invDoc.quantity,
+            referenceType: "MANUAL",
+            referenceId: `init-${productDoc.id}`,
+            performedBy: req.user.username,
+            createdAt: new Date().toISOString()
+          });
+        }
+      }
     }
 
     // Sync product barcodes / variants configuration
@@ -435,9 +674,10 @@ app.post('/api/inventory/adjust', verifyJWT, async (req, res) => {
       { upsert: true }
     );
 
+    const logId = `log-${Date.now()}`;
     // Save inventory adjustment logs
     const log = {
-      id: `log-${Date.now()}`,
+      id: logId,
       productId,
       storeId,
       quantityAdjusted: qtyNum,
@@ -446,6 +686,19 @@ app.post('/api/inventory/adjust', verifyJWT, async (req, res) => {
       timestamp: new Date().toISOString()
     };
     await db.collection('inventory_logs').insertOne(log);
+
+    // Save normalized inventory transaction
+    await db.collection('inventory_transactions').insertOne({
+      id: `tx-${Date.now()}`,
+      type: "ADJUST",
+      productId,
+      storeId,
+      quantity: qtyNum,
+      referenceType: "MANUAL",
+      referenceId: logId,
+      performedBy: req.user.username,
+      createdAt: new Date().toISOString()
+    });
 
     // Add system audit logs entry
     await db.collection('audit_logs').insertOne({
@@ -494,8 +747,12 @@ app.post('/api/inventory/transfer', verifyJWT, async (req, res) => {
 
     // Save stock logs (2 log entries: source out, target in)
     const dateStr = new Date().toISOString();
+    const logOutId = `log-${Date.now()}-out`;
+    const logInId = `log-${Date.now()}-in`;
+    const transferId = `trans-${Date.now()}`;
+
     await db.collection('inventory_logs').insertOne({
-      id: `log-${Date.now()}-out`,
+      id: logOutId,
       productId,
       storeId: sourceStoreId,
       quantityAdjusted: -qtyNum,
@@ -505,13 +762,38 @@ app.post('/api/inventory/transfer', verifyJWT, async (req, res) => {
     });
 
     await db.collection('inventory_logs').insertOne({
-      id: `log-${Date.now()}-in`,
+      id: logInId,
       productId,
       storeId: targetStoreId,
       quantityAdjusted: qtyNum,
       notes: notes || `Stock Transfer from store: ${sourceStoreId}`,
       userId: req.user.id,
       timestamp: dateStr
+    });
+
+    // Save normalized inventory transactions
+    await db.collection('inventory_transactions').insertOne({
+      id: `tx-${Date.now()}-out`,
+      type: "TRANSFER_OUT",
+      productId,
+      storeId: sourceStoreId,
+      quantity: -qtyNum,
+      referenceType: "TRANSFER",
+      referenceId: transferId,
+      performedBy: req.user.username,
+      createdAt: dateStr
+    });
+
+    await db.collection('inventory_transactions').insertOne({
+      id: `tx-${Date.now()}-in`,
+      type: "TRANSFER_IN",
+      productId,
+      storeId: targetStoreId,
+      quantity: qtyNum,
+      referenceType: "TRANSFER",
+      referenceId: transferId,
+      performedBy: req.user.username,
+      createdAt: dateStr
     });
 
     // Audit log entry
@@ -630,14 +912,28 @@ app.post('/api/invoices', verifyJWT, async (req, res) => {
       );
 
       // Track stock changes in logs
+      const logId = `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
       await db.collection('inventory_logs').insertOne({
-        id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: logId,
         productId: item.productId,
         storeId: inv.storeId,
         quantityAdjusted: -parseFloat(item.quantity),
         notes: `Sale Checkout transaction: ${inv.invoiceNumber}`,
         userId: req.user.id,
         timestamp: new Date().toISOString()
+      });
+
+      // Save normalized inventory transaction
+      await db.collection('inventory_transactions').insertOne({
+        id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        type: "OUT",
+        productId: item.productId,
+        storeId: inv.storeId,
+        quantity: -parseFloat(item.quantity),
+        referenceType: "INVOICE",
+        referenceId: inv.invoiceNumber,
+        performedBy: req.user.username,
+        createdAt: new Date().toISOString()
       });
     }
 
@@ -702,14 +998,28 @@ app.post('/api/purchases', verifyJWT, async (req, res) => {
       );
 
       // Track stock changes in logs
+      const logId = `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
       await db.collection('inventory_logs').insertOne({
-        id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: logId,
         productId: item.productId,
         storeId: purchase.storeId,
         quantityAdjusted: parseFloat(item.quantity),
         notes: `Stock Purchase Invoice Entry: ${purchase.invoiceNumber || 'N/A'}`,
         userId: req.user.id,
         timestamp: new Date().toISOString()
+      });
+
+      // Save normalized inventory transaction
+      await db.collection('inventory_transactions').insertOne({
+        id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        type: "IN",
+        productId: item.productId,
+        storeId: purchase.storeId,
+        quantity: parseFloat(item.quantity),
+        referenceType: "PURCHASE",
+        referenceId: purchase.id,
+        performedBy: req.user.username,
+        createdAt: new Date().toISOString()
       });
     }
 
@@ -946,7 +1256,27 @@ app.post('/api/upload', verifyJWT, async (req, res) => {
       console.log(`[Image Upload] File re-compressed to: ${stats.size} bytes`);
     }
 
-    res.json({ success: true, imagePath: `/uploads/${uploadType}/${outputFileName}` });
+    const imagePath = `/uploads/${uploadType}/${outputFileName}`;
+    const imageId = `img-${Date.now()}`;
+
+    // If uploading product image, store metadata separately in product_images collection
+    if (uploadType === 'products') {
+      await db.collection('product_images').insertOne({
+        id: imageId,
+        productId: req.query.productId || "",
+        filename: outputFileName,
+        filepath: targetPath,
+        webpPath: imagePath,
+        size: `${Math.round(stats.size / 1024)}KB`,
+        mimeType: "image/webp",
+        width: 800,
+        height: 800,
+        uploadedBy: req.user ? req.user.username : "system",
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    res.json({ success: true, imagePath, imageId });
   } catch (err) {
     console.error("Image upload failed:", err);
     res.status(500).json({ success: false, message: "Failed to optimize and upload product image" });
