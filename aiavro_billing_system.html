@@ -2419,6 +2419,19 @@
         </div>
         <button type="submit" class="login-btn">Authenticate & Enter</button>
       </form>
+
+      <!-- Backend URL Configurator link -->
+      <div style="text-align:center; margin-top:16px; font-size:11px">
+        <a href="#" onclick="toggleLoginUrlConfig(event)" style="color:var(--text-muted); text-decoration:none; font-weight:700">⚙️ Configure API Server URL</a>
+      </div>
+      
+      <div id="login-url-config-box" style="display:none; margin-top:12px; background:var(--bg-primary); padding:10px; border-radius:6px; border:1px solid var(--border-color)">
+        <label style="font-size:10px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px">API Gateway Endpoint URL</label>
+        <div style="display:flex; gap:8px">
+          <input type="text" id="login-backend-url-input" style="flex:1; padding:6px; font-size:11px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-panel); color:var(--text-primary)" placeholder="e.g. http://localhost:8181">
+          <button type="button" onclick="saveLoginUrlConfig()" class="primary-btn" style="padding:4px 10px; font-size:11px">Apply</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -5677,6 +5690,29 @@
       } catch (e) {
         console.error("Failed to load public settings:", e);
       }
+    }
+
+    function toggleLoginUrlConfig(e) {
+      if (e) e.preventDefault();
+      const box = document.getElementById("login-url-config-box");
+      const isHidden = box.style.display === "none" || !box.style.display;
+      box.style.display = isHidden ? "block" : "none";
+      if (isHidden) {
+        document.getElementById("login-backend-url-input").value = state.backendUrl;
+      }
+    }
+
+    function saveLoginUrlConfig() {
+      const val = document.getElementById("login-backend-url-input").value.trim();
+      if (!val) {
+        triggerAlert("API Server URL cannot be empty!", "danger");
+        return;
+      }
+      localStorage.setItem("aiavro_backend_url", val);
+      state.backendUrl = val;
+      triggerAlert(`API Server URL updated to: ${val}`, "success");
+      document.getElementById("login-url-config-box").style.display = "none";
+      loadPublicSettings(); // Reload settings from new URL
     }
 
     function handleLandingLogoSelect(e) {
