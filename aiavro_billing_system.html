@@ -312,7 +312,7 @@
 
     /* Main Area Container */
     main {
-      padding: 30px 40px;
+      padding: 20px 24px;
       display: flex;
       flex-direction: column;
       overflow-y: auto;
@@ -323,7 +323,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 30px;
+      margin-bottom: 16px;
     }
 
     .header-title-area h2 {
@@ -427,9 +427,9 @@
       background-color: var(--bg-panel);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
-      padding: 24px;
+      padding: 20px;
       box-shadow: var(--shadow-sm);
-      margin-bottom: 24px;
+      margin-bottom: 16px;
       transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
     }
 
@@ -515,9 +515,9 @@
     /* Charts Section */
     .dashboard-charts-grid {
       display: grid;
-      grid-template-columns: 1.5fr 1fr;
-      gap: 24px;
-      margin-bottom: 24px;
+      grid-template-columns: 3fr 2fr;
+      gap: 20px;
+      margin-bottom: 16px;
     }
 
     /* SVG Sales Chart Styling */
@@ -805,9 +805,9 @@
     /* POS View Split Layout */
     .pos-billing-layout {
       display: grid;
-      grid-template-columns: 1fr 480px;
-      gap: 24px;
-      height: calc(100vh - 160px);
+      grid-template-columns: 1fr 500px;
+      gap: 20px;
+      height: calc(100vh - 120px);
       align-items: stretch;
     }
 
@@ -1338,7 +1338,7 @@
 
     .primary-btn:hover:not(:disabled) {
       background-color: var(--accent-green-hover);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
       box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
     }
 
@@ -1367,7 +1367,7 @@
     .secondary-btn:hover {
       border-color: var(--text-muted);
       background-color: var(--bg-primary);
-      transform: translateY(-1px);
+      transform: none;
     }
 
     /* Modal Styles */
@@ -2244,7 +2244,7 @@
       display: grid;
       grid-template-columns: 2fr 1fr;
       gap: 20px;
-      margin: 15px 18px;
+      margin: 10px 0;
       min-height: 140px;
     }
     .product-center-grid {
@@ -3543,7 +3543,7 @@
           <div class="panel-header">
             <h3 class="panel-title">System Settings, Data Backups & Reset</h3>
           </div>
-          <div style="display:flex; flex-direction:column; gap:20px; max-width:600px">
+          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px">
 
             <!-- Visual Preferences Setup -->
             <div style="border-bottom:1px solid var(--border-color); padding-bottom:20px">
@@ -8020,7 +8020,7 @@
       if (quickLogoInput) quickLogoInput.value = activeBiz.logo || '';
     }
 
-    function saveQuickBrandSetup(e) {
+    async function saveQuickBrandSetup(e) {
       e.preventDefault();
       const activeBiz = state.businesses.find(b => b.id === state.activeBusinessId) || state.businesses[0];
       if (!activeBiz) return;
@@ -8037,11 +8037,34 @@
         activeBiz.logo = newLogo;
       }
 
-      saveStateToLocalStorage();
-      updateActiveBrandUI();
-      renderBusinessesListDropdowns();
-      if (state.activeView === 'businesses') renderBusinessesCards();
-      triggerAlert(`Billing Profile & Brand Logo updated for '${activeBiz.name}'!`, "success");
+      // Persist to backend API (not just localStorage)
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/businesses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(activeBiz)
+        });
+        const result = await res.json();
+        if (result.success) {
+          saveStateToLocalStorage();
+          updateActiveBrandUI();
+          renderBusinessesListDropdowns();
+          if (state.activeView === 'businesses') renderBusinessesCards();
+          triggerAlert(`Business profile saved to server for '${activeBiz.name}'!`, "success");
+        } else {
+          triggerAlert(result.message || 'Failed to save business profile to server.', "error");
+        }
+      } catch (err) {
+        console.error('Business profile save error:', err);
+        saveStateToLocalStorage();
+        updateActiveBrandUI();
+        renderBusinessesListDropdowns();
+        triggerAlert(`Saved locally. Server sync failed: ${err.message}`, "warning");
+      }
     }
 
     function changeActiveBusiness(bizId) {
@@ -8901,7 +8924,7 @@
           </div>
           
           <div style="display:flex; gap:8px; flex-wrap:wrap">
-            ${isActive && !isSelected ? `<button class="primary-btn" style="padding:6px 12px; font-size:11px" onclick="changeActiveBusiness(\'${biz.id}\'); renderBusinessesCards()">Set Active Outlet</button>` : ''}
+            ${isActive && !isSelected ? `<button class="primary-btn" style="padding:6px 12px; font-size:11px" onclick="changeActiveBusiness(\'${biz.id}\')">Set Active Outlet</button>` : ''}
             <button class="secondary-btn" style="padding:6px 12px; font-size:11px; border-color:${isActive ? 'var(--accent-gold)' : 'var(--accent-green)'}; color:${isActive ? 'var(--accent-gold)' : 'var(--accent-green)'}" onclick="toggleBusinessStatus(\'${biz.id}\')">${isActive ? 'Suspend Store' : 'Activate Store'}</button>
             <button class="secondary-btn" style="padding:6px 12px; font-size:11px; border-color:var(--accent-blue); color:var(--accent-blue)" onclick="quickAssignStaffToStore(\'${biz.id}\')">+ Assign Staff</button>
             <button class="secondary-btn" style="padding:6px 12px; font-size:11px" onclick="openBusinessModal(\'${biz.id}\')">Edit Details</button>
