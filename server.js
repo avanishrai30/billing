@@ -46,6 +46,7 @@ const { z } = require('zod');
 require('dotenv').config();
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -305,26 +306,8 @@ async function initDB() {
           { upsert: true }
         );
 
-        // 4. Wipe all products and barcodes
-        await db.collection('products').deleteMany({});
-        await db.collection('product_barcodes').deleteMany({});
-        console.log("[Database Cleanup] Wiped products master and variants databases.");
-
-        // 5. Wipe invoices
-        await db.collection('invoices').deleteMany({});
-        console.log("[Database Cleanup] Wiped invoice history.");
-
-        // 6. Wipe inventory records and transactions
-        await db.collection('inventory').deleteMany({});
-        await db.collection('inventory_transactions').deleteMany({});
-        await db.collection('inventory_logs').deleteMany({});
-        console.log("[Database Cleanup] Wiped stock inventory ledgers.");
-
-        // 7. Wipe other transient records
-        await db.collection('customers').deleteMany({});
-        await db.collection('suppliers').deleteMany({});
-        await db.collection('purchases').deleteMany({});
-        console.log("[Database Cleanup] Database wipe successfully executed. Ready for production.");
+        // 4. Seeding/Wiping operations deactivated for production data persistence.
+        console.log("[Database Cleanup] Core outlet records validated. Ready for production.");
       } else {
         console.log("[Database Cleanup] User business outlet not created yet. Skipping cleanup.");
       }
@@ -817,6 +800,67 @@ app.post('/api/products', verifyJWT, validateBody(productSchema), async (req, re
   } catch (err) {
     console.error("Save product failed:", err);
     res.status(500).json({ success: false, message: "Failed to save product" });
+  }
+});
+
+// REST API - Bulk Import Products
+app.post('/api/products/import', verifyJWT, async (req, res) => {
+  const { newProducts, logs } = req.body;
+  if (!Array.isArray(newProducts)) {
+    return res.status(400).json({ success: false, message: "Products list is required" });
+  }
+
+  try {
+    for (const p of newProducts) {
+      if (!p.sku || !p.name) continue;
+      const productDoc = {
+        id: p.id || `prod-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        name: p.name,
+        slug: p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+        sku: p.sku,
+        barcode: p.barcode || p.sku,
+        category: p.category || "Loose & Fresh Items",
+        categoryId: p.categoryId || p.category || "Loose & Fresh Items",
+        brand: p.brand || "AIAVRO",
+        brandId: p.brandId || p.brand || "AIAVRO",
+        supplier: p.supplier || "Direct Farmer Market",
+        supplierId: p.supplierId || p.supplier || "Direct Farmer Market",
+        cost: parseFloat(p.cost) || 0,
+        costPrice: parseFloat(p.cost) || 0,
+        price: parseFloat(p.price) || 0,
+        sellingPrice: parseFloat(p.price) || 0,
+        stock: parseFloat(p.stock) || 0,
+        reorder: parseFloat(p.reorder) || 5,
+        maxStock: parseFloat(p.maxStock) || 100,
+        gst: parseInt(p.gst) || 12,
+        unit: p.unit || "1 Unit",
+        weightUnit: p.weightUnit || "",
+        sellingMode: p.sellingMode || "packaged",
+        type: p.type || "packed",
+        dom: p.dom || "",
+        doe: p.doe || "",
+        emoji: p.emoji || "📦",
+        image: p.image || "/uploads/system/default-product.webp",
+        images: p.images || [p.image || "/uploads/system/default-product.webp"],
+        store: p.store || "Main Store",
+        status: p.status || "active",
+        createdAt: p.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      await db.collection('products').updateOne({ sku: productDoc.sku }, { $set: productDoc }, { upsert: true });
+    }
+
+    if (Array.isArray(logs) && logs.length > 0) {
+      await db.collection('logs').insertMany(logs.map(log => ({ ...log, timestamp: log.timestamp || new Date().toISOString() })));
+    }
+
+    // Broadcast change
+    io.emit('PRODUCTS_UPDATED');
+
+    res.json({ success: true, message: `Successfully imported ${newProducts.length} products` });
+  } catch (err) {
+    console.error("Bulk import failed:", err);
+    res.status(500).json({ success: false, message: "Bulk import failed" });
   }
 });
 

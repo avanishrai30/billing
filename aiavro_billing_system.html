@@ -5533,6 +5533,17 @@
       return String(val).toLowerCase();
     }
 
+    // Escape HTML strings to prevent XSS injection attacks
+    function escapeHTML(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     // Verify password: supports both hashed and legacy plain-text passwords
     function verifyPassword(inputPassword, storedPassword) {
       if (!storedPassword) return false;
@@ -6371,12 +6382,12 @@
 
         row.innerHTML = `
           <td style="font-size:12px; color:var(--text-muted); white-space:nowrap">${dateStr}</td>
-          <td><span style="font-size:11px; font-weight:700; color:var(--accent-blue)">🏬 ${storeName}</span></td>
-          <td><strong style="color:var(--text-primary)">${log.user}</strong></td>
-          <td><span style="font-size:11px; font-weight:800; color:var(--accent-green)">${log.role}</span></td>
+          <td><span style="font-size:11px; font-weight:700; color:var(--accent-blue)">🏬 ${escapeHTML(storeName)}</span></td>
+          <td><strong style="color:var(--text-primary)">${escapeHTML(log.user)}</strong></td>
+          <td><span style="font-size:11px; font-weight:800; color:var(--accent-green)">${escapeHTML(log.role)}</span></td>
           <td>${actionBadge}</td>
-          <td><code style="font-size:11px; font-weight:700; color:var(--text-muted)">${log.view}</code></td>
-          <td style="font-size:12px; color:var(--text-primary); max-width: 300px; word-wrap: break-word">${log.details}</td>
+          <td><code style="font-size:11px; font-weight:700; color:var(--text-muted)">${escapeHTML(log.view)}</code></td>
+          <td style="font-size:12px; color:var(--text-primary); max-width: 300px; word-wrap: break-word">${escapeHTML(log.details)}</td>
         `;
         tbody.appendChild(row);
       });
@@ -6433,23 +6444,23 @@
         row.innerHTML = `
           <td>
             <div style="display:flex; align-items:center; gap:10px">
-              <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-green);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0">${getInitials(user.name)}</div>
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-green);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0">${escapeHTML(getInitials(user.name))}</div>
               <div>
-                <div style="font-weight:700; font-size:13px">${user.name}</div>
-                ${user.email ? `<div style="font-size:11px; color:var(--text-muted)">${user.email}</div>` : ''}
+                <div style="font-weight:700; font-size:13px">${escapeHTML(user.name)}</div>
+                ${user.email ? `<div style="font-size:11px; color:var(--text-muted)">${escapeHTML(user.email)}</div>` : ''}
               </div>
             </div>
           </td>
-          <td><code style="background:var(--bg-primary); padding:3px 7px; border-radius:4px; font-size:12px">@${user.username}</code>${isSelf ? ' <span style="font-size:10px; color:var(--accent-green); font-weight:700">(you)</span>' : ''}</td>
+          <td><code style="background:var(--bg-primary); padding:3px 7px; border-radius:4px; font-size:12px">@${escapeHTML(user.username)}</code>${isSelf ? ' <span style="font-size:10px; color:var(--accent-green); font-weight:700">(you)</span>' : ''}</td>
           <td style="text-align:center">
-            <span class="role-badge ${categoryColors[category] || 'employee'}">${user.role}</span>
-            <small style="display:block; font-size:9px; color:var(--text-muted); margin-top:2px">(${category})</small>
+            <span class="role-badge ${categoryColors[category] || 'employee'}">${escapeHTML(user.role)}</span>
+            <small style="display:block; font-size:9px; color:var(--text-muted); margin-top:2px">(${escapeHTML(category)})</small>
           </td>
-          <td style="font-size:12px; color:var(--text-muted)">${user.email || '—'}</td>
+          <td style="font-size:12px; color:var(--text-muted)">${user.email ? escapeHTML(user.email) : '—'}</td>
           <td style="text-align:center">
             <span class="${isActive ? 'user-status-active' : 'user-status-suspended'}">${isActive ? '✓ Active' : '⊘ Suspended'}</span>
           </td>
-          <td style="font-size:12px; color:var(--text-muted)">${created}</td>
+          <td style="font-size:12px; color:var(--text-muted)">${escapeHTML(created)}</td>
           <td style="text-align:center">
             ${actionButtons}
           </td>
@@ -8288,21 +8299,21 @@
         row.innerHTML = `
           <td style="text-align:center">
             <div style="width:36px; height:36px; border-radius:4px; overflow:hidden; border:1px solid var(--border-color); display:inline-flex; align-items:center; justify-content:center; background:var(--bg-panel)">
-              <img src="${p.image || '/uploads/system/default-product.webp'}" loading="lazy" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'16\' height=\'16\' fill=\'%23888\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\'/></svg>'">
+              <img src="${escapeHTML(p.image || '/uploads/system/default-product.webp')}" loading="lazy" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'16\' height=\'16\' fill=\'%23888\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\'/></svg>'">
             </div>
           </td>
-          <td><code style="font-weight:700; color:var(--accent-green)">${p.sku}</code></td>
+          <td><code style="font-weight:700; color:var(--accent-green)">${escapeHTML(p.sku)}</code></td>
           <td>
-            <strong>${p.name}</strong>
-            <small style="color:var(--text-muted); display:block">Size: ${p.unit} | GST: ${p.gst !== undefined ? p.gst : 5}%</small>
+            <strong>${escapeHTML(p.name)}</strong>
+            <small style="color:var(--text-muted); display:block">Size: ${escapeHTML(p.unit)} | GST: ${p.gst !== undefined ? p.gst : 5}%</small>
           </td>
-          <td>${p.brand || 'AIAVRO'}</td>
-          <td>${p.category}</td>
-          <td>${p.supplier || 'Golden Ghee Co.'}</td>
+          <td>${p.brand ? escapeHTML(p.brand) : 'AIAVRO'}</td>
+          <td>${escapeHTML(p.category)}</td>
+          <td>${p.supplier ? escapeHTML(p.supplier) : 'Golden Ghee Co.'}</td>
           <td style="text-align:right">₹${safeFixed(p.cost, 2)}</td>
           <td style="text-align:right">₹${safeFixed(p.price, 2)}</td>
           <td style="text-align:right">
-            <strong>${Number.isInteger(Number(p.stock)) ? (p.stock !== undefined ? p.stock.toString() : '0') : safeFixed(p.stock, 2)} ${p.sellingMode === 'loose' ? (p.unit || 'kg') : 'Units'}</strong>
+            <strong>${Number.isInteger(Number(p.stock)) ? (p.stock !== undefined ? p.stock.toString() : '0') : safeFixed(p.stock, 2)} ${p.sellingMode === 'loose' ? escapeHTML(p.unit || 'kg') : 'Units'}</strong>
             <small style="display:block">${stockBadge}</small>
           </td>
           <td style="text-align:center">${statusBadge}</td>
@@ -9303,11 +9314,11 @@
 
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><strong>${cust.name}</strong></td>
-          <td>${cust.phone}</td>
-          <td>${cust.email || '-'}</td>
-          <td><code style="font-weight:700">${cust.gstin || 'Unregistered'}</code></td>
-          <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${cust.address}</td>
+          <td><strong>${escapeHTML(cust.name)}</strong></td>
+          <td>${escapeHTML(cust.phone)}</td>
+          <td>${cust.email ? escapeHTML(cust.email) : '-'}</td>
+          <td><code style="font-weight:700">${cust.gstin ? escapeHTML(cust.gstin) : 'Unregistered'}</code></td>
+          <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${escapeHTML(cust.address)}</td>
           <td><strong>${invCount} Bills</strong></td>
           <td><strong style="color:var(--accent-green)">₹${totalPurchases.toFixed(2)}</strong></td>
           <td>
@@ -9324,7 +9335,10 @@
       const cur = posSelect.value;
       posSelect.innerHTML = "";
       state.customers.forEach(c => {
-        posSelect.innerHTML += `<option value="${c.id}">${c.name} (${c.phone})</option>`;
+        const option = document.createElement("option");
+        option.value = c.id;
+        option.innerText = `${c.name} (${c.phone})`;
+        posSelect.appendChild(option);
       });
       if (cur) posSelect.value = cur;
     }
