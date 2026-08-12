@@ -6025,8 +6025,10 @@
           if (card) { card.style.animation = "shake 0.4s ease"; setTimeout(() => card.style.animation = "", 500); }
         }
       } catch (err) {
+        console.error("[Login Error]", err);
         if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Authenticate & Enter"; }
-        errorDiv.innerHTML = "❌ Failed to connect to server gateway.";
+        const details = err.message ? `: ${err.message}` : '';
+        errorDiv.innerHTML = `❌ Failed to connect to server gateway (${state.backendUrl})${details}. Check network/CORS.`;
         errorDiv.style.display = "block";
       }
     }

@@ -125,41 +125,28 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Configure CORS origins
-const allowedOrigins = ['https://billing.vcorganics.com'];
+// Configure CORS origins to allow all web clients, Vercel deployments, custom domains, and mobile terminals
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow mobile/CURL/local files
-    
-    const originLower = origin.toLowerCase();
-    const isAllowed = allowedOrigins.includes(origin) || 
-                      originLower.endsWith('.vcorganics.com') || 
-                      originLower.endsWith('.vercel.app') ||
-                      originLower.startsWith('http://localhost') || 
-                      originLower.startsWith('http://127.0.0.1');
-
-    if (isAllowed) {
-      return callback(null, true);
-    }
-    callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin: true, // Dynamically reflect request origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true
 }));
+app.options('*', cors());
 
 app.use(express.json({ limit: '15mb' }));
 
 // Rate limiting setup
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  max: 150,
   message: { success: false, message: "Too many login attempts, please try again after 15 minutes." }
 });
 app.use('/api/auth/', authLimiter);
 
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 100,
   message: { success: false, message: "Too many image uploads, please try again after 15 minutes." }
 });
 app.use('/api/upload', uploadLimiter);
