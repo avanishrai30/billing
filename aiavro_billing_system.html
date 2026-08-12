@@ -5504,6 +5504,11 @@
       const num = Number(val);
       return isNaN(num) ? (0).toFixed(decimals) : num.toFixed(decimals);
     }
+    // Safe string upper helper to prevent TypeError on undefined/null .toUpperCase() calls
+    function safeUpper(val, fallback = '') {
+      if (val === undefined || val === null) return String(fallback).toUpperCase();
+      return String(val).toUpperCase();
+    }
 
     // Verify password: supports both hashed and legacy plain-text passwords
     function verifyPassword(inputPassword, storedPassword) {
@@ -6055,8 +6060,8 @@
       const category = getUserCategory(user);
 
       // Update sidebar account button
-      document.getElementById("sidebar-username").innerText = user.name;
-      document.getElementById("sidebar-userrole").innerText = user.role.toUpperCase();
+      document.getElementById("sidebar-username").innerText = user.name || user.username || 'User';
+      document.getElementById("sidebar-userrole").innerText = safeUpper(user.role || user.category, 'USER');
       
       const avatarImg = document.getElementById("sidebar-avatar-img");
       const avatarInitials = document.getElementById("sidebar-avatar-initials");
@@ -6335,7 +6340,7 @@
         } else if (log.action === 'auth') {
           actionBadge = `<span class="status-badge partial" style="background-color:rgba(59,130,246,0.1); color:#3b82f6">AUTH</span>`;
         } else {
-          actionBadge = `<span class="status-badge" style="background-color:rgba(107,114,128,0.1); color:var(--text-muted)">${log.action.toUpperCase()}</span>`;
+          actionBadge = `<span class="status-badge" style="background-color:rgba(107,114,128,0.1); color:var(--text-muted)">${safeUpper(log.action)}</span>`;
         }
 
         const dateStr = new Date(log.timestamp).toLocaleString();
@@ -6642,7 +6647,7 @@
           opt.value = u.id;
           const currentStore = state.businesses.find(b => b.id === u.assignedStoreId);
           const storeLabel = currentStore ? `(Currently: ${getStoreDisplayName(currentStore)})` : `(All Stores Access)`;
-          opt.innerText = `${u.name} (@${u.username}) [${u.role.toUpperCase()}] ${storeLabel}`;
+          opt.innerText = `${u.name} (@${u.username}) [${safeUpper(u.role || u.category, 'USER')}] ${storeLabel}`;
           if (u.assignedStoreId === storeId) opt.selected = true;
           select.appendChild(opt);
         });
@@ -10167,7 +10172,7 @@
       document.getElementById("inv-terms-content").innerText = biz.terms || "Agro terms apply.";
 
       document.getElementById("inv-pay-mode-text").innerHTML = `
-        Payment Method: <strong>${inv.paymentMode.toUpperCase()}</strong>
+        Payment Method: <strong>${safeUpper(inv.paymentMode, 'CASH')}</strong>
       `;
 
       // Populate 58mm Thermal Receipt Data
@@ -10225,7 +10230,7 @@
       }
 
       const recPayMode = document.getElementById("rec-58mm-pay-mode");
-      if (recPayMode) recPayMode.innerHTML = `PAID VIA: <strong>${inv.paymentMode.toUpperCase()}</strong>`;
+      if (recPayMode) recPayMode.innerHTML = `PAID VIA: <strong>${safeUpper(inv.paymentMode, 'CASH')}</strong>`;
 
       const recTerms = document.getElementById("rec-58mm-terms-section");
       if (recTerms) recTerms.innerText = biz.terms || "Thank you for shopping!";
@@ -10430,7 +10435,7 @@
 *Items Checkouts:* ${itemsStr}
 ---------------------------------------
 *Grand Total:* *₹${inv.grandtotal.toFixed(2)}*
-*Bill Status:* ${inv.status.toUpperCase()} (${inv.paymentMode.toUpperCase()})
+*Bill Status:* ${safeUpper(inv.status)} (${safeUpper(inv.paymentMode, 'CASH')})
 ${inv.paymentMode === 'upi' ? `*Scan to Pay UPI ID:* ${biz.upiId}` : ''}
 
 Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
@@ -12486,7 +12491,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
           <td><code>${log.id.slice(-6)}</code></td>
           <td>${dateStr}</td>
           <td><strong>${log.productName}</strong></td>
-          <td><span class="status-badge ${getLogTypeClass(log.type)}" style="font-size:10px">${log.type.toUpperCase()}</span></td>
+          <td><span class="status-badge ${getLogTypeClass(log.type)}" style="font-size:10px">${safeUpper(log.type)}</span></td>
           <td style="text-align:right">${qtyLabel}</td>
           <td><code>${log.user}</code></td>
           <td><strong>${log.referenceId || '-'}</strong></td>
