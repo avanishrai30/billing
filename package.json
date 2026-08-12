@@ -14,5 +14,12 @@
     "build:backend": "npm run build -w apps/backend",
     "start:frontend": "npm run start -w apps/frontend",
     "start:backend": "npm run start -w apps/backend"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.5.0",
+    "pdfkit": "^0.19.1",
+    "sharp": "^0.35.3"
   }
 }

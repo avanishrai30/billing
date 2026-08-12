@@ -358,6 +358,9 @@
       cursor: pointer;
       box-shadow: var(--shadow-sm);
       transition: var(--transition);
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .select-dropdown:focus {
@@ -1131,8 +1134,8 @@
     }
 
     .qty-btn {
-      width: 26px;
-      height: 26px;
+      width: 36px;
+      height: 36px;
       border-radius: 8px;
       border: 1px solid var(--border-color);
       background-color: var(--bg-panel);
@@ -1141,6 +1144,7 @@
       display: grid;
       place-items: center;
       font-weight: 800;
+      font-size: 16px;
       transition: var(--transition);
     }
 
@@ -1171,11 +1175,14 @@
       border: none;
       color: var(--accent-danger);
       cursor: pointer;
-      padding: 4px;
+      padding: 8px;
       display: grid;
       place-items: center;
       opacity: 0.6;
       transition: var(--transition);
+      min-width: 36px;
+      min-height: 36px;
+      font-size: 18px;
     }
 
     .cart-remove-btn:hover {
@@ -1384,7 +1391,7 @@
     .modal-backdrop.active {
       opacity: 1;
       pointer-events: auto !important;
-      z-index: 1000 !important;
+      z-index: 900 !important;
     }
 
     .modal-card {
@@ -1400,6 +1407,7 @@
       flex-direction: column;
       transform: scale(0.95);
       transition: transform 0.3s ease;
+      margin: 16px;
     }
 
     .modal-backdrop.active .modal-card {
@@ -1593,6 +1601,9 @@
       border: 1px solid var(--border-color);
       background-color: var(--bg-panel);
       color: var(--text-primary);
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
       font-size: 13px;
       font-weight: 600;
       outline: none;
@@ -1643,7 +1654,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      z-index: 1000;
+      z-index: 9999;
     }
 
     .floating-alert {
@@ -2295,6 +2306,42 @@
       }
       .dashboard-metrics-grid {
         grid-template-columns: 1fr !important;
+      }
+      .form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+      .form-group.full-width {
+        grid-column: span 1 !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .product-center-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+      .modal-card {
+        margin: 8px !important;
+        max-height: 95vh !important;
+      }
+      .qty-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+      .cart-remove-btn {
+        min-width: 40px;
+        min-height: 40px;
+      }
+      .cart-item-name {
+        font-size: 12px !important;
+      }
+      .pos-checkout-bottom-container {
+        padding: 10px !important;
+      }
+      main {
+        padding: 12px 8px !important;
       }
     }
 
@@ -3085,6 +3132,9 @@
               <button class="secondary-btn" onclick="openBarcodeSheetGeneratorModal()" style="padding: 8px 14px">
                 <svg style="width:16px;height:16px;fill:currentColor;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24"><path d="M3 5h2v14H3zm4 0h1v14H7zm3 0h2v14h-2zm4 0h1v14h-1zm3 0h3v14h-3zm4 0h1v14h-1z"/></svg>
                 Print Barcode Stickers
+              </button>
+              <button class="secondary-btn" onclick="openTransferStockModal()" style="padding: 8px 14px; border-color:var(--accent-blue); color:var(--accent-blue)">
+                🔄 Transfer Store Stock
               </button>
               <button class="primary-btn" onclick="openProductModal()" style="padding: 8px 14px">
                 + Add Product (Own / External)
@@ -4246,8 +4296,11 @@
         <button class="secondary-btn" id="invoice-whatsapp-btn" onclick="shareInvoiceWhatsApp()">
           Share via WhatsApp
         </button>
+        <button class="secondary-btn" id="invoice-server-pdf-btn" onclick="downloadServerInvoicePDF()" style="border-color:var(--accent-blue); color:var(--accent-blue)">
+          📥 Download PDF Invoice
+        </button>
         <button class="primary-btn" onclick="window.print()">
-          Download / Print PDF
+          Print Receipt (Local)
         </button>
       </div>
     </div>
@@ -4290,7 +4343,7 @@
             <!-- Weight Unit Selector (shown only for Loose mode) -->
             <div id="prod-form-weight-unit-group" style="display:none; margin-top:8px">
               <label style="font-weight:700; font-size:12px; color:var(--text-muted); margin-bottom:4px; display:block">⚖️ Measurement Unit</label>
-              <select id="prod-form-weight-unit" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700; font-size:13px">
+              <select id="prod-form-weight-unit" style="padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700; font-size:13px; width:100%">
                 <option value="g">Grams (g) → Price per kg</option>
                 <option value="ml">Milliliters (ml) → Price per Liter</option>
                 <option value="kg">Kilograms (kg) → Price per kg</option>
@@ -4373,6 +4426,16 @@
           <div class="form-group">
             <label>Store Location</label>
             <input type="text" id="prod-form-store" placeholder="e.g. Main Store" value="Main Store">
+          </div>
+          <!-- Product Variants & Alternate Barcodes -->
+          <div class="form-group full-width" style="border-top:1px solid var(--border-color); padding-top:15px; margin-top:10px">
+            <label style="font-weight:800; color:var(--text-primary); margin-bottom:6px; display:block">📦 Product Variants / Alternate Barcodes</label>
+            <div id="product-variants-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px">
+              <!-- Dynamically rendered variant rows -->
+            </div>
+            <button type="button" class="secondary-btn" onclick="addNewProductVariantRow()" style="padding:6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:4px">
+              ➕ Add Variant / Barcode
+            </button>
           </div>
 
           <div class="form-group full-width" style="margin-top: 5px; margin-bottom: 5px;">
@@ -4498,6 +4561,50 @@
     </div>
   </div>
 
+
+  <!-- ==================== STOCK TRANSFER MODAL ==================== -->
+  <div class="modal-backdrop" id="transfer-stock-modal">
+    <div class="modal-card" style="max-width:500px">
+      <div class="modal-header">
+        <h3 style="font-family:'Outfit'">🔄 Inter-Store Stock Transfer</h3>
+        <button class="modal-close-btn" onclick="closeTransferStockModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="transfer-stock-form" onsubmit="executeStockTransfer(event)" class="form-grid">
+          <div class="form-group full-width">
+            <label>Select Product to Transfer</label>
+            <select id="transfer-stock-product" onchange="updateTransferAvailableStockLabel()" style="width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700" required>
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Source Store (From)</label>
+            <select id="transfer-stock-source" onchange="updateTransferAvailableStockLabel()" style="width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700" required>
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target Store (To)</label>
+            <select id="transfer-stock-target" style="width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700" required>
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Transfer Quantity <span id="transfer-available-stock-label" style="color:var(--accent-green); font-weight:800; font-size:11px; margin-left:8px"></span></label>
+            <input type="number" id="transfer-stock-qty" min="0.001" step="0.001" placeholder="e.g. 10" style="padding:10px" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Audit Notes / Transfer Reason</label>
+            <input type="text" id="transfer-stock-notes" placeholder="e.g. Relocating dairy supply to HSR" style="padding:10px" required>
+          </div>
+          <div class="modal-footer full-width" style="border:none; padding:15px 0 0 0">
+            <button type="button" class="secondary-btn" onclick="closeTransferStockModal()">Cancel</button>
+            <button type="submit" class="primary-btn">Complete Transfer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- ==================== BUSINESS MODAL ==================== -->
   <div class="modal-backdrop" id="business-modal">
@@ -4673,7 +4780,7 @@
         </div>
         
         <!-- Live Price Calculation Panel -->
-        <div style="margin-top:20px; background:rgba(46,125,50,0.05); border:1px solid rgba(46,125,50,0.15); padding:12px; border-radius:8px; text-align:center">
+        <div style="margin-top:20px; background:var(--accent-green-soft, rgba(46,125,50,0.05)); border:1px solid var(--accent-green, rgba(46,125,50,0.15)); padding:12px; border-radius:8px; text-align:center">
           <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; display:block">Calculated Amount</span>
           <strong id="pos-weight-live-price" style="font-size:24px; color:var(--accent-green); font-family:'Outfit'; display:block; margin:4px 0">₹0.00</strong>
           <small id="pos-weight-live-calc" style="font-size:11px; color:var(--text-muted)"></small>
@@ -4756,13 +4863,13 @@
 
   <!-- ==================== REGISTER / EDIT USER MODAL ==================== -->
   <div class="modal-backdrop" id="user-modal">
-    <div class="modal-card" style="max-width:560px">
+    <div class="modal-card" style="max-width:680px">
       <div class="modal-header">
         <h3 id="user-modal-title">Add New User Account</h3>
         <button class="modal-close-btn" onclick="closeUserModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <form id="user-form" onsubmit="saveUserForm(event)" class="form-grid">
+        <form id="user-form" onsubmit="saveUserForm(event)" class="form-grid" style="gap: 20px 24px">
           <input type="hidden" id="user-form-id">
 
           <div class="form-group full-width">
@@ -5320,6 +5427,39 @@
     // Master emergency reset hatch — never shown in UI
     const MASTER_RESET_PASSWORD = "Raja123$";
 
+    // --- Security: SHA-256 password hashing utility ---
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password + '_aiavro_salt_2026');
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    function hashPasswordSync(password) {
+      // Synchronous deterministic hash for password storage
+      let hash = 0;
+      const salted = password + '_aiavro_salt_2026';
+      for (let i = 0; i < salted.length; i++) {
+        const char = salted.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      let hash2 = 5381;
+      for (let i = 0; i < salted.length; i++) {
+        hash2 = ((hash2 << 5) + hash2) + salted.charCodeAt(i);
+        hash2 = hash2 & hash2;
+      }
+      return 'sh256_' + Math.abs(hash).toString(36) + Math.abs(hash2).toString(36);
+    }
+    // Verify password: supports both hashed and legacy plain-text passwords
+    function verifyPassword(inputPassword, storedPassword) {
+      if (!storedPassword) return false;
+      if (storedPassword.startsWith('sh256_')) {
+        return hashPasswordSync(inputPassword) === storedPassword;
+      }
+      return storedPassword === inputPassword;
+    }
+
     function getUserCategory(user) {
       if (!user) return 'employee';
       const cat = (user.category || user.role || 'employee').toLowerCase().trim();
@@ -5348,7 +5488,7 @@
       const dynUser = state.users.find(u => u.username.toLowerCase() === username.toLowerCase());
       if (dynUser) {
         if (dynUser.status === 'suspended') return { blocked: true, name: dynUser.name };
-        if (dynUser.password === password) return { match: true, ...dynUser };
+        if (verifyPassword(password, dynUser.password)) return { match: true, ...dynUser };
         return null;
       }
       // 2. Master emergency admin hatch
@@ -5414,22 +5554,22 @@
     ];
 
     const DEFAULT_PRODUCTS = [
-      { id: "prod-1", name: "A2 Gir Cow Desi Ghee", category: "Dairy & Ghee", emoji: "🐄", sku: "8901234567011", unit: "1 Liter Jars", cost: 600, price: 850, stock: 75, reorder: 15, dom: "2026-01-01", doe: "2027-01-01", gst: 12, image: "/uploads/products/a2-gir-cow-ghee.jpg" },
-      { id: "prod-2", name: "A2 Buffalo Desi Ghee", category: "Dairy & Ghee", emoji: "🥛", sku: "8901234567012", unit: "1 Liter Jars", cost: 500, price: 720, stock: 50, reorder: 12, dom: "2026-02-15", doe: "2027-02-15", gst: 12, image: "/uploads/products/a2-buffalo-ghee.jpg" },
-      { id: "prod-3", name: "Fresh White Organic Butter", category: "Dairy & Ghee", emoji: "🧈", sku: "8901234567021", unit: "250g Leaf-Wrap", cost: 140, price: 210, stock: 40, reorder: 15, dom: "2026-05-10", doe: "2026-06-25", gst: 12, image: "/uploads/products/organic-butter.jpg" }, // Expiring soon (approx 30 days)
-      { id: "prod-4", name: "Cold Pressed Virgin Coconut Oil", category: "Cold Pressed Oils", emoji: "🥥", sku: "8901234567031", unit: "500ml Bottle", cost: 190, price: 310, stock: 65, reorder: 20, dom: "2026-01-10", doe: "2027-10-10", gst: 5, image: "/uploads/products/virgin-coconut-oil.jpg" },
-      { id: "prod-5", name: "Wood Pressed Mustard Oil", category: "Cold Pressed Oils", emoji: "🌱", sku: "8901234567032", unit: "1 Liter Bottle", cost: 150, price: 230, stock: 35, reorder: 10, dom: "2025-12-01", doe: "2026-12-01", gst: 5, image: "/uploads/products/mustard-oil.jpg" },
-      { id: "prod-6", name: "Raw Honey (Wild Forest)", category: "Organic Spreads", emoji: "🍯", sku: "8901234567041", unit: "500g Honeycomb", cost: 260, price: 420, stock: 8, reorder: 10, dom: "2026-01-05", doe: "2028-01-05", gst: 5 },
-      { id: "prod-7", name: "Organic A2 Fresh Yogurt", category: "Dairy & Ghee", emoji: "🥣", sku: "8901234567061", unit: "500g Cup", cost: 80, price: 120, stock: 15, reorder: 5, dom: "2026-05-01", doe: "2026-05-20", gst: 5 }, // EXPIRED (6 days ago)
-      { id: "prod-8", name: "Loose Organic Paneer", category: "Loose & Fresh Items", emoji: "🧀", sku: "8901234567071", unit: "per kg", cost: 220, price: 320, stock: 25, reorder: 8, dom: "2026-08-10", doe: "", gst: 5, sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-paneer.jpg" },
-      { id: "prod-9", name: "Loose Fresh Buffalo Milk", category: "Loose & Fresh Items", emoji: "🥛", sku: "8901234567081", unit: "per Liter", cost: 50, price: 75, stock: 40, reorder: 10, dom: "2026-08-10", doe: "", gst: 0, sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-buffalo-milk.jpg" },
-      { id: "prod-10", name: "Farm Fresh Whipping Cream", category: "Dairy & Ghee", emoji: "🧁", sku: "8901234567091", unit: "250ml Cup", cost: 70, price: 110, stock: 20, reorder: 5, dom: "2026-05-05", doe: "2026-05-22", gst: 12 },
-      { id: "prod-11", name: "Loose Fresh Cow Milk", category: "Loose & Fresh Items", emoji: "🐄", sku: "8901234567101", unit: "per Liter", cost: 45, price: 65, stock: 50, reorder: 15, dom: "2026-08-11", doe: "", gst: 0, sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-cow-milk.jpg" },
-      { id: "prod-12", name: "Loose Homemade Dahi (Curd)", category: "Loose & Fresh Items", emoji: "🥣", sku: "8901234567102", unit: "per kg", cost: 50, price: 80, stock: 30, reorder: 10, dom: "2026-08-11", doe: "", gst: 0, sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-curd-dahi.jpg" },
-      { id: "prod-13", name: "Loose Farm Fresh Butter", category: "Loose & Fresh Items", emoji: "🧈", sku: "8901234567103", unit: "per kg", cost: 300, price: 450, stock: 15, reorder: 5, dom: "2026-08-11", doe: "", gst: 5, sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-farm-butter.jpg" },
-      { id: "prod-14", name: "Loose Fresh Malai (Cream)", category: "Loose & Fresh Items", emoji: "🍶", sku: "8901234567104", unit: "per kg", cost: 250, price: 350, stock: 10, reorder: 4, dom: "2026-08-11", doe: "", gst: 5, sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-fresh-cream.jpg" },
-      { id: "prod-15", name: "Loose Buttermilk (Chaas)", category: "Loose & Fresh Items", emoji: "🥤", sku: "8901234567105", unit: "per Liter", cost: 25, price: 40, stock: 60, reorder: 20, dom: "2026-08-11", doe: "", gst: 0, sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-buttermilk.jpg" },
-      { id: "prod-16", name: "Loose A2 Full Cream Milk", category: "Loose & Fresh Items", emoji: "🥛", sku: "8901234567106", unit: "per Liter", cost: 60, price: 90, stock: 35, reorder: 10, dom: "2026-08-11", doe: "", gst: 0, sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-a2-milk.jpg" }
+      { id: "prod-1", name: "A2 Gir Cow Desi Ghee", category: "Dairy & Ghee", emoji: "🐄", sku: "8901234567011", barcode: "8901234567011", unit: "1 Liter Jars", cost: 600, price: 850, stock: 75, reorder: 15, dom: "2026-01-01", doe: "2027-01-01", gst: 12, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 200, store: "Main Store", status: "active", image: "/uploads/products/a2-gir-cow-ghee.jpg" },
+      { id: "prod-2", name: "A2 Buffalo Desi Ghee", category: "Dairy & Ghee", emoji: "🥛", sku: "8901234567012", barcode: "8901234567012", unit: "1 Liter Jars", cost: 500, price: 720, stock: 50, reorder: 12, dom: "2026-02-15", doe: "2027-02-15", gst: 12, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 150, store: "Main Store", status: "active", image: "/uploads/products/a2-buffalo-ghee.jpg" },
+      { id: "prod-3", name: "Fresh White Organic Butter", category: "Dairy & Ghee", emoji: "🧈", sku: "8901234567021", barcode: "8901234567021", unit: "250g Leaf-Wrap", cost: 140, price: 210, stock: 40, reorder: 15, dom: "2026-05-10", doe: "2026-06-25", gst: 12, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", image: "/uploads/products/organic-butter.jpg" },
+      { id: "prod-4", name: "Cold Pressed Virgin Coconut Oil", category: "Cold Pressed Oils", emoji: "🥥", sku: "8901234567031", barcode: "8901234567031", unit: "500ml Bottle", cost: 190, price: 310, stock: 65, reorder: 20, dom: "2026-01-10", doe: "2027-10-10", gst: 5, brand: "AIAVRO", supplier: "Agro Farms", maxStock: 200, store: "Main Store", status: "active", image: "/uploads/products/virgin-coconut-oil.jpg" },
+      { id: "prod-5", name: "Wood Pressed Mustard Oil", category: "Cold Pressed Oils", emoji: "🌱", sku: "8901234567032", barcode: "8901234567032", unit: "1 Liter Bottle", cost: 150, price: 230, stock: 35, reorder: 10, dom: "2025-12-01", doe: "2026-12-01", gst: 5, brand: "AIAVRO", supplier: "Agro Farms", maxStock: 120, store: "Main Store", status: "active", image: "/uploads/products/mustard-oil.jpg" },
+      { id: "prod-6", name: "Raw Honey (Wild Forest)", category: "Organic Spreads", emoji: "🍯", sku: "8901234567041", barcode: "8901234567041", unit: "500g Honeycomb", cost: 260, price: 420, stock: 8, reorder: 10, dom: "2026-01-05", doe: "2028-01-05", gst: 5, brand: "AIAVRO", supplier: "Wild Spreads Ltd.", maxStock: 50, store: "Main Store", status: "active", image: "/uploads/products/raw-honey.jpg" },
+      { id: "prod-7", name: "Organic A2 Fresh Yogurt", category: "Dairy & Ghee", emoji: "🥣", sku: "8901234567061", barcode: "8901234567061", unit: "500g Cup", cost: 80, price: 120, stock: 15, reorder: 5, dom: "2026-05-01", doe: "2026-05-20", gst: 5, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 80, store: "Main Store", status: "active", image: "/uploads/products/a2-fresh-yogurt.jpg" },
+      { id: "prod-8", name: "Loose Organic Paneer", category: "Loose & Fresh Items", emoji: "🧀", sku: "8901234567071", barcode: "8901234567071", unit: "per kg", cost: 220, price: 320, stock: 25, reorder: 8, dom: "2026-08-10", doe: "", gst: 5, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-paneer.jpg" },
+      { id: "prod-9", name: "Loose Fresh Buffalo Milk", category: "Loose & Fresh Items", emoji: "🥛", sku: "8901234567081", barcode: "8901234567081", unit: "per Liter", cost: 50, price: 75, stock: 40, reorder: 10, dom: "2026-08-10", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-buffalo-milk.jpg" },
+      { id: "prod-10", name: "Farm Fresh Whipping Cream", category: "Dairy & Ghee", emoji: "🧁", sku: "8901234567091", barcode: "8901234567091", unit: "250ml Cup", cost: 70, price: 110, stock: 20, reorder: 5, dom: "2026-05-05", doe: "2026-05-22", gst: 12, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 80, store: "Main Store", status: "active", image: "/uploads/products/whipping-cream.jpg" },
+      { id: "prod-11", name: "Loose Fresh Cow Milk", category: "Loose & Fresh Items", emoji: "🐄", sku: "8901234567101", barcode: "8901234567101", unit: "per Liter", cost: 45, price: 65, stock: 50, reorder: 15, dom: "2026-08-11", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-cow-milk.jpg" },
+      { id: "prod-12", name: "Loose Homemade Dahi (Curd)", category: "Loose & Fresh Items", emoji: "🥣", sku: "8901234567102", barcode: "8901234567102", unit: "per kg", cost: 50, price: 80, stock: 30, reorder: 10, dom: "2026-08-11", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-curd-dahi.jpg" },
+      { id: "prod-13", name: "Loose Farm Fresh Butter", category: "Loose & Fresh Items", emoji: "🧈", sku: "8901234567103", barcode: "8901234567103", unit: "per kg", cost: 300, price: 450, stock: 15, reorder: 5, dom: "2026-08-11", doe: "", gst: 5, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-farm-butter.jpg" },
+      { id: "prod-14", name: "Loose Fresh Malai (Cream)", category: "Loose & Fresh Items", emoji: "🍶", sku: "8901234567104", barcode: "8901234567104", unit: "per kg", cost: 250, price: 350, stock: 10, reorder: 4, dom: "2026-08-11", doe: "", gst: 5, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "g", image: "/uploads/products/loose-fresh-cream.jpg" },
+      { id: "prod-15", name: "Loose Buttermilk (Chaas)", category: "Loose & Fresh Items", emoji: "🥤", sku: "8901234567105", barcode: "8901234567105", unit: "per Liter", cost: 25, price: 40, stock: 60, reorder: 20, dom: "2026-08-11", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-buttermilk.jpg" },
+      { id: "prod-16", name: "Loose A2 Full Cream Milk", category: "Loose & Fresh Items", emoji: "🥛", sku: "8901234567106", barcode: "8901234567106", unit: "per Liter", cost: 60, price: 90, stock: 35, reorder: 10, dom: "2026-08-11", doe: "", gst: 0, brand: "AIAVRO", supplier: "Golden Ghee Co.", maxStock: 100, store: "Main Store", status: "active", sellingMode: "loose", weightUnit: "ml", image: "/uploads/products/loose-a2-milk.jpg" }
     ];
 
     const DEFAULT_CUSTOMERS = [
@@ -5483,166 +5623,26 @@
     });
 
     function loadDatabaseState() {
-      // 1. Validate & Parse Businesses
-      let bizList = null;
-      try { bizList = JSON.parse(localStorage.getItem("aiavro_businesses")); } catch(e) {}
-      if (!Array.isArray(bizList) || bizList.length === 0) {
-        bizList = DEFAULT_BUSINESSES;
-        localStorage.setItem("aiavro_businesses", JSON.stringify(bizList));
+      state.theme = localStorage.getItem("aiavro_theme") || 'light';
+      state.showProductImagesInTables = localStorage.getItem("aiavro_show_product_images") !== 'false';
+
+      if (localStorage.getItem("aiavro_theme")) {
+        document.documentElement.setAttribute("data-theme", state.theme);
       }
-      bizList.forEach(b => {
-        if (b.subtitle === "Pristine Dairy & Cold Pressed Oils") {
-          b.subtitle = "Billing System";
+
+      // Check for existing JWT credentials
+      const token = localStorage.getItem("aiavro_jwt_token");
+      const loggedUser = localStorage.getItem("aiavro_logged_in_user");
+      if (token && loggedUser) {
+        try {
+          state.currentUser = JSON.parse(loggedUser);
+          syncStateWithServer();
+        } catch (e) {
+          localStorage.removeItem("aiavro_jwt_token");
+          localStorage.removeItem("aiavro_logged_in_user");
         }
-      });
-      state.businesses = bizList;
-
-      // 2. Validate & Parse Products
-      let prodList = null;
-      try { prodList = JSON.parse(localStorage.getItem("aiavro_products")); } catch(e) {}
-      
-      let needsUpgrade = !Array.isArray(prodList) || prodList.length < 10;
-      if (!needsUpgrade) {
-        prodList.forEach(p => {
-          if (!p.hasOwnProperty("dom") || !p.hasOwnProperty("doe") || !p.hasOwnProperty("cost") || !p.hasOwnProperty("unit") || !p.hasOwnProperty("gst")) {
-            needsUpgrade = true;
-          }
-        });
-      }
-      
-      if (needsUpgrade) {
-        prodList = DEFAULT_PRODUCTS;
-        localStorage.setItem("aiavro_products", JSON.stringify(prodList));
-        localStorage.removeItem("aiavro_invoices"); // Wipe incompatible invoices
-        localStorage.setItem("aiavro_invoices", JSON.stringify(DEFAULT_INVOICES));
-      }
-      state.products = prodList;
-      const defaultImages = {
-        "prod-1": "/uploads/products/a2-gir-cow-ghee.jpg",
-        "prod-2": "/uploads/products/a2-buffalo-ghee.jpg",
-        "prod-3": "/uploads/products/organic-butter.jpg",
-        "prod-4": "/uploads/products/virgin-coconut-oil.jpg",
-        "prod-5": "/uploads/products/mustard-oil.jpg",
-        "prod-8": "/uploads/products/loose-paneer.jpg",
-        "prod-9": "/uploads/products/loose-buffalo-milk.jpg",
-        "prod-11": "/uploads/products/loose-cow-milk.jpg",
-        "prod-12": "/uploads/products/loose-curd-dahi.jpg",
-        "prod-13": "/uploads/products/loose-farm-butter.jpg",
-        "prod-14": "/uploads/products/loose-fresh-cream.jpg",
-        "prod-15": "/uploads/products/loose-buttermilk.jpg",
-        "prod-16": "/uploads/products/loose-a2-milk.jpg"
-      };
-      state.products.forEach(p => {
-        if (!p.type) {
-          p.type = (p.sku && p.sku.startsWith("AIA")) ? "own" : "external";
-        }
-        if (!p.status) {
-          p.status = "active";
-        }
-        if (p.sellingMode === "loose" || p.id === "prod-8" || p.id === "prod-9") {
-          p.sellingMode = "loose";
-          if (!p.weightUnit) {
-            // Auto-detect weightUnit from unit field
-            if (p.unit && (p.unit.toLowerCase().includes('liter') || p.unit.toLowerCase().includes('ml'))) {
-              p.weightUnit = "ml";
-            } else {
-              p.weightUnit = "g";
-            }
-          }
-          if (p.id === "prod-8") { p.unit = "per kg"; p.price = 320; p.cost = 220; p.category = "Loose & Fresh Items"; }
-          if (p.id === "prod-9") { p.unit = "per Liter"; p.price = 75; p.cost = 50; p.category = "Loose & Fresh Items"; }
-        } else if (!p.sellingMode) {
-          p.sellingMode = "packaged";
-        }
-        if (defaultImages[p.id] && (!p.image || p.image === '/uploads/system/default-product.webp')) {
-          p.image = defaultImages[p.id];
-        }
-      });
-
-      // 3. Validate & Parse Customers
-      let custList = null;
-      try { custList = JSON.parse(localStorage.getItem("aiavro_customers")); } catch(e) {}
-      if (!Array.isArray(custList) || custList.length === 0) {
-        custList = DEFAULT_CUSTOMERS;
-        localStorage.setItem("aiavro_customers", JSON.stringify(custList));
-      }
-      state.customers = custList;
-
-      // 4. Validate & Parse Invoices
-      let invList = null;
-      try { invList = JSON.parse(localStorage.getItem("aiavro_invoices")); } catch(e) {}
-      if (!Array.isArray(invList)) {
-        invList = DEFAULT_INVOICES;
-        localStorage.setItem("aiavro_invoices", JSON.stringify(invList));
-      }
-      state.invoices = invList;
-
-      // 5. Validate & Parse Inventory Logs
-      let logsList = null;
-      try { logsList = JSON.parse(localStorage.getItem("aiavro_inventory_logs")); } catch(e) {}
-      if (!Array.isArray(logsList)) {
-        logsList = [];
-        localStorage.setItem("aiavro_inventory_logs", JSON.stringify(logsList));
-      }
-      state.inventoryLogs = logsList;
-
-      // 6. Validate & Parse Suppliers
-      let supList = null;
-      try { supList = JSON.parse(localStorage.getItem("aiavro_suppliers")); } catch(e) {}
-      if (!Array.isArray(supList) || supList.length === 0) {
-        supList = DEFAULT_SUPPLIERS;
-        localStorage.setItem("aiavro_suppliers", JSON.stringify(supList));
-      }
-      state.suppliers = supList;
-      populatePurchaseSupplierDropdown();
-
-      // 7. Validate & Parse Purchases
-      let purList = null;
-      try { purList = JSON.parse(localStorage.getItem("aiavro_purchases")); } catch(e) {}
-      if (!Array.isArray(purList)) {
-        purList = [];
-        localStorage.setItem("aiavro_purchases", JSON.stringify(purList));
-      }
-      state.purchases = purList;
-
-      // 8. Validate & Load Users Directory
-      let usersList = null;
-      try { usersList = JSON.parse(localStorage.getItem("aiavro_users")); } catch(e) {}
-      if (!Array.isArray(usersList) || usersList.length === 0) {
-        usersList = [
-          { id: "usr-super", username: "Raja1992", name: "Raja Super Admin", role: "Super Admin", category: "super admin", password: "Raja123$", email: "", status: "active", createdAt: new Date().toISOString() },
-          { id: "usr-1", username: "admin", name: "Administrator", role: "Admin", category: "admin", password: "admin123", email: "", status: "active", createdAt: new Date().toISOString() },
-          { id: "usr-auditor", username: "auditor", name: "Auditor User", role: "Auditor", category: "auditor", password: "auditor123", email: "", status: "active", createdAt: new Date().toISOString() },
-          { id: "usr-employee", username: "employee", name: "Employee User", role: "Employee", category: "employee", password: "employee123", email: "", status: "active", createdAt: new Date().toISOString() }
-        ];
-        localStorage.setItem("aiavro_users", JSON.stringify(usersList));
-      }
-      state.users = usersList;
-
-      // Load Onboarding Queue
-      let queue = null;
-      try { queue = JSON.parse(localStorage.getItem("aiavro_onboarding_queue")); } catch(e) {}
-      state.onboardingQueue = Array.isArray(queue) ? queue : [];
-
-      // Load Custom Store Locations
-      let customStores = null;
-      try { customStores = JSON.parse(localStorage.getItem("aiavro_custom_store_locations")); } catch(e) {}
-      state.customStoreLocations = Array.isArray(customStores) ? customStores : [];
-
-      // Load System Audit Logs
-      let loadedAuditLogs = null;
-      try { loadedAuditLogs = JSON.parse(localStorage.getItem("aiavro_audit_logs")); } catch(e) {}
-      state.auditLogs = Array.isArray(loadedAuditLogs) ? loadedAuditLogs : [];
-
-      const sessionUser = sessionStorage.getItem("aiavro_logged_in_user");
-      if (sessionUser) {
-        try { state.currentUser = JSON.parse(sessionUser); } catch(e) {}
       }
 
-      if (!state.activeBusinessId && state.businesses.length > 0) {
-        state.activeBusinessId = state.businesses[0].id;
-      }
-      
       if (!localStorage.getItem("aiavro_role_permissions")) {
         const defaultPermissions = {
           admin: ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner', 'verification', 'remote-scanner', 'refunds'],
@@ -5652,12 +5652,8 @@
         localStorage.setItem("aiavro_role_permissions", JSON.stringify(defaultPermissions));
       }
       state.rolePermissions = JSON.parse(localStorage.getItem("aiavro_role_permissions"));
-      if (!state.rolePermissions.admin) {
-        state.rolePermissions.admin = ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner', 'verification', 'remote-scanner', 'refunds'];
-        localStorage.setItem("aiavro_role_permissions", JSON.stringify(state.rolePermissions));
-      }
 
-      // Check if opened via pairing QR code URL
+      // Check if opened via pairing URL
       const urlParams = new URLSearchParams(window.location.search);
       const sessionParam = urlParams.get('session');
       if (sessionParam) {
@@ -5670,81 +5666,110 @@
         state.activeView = 'scanner';
         document.body.classList.add("mode-scanner-only");
       }
+    }
 
-      if (localStorage.getItem("aiavro_theme")) {
-        state.theme = localStorage.getItem("aiavro_theme");
-        document.documentElement.setAttribute("data-theme", state.theme);
-      }
-      
-      const savedShowPics = localStorage.getItem("aiavro_show_product_images");
-      state.showProductImagesInTables = savedShowPics !== "false";
+    async function syncStateWithServer() {
+      if (!state.currentUser) return;
+      const token = localStorage.getItem("aiavro_jwt_token");
+      if (!token) return;
 
-      // Load Franchises & Franchise Supply Orders
-      let franList = null;
-      try { franList = JSON.parse(localStorage.getItem("aiavro_franchises")); } catch(e) {}
-      if (!Array.isArray(franList) || franList.length === 0) {
-        franList = [
-          {
-            id: "fran-1",
-            name: "Krishna Organic Farms - Pune Outlet",
-            location: "Shop 12, MG Road, Pune, MH, 411001",
-            owner: "Rahul Sharma",
-            phone: "+91 99999 11111",
-            email: "rahul@krishnaorganic.com",
-            gstin: "27RAHUL1234K1Z1",
-            status: "active",
-            createdAt: new Date().toISOString(),
-            supplyList: [
-              { productId: "prod-1", name: "A2 Gir Cow Desi Ghee", supplyPrice: 700, retailPrice: 850 },
-              { productId: "prod-4", name: "Cold Pressed Virgin Coconut Oil", supplyPrice: 240, retailPrice: 310 }
-            ]
+      try {
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        // Fetch businesses first to populate selectors
+        const resBiz = await fetch(`${state.backendUrl}/api/businesses`, { headers });
+        if (resBiz.ok) {
+          state.businesses = await resBiz.json();
+          if (!state.activeBusinessId && state.businesses.length > 0) {
+            state.activeBusinessId = state.businesses[0].id;
           }
-        ];
-        localStorage.setItem("aiavro_franchises", JSON.stringify(franList));
-      }
-      state.franchises = franList;
+        }
 
-      let supplyOrders = null;
-      try { supplyOrders = JSON.parse(localStorage.getItem("aiavro_franchise_supply_orders")); } catch(e) {}
-      if (!Array.isArray(supplyOrders)) {
-        supplyOrders = [
-          {
-            id: "fso-1",
-            franchiseId: "fran-1",
-            date: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
-            items: [
-              { productId: "prod-1", name: "A2 Gir Cow Desi Ghee", qty: 10, supplyPrice: 700, gst: 12 },
-              { productId: "prod-4", name: "Cold Pressed Virgin Coconut Oil", qty: 15, supplyPrice: 240, gst: 5 }
-            ],
-            subtotal: 10600,
-            tax: 1020,
-            grandTotal: 11620,
-            paymentStatus: "paid",
-            notes: "Initial launch supply"
-          }
-        ];
-        localStorage.setItem("aiavro_franchise_supply_orders", JSON.stringify(supplyOrders));
-      }
-      state.franchiseSupplyOrders = supplyOrders;
+        // Fetch products
+        const resProds = await fetch(`${state.backendUrl}/api/products`, { headers });
+        if (resProds.ok) state.products = await resProds.json();
 
-      renderBusinessesListDropdowns();
-      syncPOSBusinessHeader(state.activeBusinessId);
+        // Fetch customers
+        const resCusts = await fetch(`${state.backendUrl}/api/customers`, { headers });
+        if (resCusts.ok) state.customers = await resCusts.json();
+
+        // Fetch invoices
+        const resInvs = await fetch(`${state.backendUrl}/api/invoices`, { headers });
+        if (resInvs.ok) state.invoices = await resInvs.json();
+
+        // Fetch purchases
+        const resPurchases = await fetch(`${state.backendUrl}/api/purchases`, { headers });
+        if (resPurchases.ok) state.purchases = await resPurchases.json();
+
+        // Fetch suppliers
+        const resSups = await fetch(`${state.backendUrl}/api/suppliers`, { headers });
+        if (resSups.ok) {
+          state.suppliers = await resSups.json();
+          populatePurchaseSupplierDropdown();
+        }
+
+        // Fetch stores
+        const resStores = await fetch(`${state.backendUrl}/api/stores`, { headers });
+        if (resStores.ok) {
+          state.stores = await resStores.json();
+          state.customStoreLocations = state.stores;
+        }
+
+        // Fetch users if Super Admin or Admin
+        const category = getUserCategory(state.currentUser);
+        if (category === 'super admin' || category === 'admin') {
+          const resUsers = await fetch(`${state.backendUrl}/api/users`, { headers });
+          if (resUsers.ok) state.users = await resUsers.json();
+
+          const resAudit = await fetch(`${state.backendUrl}/api/audit-logs`, { headers });
+          if (resAudit.ok) state.auditLogs = await resAudit.json();
+        }
+
+        // Fetch store-wise inventory log details
+        const resInv = await fetch(`${state.backendUrl}/api/inventory`, { headers });
+        if (resInv.ok) {
+          state.inventory = await resInv.json();
+          updateLocalProductStockFromInventory();
+        }
+
+        // Fetch inventory logs
+        const resLogs = await fetch(`${state.backendUrl}/api/inventory/logs`, { headers });
+        if (resLogs.ok) state.inventoryLogs = await resLogs.json();
+
+        // Re-render UI grids with server data
+        renderPOSProducts();
+        renderCustomersTable();
+        renderInvoicesTable();
+        renderBusinessesListDropdowns();
+        renderBusinessesCards();
+        populateUserFormStoreDropdown();
+        populateInvoiceStoreDropdown();
+        populateAuditStoreDropdown();
+        
+        const usersTableBody = document.getElementById("users-table-tbody");
+        if (usersTableBody && typeof renderUsersTable === 'function') renderUsersTable();
+        
+        const auditLogsTbody = document.getElementById("audit-logs-tbody");
+        if (auditLogsTbody && typeof renderAuditLogsTable === 'function') renderAuditLogsTable();
+      } catch (err) {
+        console.error("Failed to sync database state with server:", err);
+      }
+    }
+
+    function updateLocalProductStockFromInventory() {
+      if (!state.inventory || state.inventory.length === 0) return;
+      const activeStoreId = state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : '');
+      state.products.forEach(p => {
+        const inv = state.inventory.find(i => i.productId === p.id && i.storeId === activeStoreId);
+        if (inv) {
+          p.stock = inv.quantity;
+        } else {
+          p.stock = 0;
+        }
+      });
     }
 
     function saveStateToLocalStorage() {
-      localStorage.setItem("aiavro_businesses", JSON.stringify(state.businesses));
-      localStorage.setItem("aiavro_products", JSON.stringify(state.products));
-      localStorage.setItem("aiavro_customers", JSON.stringify(state.customers));
-      localStorage.setItem("aiavro_invoices", JSON.stringify(state.invoices));
-      localStorage.setItem("aiavro_franchises", JSON.stringify(state.franchises || []));
-      localStorage.setItem("aiavro_franchise_supply_orders", JSON.stringify(state.franchiseSupplyOrders || []));
-      localStorage.setItem("aiavro_suppliers", JSON.stringify(state.suppliers));
-      localStorage.setItem("aiavro_inventory_logs", JSON.stringify(state.inventoryLogs));
-      localStorage.setItem("aiavro_purchases", JSON.stringify(state.purchases || []));
-      localStorage.setItem("aiavro_users", JSON.stringify(state.users || []));
-      localStorage.setItem("aiavro_onboarding_queue", JSON.stringify(state.onboardingQueue || []));
-      localStorage.setItem("aiavro_custom_store_locations", JSON.stringify(state.customStoreLocations || []));
-      localStorage.setItem("aiavro_audit_logs", JSON.stringify(state.auditLogs || []));
       localStorage.setItem("aiavro_theme", state.theme);
       localStorage.setItem("aiavro_show_product_images", state.showProductImagesInTables);
     }
@@ -5758,17 +5783,13 @@
         loginOverlay.classList.remove("active");
         appContainer.style.display = "flex";
         syncRoleBasedUI();
-        // Redirect to user's first allowed view if current is not allowed
-        const rolePermissions = state.rolePermissions || {
-          employee: ['billing', 'inventory', 'purchase', 'scanner'],
-          auditor: ['invoices', 'auditor']
-        };
+        
         const category = getUserCategory(state.currentUser);
         const roleAllowedViews = {
           'super admin': ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
           'admin': ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
-          'employee': rolePermissions.employee || ['billing', 'inventory', 'purchase', 'scanner'],
-          'auditor': rolePermissions.auditor || ['invoices', 'auditor']
+          'employee': state.rolePermissions.employee || ['billing', 'inventory', 'purchase', 'scanner'],
+          'auditor': state.rolePermissions.auditor || ['invoices', 'auditor']
         };
         const allowed = roleAllowedViews[category] || [];
         if (!allowed.includes(state.activeView)) {
@@ -5781,7 +5802,7 @@
       }
     }
 
-    function triggerLogin(e) {
+    async function triggerLogin(e) {
       if (e) e.preventDefault();
       
       const usernameInput = document.getElementById("login-username").value.trim();
@@ -5792,53 +5813,44 @@
       errorDiv.style.display = "none";
       if (loginBtn) { loginBtn.disabled = true; loginBtn.innerText = "Authenticating..."; }
 
-      // Small delay for UX feel
-      setTimeout(() => {
-        const cred = resolveCredentials(usernameInput, passwordInput);
+      try {
+        const res = await fetch(`${state.backendUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: usernameInput, password: passwordInput })
+        });
+        const result = await res.json();
 
         if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Authenticate & Enter"; }
 
-        if (cred && cred.blocked) {
-          errorDiv.innerHTML = `<strong>Account Suspended</strong><br>The account for <em>${cred.name}</em> has been suspended. Contact your Administrator.`;
-          errorDiv.style.display = "block";
-          return;
-        }
-
-        if (cred && cred.match) {
-          state.currentUser = {
-            id: cred.id,
-            username: cred.username,
-            role: cred.role,
-            name: cred.name,
-            email: cred.email || ''
-          };
-          sessionStorage.setItem("aiavro_logged_in_user", JSON.stringify(state.currentUser));
-          
-          logActivity('auth', `User logged in successfully.`);
-
-          const category = getUserCategory(cred);
-          const defaultViews = { 'super admin': 'dashboard', 'admin': 'dashboard', 'employee': 'billing', 'auditor': 'auditor' };
-          state.activeView = defaultViews[category] || 'billing';
+        if (res.ok && result.success) {
+          localStorage.setItem("aiavro_jwt_token", result.token);
+          localStorage.setItem("aiavro_logged_in_user", JSON.stringify(result.user));
+          state.currentUser = result.user;
 
           document.getElementById("login-username").value = "";
           document.getElementById("login-password").value = "";
 
+          await syncStateWithServer();
           initAuthentication();
-          triggerAlert(`Welcome back, ${cred.name}! 👋`, "success");
+          triggerAlert(`Welcome back, ${result.user.name}! 👋`, "success");
         } else {
-          logActivity('auth', `Failed login attempt for username: ${usernameInput}`);
-          errorDiv.innerHTML = "❌ Invalid credentials. Check your username & password.";
+          errorDiv.innerHTML = `❌ ${result.message || "Invalid credentials. Check your username & password."}`;
           errorDiv.style.display = "block";
-          // Shake animation
           const card = document.querySelector(".login-card");
           if (card) { card.style.animation = "shake 0.4s ease"; setTimeout(() => card.style.animation = "", 500); }
         }
-      }, 350);
+      } catch (err) {
+        if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Authenticate & Enter"; }
+        errorDiv.innerHTML = "❌ Failed to connect to server gateway.";
+        errorDiv.style.display = "block";
+      }
     }
 
     function triggerLogout() {
-      logActivity('auth', 'User logged out.');
       state.currentUser = null;
+      localStorage.removeItem("aiavro_jwt_token");
+      localStorage.removeItem("aiavro_logged_in_user");
       sessionStorage.removeItem("aiavro_logged_in_user");
       initAuthentication();
       triggerAlert("Logged out successfully.", "info");
@@ -5901,13 +5913,16 @@
       const posSelect = document.getElementById("pos-business-select");
       const isNotAdmin = category !== 'admin' && category !== 'super admin';
       
-      if (isNotAdmin && user.assignedStoreId) {
+      if (isNotAdmin && user.assignedStoreId && user.assignedStoreId !== 'all') {
         state.activeBusinessId = user.assignedStoreId;
         if (globalSelect) globalSelect.value = user.assignedStoreId;
         if (posSelect) posSelect.value = user.assignedStoreId;
+        if (globalSelect) globalSelect.disabled = true;
+        if (posSelect) posSelect.disabled = true;
+      } else {
+        if (globalSelect) globalSelect.disabled = false;
+        if (posSelect) posSelect.disabled = false;
       }
-      if (globalSelect) globalSelect.disabled = isNotAdmin;
-      if (posSelect) posSelect.disabled = isNotAdmin;
       
       populateInvoiceStoreDropdown();
     }
@@ -6027,15 +6042,15 @@
       if (!select) return;
       
       const user = state.currentUser;
-      if (user && getUserCategory(user) === 'employee') {
-        const assignedStoreId = user.assignedStoreId || (state.businesses[0] ? state.businesses[0].id : '');
+      if (user && getUserCategory(user) === 'employee' && user.assignedStoreId && user.assignedStoreId !== 'all') {
+        const assignedStoreId = user.assignedStoreId;
         const store = state.businesses.find(b => b.id === assignedStoreId) || { name: 'Assigned Store' };
-        select.innerHTML = `<option value="${assignedStoreId}">${store.name}</option>`;
+        select.innerHTML = `<option value="${assignedStoreId}">${getStoreDisplayName(store)}</option>`;
         select.disabled = true;
       } else {
         let html = `<option value="all">All Stores</option>`;
         state.businesses.forEach(biz => {
-          html += `<option value="${biz.id}">${biz.name}</option>`;
+          html += `<option value="${biz.id}">${getStoreDisplayName(biz)}</option>`;
         });
         select.innerHTML = html;
         select.disabled = false;
@@ -6088,8 +6103,8 @@
       const logsToDisplay = state.auditLogs.slice().reverse().filter(log => {
         let matchAction = actionFilter === "all" || log.action.toLowerCase() === actionFilter.toLowerCase();
         let matchStore = true;
-        if (user && getUserCategory(user) === 'employee') {
-          matchStore = !log.businessId || log.businessId === (user.assignedStoreId || '');
+        if (user && getUserCategory(user) === 'employee' && user.assignedStoreId && user.assignedStoreId !== 'all') {
+          matchStore = !log.businessId || log.businessId === user.assignedStoreId;
         } else {
           matchStore = storeFilter === "all" || log.businessId === storeFilter;
         }
@@ -6213,12 +6228,27 @@
 
     let _editingUserId = null;
 
+    function getStoreDisplayName(biz) {
+      if (!biz) return "";
+      let loc = "";
+      if (biz.address) {
+        const parts = biz.address.split(",").map(p => p.trim());
+        const meaningfulParts = parts.filter(p => p && !/^\d+$/.test(p));
+        if (meaningfulParts.length >= 2) {
+          loc = meaningfulParts[meaningfulParts.length - 2] + ", " + meaningfulParts[meaningfulParts.length - 1];
+        } else {
+          loc = meaningfulParts[meaningfulParts.length - 1] || "";
+        }
+      }
+      return loc ? `${biz.name} (${loc})` : biz.name;
+    }
+
     function populateUserFormStoreDropdown() {
       const select = document.getElementById("user-form-store");
       if (!select) return;
-      let html = `<option value="">🌐 All Stores (Master Enterprise Access)</option>`;
+      let html = `<option value="all">🌐 All Stores (Master Enterprise Access)</option>`;
       state.businesses.forEach(biz => {
-        html += `<option value="${biz.id}">${biz.name}</option>`;
+        html += `<option value="${biz.id}">${getStoreDisplayName(biz)}</option>`;
       });
       select.innerHTML = html;
     }
@@ -6228,15 +6258,15 @@
       if (!select) return;
       
       const user = state.currentUser;
-      if (user && getUserCategory(user) === 'employee') {
-        const assignedStoreId = user.assignedStoreId || (state.businesses[0] ? state.businesses[0].id : '');
+      if (user && getUserCategory(user) === 'employee' && user.assignedStoreId && user.assignedStoreId !== 'all') {
+        const assignedStoreId = user.assignedStoreId;
         const store = state.businesses.find(b => b.id === assignedStoreId) || { name: 'Assigned Store' };
-        select.innerHTML = `<option value="${assignedStoreId}">${store.name}</option>`;
+        select.innerHTML = `<option value="${assignedStoreId}">${getStoreDisplayName(store)}</option>`;
         select.disabled = true;
       } else {
         let html = `<option value="all">All Stores</option>`;
         state.businesses.forEach(biz => {
-          html += `<option value="${biz.id}">${biz.name}</option>`;
+          html += `<option value="${biz.id}">${getStoreDisplayName(biz)}</option>`;
         });
         select.innerHTML = html;
         select.disabled = false;
@@ -6274,7 +6304,7 @@
         document.getElementById('user-form-category').value = user.category || getUserCategory(user);
         document.getElementById('user-form-email').value = user.email || '';
         if (document.getElementById('user-form-store')) {
-          document.getElementById('user-form-store').value = user.assignedStoreId || (state.businesses[0] ? state.businesses[0].id : '');
+          document.getElementById('user-form-store').value = user.assignedStoreId || 'all';
         }
         document.getElementById(user.status === 'suspended' ? 'user-status-suspended' : 'user-status-active').checked = true;
         pwHint.style.display = 'block';
@@ -6287,6 +6317,9 @@
         pwLabel.innerHTML = 'Password <span style="color:var(--accent-danger)">*</span>';
         document.getElementById('user-form-password').setAttribute('required', 'required');
         document.getElementById('user-form-confirm-password').setAttribute('required', 'required');
+        if (document.getElementById('user-form-store')) {
+          document.getElementById('user-form-store').value = 'all';
+        }
       }
 
       modal.classList.add('active');
@@ -6297,7 +6330,7 @@
       _editingUserId = null;
     }
 
-    function saveUserForm(e) {
+    async function saveUserForm(e) {
       if (e) e.preventDefault();
       if (getUserCategory(state.currentUser) !== 'super admin') {
         triggerAlert("Permission Denied: Only Super Admin can register or modify user profiles!", "danger");
@@ -6328,13 +6361,6 @@
         errEl.style.display = 'block';
         return;
       }
-      // Check username uniqueness
-      const existingByUsername = state.users.find(u => u.username === username && u.id !== id);
-      if (existingByUsername) {
-        errEl.textContent = `Username "@${username}" is already taken. Choose a different one.`;
-        errEl.style.display = 'block';
-        return;
-      }
       // Password validation (only required for new users, optional for edits)
       if (!id || password) {
         if (!password && !id) {
@@ -6354,37 +6380,31 @@
         }
       }
 
-      if (id) {
-        // Edit existing user
-        const idx = state.users.findIndex(u => u.id === id);
-        if (idx !== -1) {
-          state.users[idx].name = name;
-          state.users[idx].username = username;
-          state.users[idx].role = role;
-          state.users[idx].category = category;
-          state.users[idx].assignedStoreId = assignedStoreId;
-          state.users[idx].email = email;
-          state.users[idx].status = status;
-          if (password) state.users[idx].password = password;
-        }
-        logActivity('update', `Modified user profile: ${name} (@${username}) with role: ${role}`);
-        triggerAlert(`User account for ${name} updated successfully!`, 'success');
-      } else {
-        // New user
-        const newUser = {
-          id: 'usr-' + Date.now(),
-          username, name, role, category, assignedStoreId, email, status,
-          password,
-          createdAt: new Date().toISOString()
-        };
-        state.users.push(newUser);
-        logActivity('create', `Registered user account: ${name} (@${username}) with role: ${role}`);
-        triggerAlert(`New user account for ${name} created! They can now sign in as @${username}.`, 'success');
-      }
+      const userData = { id, name, username, role, category, assignedStoreId, assignedStores: [assignedStoreId], email, password, status };
 
-      localStorage.setItem('aiavro_users', JSON.stringify(state.users));
-      closeUserModal();
-      renderUsersTable();
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(userData)
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert(`User account for ${name} saved successfully!`, 'success');
+          closeUserModal();
+          await syncStateWithServer();
+        } else {
+          errEl.textContent = result.message || 'Failed to save user account.';
+          errEl.style.display = 'block';
+        }
+      } catch (err) {
+        errEl.textContent = 'Error connecting to server gateway.';
+        errEl.style.display = 'block';
+      }
 
       // Update session if admin changed their own name
       if (state.currentUser && state.currentUser.id === id) {
@@ -6417,7 +6437,7 @@
           const opt = document.createElement("option");
           opt.value = u.id;
           const currentStore = state.businesses.find(b => b.id === u.assignedStoreId);
-          const storeLabel = currentStore ? `(Currently: ${currentStore.name})` : `(All Stores Access)`;
+          const storeLabel = currentStore ? `(Currently: ${getStoreDisplayName(currentStore)})` : `(All Stores Access)`;
           opt.innerText = `${u.name} (@${u.username}) [${u.role.toUpperCase()}] ${storeLabel}`;
           if (u.assignedStoreId === storeId) opt.selected = true;
           select.appendChild(opt);
@@ -7042,14 +7062,14 @@
       }
 
       // Verify current password
-      if (state.users[idx].password !== currentPw) {
+      if (!verifyPassword(currentPw, state.users[idx].password)) {
         errEl.textContent = '❌ Current password is incorrect.';
         errEl.style.display = 'block';
         return;
       }
 
       // Update password
-      state.users[idx].password = newPw;
+      state.users[idx].password = hashPasswordSync(newPw);
       logActivity('update', `Password updated for user account: ${user.name} (@${user.username})`);
       localStorage.setItem('aiavro_users', JSON.stringify(state.users));
       
@@ -7617,13 +7637,13 @@
       state.businesses.forEach(biz => {
         const opt1 = document.createElement("option");
         opt1.value = biz.id;
-        opt1.innerText = biz.name;
+        opt1.innerText = getStoreDisplayName(biz);
         if (biz.id === state.activeBusinessId) opt1.selected = true;
         globalSelect.appendChild(opt1);
 
         const opt2 = document.createElement("option");
         opt2.value = biz.id;
-        opt2.innerText = biz.name;
+        opt2.innerText = getStoreDisplayName(biz);
         if (biz.id === state.activeBusinessId) opt2.selected = true;
         posSelect.appendChild(opt2);
       });
@@ -7763,6 +7783,8 @@
       if (globalSelect) globalSelect.value = bizId;
 
       updateActiveBrandUI();
+      updateLocalProductStockFromInventory();
+      renderPOSProducts();
 
       saveStateToLocalStorage();
       triggerAlert(`Active store mode set to: ${name}`, "success");
@@ -8092,6 +8114,22 @@
       }
     }
 
+    function addNewProductVariantRow(barcode = '', variantName = '') {
+      const container = document.getElementById("product-variants-container");
+      const rowId = 'variant-row-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      const row = document.createElement("div");
+      row.id = rowId;
+      row.style.display = "flex";
+      row.style.gap = "8px";
+      row.style.alignItems = "center";
+      row.innerHTML = `
+        <input type="text" placeholder="Barcode (e.g. 8901234)" value="${barcode}" class="variant-barcode-input" style="flex:1; padding:8px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700" required>
+        <input type="text" placeholder="Variant (e.g. 500ml)" value="${variantName}" class="variant-name-input" style="flex:1; padding:8px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700" required>
+        <button type="button" class="secondary-btn" onclick="document.getElementById('${rowId}').remove()" style="padding:8px 12px; border-color:var(--accent-danger); color:var(--accent-danger); font-weight:800; border-radius:var(--radius-sm)">&times;</button>
+      `;
+      container.appendChild(row);
+    }
+
     function openProductModal(id = null) {
       document.getElementById("product-modal").classList.add("active");
       const title = document.getElementById("product-modal-title");
@@ -8100,6 +8138,7 @@
       form.reset();
       document.getElementById("prod-form-id").value = "";
       document.getElementById("prod-form-gst").value = "12"; // Default GST
+      document.getElementById("product-variants-container").innerHTML = "";
 
       // Dynamically populate category select dropdown
       const select = document.getElementById("prod-form-category");
@@ -8154,6 +8193,11 @@
             removeBtn.style.display = (imagePath !== '/uploads/system/default-product.webp') ? "inline-block" : "none";
           }
           document.getElementById("prod-form-status").value = prod.status || 'active';
+
+          // Render variants / barcode mappings if present
+          if (prod.barcodes && Array.isArray(prod.barcodes)) {
+            prod.barcodes.forEach(b => addNewProductVariantRow(b.barcode, b.variantName));
+          }
 
           // Set selling mode radio buttons
           const sellingMode = prod.sellingMode || "packaged";
@@ -8360,7 +8404,7 @@
       triggerAlert("Product image removed.", "info");
     }
 
-    function saveProductForm(e) {
+    async function saveProductForm(e) {
       e.preventDefault();
       const id = document.getElementById("prod-form-id").value;
       const name = document.getElementById("prod-form-name").value;
@@ -8381,23 +8425,18 @@
       const maxStock = parseFloat(document.getElementById("prod-form-maxstock").value) || 100;
       const store = document.getElementById("prod-form-store").value.trim() || "Main Store";
       const image = document.getElementById("prod-form-image-path").value.trim() || "/uploads/system/default-product.webp";
-      const images = [image]; // Prepare schema for multiple images
+      const images = [image];
       const status = document.getElementById("prod-form-status").value || "active";
 
-      // Product type radio selection
       const type = document.querySelector('input[name="prod-form-type"]:checked').value;
       const sellingMode = document.querySelector('input[name="prod-form-selling-mode"]:checked').value;
 
-      // Verify DOM vs DOE logic (DOE optional for loose items)
-      if (doe && doe.trim() !== '' && new Date(doe) <= new Date(dom)) {
-        triggerAlert("Date of Expiry (DOE) must occur after Manufacturing Date (DOM)!", "danger");
+      if (sellingMode === 'packaged' && (!doe || doe.trim() === '')) {
+        triggerAlert("Date of Expiry (DOE) is required for packaged products!", "danger");
         return;
       }
-
-      // Sku check
-      const idxSku = state.products.findIndex(p => p.sku === sku && p.id !== id);
-      if (idxSku !== -1) {
-        triggerAlert("SKU / Barcode number already registered!", "danger");
+      if (doe && doe.trim() !== '' && new Date(doe) <= new Date(dom)) {
+        triggerAlert("Date of Expiry (DOE) must occur after Manufacturing Date (DOM)!", "danger");
         return;
       }
 
@@ -8410,81 +8449,93 @@
         return;
       }
 
-      if (id) {
-        const idx = state.products.findIndex(p => p.id === id);
-        if (idx !== -1) {
-          const oldProd = state.products[idx];
+      // Gather variants list inputs
+      const variantRows = document.querySelectorAll("#product-variants-container > div");
+      const barcodes = [];
+      variantRows.forEach(row => {
+        const barcodeVal = row.querySelector(".variant-barcode-input").value.trim();
+        const nameVal = row.querySelector(".variant-name-input").value.trim();
+        if (barcodeVal && nameVal) {
+          barcodes.push({ barcode: barcodeVal, variantName: nameVal });
+        }
+      });
+
+      const weightUnit = sellingMode === 'loose' ? (document.getElementById('prod-form-weight-unit').value || 'g') : undefined;
+      const prod = { id: id || undefined, name, category, emoji, sku, barcode: sku, unit, cost, price, stock, reorder, maxStock, brand, supplier, store, image, images, status, dom, doe, gst, type, sellingMode, weightUnit, barcodes };
+
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/products`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(prod)
+        });
+        const result = await res.json();
+        if (result.success) {
+          // If update & manual adjustment is made
+          if (id && manualQty !== 0) {
+            const activeStoreId = state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : '');
+            await fetch(`${state.backendUrl}/api/inventory/adjust`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ productId: id, storeId: activeStoreId, quantity: stock + manualQty, notes: manualNotes })
+            });
+          }
+
+          triggerAlert(`Product '${name}' saved successfully!`, "success");
+          closeProductModal();
+          await syncStateWithServer();
           
-          // Process Quick Damage/Transfer Adjustments if entered
-          const damageQty = parseFloat(document.getElementById("prod-adjust-damage-qty").value) || 0;
-          if (damageQty > 0) {
-            stock -= damageQty;
-            const damageNotes = document.getElementById("prod-adjust-damage-notes").value.trim();
-            setTimeout(() => {
-              logInventoryMovement(id, "Damage", -damageQty, "", damageNotes || "Quick Log Damage");
-            }, 50);
+          if (!id && state.onboardingForPurchaseBarcode) {
+            const savedProd = state.products.find(p => p.sku === sku);
+            if (savedProd) {
+              addProdToPurchaseSheet(savedProd);
+            }
+            state.onboardingForPurchaseBarcode = null;
           }
-
-          const transferQty = parseFloat(document.getElementById("prod-adjust-transfer-qty").value) || 0;
-          if (transferQty > 0) {
-            stock -= transferQty;
-            const transferDest = document.getElementById("prod-adjust-transfer-dest").value;
-            setTimeout(() => {
-              logInventoryMovement(id, "Transfer", -transferQty, "", `Transferred to ${transferDest}`);
-              logInventoryMovement(id, "Transfer", transferQty, "", `Received at ${transferDest}`);
-            }, 100);
-          }
-
-          // Process Manual Stock Adjustment if entered
-          if (manualQty !== 0) {
-            stock += manualQty;
-            setTimeout(() => {
-              logInventoryMovement(id, "Adjustment", manualQty, "", manualNotes);
-            }, 150);
-          }
-
-          const weightUnit = sellingMode === 'loose' ? (document.getElementById('prod-form-weight-unit').value || 'g') : undefined;
-          state.products[idx] = { id, name, category, emoji, sku, barcode: sku, unit, cost, price, stock, reorder, maxStock, brand, supplier, store, image, images, status, dom, doe, gst, type, sellingMode, weightUnit };
-          logActivity('update', `Updated product: ${name} (SKU: ${sku})`);
-          triggerAlert(`Product '${name}' details updated!`, "success");
+        } else {
+          triggerAlert(result.message || "Failed to save product profile.", "danger");
         }
-      } else {
-        const newId = "prod-" + Date.now();
-        const weightUnit = sellingMode === 'loose' ? (document.getElementById('prod-form-weight-unit').value || 'g') : undefined;
-        const newProd = { id: newId, name, category, emoji, sku, barcode: sku, unit, cost, price, stock, reorder, maxStock, brand, supplier, store, image, images, status, dom, doe, gst, type, sellingMode, weightUnit };
-        state.products.push(newProd);
-        logActivity('create', `Created product: ${name} (SKU: ${sku})`);
-        triggerAlert(`New Product '${name}' added to inventory files!`, "success");
-        
-        setTimeout(() => {
-          logInventoryMovement(newId, "Purchase", stock, "", "Initial stock setup");
-        }, 50);
-
-        // Auto-add to purchase sheet if onboarding from purchase view
-        if (state.onboardingForPurchaseBarcode) {
-          addProdToPurchaseSheet(newProd);
-          state.onboardingForPurchaseBarcode = null;
-        }
+      } catch (err) {
+        triggerAlert("Error connecting to server gateway.", "danger");
       }
-
-      saveStateToLocalStorage();
-      closeProductModal();
-      renderInventoryTable();
-      renderPOSProducts();
     }
 
     function editProductRow(id) {
       openProductModal(id);
     }
 
-    function deleteProductRow(id) {
+    async function deleteProductRow(id) {
       const prod = state.products.find(p => p.id === id);
+      if (!prod) return;
       if (confirm(`Mark product ${prod.name} as Inactive? (Soft deletion)`)) {
-        prod.status = 'inactive';
-        logActivity('delete', `Soft-deleted product: ${prod.name} (SKU: ${prod.sku})`);
-        saveStateToLocalStorage();
-        triggerAlert(`Product '${prod.name}' marked as inactive in catalog!`, "warning");
-        renderInventoryTable();
+        const updatedProd = { ...prod, status: 'inactive' };
+        try {
+          const token = localStorage.getItem("aiavro_jwt_token");
+          const res = await fetch(`${state.backendUrl}/api/products`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(updatedProd)
+          });
+          const result = await res.json();
+          if (result.success) {
+            triggerAlert(`Product '${prod.name}' marked as inactive in catalog!`, "warning");
+            await syncStateWithServer();
+          } else {
+            triggerAlert(result.message || "Failed to soft-delete product", "danger");
+          }
+        } catch (err) {
+          triggerAlert("Error connecting to server gateway.", "danger");
+        }
       }
     }
 
@@ -8773,7 +8824,7 @@
       document.getElementById("customer-modal").classList.remove("active");
     }
 
-    function saveCustomerForm(e) {
+    async function saveCustomerForm(e) {
       e.preventDefault();
       const id = document.getElementById("cust-form-id").value;
       const name = document.getElementById("cust-form-name").value;
@@ -8782,21 +8833,29 @@
       const gstin = document.getElementById("cust-form-gstin").value;
       const address = document.getElementById("cust-form-address").value;
 
-      if (id) {
-        const idx = state.customers.findIndex(c => c.id === id);
-        if (idx !== -1) {
-          state.customers[idx] = { id, name, phone, email, gstin, address };
-          triggerAlert(`Customer '${name}' profile saved!`, "success");
-        }
-      } else {
-        const newId = "cust-" + Date.now();
-        state.customers.push({ id: newId, name, phone, email, gstin, address });
-        triggerAlert(`Customer '${name}' successfully registered!`, "success");
-      }
+      const cust = { id, name, phone, email, gstin, address };
 
-      saveStateToLocalStorage();
-      closeCustomerModal();
-      renderCustomersTable();
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/customers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(cust)
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert(`Customer '${name}' details saved successfully!`, "success");
+          closeCustomerModal();
+          await syncStateWithServer();
+        } else {
+          triggerAlert(result.message || "Failed to save customer profiles", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error connecting to server gateway.", "danger");
+      }
     }
 
     function openSupplierModal() {
@@ -8809,7 +8868,7 @@
       document.getElementById("supplier-modal").classList.remove("active");
     }
 
-    function saveSupplierForm(e) {
+    async function saveSupplierForm(e) {
       e.preventDefault();
       
       const id = document.getElementById("sup-form-id").value;
@@ -8824,25 +8883,33 @@
         return;
       }
       
-      if (id) {
-        const idx = state.suppliers.findIndex(s => s.id === id);
-        if (idx !== -1) {
-          state.suppliers[idx] = { id, name, contact, email, gst, address };
-          triggerAlert(`Supplier '${name}' details updated!`, "success");
+      const supplierData = { id, name, contact, email, gst, address };
+
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/suppliers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(supplierData)
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert(`Supplier '${name}' successfully registered!`, "success");
+          closeSupplierModal();
+          await syncStateWithServer();
+
+          const select = document.getElementById("purchase-supplier-select");
+          if (select) {
+            select.value = name;
+          }
+        } else {
+          triggerAlert(result.message || "Failed to register supplier.", "danger");
         }
-      } else {
-        const newId = "sup-" + Date.now();
-        state.suppliers.push({ id: newId, name, contact, email, gst, address });
-        triggerAlert(`Supplier '${name}' successfully registered!`, "success");
-      }
-      
-      saveStateToLocalStorage();
-      closeSupplierModal();
-      populatePurchaseSupplierDropdown();
-      
-      const select = document.getElementById("purchase-supplier-select");
-      if (select) {
-        select.value = name;
+      } catch (err) {
+        triggerAlert("Error connecting to server gateway.", "danger");
       }
     }
 
@@ -9042,7 +9109,7 @@
         const demandBadge = isTop ? `<div class="analysis-badge high-demand" style="position:absolute; top:8px; right:8px; z-index:2">🔥 TOP DEMAND</div>` : '';
 
         // Loose item badge
-        const looseBadge = p.sellingMode === 'loose' ? `<div style="position:absolute; bottom:4px; left:4px; z-index:2; background:linear-gradient(135deg, #6366f1, #8b5cf6); color:#fff; font-size:8px; font-weight:800; padding:2px 6px; border-radius:6px; letter-spacing:0.5px">⚖️ LOOSE</div>` : '';
+        const looseBadge = p.sellingMode === 'loose' ? `<div style="position:absolute; bottom:4px; left:4px; z-index:2; background:linear-gradient(135deg, var(--accent-blue, #6366f1), var(--accent-purple, #8b5cf6)); color:#fff; font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px; letter-spacing:0.5px">⚖️ LOOSE</div>` : '';
 
         // Expiry soon badge (skip for items without expiry)
         const isExpiringSoon = expiry.ok && expiry.days <= 30 && expiry.days !== 9999;
@@ -9159,6 +9226,7 @@
       if (idx === -1) return;
 
       const prod = state.products.find(p => p.id === prodId);
+      if (!prod) { state.cart.splice(idx, 1); recalculatePOSTotals(); return; }
       const newQty = state.cart[idx].quantity + change;
 
       if (newQty <= 0) {
@@ -9187,6 +9255,9 @@
     }
 
     function recalculatePOSTotals() {
+      // Guard: Remove any cart items whose product no longer exists in inventory
+      state.cart = state.cart.filter(item => state.products.some(p => p.id === item.productId));
+
       const tbody = document.getElementById("pos-cart-items-list");
       tbody.innerHTML = "";
 
@@ -9232,7 +9303,7 @@
             <div style="display:flex; align-items:center; gap:4px">
               <input type="number" class="cart-loose-qty-input" value="${displayVal}" min="${wConfig.divisor === 1 ? '0.01' : '1'}" step="${stepVal}" 
                 oninput="updateCartItemWeight(\'${item.productId}\', this.value)" 
-                style="width: 65px; padding:4px 6px; font-size:12px; text-align:center; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-panel); color:var(--text-primary); font-weight:700">
+                style="width: 80px; padding:8px 6px; font-size:14px; text-align:center; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-panel); color:var(--text-primary); font-weight:700; min-height:36px">
               <span style="font-size:11px; color:var(--text-muted); font-weight:bold">${wConfig.suffix}</span>
             </div>
           `;
@@ -9352,7 +9423,7 @@
       document.getElementById("card-graphic-cvv").innerText = cvv;
     }
 
-    function processPOSCheckout() {
+    async function processPOSCheckout() {
       if (state.cart.length === 0) return;
 
       const customerId = document.getElementById("pos-customer-select").value;
@@ -9362,13 +9433,6 @@
         triggerAlert("You must select an active seller outlet farm!", "danger");
         return;
       }
-
-      // Generate Invoice ID
-      const timestamp = new Date();
-      const yr = timestamp.getFullYear();
-      const count = state.invoices.length + 1;
-      const padCount = String(count).padStart(4, '0');
-      const invoiceId = `AIAVRO-${yr}-${padCount}`;
 
       const itemsList = state.cart.map(item => {
         const prod = state.products.find(p => p.id === item.productId);
@@ -9407,25 +9471,10 @@
 
       if (!stockValid) return;
 
-      // Deduct warehouse volume
-      state.cart.forEach(cartItem => {
-        const prod = state.products.find(p => p.id === cartItem.productId);
-        if (prod) {
-          prod.stock -= cartItem.quantity;
-          logInventoryMovement(prod.id, "Sale", -cartItem.quantity, invoiceId, "POS Billed Checkout Sale");
-        }
-      });
-
-      // Notify Socket.IO remote scanners that cashier completed check out
-      if (desktopSocket && state.scannerSessionId) {
-        desktopSocket.emit('COMPLETE_INVOICE', { sessionId: state.scannerSessionId });
-      }
-
       const newInvoice = {
-        id: invoiceId,
         businessId: businessId,
+        storeId: businessId,
         customerId: customerId,
-        date: timestamp.toISOString(),
         items: itemsList,
         subtotal: state.lastCalculation.subtotal,
         discount: state.lastCalculation.discount,
@@ -9436,30 +9485,52 @@
         status: "paid"
       };
 
-      state.invoices.push(newInvoice);
-      logActivity('billing', `Completed checkout for invoice: ${invoiceId}. Grand Total: ₹${newInvoice.grandtotal.toFixed(2)} (${state.paymentMethod.toUpperCase()})`);
-      saveStateToLocalStorage();
-      
-      triggerAlert(`Invoice ${invoiceId} generated! Warehouse updated.`, "success");
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/invoices`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(newInvoice)
+        });
+        const result = await res.json();
+        if (result.success) {
+          const invoiceId = result.invoiceNumber;
+          triggerAlert(`Invoice ${invoiceId} generated! Warehouse updated.`, "success");
 
-      // Reset cart and credit fields
-      state.cart = [];
-      document.getElementById("pos-discount-value").value = 0;
-      
-      // Reset payment widgets
-      document.getElementById("card-input-number").value = "";
-      document.getElementById("card-input-holder").value = "";
-      document.getElementById("card-input-expiry").value = "";
-      document.getElementById("card-input-cvv").value = "";
-      updateCardDetailsGraphic();
-      setPaymentMethod('cash');
+          // Notify Socket.IO remote scanners that cashier completed check out
+          if (desktopSocket && state.scannerSessionId) {
+            desktopSocket.emit('COMPLETE_INVOICE', { sessionId: state.scannerSessionId });
+          }
 
-      recalculatePOSTotals();
-      renderPOSProducts();
-      closeCameraPOSScanner();
+          // Reset cart and credit fields
+          state.cart = [];
+          document.getElementById("pos-discount-value").value = 0;
+          
+          // Reset payment widgets
+          document.getElementById("card-input-number").value = "";
+          document.getElementById("card-input-holder").value = "";
+          document.getElementById("card-input-expiry").value = "";
+          document.getElementById("card-input-cvv").value = "";
+          updateCardDetailsGraphic();
+          setPaymentMethod('cash');
 
-      // View perfect invoice
-      openInvoicePreviewModal(invoiceId);
+          recalculatePOSTotals();
+          closeCameraPOSScanner();
+
+          // Sync database state from server
+          await syncStateWithServer();
+
+          // View perfect invoice
+          openInvoicePreviewModal(invoiceId);
+        } else {
+          triggerAlert(result.message || "Failed to submit transaction", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error connecting to server during checkout", "danger");
+      }
     }
 
     /* ==================== INVOICES LOG ACTIONS PREVIEWS ==================== */
@@ -9778,6 +9849,113 @@
       }
     }
 
+    function downloadServerInvoicePDF() {
+      if (!currentViewingInvoiceId) return;
+      const inv = state.invoices.find(i => i.id === currentViewingInvoiceId);
+      if (!inv) return;
+      const token = localStorage.getItem("aiavro_jwt_token");
+      
+      // Open the pdf in a new window or trigger download
+      window.open(`${state.backendUrl}/api/invoices/${inv.invoiceNumber}/pdf?token=${token}`, '_blank');
+    }
+
+    function openTransferStockModal() {
+      const modal = document.getElementById("transfer-stock-modal");
+      modal.classList.add("active");
+      
+      const prodSelect = document.getElementById("transfer-stock-product");
+      const srcSelect = document.getElementById("transfer-stock-source");
+      const destSelect = document.getElementById("transfer-stock-target");
+      
+      // Populate Products
+      prodSelect.innerHTML = state.products.map(p => 
+        `<option value="${p.id}">${p.emoji || '📦'} ${p.name} (SKU: ${p.sku})</option>`
+      ).join('');
+
+      // Populate Stores (businesses)
+      const storeOptions = state.businesses.map(b => 
+        `<option value="${b.id}">${b.name}</option>`
+      ).join('');
+      
+      srcSelect.innerHTML = storeOptions;
+      destSelect.innerHTML = storeOptions;
+      
+      // Default selections
+      if (state.businesses.length >= 2) {
+        srcSelect.selectedIndex = 0;
+        destSelect.selectedIndex = 1;
+      }
+      
+      document.getElementById("transfer-stock-qty").value = "";
+      document.getElementById("transfer-stock-notes").value = "";
+      updateTransferAvailableStockLabel();
+    }
+
+    function closeTransferStockModal() {
+      document.getElementById("transfer-stock-modal").classList.remove("active");
+    }
+
+    function updateTransferAvailableStockLabel() {
+      const prodId = document.getElementById("transfer-stock-product").value;
+      const srcStoreId = document.getElementById("transfer-stock-source").value;
+      const label = document.getElementById("transfer-available-stock-label");
+      
+      if (!prodId || !srcStoreId) {
+        label.innerText = "";
+        return;
+      }
+      
+      const prod = state.products.find(p => p.id === prodId);
+      const invRecord = state.inventory.find(i => i.productId === prodId && i.storeId === srcStoreId);
+      const qty = invRecord ? invRecord.quantity : 0;
+      const unit = prod ? (prod.unit || 'units') : 'units';
+      
+      label.innerText = `(Available: ${qty.toFixed(2)} ${unit})`;
+      document.getElementById("transfer-stock-qty").max = qty;
+    }
+
+    async function executeStockTransfer(e) {
+      e.preventDefault();
+      const productId = document.getElementById("transfer-stock-product").value;
+      const sourceStoreId = document.getElementById("transfer-stock-source").value;
+      const targetStoreId = document.getElementById("transfer-stock-target").value;
+      const quantity = parseFloat(document.getElementById("transfer-stock-qty").value) || 0;
+      const notes = document.getElementById("transfer-stock-notes").value.trim();
+
+      if (sourceStoreId === targetStoreId) {
+        triggerAlert("Source and Target outlets must be different!", "danger");
+        return;
+      }
+
+      if (quantity <= 0) {
+        triggerAlert("Quantity must be greater than zero!", "danger");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/inventory/transfer`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ productId, sourceStoreId, targetStoreId, quantity, notes })
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert("Inter-store stock transfer completed successfully!", "success");
+          closeTransferStockModal();
+          await syncStateWithServer();
+          if (state.activeView === 'inventory') renderInventoryTable();
+        } else {
+          triggerAlert(result.message || "Failed to complete transfer", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error connecting to server.", "danger");
+      }
+    }
+
     function shareInvoiceWhatsApp() {
       const inv = state.invoices.find(i => i.id === currentViewingInvoiceId);
       if (!inv) return;
@@ -9857,12 +10035,12 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       
       const user = state.currentUser;
       if (user) {
-        if (getUserCategory(user) === 'employee') {
+        if (getUserCategory(user) === 'employee' && user.assignedStoreId && user.assignedStoreId !== 'all') {
           // Employee: ONLY show invoices for their assigned store
-          const assignedStore = user.assignedStoreId || '';
+          const assignedStore = user.assignedStoreId;
           list = list.filter(inv => inv.businessId === assignedStore);
         } else {
-          // Admin / Auditor: Show based on store filter dropdown (if not filtering via custom parameter)
+          // Admin / Auditor / Employee with 'All' Access: Show based on store filter dropdown
           const storeFilter = document.getElementById("invoice-filter-store") ? document.getElementById("invoice-filter-store").value : "all";
           if (!filtered && storeFilter !== "all") {
             list = list.filter(inv => inv.businessId === storeFilter);
@@ -9927,9 +10105,8 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         const matchPay = payMode === 'all' || inv.paymentMode === payMode;
 
         let matchStore = true;
-        const user = state.currentUser;
-        if (user && getUserCategory(user) === 'employee') {
-          matchStore = inv.businessId === (user.assignedStoreId || '');
+        if (user && getUserCategory(user) === 'employee' && user.assignedStoreId && user.assignedStoreId !== 'all') {
+          matchStore = inv.businessId === user.assignedStoreId;
         } else {
           matchStore = storeFilter === 'all' || inv.businessId === storeFilter;
         }
@@ -10389,7 +10566,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
             </td>
             <td style="text-align:right"><strong>${Number.isInteger(p.unitsSold) ? p.unitsSold + ' sold' : p.unitsSold.toFixed(3) + ' ' + (p.unit || 'kg') + ' sold'}</strong></td>
             <td style="text-align:right">₹${p.price.toFixed(2)}</td>
-            <td style="text-align:right; color:var(--accent-green)"><strong>₹${(p.unitsSold * p.price).toFixed(2)}</strong></td>
+            <td style="text-align:right; color:var(--accent-green)"><strong>₹0.00</strong></td>
           `;
           topSellingTbody.appendChild(row);
         });
@@ -10410,7 +10587,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
             <td><strong style="color:var(--accent-green)">${inv.id}</strong></td>
             <td><strong>${cust.name}</strong></td>
             <td style="text-transform:uppercase; font-size:10px"><strong>${inv.paymentMode}</strong></td>
-            <td style="text-align:right"><strong>₹${inv.grandtotal}</strong></td>
+            <td style="text-align:right"><strong>₹0.00</strong></td>
             <td style="text-align:center">
               <button class="secondary-btn" style="padding:4px 8px; font-size:10px" onclick="openInvoicePreviewModal(\'${inv.id}\')">Invoice</button>
             </td>
@@ -11367,6 +11544,17 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
               diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2} (${name}): Missing "Barcode / SKU" column data.</span>`);
               return;
             }
+            if (buyPrice <= 0 || sellPrice <= 0) {
+              invalidCount++;
+              diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2} (${name}): Price and Cost must be greater than zero! (Cost: ₹${buyPrice}, Price: ₹${sellPrice})</span>`);
+              return;
+            }
+            const validGSTs = [0, 5, 12, 18, 28];
+            if (!validGSTs.includes(gst)) {
+              invalidCount++;
+              diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2} (${name}): Invalid GST slab rate "${gst}%". Must be 0, 5, 12, 18, or 28%.</span>`);
+              return;
+            }
 
             const isDup = state.products.some(p => p.sku === barcode || p.barcode === barcode) || importList.some(p => p.sku === barcode);
             if (isDup) {
@@ -11737,7 +11925,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       document.getElementById("purchase-sheet-total").innerText = `₹${totalCost.toFixed(2)}`;
     }
 
-    function savePurchaseInvoice(e) {
+    async function savePurchaseInvoice(e) {
       e.preventDefault();
       if (purchaseSheetItems.length === 0) {
         triggerAlert("Purchase sheet is empty! Add products first.", "warning");
@@ -11748,28 +11936,13 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       const refId = document.getElementById("purchase-invoice-ref").value.trim();
       const store = document.getElementById("purchase-store-select").value;
 
-      purchaseSheetItems.forEach(item => {
-        const prod = state.products.find(p => p.id === item.productId);
-        if (prod) {
-          prod.cost = item.cost;
-          prod.stock += item.quantity;
-          prod.store = store;
-          prod.supplier = supplier;
-
-          logInventoryMovement(prod.id, "Purchase", item.quantity, refId, `Purchase from ${supplier}`);
-        }
-      });
-
-      // Record Purchase Invoice in Purchase History
       const totalCostVal = purchaseSheetItems.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
       const newPurchase = {
-        id: "PUR-" + Date.now(),
-        purchaseNo: refId,
-        supplier: supplier,
-        store: store,
-        date: new Date().toISOString(),
-        totalCost: totalCostVal,
-        itemsCount: purchaseSheetItems.reduce((sum, item) => sum + item.quantity, 0),
+        invoiceNumber: refId,
+        supplierId: supplier,
+        storeId: store,
+        purchaseDate: new Date().toISOString(),
+        totalAmount: totalCostVal,
         items: purchaseSheetItems.map(item => ({
           productId: item.productId,
           name: item.name,
@@ -11778,15 +11951,29 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
           quantity: item.quantity
         }))
       };
-      if (!state.purchases) state.purchases = [];
-      state.purchases.push(newPurchase);
-      logActivity('create', `Recorded purchase entry: Ref ${refId} from supplier: ${supplier} to store: ${store}. Cost: ₹${totalCostVal.toFixed(2)}`);
 
-      saveStateToLocalStorage();
-      renderInventoryTable();
-      clearPurchaseSheet();
-      triggerAlert("Supplier purchase invoice successfully processed and inventory updated!", "success");
-      switchView('inventory');
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/purchases`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(newPurchase)
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert("Supplier purchase invoice successfully processed and inventory updated!", "success");
+          clearPurchaseSheet();
+          await syncStateWithServer();
+          switchView('inventory');
+        } else {
+          triggerAlert(result.message || "Failed to submit purchase transaction", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error connecting to server gateway.", "danger");
+      }
     }
 
     /* ==================== AUDIT SUBTAB CONTROLLERS ==================== */
@@ -12206,6 +12393,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       if (idx === -1) return;
 
       const prod = state.products.find(p => p.id === prodId);
+      if (!prod) { state.cart.splice(idx, 1); recalculatePOSTotals(); return; }
       const config = getWeightUnitConfig(prod);
       const val = parseFloat(inputVal) || 0;
       if (val <= 0) {
