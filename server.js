@@ -445,7 +445,12 @@ app.post('/api/auth/login', validateBody(loginSchema), async (req, res) => {
   const { username, password } = req.validatedBody;
 
   try {
-    const user = await db.collection('users').findOne({ username: username.toLowerCase() });
+    const user = await db.collection('users').findOne({
+      $or: [
+        { username: username.toLowerCase() },
+        { email: username.toLowerCase() }
+      ]
+    });
     if (!user) return res.status(401).json({ success: false, message: "Invalid username or password" });
     if (user.status === 'suspended') return res.status(403).json({ success: false, message: "Your account is suspended" });
 
