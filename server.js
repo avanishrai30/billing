@@ -175,40 +175,61 @@ async function initDB() {
     db = dbClient.db();
     console.log(`[Database] Connected to self-hosted MongoDB: ${db.databaseName}`);
 
+    // Self-healing Index creation helper to resolve IndexKeySpecsConflict automatically
+    const createIndexSafely = async (collName, spec, options = {}) => {
+      try {
+        await db.collection(collName).createIndex(spec, options);
+      } catch (err) {
+        if (err.codeName === 'IndexKeySpecsConflict' || err.code === 85 || err.code === 86 || (err.message && err.message.includes('IndexKeySpecsConflict'))) {
+          console.warn(`[Database Migration] Conflict creating index on ${collName}, dropping existing index and retrying...`);
+          try {
+            const indexName = Object.keys(spec).map(k => `${k}_${spec[k]}`).join('_');
+            await db.collection(collName).dropIndex(indexName);
+            await db.collection(collName).createIndex(spec, options);
+            console.log(`[Database Migration] Index on ${collName} (${indexName}) recreated successfully.`);
+          } catch (dropErr) {
+            console.error(`[Database Migration] Failed to recreate index on ${collName}:`, dropErr.message);
+          }
+        } else {
+          console.warn(`[Database] Index note on ${collName}:`, err.message);
+        }
+      }
+    };
+
     // Create Indexes
     // 1. users indexes
-    await db.collection('users').createIndex({ username: 1 }, { unique: true });
-    await db.collection('users').createIndex({ email: 1 }, { unique: true, sparse: true });
-    await db.collection('users').createIndex({ phone: 1 });
-    await db.collection('users').createIndex({ role: 1 });
+    await createIndexSafely('users', { username: 1 }, { unique: true });
+    await createIndexSafely('users', { email: 1 }, { unique: true, sparse: true });
+    await createIndexSafely('users', { phone: 1 });
+    await createIndexSafely('users', { role: 1 });
 
     // 2. stores indexes
-    await db.collection('stores').createIndex({ code: 1 }, { unique: true });
+    await createIndexSafely('stores', { code: 1 }, { unique: true });
 
     // 3. products indexes
-    await db.collection('products').createIndex({ sku: 1 }, { unique: true });
-    await db.collection('products').createIndex({ barcode: 1 }, { unique: true, sparse: true });
-    await db.collection('products').createIndex({ name: "text" });
+    await createIndexSafely('products', { sku: 1 }, { unique: true });
+    await createIndexSafely('products', { barcode: 1 }, { unique: true, sparse: true });
+    await createIndexSafely('products', { name: "text" });
 
     // 4. product_images indexes
-    await db.collection('product_images').createIndex({ id: 1 }, { unique: true });
-    await db.collection('product_images').createIndex({ productId: 1 });
+    await createIndexSafely('product_images', { id: 1 }, { unique: true });
+    await createIndexSafely('product_images', { productId: 1 });
 
     // 5. customers indexes
-    await db.collection('customers').createIndex({ phone: 1 });
-    await db.collection('customers').createIndex({ email: 1 });
-    await db.collection('customers').createIndex({ gstin: 1 });
+    await createIndexSafely('customers', { phone: 1 });
+    await createIndexSafely('customers', { email: 1 });
+    await createIndexSafely('customers', { gstin: 1 });
 
     // 6. inventory compound index
-    await db.collection('inventory').createIndex({ productId: 1, storeId: 1 }, { unique: true });
+    await createIndexSafely('inventory', { productId: 1, storeId: 1 }, { unique: true });
 
     // 7. invoices indexes
-    await db.collection('invoices').createIndex({ invoiceNumber: 1 }, { unique: true });
-    await db.collection('invoices').createIndex({ transactionId: 1 }, { unique: true, sparse: true });
+    await createIndexSafely('invoices', { invoiceNumber: 1 }, { unique: true });
+    await createIndexSafely('invoices', { transactionId: 1 }, { unique: true, sparse: true });
 
     // 8. product_barcodes (variant mappings)
-    await db.collection('product_barcodes').createIndex({ barcode: 1 });
-    await db.collection('product_barcodes').createIndex({ productId: 1 });
+    await createIndexSafely('product_barcodes', { barcode: 1 });
+    await createIndexSafely('product_barcodes', { productId: 1 });
 
     // Migration: Clean up duplicates in businesses collection (keep one per unique id)
     try {
