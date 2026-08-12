@@ -266,47 +266,116 @@ async function initDB() {
 
     console.log("[Database] Collections indexes registered.");
 
-    // Seed default stores (idempotently using updateOne with upsert)
-    const defaultStores = [
-      { id: "store-wf", name: "Whitefield Store", code: "ST-WF", address: "Whitefield Retail Hub, Sector 2, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() },
-      { id: "store-hsr", name: "HSR Layout Store", code: "ST-HSR", address: "HSR Layout, Sector 6, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() },
-      { id: "store-kor", name: "Koramangala Store", code: "ST-KO", address: "Koramangala 4th Block, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() }
-    ];
+    // Dynamic Database Wipe & Cleanup Migration
+    let shouldSeedDefaults = true;
+    try {
+      const activeBiz = await db.collection('businesses').findOne({
+        $or: [
+          { id: "biz-1786547429208" },
+          { name: "VC ORGANIC'S" },
+          { phone: "8050065491" }
+        ]
+      });
 
-    for (const store of defaultStores) {
-      await db.collection('stores').updateOne(
-        { id: store.id },
-        { $setOnInsert: store },
-        { upsert: true }
-      );
+      if (activeBiz) {
+        shouldSeedDefaults = false;
+        console.log(`[Database Cleanup] Found user's active business outlet: ${activeBiz.name} (${activeBiz.id})`);
+
+        // 1. Delete all other businesses
+        const delBiz = await db.collection('businesses').deleteMany({ id: { $ne: activeBiz.id } });
+        console.log(`[Database Cleanup] Deleted ${delBiz.deletedCount} default businesses.`);
+
+        // 2. Delete all other stores
+        const delStores = await db.collection('stores').deleteMany({ id: { $ne: activeBiz.id } });
+        console.log(`[Database Cleanup] Deleted ${delStores.deletedCount} default stores.`);
+
+        // 3. Ensure the active store outlet exists in 'stores' collection
+        await db.collection('stores').updateOne(
+          { id: activeBiz.id },
+          {
+            $setOnInsert: {
+              id: activeBiz.id,
+              name: activeBiz.name,
+              code: "VC-ORG",
+              address: activeBiz.address || "Bangalore",
+              status: "active",
+              createdAt: new Date().toISOString()
+            }
+          },
+          { upsert: true }
+        );
+
+        // 4. Wipe all products and barcodes
+        await db.collection('products').deleteMany({});
+        await db.collection('product_barcodes').deleteMany({});
+        console.log("[Database Cleanup] Wiped products master and variants databases.");
+
+        // 5. Wipe invoices
+        await db.collection('invoices').deleteMany({});
+        console.log("[Database Cleanup] Wiped invoice history.");
+
+        // 6. Wipe inventory records and transactions
+        await db.collection('inventory').deleteMany({});
+        await db.collection('inventory_transactions').deleteMany({});
+        await db.collection('inventory_logs').deleteMany({});
+        console.log("[Database Cleanup] Wiped stock inventory ledgers.");
+
+        // 7. Wipe other transient records
+        await db.collection('customers').deleteMany({});
+        await db.collection('suppliers').deleteMany({});
+        await db.collection('purchases').deleteMany({});
+        console.log("[Database Cleanup] Database wipe successfully executed. Ready for production.");
+      } else {
+        console.log("[Database Cleanup] User business outlet not created yet. Skipping cleanup.");
+      }
+    } catch (cleanErr) {
+      console.error("[Database Cleanup] Error running clean-up migration:", cleanErr);
     }
 
-    // Seed default businesses (idempotently using updateOne with upsert)
-    const defaultBusinesses = defaultStores.map((s, idx) => ({
-      id: s.id,
-      name: s.name,
-      subtitle: "Organic Farms Outlet",
-      owner: "VC Organic Admin",
-      gstin: `27AIAVRO111${idx}A1Z0`,
-      phone: "+91 98765 43210",
-      email: "support@vcorganics.com",
-      address: s.address,
-      bankName: "HDFC Farmers Cooperative Bank",
-      accountNo: `5020001234567${idx}`,
-      ifsc: "HDFC0001234",
-      upiId: "vcorganics@upi",
-      terms: "1. Fresh Organic Products.\n2. Returns within 24h for perishables.",
-      status: "active"
-    }));
+    // Seed default stores and businesses only if no active user business outlet is found
+    if (shouldSeedDefaults) {
+      // Seed default stores (idempotently using updateOne with upsert)
+      const defaultStores = [
+        { id: "store-wf", name: "Whitefield Store", code: "ST-WF", address: "Whitefield Retail Hub, Sector 2, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() },
+        { id: "store-hsr", name: "HSR Layout Store", code: "ST-HSR", address: "HSR Layout, Sector 6, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() },
+        { id: "store-kor", name: "Koramangala Store", code: "ST-KO", address: "Koramangala 4th Block, Bengaluru, Karnataka", status: "active", createdAt: new Date().toISOString() }
+      ];
 
-    for (const biz of defaultBusinesses) {
-      await db.collection('businesses').updateOne(
-        { id: biz.id },
-        { $setOnInsert: biz },
-        { upsert: true }
-      );
+      for (const store of defaultStores) {
+        await db.collection('stores').updateOne(
+          { id: store.id },
+          { $setOnInsert: store },
+          { upsert: true }
+        );
+      }
+
+      // Seed default businesses (idempotently using updateOne with upsert)
+      const defaultBusinesses = defaultStores.map((s, idx) => ({
+        id: s.id,
+        name: s.name,
+        subtitle: "Organic Farms Outlet",
+        owner: "VC Organic Admin",
+        gstin: `27AIAVRO111${idx}A1Z0`,
+        phone: "+91 98765 43210",
+        email: "support@vcorganics.com",
+        address: s.address,
+        bankName: "HDFC Farmers Cooperative Bank",
+        accountNo: `5020001234567${idx}`,
+        ifsc: "HDFC0001234",
+        upiId: "vcorganics@upi",
+        terms: "1. Fresh Organic Products.\n2. Returns within 24h for perishables.",
+        status: "active"
+      }));
+
+      for (const biz of defaultBusinesses) {
+        await db.collection('businesses').updateOne(
+          { id: biz.id },
+          { $setOnInsert: biz },
+          { upsert: true }
+        );
+      }
+      console.log("[Database] Seeded default business outlet configurations.");
     }
-    console.log("[Database] Seeded business outlet configurations idempotently.");
 
     // Seed default Owner & Super Admin accounts (hash with bcrypt 12 rounds)
     const userCount = await db.collection('users').countDocuments();
