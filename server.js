@@ -100,7 +100,7 @@ async function initDB() {
         bankName: "HDFC Farmers Cooperative Bank",
         accountNo: `5020001234567${idx}`,
         ifsc: "HDFC0001234",
-        upiId: "vcorganic@upi",
+        upiId: "vcorganics@upi",
         terms: "1. Fresh Organic Products.\n2. Returns within 24h for perishables."
       }));
       await db.collection('businesses').insertMany(defaultBusinesses);
@@ -1015,7 +1015,7 @@ initDB().then(() => {
   server.listen(PORT, () => {
     console.log(`=============================================================`);
     console.log(` VC Organic API Gateway listening on http://localhost:${PORT}`);
-    console.log(` Nginx reverse proxy routing configured for api.vcorganic.com`);
+    console.log(` Nginx reverse proxy routing configured for api.vcorganics.com`);
     console.log(`=============================================================`);
   });
 });
