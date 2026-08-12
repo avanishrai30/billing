@@ -5476,6 +5476,13 @@
     const MASTER_RESET_PASSWORD = "Raja123$";
     const DEFAULT_LOGO_SVG = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='28' fill='none' stroke='%23ffffff' stroke-width='6'/><path d='M35 50 L45 60 L65 40' fill='none' stroke='%2310b981' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg>`;
 
+    function getFullImageUrl(url) {
+      if (!url || url === 'transparent logo aiavro Background Removed.png') return DEFAULT_LOGO_SVG;
+      if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+      const cleanPath = url.startsWith('/') ? url : '/' + url;
+      return state.backendUrl + cleanPath;
+    }
+
     // --- Security: SHA-256 password hashing utility ---
     async function hashPassword(password) {
       const encoder = new TextEncoder();
@@ -5608,7 +5615,7 @@
           if (inputEl) inputEl.value = data.title;
         }
         if (data.logo) {
-          const logoUrl = data.logo.startsWith('http') || data.logo.startsWith('/') ? data.logo : state.backendUrl + data.logo;
+          const logoUrl = getFullImageUrl(data.logo);
           document.getElementById("login-brand-logo-img").src = logoUrl;
           
           const previewEl = document.getElementById("settings-landing-logo-preview");
@@ -7992,8 +7999,7 @@
       const activeBiz = state.businesses.find(b => b.id === state.activeBusinessId) || state.businesses[0] || (typeof DEFAULT_BUSINESSES !== 'undefined' ? DEFAULT_BUSINESSES[0] : null);
       if (!activeBiz) return;
 
-      const defaultLogo = DEFAULT_LOGO_SVG;
-      const logoUrl = activeBiz.logo || defaultLogo;
+      const logoUrl = getFullImageUrl(activeBiz.logo);
       const brandName = activeBiz.name || "AIAVRO";
       const subtitle = activeBiz.subtitle || "Billing System";
 
@@ -8959,7 +8965,7 @@
         card.innerHTML = `
           <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:15px">
             <div style="display:flex; align-items:center; gap:12px">
-              ${biz.logo ? `<img src="${biz.logo}" alt="Store Logo" style="width:48px; height:48px; object-fit:contain; flex-shrink:0">` : `<div style="width:42px; height:42px; background:#001845; border-radius:10px; display:grid; place-items:center; flex-shrink:0">
+              ${biz.logo ? `<img src="${getFullImageUrl(biz.logo)}" alt="Store Logo" style="width:48px; height:48px; object-fit:contain; flex-shrink:0" onerror="this.onerror=null; this.src='${DEFAULT_LOGO_SVG}'">` : `<div style="width:42px; height:42px; background:#001845; border-radius:10px; display:grid; place-items:center; flex-shrink:0">
                 <svg viewBox="0 0 100 100" style="width:24px; height:24px">
                   <circle cx="50" cy="50" r="30" fill="none" stroke="#ffffff" stroke-width="5" />
                   <circle cx="43" cy="50" r="23" fill="none" stroke="#ffffff" stroke-width="5" />
