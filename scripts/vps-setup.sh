@@ -85,7 +85,7 @@ echo "Configuring Nginx virtual host for api.vcorganics.com at $CONF_FILE..."
 cat << 'EOF' > "$CONF_FILE"
 server {
     listen 80;
-    server_name api.vcorganics.com api.vcorganic.com;
+    server_name api.vcorganics.com;
 
     # Maximum payload limit for base64 product image uploads
     client_max_body_size 12M;
@@ -128,7 +128,7 @@ echo -e "${GREEN}Nginx reverse proxy configured successfully.${NC}"
 echo -e "${GREEN}==> Step 7: Configuring Certbot SSL setup...${NC}"
 apt-get install -y certbot python3-certbot-nginx
 echo -e "${GREEN}Certbot installed. To register SSL certificates for api.vcorganics.com, execute:${NC}"
-echo -e "  sudo certbot --nginx -d api.vcorganics.com -d api.vcorganic.com --non-interactive --agree-tos -m support@vcorganics.com"
+echo -e "  sudo certbot --nginx -d api.vcorganics.com --non-interactive --agree-tos -m support@vcorganics.com"
 
 # 8. FINALIZE CONFIGURATION & PERMISSIONS
 # Create empty log files for Nginx logs redirection
