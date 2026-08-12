@@ -5124,12 +5124,12 @@
 
         <!-- Profile Info Section -->
         <div style="display:flex; align-items:center; gap:16px; padding:20px; background:var(--bg-primary); border-radius:var(--radius-md); margin-bottom:20px; border:1px solid var(--border-color)">
-          <div style="width:52px; height:52px; border-radius:50%; background:var(--accent-green); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:white; flex-shrink:0; position:relative; cursor:pointer; overflow:hidden" id="account-avatar-container" onclick="triggerAccountAvatarUpload()">
+          <div style="width:52px; height:52px; border-radius:50%; background:var(--accent-green); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:white; flex-shrink:0; position:relative; overflow:hidden" id="account-avatar-container">
             <img id="account-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; display:none" onerror="this.style.display='none'; document.getElementById('account-avatar-initials').style.display='block';">
             <span id="account-avatar-initials">A</span>
-            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:8px; text-align:center; padding:2px 0; font-weight:700">EDIT</div>
+            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:8px; text-align:center; padding:2px 0; font-weight:700; pointer-events:none">EDIT</div>
+            <input type="file" id="account-avatar-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; z-index:5" onchange="handleAccountAvatarSelect(event)">
           </div>
-          <input type="file" id="account-avatar-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display:none" onchange="handleAccountAvatarSelect(event)">
           <div>
             <div style="font-size:18px; font-weight:800; color:var(--text-primary)" id="account-display-name">Administrator</div>
             <div style="font-size:12px; color:var(--text-muted); margin-top:2px">
@@ -5154,10 +5154,12 @@
                 <div style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#fff; border-radius:6px; border:1px solid var(--border-color)">
                   <img id="settings-landing-logo-preview" src="transparent logo aiavro Background Removed.png" style="max-width:100%; max-height:100%; object-fit:contain">
                 </div>
-                <button type="button" class="secondary-btn" onclick="document.getElementById('settings-landing-logo-file').click()" style="padding:6px 12px; font-size:11px">
-                  📷 Choose Logo
-                </button>
-                <input type="file" id="settings-landing-logo-file" accept="image/*" style="display:none" onchange="handleLandingLogoSelect(event)">
+                <div style="position:relative">
+                  <button type="button" class="secondary-btn" style="padding:6px 12px; font-size:11px; pointer-events:none">
+                    📷 Choose Logo
+                  </button>
+                  <input type="file" id="settings-landing-logo-file" accept="image/*" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; z-index:5" onchange="handleLandingLogoSelect(event)">
+                </div>
                 <input type="hidden" id="settings-landing-logo-path" value="transparent logo aiavro Background Removed.png">
               </div>
             </div>

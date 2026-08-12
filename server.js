@@ -43,17 +43,27 @@ Object.values(UPLOAD_SUBDIRS).forEach(dir => {
   fs.mkdirSync(dir, { recursive: true });
 });
 
-// Security Hardening with Helmet (disabling CSP to prevent breaking SPA inline styles/scripts)
+// Security Hardening with Helmet (disabling CSP and cross-origin resource policy blocks to allow billing.vcorganics.com client access)
 app.use(helmet({
-  contentSecurityPolicy: false
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false
 }));
 
-// Strictly configure CORS origins
+// Configure CORS origins
 const allowedOrigins = ['https://billing.vcorganics.com'];
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true); // Allow mobile/CURL/local files
-    if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+    
+    const originLower = origin.toLowerCase();
+    const isAllowed = allowedOrigins.includes(origin) || 
+                      originLower.endsWith('.vcorganics.com') || 
+                      originLower.endsWith('.vercel.app') ||
+                      originLower.startsWith('http://localhost') || 
+                      originLower.startsWith('http://127.0.0.1');
+
+    if (isAllowed) {
       return callback(null, true);
     }
     callback(new Error('Not allowed by CORS'));
