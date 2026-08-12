@@ -863,10 +863,10 @@ app.post('/api/inventory/transfer', verifyJWT, async (req, res) => {
     await writeAuditLog('inventory_updated', 'inventory', productId, null, { sourceStoreId, targetStoreId, quantity: qtyNum }, req);
     
     // Fetch updated inventory levels to broadcast actual stock
-    const sourceStock = await db.collection('inventory').findOne({ productId, storeId: sourceStoreId });
+    const updatedSourceStock = await db.collection('inventory').findOne({ productId, storeId: sourceStoreId });
     const targetStock = await db.collection('inventory').findOne({ productId, storeId: targetStoreId });
     
-    io.to(`store_${sourceStoreId}`).emit('inventory_updated', { productId, storeId: sourceStoreId, quantity: sourceStock ? sourceStock.quantity : 0 });
+    io.to(`store_${sourceStoreId}`).emit('inventory_updated', { productId, storeId: sourceStoreId, quantity: updatedSourceStock ? updatedSourceStock.quantity : 0 });
     io.to(`store_${targetStoreId}`).emit('inventory_updated', { productId, storeId: targetStoreId, quantity: targetStock ? targetStock.quantity : 0 });
     
     res.json({ success: true });
