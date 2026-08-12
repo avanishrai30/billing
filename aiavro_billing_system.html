@@ -2403,7 +2403,7 @@
       <div class="login-logo">
         <img id="login-brand-logo-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>" alt="Brand Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\'%23001845\'/><circle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/><circle cx=\'43\' cy=\'50\' r=\'23\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/></svg>'">
       </div>
-      <h2 class="login-title" id="login-brand-name">AIAVRO Business OS</h2>
+      <h2 class="login-title" id="login-brand-name">VC ORGANIC'S Billing OS</h2>
       <p class="login-subtitle">Sign in with your credentials to continue</p>
       
       <div class="login-error" id="login-error-msg"></div>
@@ -2447,15 +2447,15 @@
           <img id="sidebar-brand-logo-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>" alt="Brand Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\'%23001845\'/><circle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/><circle cx=\'43\' cy=\'50\' r=\'23\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/></svg>'">
         </div>
         <div class="brand-info">
-          <h1 class="brand-name" id="sidebar-brand-name">AIAVRO</h1>
-          <span class="brand-subtitle" id="sidebar-brand-subtitle">Billing System</span>
+          <h1 class="brand-name" id="sidebar-brand-name">VC ORGANIC'S</h1>
+          <span class="brand-subtitle" id="sidebar-brand-subtitle">BANASWADI STORE</span>
         </div>
       </div>
 
       <!-- Active Business Widget -->
       <div class="active-business-widget">
         <span class="widget-label">Active Seller</span>
-        <span class="widget-value" id="sidebar-active-business">AIAVRO Organic Farms</span>
+        <span class="widget-value" id="sidebar-active-business">VC ORGANIC'S</span>
       </div>
 
       <!-- Sidebar Navigation Menu -->
@@ -5751,6 +5751,27 @@
       state.showProductImagesInTables = localStorage.getItem("aiavro_show_product_images") !== 'false';
       state.backendUrl = localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com';
 
+      // Load cached business details to prevent layout/logo flickers on refresh
+      const cachedBizId = localStorage.getItem("aiavro_active_biz_id");
+      const cachedBizName = localStorage.getItem("aiavro_active_biz_name");
+      const cachedBizSubtitle = localStorage.getItem("aiavro_active_biz_subtitle");
+      const cachedBizLogo = localStorage.getItem("aiavro_active_biz_logo");
+
+      if (cachedBizId && cachedBizName) {
+        state.activeBusinessId = cachedBizId;
+        state.businesses = [{
+          id: cachedBizId,
+          name: cachedBizName,
+          subtitle: cachedBizSubtitle || "",
+          logo: cachedBizLogo || "",
+          status: "active"
+        }];
+        // Synchronously update the DOM to prevent visual brand flickering
+        updateActiveBrandUI();
+        const sidebarLabel = document.getElementById("sidebar-active-business");
+        if (sidebarLabel) sidebarLabel.innerText = cachedBizName;
+      }
+
       loadPublicSettings();
 
       if (localStorage.getItem("aiavro_theme")) {
@@ -6000,6 +6021,20 @@
     function saveStateToLocalStorage() {
       localStorage.setItem("aiavro_theme", state.theme);
       localStorage.setItem("aiavro_show_product_images", state.showProductImagesInTables);
+      if (state.activeBusinessId) {
+        const activeBiz = state.businesses.find(b => b.id === state.activeBusinessId);
+        if (activeBiz) {
+          localStorage.setItem("aiavro_active_biz_id", activeBiz.id);
+          localStorage.setItem("aiavro_active_biz_name", activeBiz.name || "");
+          localStorage.setItem("aiavro_active_biz_subtitle", activeBiz.subtitle || "");
+          localStorage.setItem("aiavro_active_biz_logo", activeBiz.logo || "");
+        }
+      } else {
+        localStorage.removeItem("aiavro_active_biz_id");
+        localStorage.removeItem("aiavro_active_biz_name");
+        localStorage.removeItem("aiavro_active_biz_subtitle");
+        localStorage.removeItem("aiavro_active_biz_logo");
+      }
     }
 
     /* ==================== SECURITY & USER ROLE ACCESS MANAGEMENT ==================== */
