@@ -5575,6 +5575,13 @@
       loadDatabaseState();
       initAuthentication();
       renderOnboardingQueue();
+
+      // Fallback: poll server database for state alignment every 30 seconds
+      setInterval(() => {
+        if (state.currentUser && typeof syncStateWithServer === 'function') {
+          syncStateWithServer();
+        }
+      }, 30000);
     });
 
     async function loadPublicSettings() {
@@ -5739,10 +5746,28 @@
       }
     }
 
+    let syncSocket = null;
+    function initSyncSocket() {
+      if (syncSocket) return;
+      console.log("[Sync] Establishing background real-time synchronization socket...");
+      syncSocket = io(state.backendUrl);
+
+      syncSocket.on('connect', () => {
+        console.log("[Sync] Persisted database synchronization channel established.");
+      });
+
+      syncSocket.on('db_sync_required', (data) => {
+        console.log(`[Sync] Real-time mutation broadcast received for: ${data.module}. Resyncing state...`);
+        syncStateWithServer();
+      });
+    }
+
     async function syncStateWithServer() {
       if (!state.currentUser) return;
       const token = localStorage.getItem("aiavro_jwt_token");
       if (!token) return;
+
+      initSyncSocket();
 
       try {
         const headers = { 'Authorization': `Bearer ${token}` };

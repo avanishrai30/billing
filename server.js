@@ -377,6 +377,7 @@ app.post('/api/settings', verifyJWT, async (req, res) => {
       { $set: { title, logo, updatedAt: new Date().toISOString() } },
       { upsert: true }
     );
+    io.emit('db_sync_required', { module: 'settings' });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to save settings" });
@@ -393,6 +394,7 @@ app.post('/api/users/avatar', verifyJWT, async (req, res) => {
       { id: req.user.id },
       { $set: { avatar, updatedAt: new Date().toISOString() } }
     );
+    io.emit('db_sync_required', { module: 'users' });
     res.json({ success: true, avatar });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to update avatar" });
@@ -432,6 +434,7 @@ app.post('/api/users/change-password', verifyJWT, async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
+    io.emit('db_sync_required', { module: 'users' });
     res.json({ success: true, message: "Password updated successfully" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error updating password" });
@@ -570,6 +573,7 @@ app.post('/api/products', verifyJWT, validateBody(productSchema), async (req, re
     }
 
     prod.barcodes = barcodesList; // Return clean representation to client
+    io.emit('db_sync_required', { module: 'products' });
     res.json({ success: true, product: prod });
   } catch (err) {
     console.error("Save product failed:", err);
@@ -719,6 +723,7 @@ app.post('/api/inventory/adjust', verifyJWT, async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
+    io.emit('db_sync_required', { module: 'inventory' });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to adjust stock count" });
@@ -815,6 +820,7 @@ app.post('/api/inventory/transfer', verifyJWT, async (req, res) => {
       timestamp: dateStr
     });
 
+    io.emit('db_sync_required', { module: 'inventory' });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Transfer failed" });
@@ -970,6 +976,7 @@ app.post('/api/invoices', verifyJWT, async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
+    io.emit('db_sync_required', { module: 'invoices' });
     res.json({ success: true, invoiceNumber: inv.invoiceNumber });
   } catch (err) {
     console.error("Save invoice transaction failed:", err);
@@ -1044,6 +1051,7 @@ app.post('/api/purchases', verifyJWT, async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
+    io.emit('db_sync_required', { module: 'purchases' });
     res.json({ success: true, id: purchase.id });
   } catch (err) {
     console.error("Save purchase log failed:", err);
@@ -1126,6 +1134,7 @@ app.post('/api/businesses', verifyJWT, async (req, res) => {
       { upsert: true }
     );
 
+    io.emit('db_sync_required', { module: 'businesses' });
     res.json({ success: true, message: "Business profile saved successfully", business: biz });
   } catch (err) {
     console.error("Failed to save business configuration:", err);
@@ -1145,6 +1154,7 @@ app.delete('/api/businesses/:id', verifyJWT, async (req, res) => {
   try {
     await db.collection('businesses').deleteOne({ id: bizId });
     await db.collection('stores').deleteOne({ id: bizId });
+    io.emit('db_sync_required', { module: 'businesses' });
     res.json({ success: true, message: "Business profile deleted successfully" });
   } catch (err) {
     console.error("Failed to delete business configuration:", err);
