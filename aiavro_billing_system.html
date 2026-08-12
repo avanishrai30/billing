@@ -5468,10 +5468,7 @@
       // Socket Remote Scanner State
       scannerConnected: false,
       scannerSessionId: null,
-      backendUrl: localStorage.getItem("aiavro_backend_url") || 
-        ((window.location.hostname && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) 
-          ? 'http://localhost:8181' 
-          : 'https://api.vcorganics.com'),
+      backendUrl: localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com',
       socket: null
     };
 

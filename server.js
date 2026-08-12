@@ -1,9 +1,40 @@
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+// Self-healing dependency verification engine
+try {
+  console.log("[Engine] Verifying package dependencies...");
+  const pkgPath = path.join(__dirname, 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const deps = Object.keys(pkg.dependencies || {});
+    let missing = false;
+    for (const dep of deps) {
+      try {
+        require.resolve(dep);
+      } catch (e) {
+        console.warn(`[Engine] Missing dependency detected: ${dep}`);
+        missing = true;
+        break;
+      }
+    }
+    if (missing) {
+      console.log("[Engine] Installing missing dependencies automatically, please wait...");
+      execSync('npm install --no-audit --no-fund', { cwd: __dirname, stdio: 'inherit' });
+      console.log("[Engine] All dependencies installed successfully!");
+    } else {
+      console.log("[Engine] All dependencies are present.");
+    }
+  }
+} catch (err) {
+  console.error("[Engine] Dependency check failed:", err);
+}
+
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
 const { MongoClient, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const sharp = require('sharp');
