@@ -23,6 +23,50 @@ const io = socketIo(server, {
   }
 });
 
+// Store presence mapping
+const activePresences = new Map();
+
+io.on('connection', (socket) => {
+  console.log(`[Socket] Client connected: ${socket.id}`);
+
+  // 1. Join scanning session room
+  socket.on('JOIN_SESSION', (data) => {
+    if (data && data.sessionId) {
+      socket.join(data.sessionId);
+      console.log(`[Socket] Client ${socket.id} joined scanner session: ${data.sessionId}`);
+    }
+  });
+
+  // 2. Join store and global sync rooms
+  socket.on('JOIN_SYNC', (data) => {
+    if (data) {
+      socket.join('sync_global');
+      if (data.storeId) {
+        socket.join(`store_${data.storeId}`);
+        console.log(`[Socket] Client ${socket.id} joined sync rooms: sync_global, store_${data.storeId}`);
+      }
+    }
+  });
+
+  // 3. User presence heartbeats
+  socket.on('USER_HEARTBEAT', (presence) => {
+    if (presence && presence.userId) {
+      activePresences.set(socket.id, {
+        socketId: socket.id,
+        userId: presence.userId,
+        username: presence.username,
+        storeId: presence.storeId,
+        lastSeen: new Date().toISOString()
+      });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`[Socket] Client disconnected: ${socket.id}`);
+    activePresences.delete(socket.id);
+  });
+});
+
 const PORT = process.env.PORT || 8181;
 const JWT_SECRET = process.env.JWT_SECRET || 'vc_organic_master_jwt_secret_2026';
 const UPLOAD_ROOT = process.env.UPLOAD_PATH || (fs.existsSync('/opt/vc-organics') ? '/opt/vc-organics/uploads' : path.join(__dirname, 'uploads'));
@@ -143,6 +187,7 @@ async function initDB() {
 
     // 7. invoices indexes
     await db.collection('invoices').createIndex({ invoiceNumber: 1 }, { unique: true });
+    await db.collection('invoices').createIndex({ transactionId: 1 }, { unique: true, sparse: true });
 
     // 8. product_barcodes (variant mappings)
     await db.collection('product_barcodes').createIndex({ barcode: 1 });
@@ -280,6 +325,22 @@ function validateBody(schema) {
   };
 }
 
+async function writeAuditLog(eventType, entity, entityId, before, after, req) {
+  try {
+    await db.collection('audit_logs').insertOne({
+      eventType,
+      entity,
+      entityId,
+      before: before || {},
+      after: after || {},
+      performedBy: (req && req.user) ? req.user.username : 'system',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("[Audit Log] Failed to write structured audit log:", err);
+  }
+}
+
 // JWT Authorization Middleware
 function verifyJWT(req, res, next) {
   let token = req.query.token;
@@ -377,7 +438,8 @@ app.post('/api/settings', verifyJWT, async (req, res) => {
       { $set: { title, logo, updatedAt: new Date().toISOString() } },
       { upsert: true }
     );
-    io.emit('db_sync_required', { module: 'settings' });
+    await writeAuditLog('settings_updated', 'settings', 'landing_settings', null, { title, logo }, req);
+    io.to('sync_global').emit('settings_updated', { title, logo });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to save settings" });
@@ -394,7 +456,8 @@ app.post('/api/users/avatar', verifyJWT, async (req, res) => {
       { id: req.user.id },
       { $set: { avatar, updatedAt: new Date().toISOString() } }
     );
-    io.emit('db_sync_required', { module: 'users' });
+    await writeAuditLog('user_updated', 'user', req.user.id, null, { avatar }, req);
+    io.to('sync_global').emit('user_updated', { userId: req.user.id, avatar });
     res.json({ success: true, avatar });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to update avatar" });
@@ -426,15 +489,8 @@ app.post('/api/users/change-password', verifyJWT, async (req, res) => {
       { $set: { passwordHash: newHash, updatedAt: new Date().toISOString() } }
     );
 
-    // Write audit log
-    await db.collection('audit_logs').insertOne({
-      userId: req.user.id,
-      module: "users",
-      action: "Password Change",
-      timestamp: new Date().toISOString()
-    });
-
-    io.emit('db_sync_required', { module: 'users' });
+    await writeAuditLog('user_updated', 'user', req.user.id, null, null, req);
+    io.to('sync_global').emit('user_updated', { userId: req.user.id });
     res.json({ success: true, message: "Password updated successfully" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error updating password" });
@@ -573,7 +629,8 @@ app.post('/api/products', verifyJWT, validateBody(productSchema), async (req, re
     }
 
     prod.barcodes = barcodesList; // Return clean representation to client
-    io.emit('db_sync_required', { module: 'products' });
+    await writeAuditLog(req.body.id ? 'product_updated' : 'product_created', 'product', productDoc.id, null, productDoc, req);
+    io.to('sync_global').emit(req.body.id ? 'product_updated' : 'product_created', { product: prod });
     res.json({ success: true, product: prod });
   } catch (err) {
     console.error("Save product failed:", err);
@@ -714,16 +771,8 @@ app.post('/api/inventory/adjust', verifyJWT, async (req, res) => {
       createdAt: new Date().toISOString()
     });
 
-    // Add system audit logs entry
-    await db.collection('audit_logs').insertOne({
-      userId: req.user.id,
-      action: "inventory adjustment",
-      module: "inventory",
-      recordId: productId,
-      timestamp: new Date().toISOString()
-    });
-
-    io.emit('db_sync_required', { module: 'inventory' });
+    await writeAuditLog('inventory_updated', 'inventory', productId, null, { storeId, quantity: qtyNum }, req);
+    io.to(`store_${storeId}`).emit('inventory_updated', { productId, storeId, quantity: qtyNum });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to adjust stock count" });
@@ -811,16 +860,15 @@ app.post('/api/inventory/transfer', verifyJWT, async (req, res) => {
       createdAt: dateStr
     });
 
-    // Audit log entry
-    await db.collection('audit_logs').insertOne({
-      userId: req.user.id,
-      action: "Stock Transfer",
-      module: "inventory",
-      recordId: productId,
-      timestamp: dateStr
-    });
-
-    io.emit('db_sync_required', { module: 'inventory' });
+    await writeAuditLog('inventory_updated', 'inventory', productId, null, { sourceStoreId, targetStoreId, quantity: qtyNum }, req);
+    
+    // Fetch updated inventory levels to broadcast actual stock
+    const sourceStock = await db.collection('inventory').findOne({ productId, storeId: sourceStoreId });
+    const targetStock = await db.collection('inventory').findOne({ productId, storeId: targetStoreId });
+    
+    io.to(`store_${sourceStoreId}`).emit('inventory_updated', { productId, storeId: sourceStoreId, quantity: sourceStock ? sourceStock.quantity : 0 });
+    io.to(`store_${targetStoreId}`).emit('inventory_updated', { productId, storeId: targetStoreId, quantity: targetStock ? targetStock.quantity : 0 });
+    
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Transfer failed" });
@@ -913,7 +961,17 @@ app.post('/api/invoices', verifyJWT, async (req, res) => {
     return res.status(400).json({ success: false, message: "Cannot submit empty invoice transaction" });
   }
 
+  // Ensure transactionId exists
+  inv.transactionId = inv.transactionId || "tx-fb-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4);
+
   try {
+    // Idempotency: verify if transaction has already been registered
+    const existingInvoice = await db.collection('invoices').findOne({ transactionId: inv.transactionId });
+    if (existingInvoice) {
+      console.log(`[Idempotency] Double-submit blocked for transaction: ${inv.transactionId}`);
+      return res.json({ success: true, invoiceNumber: existingInvoice.invoiceNumber, duplicate: true });
+    }
+
     // Generate Serial Invoice Sequence Number
     const count = await db.collection('invoices').countDocuments();
     inv.invoiceNumber = `VC-${new Date().getFullYear()}-${(count + 1).toString().padStart(4, '0')}`;
@@ -967,16 +1025,21 @@ app.post('/api/invoices', verifyJWT, async (req, res) => {
     const pdfPath = path.join(UPLOAD_SUBDIRS.invoices, `${inv.invoiceNumber}.pdf`);
     buildInvoicePDF(inv, business, pdfPath);
 
-    // Save activity audit log
-    await db.collection('audit_logs').insertOne({
-      userId: req.user.id,
-      action: "Invoice Creation",
-      module: "billing",
-      recordId: inv.invoiceNumber,
-      timestamp: new Date().toISOString()
-    });
+    await writeAuditLog('invoice_created', 'invoice', inv.invoiceNumber, null, inv, req);
 
-    io.emit('db_sync_required', { module: 'invoices' });
+    // Broadcast invoice creation globally
+    io.to('sync_global').emit('invoice_created', { invoice: inv });
+
+    // Broadcast updated inventory levels to this store room specifically
+    for (const item of inv.items) {
+      const updatedInv = await db.collection('inventory').findOne({ productId: item.productId, storeId: inv.storeId });
+      io.to(`store_${inv.storeId}`).emit('inventory_updated', {
+        productId: item.productId,
+        storeId: inv.storeId,
+        quantity: updatedInv ? updatedInv.quantity : 0
+      });
+    }
+
     res.json({ success: true, invoiceNumber: inv.invoiceNumber });
   } catch (err) {
     console.error("Save invoice transaction failed:", err);
@@ -1042,16 +1105,21 @@ app.post('/api/purchases', verifyJWT, async (req, res) => {
 
     await db.collection('purchases').insertOne(purchase);
 
-    // Save activity audit log
-    await db.collection('audit_logs').insertOne({
-      userId: req.user.id,
-      action: "Purchase Entry",
-      module: "purchase",
-      recordId: purchase.id,
-      timestamp: new Date().toISOString()
-    });
+    await writeAuditLog('purchase_created', 'purchase', purchase.id, null, purchase, req);
 
-    io.emit('db_sync_required', { module: 'purchases' });
+    // Broadcast purchase creation globally
+    io.to('sync_global').emit('purchase_created', { purchase });
+
+    // Broadcast updated inventory levels to this store room specifically
+    for (const item of purchase.items) {
+      const updatedInv = await db.collection('inventory').findOne({ productId: item.productId, storeId: purchase.storeId });
+      io.to(`store_${purchase.storeId}`).emit('inventory_updated', {
+        productId: item.productId,
+        storeId: purchase.storeId,
+        quantity: updatedInv ? updatedInv.quantity : 0
+      });
+    }
+
     res.json({ success: true, id: purchase.id });
   } catch (err) {
     console.error("Save purchase log failed:", err);
@@ -1134,7 +1202,8 @@ app.post('/api/businesses', verifyJWT, async (req, res) => {
       { upsert: true }
     );
 
-    io.emit('db_sync_required', { module: 'businesses' });
+    await writeAuditLog('business_updated', 'business', docId, null, biz, req);
+    io.to('sync_global').emit('business_updated', { business: biz });
     res.json({ success: true, message: "Business profile saved successfully", business: biz });
   } catch (err) {
     console.error("Failed to save business configuration:", err);
@@ -1154,7 +1223,8 @@ app.delete('/api/businesses/:id', verifyJWT, async (req, res) => {
   try {
     await db.collection('businesses').deleteOne({ id: bizId });
     await db.collection('stores').deleteOne({ id: bizId });
-    io.emit('db_sync_required', { module: 'businesses' });
+    await writeAuditLog('business_deleted', 'business', bizId, null, null, req);
+    io.to('sync_global').emit('business_deleted', { businessId: bizId });
     res.json({ success: true, message: "Business profile deleted successfully" });
   } catch (err) {
     console.error("Failed to delete business configuration:", err);
@@ -1171,6 +1241,11 @@ app.get('/api/users', verifyJWT, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch user directory" });
   }
+});
+
+// REST API - Fetch all active cashier presences (for monitoring)
+app.get('/api/users/presences', verifyJWT, (req, res) => {
+  res.json(Array.from(activePresences.values()));
 });
 
 // REST API - Create / Modify user account
@@ -1207,15 +1282,8 @@ app.post('/api/users', verifyJWT, async (req, res) => {
       await db.collection('users').insertOne(user);
     }
 
-    // Add activity audit log
-    await db.collection('audit_logs').insertOne({
-      userId: req.user.id,
-      action: "User Creation",
-      module: "users",
-      recordId: user.id,
-      timestamp: new Date().toISOString()
-    });
-
+    await writeAuditLog(req.body.id ? 'user_updated' : 'user_created', 'user', user.id, null, user, req);
+    io.to('sync_global').emit('user_updated', { userId: user.id });
     res.json({ success: true, user });
   } catch (err) {
     console.error("Save user account failed:", err);

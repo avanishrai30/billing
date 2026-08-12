@@ -5576,12 +5576,12 @@
       initAuthentication();
       renderOnboardingQueue();
 
-      // Fallback: poll server database for state alignment every 30 seconds
+      // Fallback: poll server database for state alignment every 90 seconds
       setInterval(() => {
         if (state.currentUser && typeof syncStateWithServer === 'function') {
           syncStateWithServer();
         }
-      }, 30000);
+      }, 90000);
     });
 
     async function loadPublicSettings() {
@@ -5747,6 +5747,14 @@
     }
 
     let syncSocket = null;
+    function joinStoreSyncRoom() {
+      if (syncSocket && syncSocket.connected) {
+        const storeId = state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : 'default');
+        console.log(`[Sync] Registering socket with store sync room: store_${storeId}`);
+        syncSocket.emit('JOIN_SYNC', { storeId });
+      }
+    }
+
     function initSyncSocket() {
       if (syncSocket) return;
       console.log("[Sync] Establishing background real-time synchronization socket...");
@@ -5754,12 +5762,79 @@
 
       syncSocket.on('connect', () => {
         console.log("[Sync] Persisted database synchronization channel established.");
+        joinStoreSyncRoom();
       });
 
-      syncSocket.on('db_sync_required', (data) => {
-        console.log(`[Sync] Real-time mutation broadcast received for: ${data.module}. Resyncing state...`);
-        syncStateWithServer();
+      // Presence heartbeats (every 10 seconds)
+      setInterval(() => {
+        if (state.currentUser && syncSocket && syncSocket.connected) {
+          syncSocket.emit('USER_HEARTBEAT', {
+            userId: state.currentUser.id,
+            username: state.currentUser.username,
+            storeId: state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : 'default'),
+            lastSeen: new Date().toISOString()
+          });
+        }
+      }, 10000);
+
+      // Listeners for targeted, granular events
+      syncSocket.on('inventory_updated', (data) => {
+        console.log(`[Sync] Inventory updated:`, data);
+        const inv = state.inventory.find(i => i.productId === data.productId && i.storeId === data.storeId);
+        if (inv) {
+          inv.quantity = data.quantity;
+        } else {
+          state.inventory.push({ productId: data.productId, storeId: data.storeId, quantity: data.quantity });
+        }
+        // Update representation on product
+        const prod = state.products.find(p => p.id === data.productId);
+        if (prod) {
+          prod.stock = data.quantity;
+        }
+        renderPOSProducts();
+        renderInventoryTable();
       });
+
+      syncSocket.on('product_created', (data) => {
+        console.log(`[Sync] Product created:`, data.product);
+        const idx = state.products.findIndex(p => p.id === data.product.id);
+        if (idx === -1) {
+          state.products.push(data.product);
+        } else {
+          state.products[idx] = data.product;
+        }
+        renderPOSProducts();
+        renderProductsTable();
+      });
+
+      syncSocket.on('product_updated', (data) => {
+        console.log(`[Sync] Product updated:`, data.product);
+        const idx = state.products.findIndex(p => p.id === data.product.id);
+        if (idx !== -1) {
+          state.products[idx] = data.product;
+        }
+        renderPOSProducts();
+        renderProductsTable();
+      });
+
+      syncSocket.on('invoice_created', (data) => {
+        console.log(`[Sync] Invoice created:`, data.invoice);
+        const idx = state.invoices.findIndex(i => i.invoiceNumber === data.invoice.invoiceNumber);
+        if (idx === -1) {
+          state.invoices.push(data.invoice);
+        }
+        renderInvoicesTable();
+      });
+
+      syncSocket.on('settings_updated', (data) => {
+        console.log(`[Sync] Settings updated:`, data);
+        loadPublicSettings();
+      });
+
+      syncSocket.on('business_updated', () => syncStateWithServer());
+      syncSocket.on('business_deleted', () => syncStateWithServer());
+      syncSocket.on('user_updated', () => syncStateWithServer());
+      syncSocket.on('purchase_created', () => syncStateWithServer());
     }
 
     async function syncStateWithServer() {
@@ -7971,6 +8046,7 @@
 
     function changeActiveBusiness(bizId) {
       state.activeBusinessId = bizId || "";
+      joinStoreSyncRoom();
       const bizObj = state.businesses.find(b => b.id === bizId);
       const name = bizObj ? bizObj.name : "All Outlets Consolidated";
       
@@ -9728,6 +9804,7 @@
       if (!stockValid) return;
 
       const newInvoice = {
+        transactionId: `tx-cl-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         businessId: businessId,
         storeId: businessId,
         customerId: customerId,
