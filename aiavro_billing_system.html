@@ -2595,10 +2595,10 @@
           </div>
 
           <!-- Fast Business Selector -->
-          <div style="display:flex; flex-direction:column; gap:4px">
-            <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted)">Seller Outlet</span>
-            <select class="select-dropdown" id="global-business-select" onchange="changeActiveBusiness(this.value)">
-              <!-- Dynamic business list -->
+          <div style="display:flex; flex-direction:column; gap:4px; min-width:180px; flex-shrink:0">
+            <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px">Seller Outlet</span>
+            <select class="select-dropdown" id="global-business-select" onchange="changeActiveBusiness(this.value)" style="padding:8px 12px; font-size:13px; font-weight:700; height:38px; min-width:180px; width:100%; border:1.5px solid var(--accent-green); border-radius:var(--radius-sm); outline:none">
+              <option value="">🌐 Select Outlet...</option>
             </select>
           </div>
 
