@@ -5499,6 +5499,12 @@
       }
       return 'sh256_' + Math.abs(hash).toString(36) + Math.abs(hash2).toString(36);
     }
+    // Safe number formatter helper to prevent TypeError on undefined/null .toFixed() calls
+    function safeFixed(val, decimals = 2) {
+      const num = Number(val);
+      return isNaN(num) ? (0).toFixed(decimals) : num.toFixed(decimals);
+    }
+
     // Verify password: supports both hashed and legacy plain-text passwords
     function verifyPassword(inputPassword, storedPassword) {
       if (!storedPassword) return false;
@@ -6748,11 +6754,11 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:15px">
             <div>
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block">Earnings Made</span>
-              <strong style="font-size:14px; color:var(--accent-green); font-family:'Outfit'">₹${totalEarnings.toFixed(2)}</strong>
+              <strong style="font-size:14px; color:var(--accent-green); font-family:'Outfit'">₹${safeFixed(totalEarnings, 2)}</strong>
             </div>
             <div>
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block">Pending Supply</span>
-              <strong style="font-size:14px; color:var(--accent-warning); font-family:'Outfit'">₹${totalPending.toFixed(2)}</strong>
+              <strong style="font-size:14px; color:var(--accent-warning); font-family:'Outfit'">₹${safeFixed(totalPending, 2)}</strong>
             </div>
           </div>
 
@@ -8257,10 +8263,10 @@
           <td>${p.brand || 'AIAVRO'}</td>
           <td>${p.category}</td>
           <td>${p.supplier || 'Golden Ghee Co.'}</td>
-          <td style="text-align:right">₹${p.cost.toFixed(2)}</td>
-          <td style="text-align:right">₹${p.price.toFixed(2)}</td>
+          <td style="text-align:right">₹${safeFixed(p.cost, 2)}</td>
+          <td style="text-align:right">₹${safeFixed(p.price, 2)}</td>
           <td style="text-align:right">
-            <strong>${Number.isInteger(p.stock) ? p.stock.toString() : p.stock.toFixed(2)} ${p.sellingMode === 'loose' ? (p.unit || 'kg') : 'Units'}</strong>
+            <strong>${Number.isInteger(Number(p.stock)) ? (p.stock !== undefined ? p.stock.toString() : '0') : safeFixed(p.stock, 2)} ${p.sellingMode === 'loose' ? (p.unit || 'kg') : 'Units'}</strong>
             <small style="display:block">${stockBadge}</small>
           </td>
           <td style="text-align:center">${statusBadge}</td>
@@ -8963,7 +8969,7 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:15px">
             <div>
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block">Store Sales Volume</span>
-              <strong style="font-size:14px; color:var(--accent-green); font-family:'Outfit'">₹${storeSalesSum.toFixed(2)}</strong>
+              <strong style="font-size:14px; color:var(--accent-green); font-family:'Outfit'">₹${safeFixed(storeSalesSum, 2)}</strong>
             </div>
             <div>
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block">Store Inventory</span>
@@ -9405,7 +9411,7 @@
         const isOut = p.stock <= 0;
         const expiry = getExpiryMetrics(p.doe);
         
-        const stockQtyStr = Number.isInteger(p.stock) ? p.stock.toString() : p.stock.toFixed(2);
+        const stockQtyStr = Number.isInteger(Number(p.stock)) ? (p.stock !== undefined ? p.stock.toString() : '0') : safeFixed(p.stock, 2);
         const stockUnitStr = p.unit || 'Units';
         let stockLabel = `<span style="color:var(--accent-green)">In Stock (${stockQtyStr} ${stockUnitStr})</span>`;
         
@@ -9449,7 +9455,7 @@
             ${marginFlag}
           </div>
           <div class="product-grid-price-stock" style="margin-top:4px;">
-            <span class="product-grid-price" style="font-size:13px;">₹${p.price.toFixed(2)}${p.sellingMode === 'loose' ? ' / ' + (p.unit || 'kg') : ''}</span>
+            <span class="product-grid-price" style="font-size:13px;">₹${safeFixed(p.price, 2)}${p.sellingMode === 'loose' ? ' / ' + (p.unit || 'kg') : ''}</span>
             <span class="product-grid-stock" style="font-size:10px;">${stockLabel}</span>
           </div>
         `;
@@ -9517,7 +9523,7 @@
         // Expiry warning
         const expiry = getExpiryMetrics(p.doe);
 
-        const stockQtyStr = Number.isInteger(p.stock) ? p.stock.toString() : p.stock.toFixed(2);
+        const stockQtyStr = Number.isInteger(Number(p.stock)) ? (p.stock !== undefined ? p.stock.toString() : '0') : safeFixed(p.stock, 2);
         const stockUnitStr = p.unit || 'Units';
         let stockLabel = `<span style="color:var(--accent-green)">In Stock (${stockQtyStr} ${stockUnitStr})</span>`;
         
@@ -9579,7 +9585,7 @@
             ${marginFlag}
           </div>
           <div class="product-grid-price-stock" style="margin-top:6px">
-            <span class="product-grid-price">₹${p.price.toFixed(2)}${p.sellingMode === 'loose' ? ' / ' + (p.unit || 'kg') : ''}</span>
+            <span class="product-grid-price">₹${safeFixed(p.price, 2)}${p.sellingMode === 'loose' ? ' / ' + (p.unit || 'kg') : ''}</span>
             <span class="product-grid-stock">${stockLabel}</span>
           </div>
         `;
