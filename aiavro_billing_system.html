@@ -5509,6 +5509,11 @@
       if (val === undefined || val === null) return String(fallback).toUpperCase();
       return String(val).toUpperCase();
     }
+    // Safe string lower helper to prevent TypeError on undefined/null .toLowerCase() calls
+    function safeLower(val, fallback = '') {
+      if (val === undefined || val === null) return String(fallback).toLowerCase();
+      return String(val).toLowerCase();
+    }
 
     // Verify password: supports both hashed and legacy plain-text passwords
     function verifyPassword(inputPassword, storedPassword) {
@@ -6310,7 +6315,7 @@
 
       // Display in reverse chronological order (newest first)
       const logsToDisplay = state.auditLogs.slice().reverse().filter(log => {
-        let matchAction = actionFilter === "all" || log.action.toLowerCase() === actionFilter.toLowerCase();
+        let matchAction = actionFilter === "all" || safeLower(log.action) === safeLower(actionFilter);
         let matchStore = true;
         if (user && getUserCategory(user) === 'employee' && user.assignedStoreId && user.assignedStoreId !== 'all') {
           matchStore = !log.businessId || log.businessId === user.assignedStoreId;
@@ -12459,11 +12464,15 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       }
     }
 
+    function safeLower(str) {
+      return (str || "").toString().toLowerCase();
+    }
+
     function renderInventoryAuditLogs() {
       const tbody = document.getElementById("inventory-audit-table-body");
       tbody.innerHTML = "";
 
-      const query = document.getElementById("audit-search").value.trim().toLowerCase();
+      const query = safeLower(document.getElementById("audit-search").value.trim());
       const filterType = document.getElementById("audit-filter-type").value;
       const logs = state.inventoryLogs || [];
       const sortedLogs = [...logs].sort((a,b) => new Date(b.date) - new Date(a.date));
