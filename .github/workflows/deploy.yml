@@ -10,6 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check Secrets
+        run: |
+          echo "HOST_EXISTS=${{ secrets.HOST != '' }}"
+          echo "USERNAME_EXISTS=${{ secrets.USERNAME != '' }}"
+          echo "PORT_EXISTS=${{ secrets.PORT != '' }}"
+          echo "SSH_KEY_EXISTS=${{ secrets.SSH_KEY != '' }}"
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -17,14 +24,9 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.PORT }}
-
           script: |
             cd /opt/vc-organic
-
             git pull origin main
-
             npm install
-
             pm2 restart vc-organic-billing-api
-
             pm2 save
