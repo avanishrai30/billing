@@ -1154,9 +1154,12 @@ app.post('/api/businesses', verifyJWT, async (req, res) => {
     return res.status(400).json({ success: false, message: "Business name is required" });
   }
 
-  // Ensure only OWNER or super admin can modify business configurations
-  if (req.user.role !== 'OWNER' && req.user.category !== 'super admin' && req.user.role !== 'Super Admin') {
-    return res.status(403).json({ success: false, message: "Forbidden: Only Super Admin can manage outlet configurations" });
+  // Ensure only admin, owner, or super admin can modify business configurations
+  const userRole = (req.user.role || '').toLowerCase();
+  const userCategory = (req.user.category || '').toLowerCase();
+  const allowedRoles = ['owner', 'super admin', 'admin'];
+  if (!allowedRoles.includes(userRole) && userCategory !== 'super admin' && userCategory !== 'admin') {
+    return res.status(403).json({ success: false, message: "Forbidden: Only Admin or Owner can manage outlet configurations" });
   }
 
   try {

@@ -434,7 +434,7 @@
     }
 
     .panel:hover {
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--shadow-sm);
     }
 
     .panel-header {
@@ -3505,32 +3505,32 @@
 
             <div class="form-group">
               <label style="font-size:12px; font-weight:700">Tagline / Subtitle</label>
-              <input type="text" id="quick-biz-subtitle" placeholder="e.g. Pure Organic Produce" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+              <input type="text" id="quick-biz-subtitle" placeholder="e.g. Pure Organic Produce" style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
             </div>
 
             <div class="form-group">
               <label style="font-size:12px; font-weight:700">GSTIN / Tax ID Number</label>
-              <input type="text" id="quick-biz-gstin" placeholder="e.g. 27ABCDE1234F1Z5" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+              <input type="text" id="quick-biz-gstin" placeholder="e.g. 27ABCDE1234F1Z5" style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
             </div>
 
             <div class="form-group">
               <label style="font-size:12px; font-weight:700">Contact Phone</label>
-              <input type="text" id="quick-biz-phone" placeholder="+91 XXXXX XXXXX" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+              <input type="text" id="quick-biz-phone" placeholder="+91 XXXXX XXXXX" style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
             </div>
 
             <div class="form-group">
               <label style="font-size:12px; font-weight:700">Support Email</label>
-              <input type="email" id="quick-biz-email" placeholder="contact@mystore.com" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+              <input type="email" id="quick-biz-email" placeholder="contact@mystore.com" style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
             </div>
 
             <div class="form-group">
               <label style="font-size:12px; font-weight:700">Payment UPI ID (for Invoice QR Code)</label>
-              <input type="text" id="quick-biz-upi" placeholder="e.g. storename@upi" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+              <input type="text" id="quick-biz-upi" placeholder="e.g. storename@upi" style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
             </div>
 
             <div class="form-group" style="grid-column:1 / -1">
               <label style="font-size:12px; font-weight:700">Business Address Location</label>
-              <input type="text" id="quick-biz-address" placeholder="Store Address, City, Pincode" required style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+              <input type="text" id="quick-biz-address" placeholder="Store Address, City, Pincode" style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
             </div>
 
             <div style="grid-column:1 / -1; display:flex; justify-content:flex-end; gap:12px; margin-top:8px">
@@ -5913,6 +5913,7 @@
         renderInvoicesTable();
         renderBusinessesListDropdowns();
         renderBusinessesCards();
+        updateActiveBrandUI();
         populateUserFormStoreDropdown();
         populateInvoiceStoreDropdown();
         populateAuditStoreDropdown();
@@ -8023,21 +8024,50 @@
     async function saveQuickBrandSetup(e) {
       e.preventDefault();
       const activeBiz = state.businesses.find(b => b.id === state.activeBusinessId) || state.businesses[0];
-      if (!activeBiz) return;
-
-      const newLogo = document.getElementById("quick-biz-logo").value;
-      activeBiz.name = document.getElementById("quick-biz-name").value;
-      activeBiz.subtitle = document.getElementById("quick-biz-subtitle").value;
-      activeBiz.gstin = document.getElementById("quick-biz-gstin").value;
-      activeBiz.phone = document.getElementById("quick-biz-phone").value;
-      activeBiz.email = document.getElementById("quick-biz-email").value;
-      activeBiz.address = document.getElementById("quick-biz-address").value;
-      activeBiz.upiId = document.getElementById("quick-biz-upi").value;
-      if (newLogo !== undefined) {
-        activeBiz.logo = newLogo;
+      if (!activeBiz) {
+        triggerAlert('No active business outlet found. Please create one first.', 'error');
+        return;
       }
 
-      // Persist to backend API (not just localStorage)
+      // Read form values
+      activeBiz.name = document.getElementById("quick-biz-name").value;
+      activeBiz.subtitle = document.getElementById("quick-biz-subtitle").value || '';
+      activeBiz.gstin = document.getElementById("quick-biz-gstin").value || '';
+      activeBiz.phone = document.getElementById("quick-biz-phone").value || '';
+      activeBiz.email = document.getElementById("quick-biz-email").value || '';
+      activeBiz.address = document.getElementById("quick-biz-address").value || '';
+      activeBiz.upiId = document.getElementById("quick-biz-upi").value || '';
+
+      // Handle logo: upload via /api/upload if it's base64, otherwise keep existing
+      const logoHiddenValue = document.getElementById("quick-biz-logo").value;
+      if (logoHiddenValue && logoHiddenValue.startsWith('data:image')) {
+        try {
+          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=logos`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem("aiavro_jwt_token")}`
+            },
+            body: JSON.stringify({
+              fileName: `brand-logo-${activeBiz.id}.png`,
+              base64Data: logoHiddenValue
+            })
+          });
+          const uploadResult = await uploadRes.json();
+          if (uploadResult.success && uploadResult.imagePath) {
+            activeBiz.logo = uploadResult.imagePath;
+          } else {
+            activeBiz.logo = logoHiddenValue; // Fallback: store base64
+          }
+        } catch (uploadErr) {
+          console.warn('Logo upload failed, storing base64:', uploadErr);
+          activeBiz.logo = logoHiddenValue;
+        }
+      } else if (logoHiddenValue) {
+        activeBiz.logo = logoHiddenValue;
+      }
+
+      // Persist to backend API
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
         const res = await fetch(`${state.backendUrl}/api/businesses`, {
@@ -8050,10 +8080,7 @@
         });
         const result = await res.json();
         if (result.success) {
-          saveStateToLocalStorage();
-          updateActiveBrandUI();
-          renderBusinessesListDropdowns();
-          if (state.activeView === 'businesses') renderBusinessesCards();
+          await syncStateWithServer();
           triggerAlert(`Business profile saved to server for '${activeBiz.name}'!`, "success");
         } else {
           triggerAlert(result.message || 'Failed to save business profile to server.', "error");
