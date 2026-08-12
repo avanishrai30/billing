@@ -1,4 +1,4 @@
-name: Deploy VPS
+name: Deploy VC Organic
 
 on:
   push:
@@ -8,18 +8,23 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
-      - name: Deploy via SSH
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.PORT }}
+
           script: |
             cd /opt/vc-organic
+
             git pull origin main
-            npm install --no-audit --no-fund
-            pm2 restart ecosystem.config.js --env production
+
+            npm install
+
+            pm2 restart vc-organic-billing-api
+
+            pm2 save
