@@ -379,7 +379,12 @@ const productSchema = z.object({
   status: z.string().trim().optional(),
   imageId: z.string().trim().optional(),
   image: z.string().trim().optional(),
-  images: z.array(z.string()).optional()
+  images: z.array(z.string()).optional(),
+  store: z.string().trim().optional(),
+  barcodes: z.array(z.object({
+    barcode: z.string().trim(),
+    variantName: z.string().trim()
+  })).optional()
 });
 
 const userSchema = z.object({
@@ -670,11 +675,14 @@ app.post('/api/products', verifyJWT, validateBody(productSchema), async (req, re
       emoji: prodInput.emoji || "📦",
       image: prodInput.image || "/uploads/system/default-product.webp",
       images: prodInput.images || [prodInput.image || "/uploads/system/default-product.webp"],
+      store: prodInput.store || "Main Store",
       status: prodInput.status || "active",
       imageId: prodInput.imageId || "",
       createdAt: prodInput.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
+    const prod = productDoc; // Reference alias to map variants, sync representations, and events
 
     if (prodInput.id) {
       await db.collection('products').updateOne({ id: prodInput.id }, { $set: productDoc });
