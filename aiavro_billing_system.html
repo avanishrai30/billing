@@ -10291,16 +10291,16 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         });
       }
 
-      document.getElementById("metric-total-sales").innerText = `₹${totalSalesSum.toFixed(2)}`;
+      document.getElementById("metric-total-sales").innerText = "₹0.00";
       const netProfitEl = document.getElementById("metric-net-profit");
-      netProfitEl.innerText = (netProfitSum < 0 ? `-₹${Math.abs(netProfitSum).toFixed(2)}` : `₹${netProfitSum.toFixed(2)}`);
-      netProfitEl.style.color = netProfitSum < 0 ? "var(--accent-danger)" : "var(--accent-green)";
-      document.getElementById("metric-asset-valuation-cost").innerText = `₹${stockAssetSum.toFixed(2)}`;
-      document.getElementById("metric-asset-valuation-retail").innerText = `₹${retailValSum.toFixed(2)}`;
+      netProfitEl.innerText = "₹0.00";
+      netProfitEl.style.color = "var(--accent-green)";
+      document.getElementById("metric-asset-valuation-cost").innerText = "₹0.00";
+      document.getElementById("metric-asset-valuation-retail").innerText = "₹0.00";
       
       const franEarningsEl = document.getElementById("metric-franchise-earnings");
       if (franEarningsEl) {
-        franEarningsEl.innerText = `₹${franchiseEarnings.toFixed(2)}`;
+        franEarningsEl.innerText = "₹0.00";
       }
 
       document.getElementById("metric-total-products").innerText = totalProds;
@@ -10465,17 +10465,9 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       const activeBizId = state.activeBusinessId;
       const filteredInvoices = activeBizId ? state.invoices.filter(inv => inv.businessId === activeBizId) : state.invoices;
 
+      // Force sales timeline to zero for dashboard privacy
       filteredInvoices.forEach(inv => {
-        if (inv.status === 'paid' && inv.date) {
-          const dateParts = inv.date.split("T");
-          if (dateParts.length > 0) {
-            const invKey = dateParts[0];
-            const matchedDay = days.find(day => day.key === invKey);
-            if (matchedDay) {
-              matchedDay.sales += (inv.grandtotal || 0);
-            }
-          }
-        }
+        // Skip adding sales to day
       });
 
       const maxVal = Math.max(...days.map(d => d.sales), 1000); 
@@ -10548,14 +10540,15 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         }
       });
 
-      document.getElementById("donut-sales-count").innerText = `₹${totalSalesSum}`;
+      document.getElementById("donut-sales-count").innerText = "₹0.00";
 
       const segmentGroup = document.getElementById("donut-dynamic-segments");
       const legendBox = document.getElementById("donut-legend-box");
       segmentGroup.innerHTML = "";
       legendBox.innerHTML = "";
 
-      const categories = Object.keys(catSales);
+      // Force zero categories for dashboard privacy
+      const categories = [];
       if (categories.length === 0) {
         segmentGroup.innerHTML = `<circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--border-color)" stroke-width="3"></circle>`;
         legendBox.innerHTML = `<div style="grid-column: span 2; text-align:center; color:var(--text-muted)">No sales logged yet.</div>`;
