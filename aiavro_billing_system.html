@@ -5696,8 +5696,16 @@
     }
 
     function loadDatabaseState() {
+      // Auto-correct misspelled backend URL in localStorage if present from previous sessions
+      const storedUrl = localStorage.getItem("aiavro_backend_url");
+      if (storedUrl && storedUrl.includes("vcorganic.com") && !storedUrl.includes("vcorganics.com")) {
+        console.log("[Engine] Correcting misspelled backend URL in localStorage...");
+        localStorage.setItem("aiavro_backend_url", "https://api.vcorganics.com");
+      }
+
       state.theme = localStorage.getItem("aiavro_theme") || 'light';
       state.showProductImagesInTables = localStorage.getItem("aiavro_show_product_images") !== 'false';
+      state.backendUrl = localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com';
 
       loadPublicSettings();
 
