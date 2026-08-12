@@ -2531,7 +2531,10 @@
 
         <!-- My Account Button -->
         <button class="sidebar-account-btn" onclick="openAccountModal()" title="My Account & Change Password">
-          <div class="sidebar-account-avatar" id="sidebar-avatar-initials">A</div>
+          <div class="sidebar-account-avatar" id="sidebar-avatar-container" style="overflow:hidden">
+            <img id="sidebar-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; display:none" onerror="this.style.display='none'; document.getElementById('sidebar-avatar-initials').style.display='block';">
+            <span id="sidebar-avatar-initials">A</span>
+          </div>
           <div class="sidebar-account-info">
             <div class="sidebar-account-name" id="sidebar-username">Administrator</div>
             <div class="sidebar-account-role" id="sidebar-userrole">ADMIN</div>
@@ -3540,6 +3543,34 @@
                 <label for="settings-show-product-images" style="font-size:13px; font-weight:600; cursor:pointer; user-select:none">
                   Display product image thumbnails (falls back to emojis when no image is available)
                 </label>
+              </div>
+            </div>
+
+            <!-- Landing Page Customization (Super Admin / Admin Only) -->
+            <div style="border-bottom:1px solid var(--border-color); padding-bottom:20px" data-role="admin">
+              <h4 style="font-size:14px; font-weight:700; margin-bottom:8px">🏢 Landing Page Customization</h4>
+              <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
+                Customize the brand name and brand logo displayed on the landing page login screen.
+              </p>
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <div class="form-group" style="margin:0">
+                  <label style="font-size:12px; font-weight:700">Landing Page Portal Title</label>
+                  <input type="text" id="settings-landing-title" placeholder="e.g. AIAVRO Business OS" style="padding:8px 12px; font-size:13px; border-radius:var(--radius-sm); border:1px solid var(--border-color); width:100%">
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label style="font-size:12px; font-weight:700; margin-bottom:4px; display:block">Landing Page Portal Logo</label>
+                  <div style="display:flex; align-items:center; gap:16px">
+                    <div style="width:48px; height:48px; border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; background:var(--bg-primary); border-radius:8px">
+                      <img id="settings-landing-logo-preview" src="transparent logo aiavro Background Removed.png" style="max-width:100%; max-height:100%; object-fit:contain">
+                    </div>
+                    <button type="button" class="secondary-btn" onclick="document.getElementById('settings-landing-logo-file').click()" style="padding:6px 12px; font-size:12px">
+                      📷 Choose Logo Image
+                    </button>
+                    <input type="file" id="settings-landing-logo-file" accept="image/*" style="display:none" onchange="handleLandingLogoSelect(event)">
+                    <input type="hidden" id="settings-landing-logo-path" value="transparent logo aiavro Background Removed.png">
+                  </div>
+                </div>
+                <button type="button" class="primary-btn" onclick="saveLandingPageSettings()" style="align-self:flex-start; margin-top:4px">Save Landing Customization</button>
               </div>
             </div>
             
@@ -5108,7 +5139,12 @@
 
         <!-- Profile Info Section -->
         <div style="display:flex; align-items:center; gap:16px; padding:20px; background:var(--bg-primary); border-radius:var(--radius-md); margin-bottom:20px; border:1px solid var(--border-color)">
-          <div style="width:52px; height:52px; border-radius:50%; background:var(--accent-green); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:white; flex-shrink:0" id="account-avatar-initials">A</div>
+          <div style="width:52px; height:52px; border-radius:50%; background:var(--accent-green); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:white; flex-shrink:0; position:relative; cursor:pointer; overflow:hidden" id="account-avatar-container" onclick="triggerAccountAvatarUpload()">
+            <img id="account-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; display:none" onerror="this.style.display='none'; document.getElementById('account-avatar-initials').style.display='block';">
+            <span id="account-avatar-initials">A</span>
+            <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:8px; text-align:center; padding:2px 0; font-weight:700">EDIT</div>
+          </div>
+          <input type="file" id="account-avatar-file-input" accept="image/png, image/jpeg, image/jpg, image/webp" style="display:none" onchange="handleAccountAvatarSelect(event)">
           <div>
             <div style="font-size:18px; font-weight:800; color:var(--text-primary)" id="account-display-name">Administrator</div>
             <div style="font-size:12px; color:var(--text-muted); margin-top:2px">
@@ -5622,9 +5658,102 @@
       renderOnboardingQueue();
     });
 
+    async function loadPublicSettings() {
+      try {
+        const res = await fetch(`${state.backendUrl}/api/public/settings`);
+        const data = await res.json();
+        if (data.title) {
+          document.getElementById("login-brand-name").innerText = data.title;
+          const inputEl = document.getElementById("settings-landing-title");
+          if (inputEl) inputEl.value = data.title;
+        }
+        if (data.logo) {
+          const logoUrl = data.logo.startsWith('http') || data.logo.startsWith('/') ? data.logo : state.backendUrl + data.logo;
+          document.getElementById("login-brand-logo-img").src = logoUrl;
+          
+          const previewEl = document.getElementById("settings-landing-logo-preview");
+          if (previewEl) previewEl.src = logoUrl;
+          
+          const pathEl = document.getElementById("settings-landing-logo-path");
+          if (pathEl) pathEl.value = data.logo;
+        }
+      } catch (e) {
+        console.error("Failed to load public settings:", e);
+      }
+    }
+
+    function handleLandingLogoSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        const base64Data = evt.target.result;
+        try {
+          const token = localStorage.getItem("aiavro_jwt_token");
+          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=logos`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              base64Data: base64Data
+            })
+          });
+          const uploadResult = await uploadRes.json();
+          if (uploadResult.success) {
+            const path = uploadResult.imagePath;
+            document.getElementById("settings-landing-logo-path").value = path;
+            document.getElementById("settings-landing-logo-preview").src = state.backendUrl + path;
+            triggerAlert("Landing logo uploaded successfully!", "success");
+          } else {
+            triggerAlert(uploadResult.message || "Failed to upload image", "danger");
+          }
+        } catch (err) {
+          triggerAlert("Error uploading logo image.", "danger");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function saveLandingPageSettings() {
+      const title = document.getElementById("settings-landing-title").value.trim();
+      const logo = document.getElementById("settings-landing-logo-path").value.trim();
+
+      if (!title) {
+        triggerAlert("Landing Page Portal Title is required!", "danger");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/settings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ title, logo })
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert("Landing page settings saved successfully!", "success");
+          await loadPublicSettings();
+        } else {
+          triggerAlert(result.message || "Failed to save settings", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error saving settings to server.", "danger");
+      }
+    }
+
     function loadDatabaseState() {
       state.theme = localStorage.getItem("aiavro_theme") || 'light';
       state.showProductImagesInTables = localStorage.getItem("aiavro_show_product_images") !== 'false';
+
+      loadPublicSettings();
 
       if (localStorage.getItem("aiavro_theme")) {
         document.documentElement.setAttribute("data-theme", state.theme);
@@ -5865,8 +5994,20 @@
       // Update sidebar account button
       document.getElementById("sidebar-username").innerText = user.name;
       document.getElementById("sidebar-userrole").innerText = user.role.toUpperCase();
-      const avatarEl = document.getElementById("sidebar-avatar-initials");
-      if (avatarEl) avatarEl.textContent = getInitials(user.name || user.username);
+      
+      const avatarImg = document.getElementById("sidebar-avatar-img");
+      const avatarInitials = document.getElementById("sidebar-avatar-initials");
+      if (avatarImg && avatarInitials) {
+        if (user.avatar) {
+          avatarImg.src = state.backendUrl + user.avatar;
+          avatarImg.style.display = "block";
+          avatarInitials.style.display = "none";
+        } else {
+          avatarImg.style.display = "none";
+          avatarInitials.style.display = "block";
+          avatarInitials.textContent = getInitials(user.name || user.username);
+        }
+      }
 
       // Resolve dynamic permissions
       const rolePermissions = state.rolePermissions || {
@@ -7013,7 +7154,20 @@
       document.getElementById('account-display-username').textContent = '@' + user.username;
       document.getElementById('account-display-role').textContent = (user.role || 'user').toUpperCase();
       document.getElementById('account-display-email').textContent = user.email || '';
-      document.getElementById('account-avatar-initials').textContent = getInitials(user.name || user.username);
+      
+      const avatarImg = document.querySelector("#account-avatar-container img");
+      const avatarInitials = document.getElementById("account-avatar-initials");
+      if (avatarImg && avatarInitials) {
+        if (user.avatar) {
+          avatarImg.src = state.backendUrl + user.avatar;
+          avatarImg.style.display = "block";
+          avatarInitials.style.display = "none";
+        } else {
+          avatarImg.style.display = "none";
+          avatarInitials.style.display = "block";
+          avatarInitials.textContent = getInitials(user.name || user.username);
+        }
+      }
 
       // Clear password fields
       document.getElementById('account-current-pw').value = '';
@@ -7026,6 +7180,76 @@
 
     function closeAccountModal() {
       document.getElementById('account-modal').classList.remove('active');
+    }
+
+    function triggerAccountAvatarUpload() {
+      document.getElementById("account-avatar-file-input").click();
+    }
+
+    function handleAccountAvatarSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        const base64Data = evt.target.result;
+        try {
+          const token = localStorage.getItem("aiavro_jwt_token");
+          
+          // 1. Upload the image to backend employees folder
+          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=employees`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              base64Data: base64Data
+            })
+          });
+          const uploadResult = await uploadRes.json();
+          if (!uploadResult.success) {
+            triggerAlert(uploadResult.message || "Failed to upload avatar image", "danger");
+            return;
+          }
+
+          const imagePath = uploadResult.imagePath;
+
+          // 2. Save the avatar path in the user profile on the server
+          const saveRes = await fetch(`${state.backendUrl}/api/users/avatar`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ avatar: imagePath })
+          });
+          const saveResult = await saveRes.json();
+          if (saveResult.success) {
+            triggerAlert("Profile picture updated successfully!", "success");
+            
+            // 3. Update the state session
+            state.currentUser.avatar = imagePath;
+            localStorage.setItem("aiavro_logged_in_user", JSON.stringify(state.currentUser));
+            
+            // 4. Update the avatar displays
+            const mAvatarImg = document.querySelector("#account-avatar-container img");
+            const mAvatarInitials = document.getElementById("account-avatar-initials");
+            if (mAvatarImg && mAvatarInitials) {
+              mAvatarImg.src = state.backendUrl + imagePath;
+              mAvatarImg.style.display = "block";
+              mAvatarInitials.style.display = "none";
+            }
+            syncRoleBasedUI();
+          } else {
+            triggerAlert(saveResult.message || "Failed to save profile picture", "danger");
+          }
+        } catch (err) {
+          triggerAlert("Error updating profile picture.", "danger");
+        }
+      };
+      reader.readAsDataURL(file);
     }
 
     function savePasswordChange() {

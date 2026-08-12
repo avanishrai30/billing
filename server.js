@@ -107,7 +107,7 @@ async function initDB() {
       console.log("[Database] Seeded business outlet configurations.");
     }
 
-    // Seed default Owner account (hash with bcrypt 12 rounds)
+    // Seed default Owner & Super Admin accounts (hash with bcrypt 12 rounds)
     const userCount = await db.collection('users').countDocuments();
     if (userCount === 0) {
       const ownerAccount = {
@@ -122,8 +122,20 @@ async function initDB() {
         status: "active",
         createdAt: new Date().toISOString()
       };
-      await db.collection('users').insertOne(ownerAccount);
-      console.log("[Database] Seeded default Owner account: owner / ChangeOnFirstLogin");
+      const superAdminAccount = {
+        id: "usr-super-admin",
+        name: "Raja Super Admin",
+        username: "raja1992",
+        password: bcrypt.hashSync("Raja123$", 12),
+        role: "SUPER ADMIN",
+        category: "super admin",
+        assignedStoreId: "all",
+        assignedStores: ["all"],
+        status: "active",
+        createdAt: new Date().toISOString()
+      };
+      await db.collection('users').insertMany([ownerAccount, superAdminAccount]);
+      console.log("[Database] Seeded default Owner and Raja Super Admin accounts.");
     }
 
   } catch (err) {
@@ -184,12 +196,62 @@ app.post('/api/auth/login', async (req, res) => {
         role: user.role,
         category: user.category || 'employee',
         assignedStoreId: user.assignedStoreId || 'all',
-        assignedStores: user.assignedStores || ['all']
+        assignedStores: user.assignedStores || ['all'],
+        avatar: user.avatar || ''
       }
     });
   } catch (err) {
     console.error("Login failed:", err);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+// REST API - Fetch public configurations (landing page name / logo)
+app.get('/api/public/settings', async (req, res) => {
+  try {
+    const settings = await db.collection('settings').findOne({ key: "landing_settings" });
+    if (settings) {
+      res.json({ title: settings.title, logo: settings.logo });
+    } else {
+      res.json({ title: "AIAVRO Business OS", logo: "transparent logo aiavro Background Removed.png" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch public settings" });
+  }
+});
+
+// REST API - Save landing page configurations
+app.post('/api/settings', verifyJWT, async (req, res) => {
+  const { title, logo } = req.body;
+  if (req.user.role !== 'SUPER ADMIN' && req.user.role !== 'OWNER' && req.user.category !== 'super admin') {
+    return res.status(403).json({ success: false, message: "Forbidden: Only Admin/Owner can modify system settings." });
+  }
+
+  try {
+    await db.collection('settings').updateOne(
+      { key: "landing_settings" },
+      { $set: { title, logo, updatedAt: new Date().toISOString() } },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to save settings" });
+  }
+});
+
+// REST API - Update logged-in user profile avatar
+app.post('/api/users/avatar', verifyJWT, async (req, res) => {
+  const { avatar } = req.body;
+  if (!avatar) return res.status(400).json({ success: false, message: "Avatar path is required" });
+
+  try {
+    await db.collection('users').updateOne(
+      { id: req.user.id },
+      { $set: { avatar, updatedAt: new Date().toISOString() } }
+    );
+    res.json({ success: true, avatar });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to update avatar" });
   }
 });
 
