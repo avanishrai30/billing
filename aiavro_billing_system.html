@@ -4386,8 +4386,8 @@
           </div>
 
           <div class="form-group">
-            <label>Emoji representation</label>
-            <input type="text" id="prod-form-emoji" placeholder="e.g. 🐄 or 🧈 or 🥥" required>
+            <label>Emoji representation <small style="color:var(--text-muted)">(Optional)</small></label>
+            <input type="text" id="prod-form-emoji" placeholder="e.g. 🐄 or 🧈 or 🥥 (Optional)">
           </div>
 
           <div class="form-group">
@@ -8730,17 +8730,15 @@
           document.getElementById("prod-form-image-preview").src = webpDataUrl;
 
           // Trigger Upload API call
-          const role = state.currentUser ? state.currentUser.role : 'employee';
-          
-          fetch(`${state.backendUrl}/api/uploads/product`, {
+          fetch(`${state.backendUrl}/api/upload?type=products`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem("aiavro_jwt_token")}`
             },
             body: JSON.stringify({
               fileName,
-              base64Data: webpDataUrl,
-              role
+              base64Data: webpDataUrl
             })
           })
           .then(res => {
@@ -8750,6 +8748,7 @@
           .then(data => {
             if (data.success) {
               document.getElementById("prod-form-image-path").value = data.imagePath;
+              document.getElementById("prod-form-image-preview").src = getFullImageUrl(data.imagePath);
               const removeBtn = document.getElementById("prod-form-image-remove-btn");
               if (removeBtn) removeBtn.style.display = "inline-block";
               triggerAlert("Product image optimized and saved successfully!", "success");
@@ -8760,9 +8759,9 @@
           .catch(err => {
             console.error("Image upload failed:", err);
             // Revert preview on failure
-            document.getElementById("prod-form-image-preview").src = '/uploads/system/default-product.webp';
+            document.getElementById("prod-form-image-preview").src = DEFAULT_LOGO_SVG;
             document.getElementById("prod-form-image-path").value = '/uploads/system/default-product.webp';
-            triggerAlert("Failed to upload image. Syncing offline fallback...", "warning");
+            triggerAlert(`Failed to upload image (${err.message}). Using local preview.`, "warning");
           });
         };
         img.src = e.target.result;
