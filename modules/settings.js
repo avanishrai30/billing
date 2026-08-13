@@ -1,8 +1,10 @@
 const express = require('express');
-const { getContext, verifyJWT, writeAuditLog } = require('./context');
+const { getContext, verifyJWT } = require('./context');
+const auditService = require('../services/auditService');
 
 const router = express.Router();
 
+// GET /api/v1/role-permissions - Fetch RBAC permissions matrix
 router.get('/role-permissions', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
@@ -22,9 +24,10 @@ router.get('/role-permissions', verifyJWT, async (req, res) => {
   }
 });
 
+// POST /api/v1/role-permissions - Save RBAC permissions matrix (Admin / Owner only)
 router.post('/role-permissions', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
-  const permissions = req.body;
+  const permissions = req.body.permissions || req.body;
   if (req.user.role !== 'SUPER ADMIN' && req.user.role !== 'OWNER' && req.user.category !== 'super admin') {
     return res.status(403).json({ success: false, message: "Forbidden" });
   }
@@ -35,14 +38,15 @@ router.post('/role-permissions', verifyJWT, async (req, res) => {
       { $set: { permissions, updatedAt: new Date().toISOString() } },
       { upsert: true }
     );
-    await writeAuditLog('rbac_updated', 'permissions', 'matrix', null, permissions, req);
-    io.to('sync_global').emit('rbac_updated', permissions);
+    await auditService.writeAuditLog('rbac_updated', 'permissions', 'matrix', null, permissions, req);
+    if (io) io.to('sync_global').emit('rbac_updated', permissions);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to save permissions" });
   }
 });
 
+// GET /api/v1/public/settings - Public portal branding settings (no auth required)
 router.get('/public/settings', async (req, res) => {
   const { db } = getContext();
   try {
@@ -57,6 +61,7 @@ router.get('/public/settings', async (req, res) => {
   }
 });
 
+// POST /api/v1/settings - Save portal branding settings (Admin / Owner only)
 router.post('/settings', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
   const { title, logo } = req.body;
@@ -70,8 +75,8 @@ router.post('/settings', verifyJWT, async (req, res) => {
       { $set: { title, logo, updatedAt: new Date().toISOString() } },
       { upsert: true }
     );
-    await writeAuditLog('settings_updated', 'settings', 'landing_settings', null, { title, logo }, req);
-    io.to('sync_global').emit('settings_updated', { title, logo });
+    await auditService.writeAuditLog('settings_updated', 'settings', 'landing_settings', null, { title, logo }, req);
+    if (io) io.to('sync_global').emit('settings_updated', { title, logo });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to save settings" });

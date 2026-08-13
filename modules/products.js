@@ -1,8 +1,10 @@
 const express = require('express');
-const { getContext, verifyJWT, validateBody, schemas, writeAuditLog } = require('./context');
+const { getContext, verifyJWT, validateBody, schemas } = require('./context');
+const auditService = require('../services/auditService');
 
 const router = express.Router();
 
+// GET /api/v1/products - Fetch all active products
 router.get('/', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
@@ -13,6 +15,22 @@ router.get('/', verifyJWT, async (req, res) => {
   }
 });
 
+// GET /api/v1/products/:id - Fetch single product
+router.get('/:id', verifyJWT, async (req, res) => {
+  const { db } = getContext();
+  try {
+    const product = await db.collection('products').findOne({
+      $or: [{ id: req.params.id }, { sku: req.params.id }, { barcode: req.params.id }],
+      isArchived: { $ne: true }
+    });
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch product" });
+  }
+});
+
+// POST /api/v1/products - Create or update product
 router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res) => {
   const { db, io } = getContext();
   const productData = req.validatedBody;
@@ -29,19 +47,20 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
     if (!productData.id) {
       productDoc.createdAt = new Date().toISOString();
       await db.collection('products').insertOne(productDoc);
-      await writeAuditLog('product_created', 'inventory', productId, null, productDoc, req);
+      await auditService.writeAuditLog('product_created', 'inventory', productId, null, productDoc, req);
     } else {
       await db.collection('products').updateOne({ id: productId }, { $set: productDoc });
-      await writeAuditLog('product_updated', 'inventory', productId, null, productDoc, req);
+      await auditService.writeAuditLog('product_updated', 'inventory', productId, null, productDoc, req);
     }
 
-    io.to('sync_global').emit('product_updated', { productId });
+    if (io) io.to('sync_global').emit('product_updated', { productId });
     res.json({ success: true, product: productDoc });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error saving product" });
   }
 });
 
+// DELETE /api/v1/products/:id - Soft delete (archive) product
 router.delete('/:id', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
   const productId = req.params.id;
@@ -51,14 +70,15 @@ router.delete('/:id', verifyJWT, async (req, res) => {
       { id: productId },
       { $set: { isArchived: true, updatedAt: new Date().toISOString() } }
     );
-    await writeAuditLog('product_archived', 'inventory', productId, null, null, req);
-    io.to('sync_global').emit('product_deleted', { productId });
+    await auditService.writeAuditLog('product_archived', 'inventory', productId, null, null, req);
+    if (io) io.to('sync_global').emit('product_deleted', { productId });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error archiving product" });
   }
 });
 
+// POST /api/v1/products/import - Bulk import products
 router.post('/import', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
   const products = req.body.newProducts || req.body.products;
@@ -68,7 +88,7 @@ router.post('/import', verifyJWT, async (req, res) => {
 
   try {
     for (const prod of products) {
-      const productId = prod.id || `prd-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+      const productId = prod.id || `prd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
       await db.collection('products').updateOne(
         { sku: prod.sku },
         { 
@@ -78,8 +98,8 @@ router.post('/import', verifyJWT, async (req, res) => {
         { upsert: true }
       );
     }
-    await writeAuditLog('product_imported', 'inventory', 'bulk', null, { count: products.length }, req);
-    io.to('sync_global').emit('products_imported', { count: products.length });
+    await auditService.writeAuditLog('product_imported', 'inventory', 'bulk', null, { count: products.length }, req);
+    if (io) io.to('sync_global').emit('products_imported', { count: products.length });
     res.json({ success: true, imported: products.length });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error importing products" });

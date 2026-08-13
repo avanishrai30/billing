@@ -1,8 +1,5 @@
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const { z } = require('zod');
-const path = require('path');
-const fs = require('fs');
 
 const loginSchema = z.object({
   username: z.string().trim().min(1, "Username is required"),
@@ -82,7 +79,7 @@ function getContext() {
   return context;
 }
 
-// Middlewares & helpers
+// JWT Verification Middleware
 function verifyJWT(req, res, next) {
   let token = req.query.token;
   const authHeader = req.headers['authorization'];
@@ -98,6 +95,7 @@ function verifyJWT(req, res, next) {
   });
 }
 
+// Body Validation Middleware
 function validateBody(schema) {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
@@ -113,149 +111,15 @@ function validateBody(schema) {
   };
 }
 
+// Backward-compatibility delegators
 async function writeAuditLog(eventType, entity, entityId, before, after, req) {
-  try {
-    const db = context.db;
-    let userStr = 'System';
-    let roleStr = 'SYSTEM';
-    let businessId = 'all';
-    let businessName = 'All Outlets';
-    let viewName = 'system';
-    
-    if (req && req.user) {
-      const dbUser = await db.collection('users').findOne({ username: req.user.username });
-      if (dbUser) {
-        userStr = `${dbUser.name} (@${dbUser.username})`;
-        roleStr = (dbUser.role || 'employee').toUpperCase();
-        
-        const bizId = dbUser.assignedStoreId || 'all';
-        if (bizId !== 'all') {
-          const biz = await db.collection('businesses').findOne({ id: bizId });
-          if (biz) {
-            businessId = biz.id;
-            businessName = biz.name;
-          }
-        }
-      }
-    }
-
-    const actionMapping = {
-      'auth_login': { action: 'auth', view: 'login' },
-      'auth_logout': { action: 'auth', view: 'login' },
-      'product_created': { action: 'create', view: 'inventory' },
-      'product_updated': { action: 'update', view: 'inventory' },
-      'product_archived': { action: 'delete', view: 'inventory' },
-      'purchase_created': { action: 'create', view: 'purchase' },
-      'inventory_updated': { action: 'update', view: 'inventory' },
-      'invoice_created': { action: 'billing', view: 'billing' },
-      'invoice_voided': { action: 'delete', view: 'invoices' },
-      'franchise_created': { action: 'create', view: 'businesses' },
-      'franchise_deleted': { action: 'delete', view: 'businesses' },
-      'franchise_order_created': { action: 'create', view: 'purchase' },
-      'rbac_updated': { action: 'update', view: 'permissions' },
-      'user_updated': { action: 'update', view: 'permissions' },
-      'user_created': { action: 'create', view: 'permissions' }
-    };
-
-    const map = actionMapping[eventType] || { action: 'update', view: 'system' };
-    const actionType = map.action;
-    viewName = map.view;
-
-    let detailsString = eventType;
-    if (eventType === 'auth_login') {
-      detailsString = `User session authenticated successfully`;
-    } else if (eventType === 'auth_logout') {
-      detailsString = `User session terminated successfully`;
-    } else if (eventType === 'product_created') {
-      detailsString = `Added product '${after.name}' (SKU: ${after.sku}, Price: ₹${after.price})`;
-    } else if (eventType === 'product_updated') {
-      detailsString = `Updated product '${after.name}' details (SKU: ${after.sku}, Price: ₹${after.price})`;
-    } else if (eventType === 'product_archived') {
-      detailsString = `Archived product ID: ${entityId}`;
-    } else if (eventType === 'purchase_created') {
-      detailsString = `Recorded supplier purchase entry (Supplier: ${after.supplier || 'N/A'}, Invoice: #${after.invoiceNumber || 'N/A'}, Total: ₹${after.grandTotal || 0})`;
-    } else if (eventType === 'inventory_updated') {
-      detailsString = `Adjusted inventory stock levels for product ID ${entityId} to ${after.quantity} units`;
-    } else if (eventType === 'invoice_created') {
-      detailsString = `Completed POS transaction for customer '${after.customerName || 'Walk-In'}'. Created Invoice #${entityId} (Total: ₹${after.grandTotal || 0})`;
-    } else if (eventType === 'invoice_voided') {
-      detailsString = `Voided Invoice #${entityId} and reverted items back to warehouse stock`;
-    } else if (eventType === 'franchise_created') {
-      detailsString = `Saved franchise CRM profile: ${after.name}`;
-    } else if (eventType === 'franchise_deleted') {
-      detailsString = `Removed franchise profile (ID: ${entityId})`;
-    } else if (eventType === 'franchise_order_created') {
-      detailsString = `Dispatched supply stock order to Franchise Outlet (ID: #${entityId}, Value: ₹${after.grandTotal || 0})`;
-    } else if (eventType === 'rbac_updated') {
-      detailsString = `Updated global role-permissions matrix permissions configurations`;
-    } else if (eventType === 'user_updated') {
-      detailsString = `Modified account profile details for user: ${entityId}`;
-    } else if (eventType === 'user_created') {
-      detailsString = `Created user account for: ${after.username} (Designation: ${after.role})`;
-    }
-
-    await db.collection('audit_logs').insertOne({
-      eventType,
-      entity,
-      entityId,
-      before: before || {},
-      after: after || {},
-      performedBy: (req && req.user) ? req.user.username : 'system',
-      user: userStr,
-      role: roleStr,
-      action: actionType,
-      view: viewName,
-      details: detailsString,
-      businessId,
-      businessName,
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    console.error("[Audit Log] Failed to write structured audit log:", err);
-  }
+  const auditService = require('../services/auditService');
+  return await auditService.writeAuditLog(eventType, entity, entityId, before, after, req);
 }
 
-// ERP V3: Immutable Ledger Inventory Movement helper
 async function recordInventoryMovement(productId, locationId, type, quantity, referenceType, referenceId, performedBy) {
-  const db = context.db;
-  const currentInv = await db.collection('inventory').findOne({ productId, storeId: locationId });
-  const beforeQuantity = currentInv ? (parseFloat(currentInv.quantity) || 0) : 0;
-  const afterQuantity = beforeQuantity + parseFloat(quantity);
-
-  // Update real-time inventory count
-  await db.collection('inventory').updateOne(
-    { productId, storeId: locationId },
-    { 
-      $set: { quantity: afterQuantity, updatedAt: new Date().toISOString() },
-      $setOnInsert: { productId, storeId: locationId, reservedQuantity: 0, reorderLevel: 10 }
-    },
-    { upsert: true }
-  );
-
-  // Insert ledger record
-  const ledgerId = `mov-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-  await db.collection('inventory_ledger').insertOne({
-    id: ledgerId,
-    productId,
-    locationId,
-    type,
-    quantity: parseFloat(quantity),
-    beforeQuantity,
-    afterQuantity,
-    referenceType,
-    referenceId,
-    performedBy,
-    createdAt: new Date().toISOString()
-  });
-
-  // Emit Socket update to the store room
-  context.io.to(`store_${locationId}`).emit('inventory.updated', {
-    productId,
-    storeId: locationId,
-    quantity: afterQuantity
-  });
-
-  return afterQuantity;
+  const inventoryService = require('../services/inventoryService');
+  return await inventoryService.recordInventoryMovement(productId, locationId, type, quantity, referenceType, referenceId, performedBy);
 }
 
 module.exports = {

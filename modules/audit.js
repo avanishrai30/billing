@@ -1,12 +1,14 @@
 const express = require('express');
-const { getContext, verifyJWT } = require('./context');
+const { verifyJWT } = require('./context');
+const auditService = require('../services/auditService');
 
 const router = express.Router();
 
+// GET /api/v1/audit-logs - Read audit log history
 router.get('/', verifyJWT, async (req, res) => {
-  const { db } = getContext();
   try {
-    const logs = await db.collection('audit_logs').find({}).sort({ timestamp: -1 }).limit(1000).toArray();
+    const limit = parseInt(req.query.limit) || 1000;
+    const logs = await auditService.listAuditLogs(limit);
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch audit logs" });
