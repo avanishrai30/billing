@@ -60,7 +60,7 @@ const inventoryService = {
         { returnDocument: 'after' }
       );
 
-      const doc = updateResult.value || updateResult;
+      const doc = updateResult ? (updateResult.value || updateResult) : null;
       if (!doc || doc.quantity === undefined) {
         // Stock was insufficient or record not found
         const currentRec = await db.collection('inventory').findOne({
@@ -140,7 +140,7 @@ const inventoryService = {
       { upsert: true, returnDocument: 'after' }
     );
 
-    const doc = updateResult.value || updateResult;
+    const doc = updateResult ? (updateResult.value || updateResult) : null;
     const afterQuantity = doc ? (parseFloat(doc.quantity) || 0) : delta;
     const beforeQuantity = afterQuantity - delta;
     const calcTotalValue = totalValue !== null ? totalValue : Math.abs(delta) * parseFloat(unitCost || 0);
