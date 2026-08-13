@@ -36,40 +36,67 @@ router.get('/:id', verifyJWT, async (req, res) => {
   }
 });
 
-// POST /api/v1/invoices - Create POS invoice & consume inventory stock via inventoryService
+// POST /api/v1/invoices - Create POS invoice & consume inventory stock atomically via inventoryService
 router.post('/', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
   const invoiceData = req.body;
-  if (!invoiceData.items || !invoiceData.storeId) {
-    return res.status(400).json({ success: false, message: "Missing required fields" });
+  const targetLocationId = invoiceData.storeId || invoiceData.locationId;
+
+  if (!invoiceData.items || !targetLocationId) {
+    return res.status(400).json({ success: false, message: "Missing required fields: items, storeId/locationId" });
   }
 
+  const invoiceNumber = invoiceData.invoiceNumber || `INV-${Date.now()}`;
+  const username = req.user ? req.user.username : 'system';
+
   try {
-    const invoiceNumber = invoiceData.invoiceNumber || `INV-${Date.now()}`;
+    // 1. Consume stock batch with atomic $gte guard and automatic rollback
+    await inventoryService.consumeStockBatch(
+      invoiceData.items,
+      targetLocationId,
+      invoiceNumber,
+      username
+    );
+
+    // 2. Insert invoice document only after successful stock deduction
     const invoiceDoc = {
       ...invoiceData,
       invoiceNumber,
+      storeId: targetLocationId,
+      locationId: targetLocationId,
       isArchived: false,
       createdAt: new Date().toISOString()
     };
 
     await db.collection('invoices').insertOne(invoiceDoc);
 
-    // Consume stock via domain inventoryService
-    await inventoryService.consumeStock(
-      invoiceDoc.items,
-      invoiceDoc.storeId,
+    // 3. Write structured audit log
+    await auditService.writeAuditLog(
+      'STOCK_SALE',
+      'billing',
       invoiceNumber,
-      req.user ? req.user.username : 'system'
+      null,
+      invoiceDoc,
+      req
     );
 
-    await auditService.writeAuditLog('invoice_created', 'billing', invoiceNumber, null, invoiceDoc, req);
+    // 4. Emit realtime event
     if (io) {
-      io.to(`store_${invoiceDoc.storeId}`).emit('invoice_created', { invoiceNumber });
+      io.to(`store_${targetLocationId}`).emit('invoice_created', { invoiceNumber });
     }
+
     res.json({ success: true, invoice: invoiceDoc });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error creating invoice" });
+    console.error(`[Billing] Invoice #${invoiceNumber} creation failed:`, err);
+    if (err.code === 'INSUFFICIENT_STOCK') {
+      return res.status(400).json({
+        success: false,
+        code: 'INSUFFICIENT_STOCK',
+        message: err.message,
+        errors: err.errors || []
+      });
+    }
+    res.status(500).json({ success: false, message: err.message || "Server error creating invoice" });
   }
 });
 
@@ -90,25 +117,33 @@ router.post('/:id/void', verifyJWT, async (req, res) => {
       { $set: { isArchived: true, voidedAt: new Date().toISOString() } }
     );
 
-    // Revert stock via domain inventoryService
+    // Revert stock batch via domain inventoryService
     if (invoice.items) {
-      await inventoryService.revertStock(
+      await inventoryService.revertStockBatch(
         invoice.items,
-        invoice.storeId,
-        'void_sale',
+        invoice.storeId || invoice.locationId,
+        'VOID',
         'invoice_void',
         invoice.invoiceNumber || invoiceId,
         req.user ? req.user.username : 'system'
       );
     }
 
-    await auditService.writeAuditLog('invoice_voided', 'billing', invoice.invoiceNumber || invoiceId, null, null, req);
+    await auditService.writeAuditLog(
+      'STOCK_VOID',
+      'billing',
+      invoice.invoiceNumber || invoiceId,
+      null,
+      { invoiceId: invoice.invoiceNumber || invoiceId, items: invoice.items },
+      req
+    );
+
     if (io) {
-      io.to(`store_${invoice.storeId}`).emit('invoice_voided', { invoiceId });
+      io.to(`store_${invoice.storeId || invoice.locationId}`).emit('invoice_voided', { invoiceId });
     }
-    res.json({ success: true, message: "Invoice voided" });
+    res.json({ success: true, message: "Invoice voided and inventory stock reverted" });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error voiding invoice" });
+    res.status(500).json({ success: false, message: err.message || "Server error voiding invoice" });
   }
 });
 
@@ -129,7 +164,7 @@ router.get('/:invoiceNumber/pdf', verifyJWT, async (req, res) => {
     doc.fontSize(20).text(`Invoice ${invoice.invoiceNumber || invoice.id}`, { align: 'center' });
     doc.moveDown();
     doc.fontSize(12).text(`Date: ${invoice.createdAt || invoice.date}`);
-    doc.text(`Store ID: ${invoice.storeId}`);
+    doc.text(`Store ID: ${invoice.storeId || invoice.locationId}`);
     doc.text(`Customer: ${invoice.customerName || 'Walk-in'}`);
     doc.moveDown();
 

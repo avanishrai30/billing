@@ -10,7 +10,7 @@ router.get('/', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
     const purchases = await db.collection('purchases').find({ isArchived: { $ne: true } }).toArray();
-    res.json(purchases); // Return array directly for backward compatibility
+    res.json(purchases);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch purchases" });
   }
@@ -30,39 +30,49 @@ router.get('/:id', verifyJWT, async (req, res) => {
   }
 });
 
-// POST /api/v1/purchases - Create purchase entry & add stock via inventoryService
+// POST /api/v1/purchases - Create purchase entry & add stock batch via inventoryService
 router.post('/', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
   const purchaseData = req.body;
+  const targetLocationId = purchaseData.storeId || purchaseData.locationId;
 
   try {
     const purchaseId = purchaseData.id || `pur-${Date.now()}`;
+    const username = req.user ? req.user.username : 'system';
+
+    // 1. Add stock batch atomically
+    if (purchaseData.items && targetLocationId) {
+      await inventoryService.addStockBatch(
+        purchaseData.items,
+        targetLocationId,
+        purchaseId,
+        username
+      );
+    }
+
+    // 2. Insert purchase document
     const purchaseDoc = {
       ...purchaseData,
       id: purchaseId,
+      storeId: targetLocationId,
+      locationId: targetLocationId,
       isArchived: false,
       createdAt: new Date().toISOString()
     };
 
     await db.collection('purchases').insertOne(purchaseDoc);
 
-    // Increment inventory via domain inventoryService
-    if (purchaseDoc.items && purchaseDoc.storeId) {
-      await inventoryService.addStock(
-        purchaseDoc.items,
-        purchaseDoc.storeId,
-        purchaseId,
-        req.user ? req.user.username : 'system'
-      );
-    }
+    // 3. Write audit log
+    await auditService.writeAuditLog('STOCK_PURCHASE', 'purchase', purchaseId, null, purchaseDoc, req);
 
-    await auditService.writeAuditLog('purchase_created', 'purchase', purchaseId, null, purchaseDoc, req);
+    // 4. Emit realtime event
     if (io) {
       io.to('sync_global').emit('purchase_created', { purchaseId });
     }
     res.json({ success: true, purchase: purchaseDoc });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error creating purchase" });
+    console.error("Purchase creation error:", err);
+    res.status(500).json({ success: false, message: err.message || "Server error creating purchase" });
   }
 });
 
@@ -81,11 +91,12 @@ router.delete('/:id', verifyJWT, async (req, res) => {
       { $set: { isArchived: true, deletedAt: new Date().toISOString() } }
     );
 
-    // Revert stock via domain inventoryService
-    if (purchase.items && purchase.storeId) {
-      await inventoryService.revertStock(
+    // Revert stock batch
+    if (purchase.items) {
+      const locId = purchase.storeId || purchase.locationId;
+      await inventoryService.revertStockBatch(
         purchase.items,
-        purchase.storeId,
+        locId,
         'purchase_void',
         'purchase_void',
         purchaseId,
@@ -93,13 +104,13 @@ router.delete('/:id', verifyJWT, async (req, res) => {
       );
     }
 
-    await auditService.writeAuditLog('purchase_deleted', 'purchase', purchaseId, null, null, req);
+    await auditService.writeAuditLog('STOCK_VOID', 'purchase', purchaseId, null, null, req);
     if (io) {
       io.to('sync_global').emit('purchase_deleted', { purchaseId });
     }
-    res.json({ success: true, message: "Purchase deleted" });
+    res.json({ success: true, message: "Purchase deleted and inventory stock reverted" });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error deleting purchase" });
+    res.status(500).json({ success: false, message: err.message || "Server error deleting purchase" });
   }
 });
 
