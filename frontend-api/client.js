@@ -1,7 +1,21 @@
-// Central API Client Core
-const API_BASE_URL = window.location.origin;
+// Central Frontend API Client Core (V3)
+function getApiBaseUrl() {
+  const customUrl = localStorage.getItem("aiavro_backend_url");
+  if (customUrl && customUrl.trim()) {
+    return customUrl.trim().replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    if (window.VC_API_URL) return window.VC_API_URL.replace(/\/+$/, '');
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return window.location.port === '8181' ? window.location.origin : 'http://localhost:8181';
+    }
+  }
+  return 'https://api.vcorganics.com';
+}
 
 async function request(url, options = {}) {
+  const baseUrl = getApiBaseUrl();
   const token = localStorage.getItem("aiavro_jwt_token");
   const headers = {
     'Content-Type': 'application/json',
@@ -13,15 +27,19 @@ async function request(url, options = {}) {
   }
 
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), options.timeout || 15000);
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 15000);
 
   try {
-    const res = await fetch(`${API_BASE_URL}${url}`, {
+    const targetUrl = url.startsWith('http://') || url.startsWith('https://')
+      ? url
+      : `${baseUrl}${url}`;
+
+    const res = await fetch(targetUrl, {
       ...options,
       headers,
       signal: controller.signal
     });
-    clearTimeout(id);
+    clearTimeout(timeoutId);
 
     if (res.status === 401) {
       console.warn("[API] Unauthorized (401), logging out...");
@@ -40,7 +58,7 @@ async function request(url, options = {}) {
 
     return await res.json();
   } catch (err) {
-    clearTimeout(id);
+    clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
       throw new Error("Request timeout. Please check your connection.");
     }
@@ -50,5 +68,6 @@ async function request(url, options = {}) {
 
 // Global api namespace
 window.api = {
-  request
+  request,
+  getBaseUrl: getApiBaseUrl
 };
