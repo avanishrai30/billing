@@ -10660,7 +10660,9 @@
       try {
         const result = await api.invoices.save(newInvoice);
         if (result.success) {
-          const invoiceId = result.invoiceNumber;
+          // Extract invoice from the actual response object
+          const freshInvoice = result.invoice || result;
+          const invoiceId = freshInvoice.invoiceNumber || freshInvoice.id || result.invoiceNumber || result.id;
           triggerAlert(`Invoice ${invoiceId} generated! Warehouse updated.`, "success");
 
           // Notify Socket.IO remote scanners that cashier completed check out
@@ -10683,13 +10685,24 @@
           recalculatePOSTotals();
           closeCameraPOSScanner();
 
-          // Sync database state from server
-          await syncStateWithServer();
+          // Inject the fresh invoice into state immediately so print center can use it
+          // before syncStateWithServer re-fetches (which might lag)
+          const normalizedFresh = normalizeInvoiceForPrint(freshInvoice);
+          const existingIdx = state.invoices.findIndex(i => i.id === invoiceId);
+          if (existingIdx >= 0) {
+            state.invoices[existingIdx] = normalizedFresh;
+          } else {
+            state.invoices.unshift(normalizedFresh);
+          }
 
-          // View perfect invoice
+          // Sync database state from server (background refresh)
+          syncStateWithServer().catch(e => console.warn('[Checkout] Background sync warning:', e));
+
+          // Open print center with the fresh invoice immediately
           openInvoicePreviewModal(invoiceId);
         } else {
-          triggerAlert(result.message || "Failed to submit transaction", "danger");
+          const errMsg = result.error?.message || result.message || "Failed to submit transaction";
+          triggerAlert(errMsg, "danger");
         }
       } catch (err) {
         triggerAlert("Error connecting to server during checkout", "danger");
@@ -10699,6 +10712,121 @@
     /* ==================== INVOICES LOG ACTIONS PREVIEWS ==================== */
     let currentViewingInvoiceId = "";
     let currentInvoicePrintFormat = 'receipt58'; // 'receipt58' or 'a4'
+
+    // Normalize any invoice (fresh or legacy) into a predictable shape for print rendering
+    function normalizeInvoiceForPrint(inv) {
+      if (!inv) return null;
+      const items = (inv.items || inv.lineItems || inv.invoiceItems || []).map(item => ({
+        productId: item.productId || item.id || '',
+        variantId: item.variantId || null,
+        name: item.name || item.productName || 'Unknown Item',
+        sku: item.sku || '',
+        barcode: item.barcode || '',
+        unit: item.unit || 'unit',
+        quantity: parseFloat(item.quantity) || 0,
+        price: parseFloat(item.price || item.sellingPrice || item.unitPrice || item.rate || 0),
+        unitPrice: parseFloat(item.price || item.sellingPrice || item.unitPrice || item.rate || 0),
+        cost: parseFloat(item.cost || item.purchasePrice || 0),
+        gstRate: parseFloat(item.gstRate !== undefined ? item.gstRate : (item.gst !== undefined ? item.gst : 0)),
+        taxAmount: parseFloat(item.taxAmount || item.tax || 0),
+        discount: parseFloat(item.discount || 0),
+        lineTotal: parseFloat(item.lineTotal || (item.price || item.sellingPrice || 0) * (item.quantity || 0) || 0)
+      }));
+
+      return {
+        ...inv,
+        id: inv.id || inv.invoiceNumber || (inv._id ? inv._id.toString() : ''),
+        invoiceNumber: inv.invoiceNumber || inv.id || '',
+        date: inv.date || inv.createdAt || new Date().toISOString(),
+        businessId: inv.businessId || inv.storeId || inv.locationId || '',
+        storeId: inv.storeId || inv.locationId || inv.businessId || '',
+        locationId: inv.locationId || inv.storeId || inv.businessId || '',
+        customerId: inv.customerId || null,
+        customerName: inv.customerName || '',
+        items: items,
+        subtotal: parseFloat(inv.subtotal) || 0,
+        discount: parseFloat(inv.discount) || 0,
+        tax: parseFloat(inv.tax) || 0,
+        roundoff: parseFloat(inv.roundoff) || 0,
+        grandtotal: parseFloat(inv.grandtotal || inv.grandTotal || inv.total || 0),
+        grandTotal: parseFloat(inv.grandTotal || inv.grandtotal || inv.total || 0),
+        paymentMode: (inv.paymentMode || inv.paymentMethod || 'CASH').toUpperCase(),
+        status: inv.status || 'paid',
+        createdBy: inv.createdBy || 'system',
+        isArchived: !!inv.isArchived
+      };
+    }
+
+    // Resolve store/outlet branding for a given invoice
+    function resolveInvoiceBranding(inv) {
+      const fallbackBranding = {
+        name: 'Store',
+        subtitle: '',
+        owner: '',
+        logo: null,
+        address: '',
+        phone: '',
+        email: '',
+        gstin: '',
+        website: '',
+        terms: 'Thank you for shopping!',
+        upiId: ''
+      };
+
+      if (!inv) return fallbackBranding;
+
+      // 1. Try to find the store/outlet by storeId/locationId first
+      const storeId = inv.storeId || inv.locationId || inv.businessId;
+      let biz = null;
+
+      if (storeId) {
+        // Try stores collection first
+        biz = state.stores?.find(s => s.id === storeId);
+        // Then try businesses
+        if (!biz) biz = state.businesses?.find(b => b.id === storeId);
+      }
+
+      // 2. Try businessId specifically
+      if (!biz && inv.businessId) {
+        biz = state.businesses?.find(b => b.id === inv.businessId);
+      }
+
+      // 3. Fallback to active business or first business
+      if (!biz) {
+        biz = state.businesses?.find(b => b.id === state.activeBusinessId)
+           || (state.businesses?.length > 0 ? state.businesses[0] : null);
+      }
+
+      if (!biz) return fallbackBranding;
+
+      return {
+        name: biz.name || fallbackBranding.name,
+        subtitle: biz.subtitle || biz.tagline || '',
+        owner: biz.owner || biz.ownerName || '',
+        logo: biz.logo || null,
+        address: biz.address || '',
+        phone: biz.phone || biz.mobile || '',
+        email: biz.email || '',
+        gstin: biz.gstin || biz.gst || '',
+        website: biz.website || '',
+        terms: biz.terms || fallbackBranding.terms,
+        upiId: biz.upiId || biz.upi || ''
+      };
+    }
+
+    // Resolve customer info for a given invoice
+    function resolveInvoiceCustomer(inv) {
+      const walkin = { name: 'Walk-in Customer', phone: '', address: '', gstin: '' };
+      if (!inv || !inv.customerId) return walkin;
+      const cust = state.customers?.find(c => c.id === inv.customerId);
+      if (!cust) return { ...walkin, name: inv.customerName || 'Walk-in Customer' };
+      return {
+        name: cust.name || 'Walk-in Customer',
+        phone: cust.phone || cust.mobile || '',
+        address: cust.address || '',
+        gstin: cust.gstin || cust.gst || ''
+      };
+    }
 
     function setInvoicePrintFormat(format) {
       currentInvoicePrintFormat = format;
@@ -10786,11 +10914,34 @@
       const modal = document.getElementById("invoice-modal");
       modal.classList.add("active");
 
-      const inv = state.invoices.find(i => i.id === invoiceId);
-      if (!inv) return;
+      const rawInv = state.invoices.find(i => i.id === invoiceId || i.invoiceNumber === invoiceId);
+      if (!rawInv) {
+        console.warn(`[PrintCenter] Invoice not found for ID: ${invoiceId}`);
+        return;
+      }
+
+      // Canonical normalized invoice object
+      const inv = normalizeInvoiceForPrint(rawInv);
+      const biz = resolveInvoiceBranding(inv);
+      const cust = resolveInvoiceCustomer(inv);
+
+      // Development Diagnostic Log
+      console.table({
+        invoiceId: inv.id,
+        itemCount: inv.items ? inv.items.length : 0,
+        storeId: inv.storeId,
+        businessId: inv.businessId,
+        storeName: biz.name,
+        logo: biz.logo || 'none',
+        grandTotal: inv.grandtotal
+      });
+
+      if (!inv.items || inv.items.length === 0) {
+        console.warn(`[PrintCenter] Invoice #${inv.id} has no printable items!`);
+      }
 
       const refundBtn = document.getElementById("invoice-refund-btn");
-      if (inv.status === 'refunded') {
+      if (inv.status === 'refunded' || inv.status === 'VOIDED' || inv.isArchived) {
         refundBtn.style.display = "none";
         document.getElementById("inv-seal-box").innerHTML = `<span>AIAVRO</span><span style="color:var(--accent-danger)">CANCELLED</span>`;
         document.getElementById("inv-seal-box").style.color = "var(--accent-danger)";
@@ -10804,44 +10955,46 @@
         } else {
           refundBtn.style.display = "none";
         }
-        document.getElementById("inv-seal-box").innerHTML = `<span>AIAVRO</span><span>PAID STAMP</span>`;
+        document.getElementById("inv-seal-box").innerHTML = `<span>${escapeHTML(biz.name.toUpperCase())}</span><span>PAID STAMP</span>`;
         document.getElementById("inv-seal-box").style.color = "var(--accent-green)";
         document.getElementById("inv-seal-box").style.borderColor = "var(--accent-green)";
       }
 
-      const biz = state.businesses.find(b => b.id === inv.businessId) || DEFAULT_BUSINESSES[0];
-      const cust = state.customers.find(c => c.id === inv.customerId) || DEFAULT_CUSTOMERS[2];
-
       // Populate A4 Tax Invoice Data
       const invLogoImg = document.getElementById("inv-header-logo-img");
       if (invLogoImg) {
-        invLogoImg.src = getFullImageUrl(biz.logo);
+        if (biz.logo) {
+          invLogoImg.style.display = "block";
+          invLogoImg.src = getFullImageUrl(biz.logo);
+        } else {
+          invLogoImg.style.display = "none";
+        }
       }
 
       document.getElementById("inv-seller-brand").innerText = biz.name;
-      document.getElementById("inv-seller-subtitle").innerText = biz.subtitle;
-      document.getElementById("inv-meta-id").innerText = inv.id;
+      document.getElementById("inv-seller-subtitle").innerText = biz.subtitle || "";
+      document.getElementById("inv-meta-id").innerText = inv.invoiceNumber || inv.id;
       document.getElementById("inv-meta-date").innerText = new Date(inv.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
 
       document.getElementById("inv-seller-details").innerHTML = `
-        <strong>${biz.owner}</strong><br>
-        Address: ${biz.address}<br>
-        GSTIN: <strong>${biz.gstin}</strong><br>
-        Phone: ${biz.phone}
+        <strong>${escapeHTML(biz.owner || biz.name)}</strong><br>
+        Address: ${escapeHTML(biz.address || 'Local Store')}<br>
+        ${biz.gstin ? `GSTIN: <strong>${escapeHTML(biz.gstin)}</strong><br>` : ''}
+        Phone: ${escapeHTML(biz.phone || 'N/A')}
       `;
 
       document.getElementById("inv-buyer-details").innerHTML = `
-        <strong>${cust.name}</strong><br>
-        Address: ${cust.address}<br>
-        ${cust.gstin ? `GSTIN: <strong>${cust.gstin}</strong><br>` : ''}
-        Phone: ${cust.phone}
+        <strong>${escapeHTML(cust.name)}</strong><br>
+        ${cust.address ? `Address: ${escapeHTML(cust.address)}<br>` : ''}
+        ${cust.gstin ? `GSTIN: <strong>${escapeHTML(cust.gstin)}</strong><br>` : ''}
+        ${cust.phone ? `Phone: ${escapeHTML(cust.phone)}` : ''}
       `;
 
       const tbody = document.getElementById("invoice-items-table-body");
       tbody.innerHTML = "";
 
       inv.items.forEach((item, index) => {
-        const total = item.price * item.quantity;
+        const total = item.lineTotal || (item.price * item.quantity);
         const discountAmount = inv.discount || 0;
         const subtotal = inv.subtotal || total;
         const itemDiscount = subtotal > 0 ? (discountAmount * (total / subtotal)) : 0;
@@ -10856,10 +11009,10 @@
         row.innerHTML = `
           <td>${index + 1}</td>
           <td>
-            <strong>${item.name}</strong><br>
-            <small style="color:#64748b">Size: ${item.unit} | GST: ${gstRate}%</small>
+            <strong>${escapeHTML(item.name)}</strong><br>
+            <small style="color:#64748b">Size: ${escapeHTML(item.unit || 'unit')}${gstRate > 0 ? ` | GST: ${gstRate}%` : ''}</small>
           </td>
-          <td style="text-align: right">₹${item.price.toFixed(2)}</td>
+          <td style="text-align: right">₹${(item.price || 0).toFixed(2)}</td>
           <td style="text-align: center">${qtyDisplay}</td>
           <td style="text-align: right">₹${itemDiscount.toFixed(2)}</td>
           <td style="text-align: right">₹${itemTax.toFixed(2)}</td>
@@ -10868,13 +11021,13 @@
         tbody.appendChild(row);
       });
 
-      document.getElementById("inv-calc-subtotal").innerText = `₹${inv.subtotal.toFixed(2)}`;
-      document.getElementById("inv-calc-discount").innerText = `-₹${inv.discount.toFixed(2)}`;
-      document.getElementById("inv-calc-tax").innerText = `₹${inv.tax.toFixed(2)}`;
-      document.getElementById("inv-calc-roundoff").innerText = `${inv.roundoff >= 0 ? '+' : ''}₹${inv.roundoff.toFixed(2)}`;
-      document.getElementById("inv-calc-grandtotal").innerText = `₹${inv.grandtotal.toFixed(2)}`;
-      document.getElementById("inv-calc-words").innerText = convertNumberToWords(inv.grandtotal) + " Only";
-      document.getElementById("inv-terms-content").innerText = biz.terms || "Agro terms apply.";
+      document.getElementById("inv-calc-subtotal").innerText = `₹${(inv.subtotal || 0).toFixed(2)}`;
+      document.getElementById("inv-calc-discount").innerText = `-₹${(inv.discount || 0).toFixed(2)}`;
+      document.getElementById("inv-calc-tax").innerText = `₹${(inv.tax || 0).toFixed(2)}`;
+      document.getElementById("inv-calc-roundoff").innerText = `${(inv.roundoff || 0) >= 0 ? '+' : ''}₹${(inv.roundoff || 0).toFixed(2)}`;
+      document.getElementById("inv-calc-grandtotal").innerText = `₹${(inv.grandtotal || 0).toFixed(2)}`;
+      document.getElementById("inv-calc-words").innerText = convertNumberToWords(inv.grandtotal || 0) + " Only";
+      document.getElementById("inv-terms-content").innerText = biz.terms || "Thank you for shopping!";
 
       document.getElementById("inv-pay-mode-text").innerHTML = `
         Payment Method: <strong>${safeUpper(inv.paymentMode, 'CASH')}</strong>
@@ -10882,46 +11035,61 @@
 
       // Populate 58mm Thermal Receipt Data
       const recLogo = document.getElementById("rec-58mm-logo");
-      if (recLogo) recLogo.src = getFullImageUrl(biz.logo);
+      if (recLogo) {
+        if (biz.logo) {
+          recLogo.style.display = "block";
+          recLogo.src = getFullImageUrl(biz.logo);
+        } else {
+          recLogo.style.display = "none";
+        }
+      }
       
       const recStoreName = document.getElementById("rec-58mm-store-name");
       if (recStoreName) recStoreName.innerText = biz.name;
 
       const recSellerInfo = document.getElementById("rec-58mm-seller-info");
       if (recSellerInfo) {
-        recSellerInfo.innerHTML = `${biz.address}<br>GSTIN: <strong>${biz.gstin}</strong> | Ph: ${biz.phone}`;
+        const sellerParts = [];
+        if (biz.address) sellerParts.push(escapeHTML(biz.address));
+        if (biz.gstin) sellerParts.push(`GSTIN: <strong>${escapeHTML(biz.gstin)}</strong>`);
+        if (biz.phone) sellerParts.push(`Ph: ${escapeHTML(biz.phone)}`);
+        recSellerInfo.innerHTML = sellerParts.join('<br>');
       }
 
-      document.getElementById("rec-58mm-id").innerText = inv.id;
+      document.getElementById("rec-58mm-id").innerText = inv.invoiceNumber || inv.id;
       document.getElementById("rec-58mm-date").innerText = new Date(inv.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
 
       const recBuyerInfo = document.getElementById("rec-58mm-buyer-section");
       if (recBuyerInfo) {
-        recBuyerInfo.innerHTML = `BUYER: <strong>${cust.name}</strong> (${cust.phone})`;
+        recBuyerInfo.innerHTML = `BUYER: <strong>${escapeHTML(cust.name)}</strong>${cust.phone ? ` (${escapeHTML(cust.phone)})` : ''}`;
       }
 
       const recItemsBody = document.getElementById("rec-58mm-items-body");
       if (recItemsBody) {
         recItemsBody.innerHTML = "";
         inv.items.forEach(item => {
-          const itemTotal = item.price * item.quantity;
+          const itemTotal = item.lineTotal || (item.price * item.quantity);
           const qtyDisplay = Number.isInteger(item.quantity) ? item.quantity.toString() : item.quantity.toFixed(3);
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td style="padding:4px 0; line-height:1.3">
               <strong style="font-family:sans-serif; font-size:11px">${escapeHTML(item.name)}</strong><br>
-              <span style="font-size:9.5px; color:#333">${qtyDisplay} ${escapeHTML(item.unit || 'unit')} @ ₹${item.price.toFixed(2)}</span>
+              <span style="font-size:9.5px; color:#333">${qtyDisplay} ${escapeHTML(item.unit || 'unit')} @ ₹${(item.price || 0).toFixed(2)}</span>
             </td>
-            <td style="padding:4px 0; text-align:right; vertical-align:bottom; font-weight:700">₹${itemTotal.toFixed(2)}</td>
+            <td style="padding:4px 0; text-align:right; vertical-align:bottom; font-weight:700">₹${totalToFixed(itemTotal)}</td>
           `;
           recItemsBody.appendChild(tr);
         });
       }
 
-      document.getElementById("rec-58mm-subtotal").innerText = `₹${inv.subtotal.toFixed(2)}`;
-      document.getElementById("rec-58mm-discount").innerText = `-₹${inv.discount.toFixed(2)}`;
-      document.getElementById("rec-58mm-tax").innerText = `₹${inv.tax.toFixed(2)}`;
-      document.getElementById("rec-58mm-grandtotal").innerText = `₹${inv.grandtotal.toFixed(2)}`;
+      function totalToFixed(val) {
+        return (parseFloat(val) || 0).toFixed(2);
+      }
+
+      document.getElementById("rec-58mm-subtotal").innerText = `₹${(inv.subtotal || 0).toFixed(2)}`;
+      document.getElementById("rec-58mm-discount").innerText = `-₹${(inv.discount || 0).toFixed(2)}`;
+      document.getElementById("rec-58mm-tax").innerText = `₹${(inv.tax || 0).toFixed(2)}`;
+      document.getElementById("rec-58mm-grandtotal").innerText = `₹${(inv.grandtotal || 0).toFixed(2)}`;
 
       const recSavings = document.getElementById("rec-58mm-savings-banner");
       if (recSavings) {
@@ -10943,31 +11111,36 @@
       const qrWidget = document.getElementById("invoice-upi-qr-widget");
       const recUpiQr = document.getElementById("rec-58mm-upi-qr");
 
-      if (inv.paymentMode === 'upi' && biz.upiId && inv.status === 'paid') {
+      if (inv.paymentMode === 'UPI' && biz.upiId && (inv.status === 'paid' || inv.status === 'COMPLETED')) {
         qrWidget.style.display = "flex";
         if (recUpiQr) recUpiQr.style.display = "flex";
         document.getElementById("invoice-upi-id-label").innerText = `UPI ID: ${biz.upiId}`;
-        const upiUri = `upi://pay?pa=${biz.upiId}&pn=${encodeURIComponent(biz.name)}&am=${inv.grandtotal}&cu=INR&tn=Invoice-${inv.id}`;
+        const upiUri = `upi://pay?pa=${biz.upiId}&pn=${encodeURIComponent(biz.name)}&am=${inv.grandtotal}&cu=INR&tn=Invoice-${inv.invoiceNumber || inv.id}`;
 
         const canvas = document.getElementById("invoice-payment-qrcode-canvas");
-        QRCode.toCanvas(canvas, upiUri, {
-          width: 80,
-          margin: 1
-        });
+        if (canvas && typeof QRCode !== 'undefined') {
+          QRCode.toCanvas(canvas, upiUri, {
+            width: 80,
+            margin: 1
+          });
+        }
 
         const recCanvas = document.getElementById("rec-58mm-qrcode-canvas");
-        if (recCanvas) {
+        if (recCanvas && typeof QRCode !== 'undefined') {
           QRCode.toCanvas(recCanvas, upiUri, {
             width: 70,
             margin: 1
           });
         }
       } else {
-        qrWidget.style.display = "none";
+        if (qrWidget) qrWidget.style.display = "none";
         if (recUpiQr) recUpiQr.style.display = "none";
       }
 
-      // Default to 58mm Thermal format for fast store counter printing
+      // Apply print customization options
+      updatePrintPreviewOptions();
+
+      // Default to current print format
       setInvoicePrintFormat(currentInvoicePrintFormat);
     }
 
@@ -10987,19 +11160,19 @@
         return;
       }
 
-      const inv = state.invoices.find(i => i.id === currentViewingInvoiceId);
-      if (!inv || inv.status === 'refunded') return;
+      const inv = state.invoices.find(i => i.id === currentViewingInvoiceId || i.invoiceNumber === currentViewingInvoiceId);
+      if (!inv || inv.status === 'refunded' || inv.status === 'VOIDED') return;
 
       if (confirm(`Wipe this transaction? This will declare bill VOID and return sold stocks back to warehouse inventory.`)) {
         try {
-          const result = await api.invoices.void(inv.id);
+          const result = await api.invoices.void(inv.invoiceNumber || inv.id);
           if (result.success) {
-            logActivity('delete', `Voided/refunded invoice: ${inv.id}. Stocks returned to inventory.`);
+            logActivity('delete', `Voided/refunded invoice: ${inv.invoiceNumber || inv.id}. Stocks returned to inventory.`);
             closeInvoiceModal();
             await syncStateWithServer();
             triggerAlert("Invoice declared VOID! Warehouse stocks returned.", "warning");
           } else {
-            triggerAlert(result.message || "Failed to void invoice on server", "danger");
+            triggerAlert(result.message || result.error?.message || "Failed to void invoice on server", "danger");
           }
         } catch (err) {
           triggerAlert("Error connecting to server gateway.", "danger");
@@ -11007,14 +11180,28 @@
       }
     }
 
-    function downloadServerInvoicePDF() {
+    async function downloadServerInvoicePDF() {
       if (!currentViewingInvoiceId) return;
-      const inv = state.invoices.find(i => i.id === currentViewingInvoiceId);
-      if (!inv) return;
-      const token = localStorage.getItem("aiavro_jwt_token");
+      const rawInv = state.invoices.find(i => i.id === currentViewingInvoiceId || i.invoiceNumber === currentViewingInvoiceId);
+      if (!rawInv) return;
+      const inv = normalizeInvoiceForPrint(rawInv);
       
-      // Open the pdf in a new window or trigger download
-      window.open(`${state.backendUrl}/api/v1/invoices/${inv.invoiceNumber}/pdf?token=${token}`, '_blank');
+      try {
+        triggerAlert("Preparing PDF invoice download...", "info");
+        const blob = await api.invoices.getPdf(inv.invoiceNumber || inv.id);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Invoice-${inv.invoiceNumber || inv.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        triggerAlert("PDF invoice downloaded successfully!", "success");
+      } catch (err) {
+        console.error("PDF download error:", err);
+        triggerAlert("Failed to download PDF invoice. Please try again.", "danger");
+      }
     }
 
     function openTransferStockModal() {
