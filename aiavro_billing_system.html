@@ -5702,16 +5702,22 @@
 
         <!-- STEP 2: Column Mapping -->
         <div id="import-step-2" class="import-step-view" style="display:none">
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">
-            We automatically detected fields from your spreadsheet headers. Review and adjust column mappings if necessary.
-          </p>
-          <div style="max-height:280px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+            <p style="font-size:12px; color:var(--text-muted); margin:0">
+              We profiled your spreadsheet and automatically mapped columns with confidence scores. Adjust any mapping if needed.
+            </p>
+            <div id="import-ignored-cols-badge" style="font-size:11px; font-weight:700; color:var(--text-muted); background:var(--bg-primary); padding:4px 8px; border-radius:4px; border:1px solid var(--border-color)">
+              0 Unused Columns
+            </div>
+          </div>
+          <div style="max-height:300px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px">
             <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left">
               <thead style="background:var(--bg-primary); position:sticky; top:0; z-index:2">
                 <tr style="border-bottom:1px solid var(--border-color)">
-                  <th style="padding:8px 12px">Spreadsheet Header</th>
-                  <th style="padding:8px 12px">Sample Row Value</th>
-                  <th style="padding:8px 12px">Mapped System Field</th>
+                  <th style="padding:8px 12px; width:22%">Spreadsheet Column</th>
+                  <th style="padding:8px 12px; width:35%">Confidence & Detection Reason</th>
+                  <th style="padding:8px 12px; width:18%">Sample Data</th>
+                  <th style="padding:8px 12px; width:25%">Mapped Field</th>
                 </tr>
               </thead>
               <tbody id="import-mapping-table-body"></tbody>
@@ -5724,29 +5730,29 @@
           <!-- Summary Metrics Cards -->
           <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:14px" id="import-preview-kpi-grid">
             <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:8px; text-align:center">
-              <small style="font-size:10px; color:var(--text-muted); font-weight:700">TOTAL ROWS</small>
+              <small style="font-size:10px; color:var(--text-muted); font-weight:700">TOTAL</small>
               <div id="kpi-total-rows" style="font-size:16px; font-weight:900">0</div>
             </div>
             <div style="background:var(--bg-primary); border:1px solid var(--accent-green); border-radius:8px; padding:8px; text-align:center">
               <small style="font-size:10px; color:var(--accent-green); font-weight:700">READY</small>
               <div id="kpi-ready-rows" style="font-size:16px; font-weight:900; color:var(--accent-green)">0</div>
             </div>
-            <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:8px; text-align:center">
-              <small style="font-size:10px; color:var(--text-muted); font-weight:700">NEW PRODS</small>
-              <div id="kpi-new-rows" style="font-size:16px; font-weight:900">0</div>
-            </div>
             <div style="background:var(--bg-primary); border:1px solid var(--accent-gold); border-radius:8px; padding:8px; text-align:center">
-              <small style="font-size:10px; color:var(--accent-gold); font-weight:700">UPDATES</small>
-              <div id="kpi-update-rows" style="font-size:16px; font-weight:900; color:var(--accent-gold)">0</div>
+              <small style="font-size:10px; color:var(--accent-gold); font-weight:700">WARNINGS</small>
+              <div id="kpi-warning-rows" style="font-size:16px; font-weight:900; color:var(--accent-gold)">0</div>
+            </div>
+            <div style="background:var(--bg-primary); border:1px solid #f97316; border-radius:8px; padding:8px; text-align:center">
+              <small style="font-size:10px; color:#f97316; font-weight:700">REVIEW REQ.</small>
+              <div id="kpi-review-rows" style="font-size:16px; font-weight:900; color:#f97316">0</div>
             </div>
             <div style="background:var(--bg-primary); border:1px solid var(--accent-danger); border-radius:8px; padding:8px; text-align:center">
-              <small style="font-size:10px; color:var(--accent-danger); font-weight:700">CONFLICTS/ERR</small>
-              <div id="kpi-conflict-rows" style="font-size:16px; font-weight:900; color:var(--accent-danger)">0</div>
+              <small style="font-size:10px; color:var(--accent-danger); font-weight:700">BLOCKED</small>
+              <div id="kpi-blocked-rows" style="font-size:16px; font-weight:900; color:var(--accent-danger)">0</div>
             </div>
           </div>
 
           <!-- Configuration Controls -->
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; background:var(--bg-primary); padding:10px; border-radius:8px; border:1px solid var(--border-color)">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; background:var(--bg-primary); padding:10px; border-radius:8px; border:1px solid var(--border-color)">
             <div>
               <label style="font-size:11px; font-weight:700; display:block; margin-bottom:4px">Import Strategy:</label>
               <select id="import-strategy-select" onchange="refreshImportPreview()" style="width:100%; padding:6px 10px; font-size:12px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-weight:700">
@@ -5756,7 +5762,7 @@
               </select>
             </div>
             <div>
-              <label style="font-size:11px; font-weight:700; display:block; margin-bottom:4px">Default Opening Stock Store:</label>
+              <label style="font-size:11px; font-weight:700; display:block; margin-bottom:4px">Default Store (For Opening Stock > 0):</label>
               <select id="import-store-select" onchange="refreshImportPreview()" style="width:100%; padding:6px 10px; font-size:12px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-weight:700"></select>
             </div>
           </div>
@@ -5765,28 +5771,36 @@
           <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap">
             <button type="button" class="secondary-btn" id="filter-pill-all" onclick="filterImportPreviewTable('ALL')" style="padding:3px 8px; font-size:11px; font-weight:700">All (<span id="count-pill-all">0</span>)</button>
             <button type="button" class="secondary-btn" id="filter-pill-ready" onclick="filterImportPreviewTable('READY')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-green)">Ready (<span id="count-pill-ready">0</span>)</button>
-            <button type="button" class="secondary-btn" id="filter-pill-new" onclick="filterImportPreviewTable('NEW')" style="padding:3px 8px; font-size:11px; font-weight:700">New (<span id="count-pill-new">0</span>)</button>
-            <button type="button" class="secondary-btn" id="filter-pill-update" onclick="filterImportPreviewTable('UPDATE')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-gold)">Update (<span id="count-pill-update">0</span>)</button>
-            <button type="button" class="secondary-btn" id="filter-pill-conflict" onclick="filterImportPreviewTable('CONFLICT')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-danger)">Conflicts (<span id="count-pill-conflict">0</span>)</button>
-            <button type="button" class="secondary-btn" id="filter-pill-invalid" onclick="filterImportPreviewTable('INVALID')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-danger)">Invalid (<span id="count-pill-invalid">0</span>)</button>
+            <button type="button" class="secondary-btn" id="filter-pill-warning" onclick="filterImportPreviewTable('WARNING')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-gold)">Warnings (<span id="count-pill-warning">0</span>)</button>
+            <button type="button" class="secondary-btn" id="filter-pill-review" onclick="filterImportPreviewTable('REVIEW_REQUIRED')" style="padding:3px 8px; font-size:11px; font-weight:700; color:#f97316">Review Req. (<span id="count-pill-review">0</span>)</button>
+            <button type="button" class="secondary-btn" id="filter-pill-blocked" onclick="filterImportPreviewTable('BLOCKED')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-danger)">Blocked (<span id="count-pill-blocked">0</span>)</button>
           </div>
 
           <!-- Preview Table -->
-          <div style="max-height:260px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px">
+          <div style="max-height:230px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px">
             <table style="width:100%; border-collapse:collapse; font-size:11.5px; text-align:left">
               <thead style="background:var(--bg-primary); position:sticky; top:0; z-index:2">
                 <tr style="border-bottom:1px solid var(--border-color)">
-                  <th style="padding:6px 10px; width:40px">#</th>
-                  <th style="padding:6px 10px; width:70px">Status</th>
+                  <th style="padding:6px 10px; width:35px">#</th>
+                  <th style="padding:6px 10px; width:80px">Status</th>
                   <th style="padding:6px 10px">Product</th>
-                  <th style="padding:6px 10px">Barcode / SKU</th>
+                  <th style="padding:6px 10px">Weight / Unit</th>
                   <th style="padding:6px 10px">Cost / Price</th>
                   <th style="padding:6px 10px; text-align:center">Stock</th>
-                  <th style="padding:6px 10px">Details</th>
+                  <th style="padding:6px 10px">Explanation & Actions</th>
                 </tr>
               </thead>
               <tbody id="import-preview-table-body"></tbody>
             </table>
+          </div>
+
+          <!-- Interactive 'Why?' Explanation Drawer / Panel -->
+          <div id="import-why-panel" style="display:none; margin-top:10px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:12px; font-size:12px">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+              <strong style="font-size:12.5px" id="import-why-title">🔍 Row Details & Mapping Explanation</strong>
+              <button type="button" class="secondary-btn" style="padding:2px 8px; font-size:11px" onclick="document.getElementById('import-why-panel').style.display='none'">✕ Close</button>
+            </div>
+            <div id="import-why-content" style="line-height:1.6"></div>
           </div>
         </div>
 
@@ -13084,6 +13098,180 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       reader.readAsArrayBuffer(file);
     }
 
+    /* ==================== INTELLIGENT BULK IMPORT CONTROLLERS ==================== */
+    let currentImportStep = 1;
+    let currentImportWorkbook = null;
+    let currentImportRawMatrix = [];
+    let currentImportHeaders = [];
+    let currentImportColumnMapping = {};
+    let currentImportFieldExplanations = {};
+    let currentImportPreviewData = null;
+    let currentImportTableFilter = 'ALL';
+
+    const CANONICAL_FIELD_OPTIONS = [
+      { id: 'productName', label: 'Product Name (Required for New)' },
+      { id: 'sku', label: 'SKU / Item Code' },
+      { id: 'barcode', label: 'Barcode / EAN / UPC' },
+      { id: 'category', label: 'Category' },
+      { id: 'brand', label: 'Brand' },
+      { id: 'supplier', label: 'Supplier / Vendor' },
+      { id: 'type', label: 'Product Type (OWN / EXTERNAL)' },
+      { id: 'unit', label: 'Unit / Weight (e.g. 1 LTR, 500g)' },
+      { id: 'purchasePrice', label: 'Purchase Price / Cost' },
+      { id: 'sellingPrice', label: 'Selling Price / Rate / Purchase' },
+      { id: 'mrp', label: 'MRP' },
+      { id: 'gst', label: 'GST Slab Rate (%)' },
+      { id: 'openingStock', label: 'Opening Stock Quantity' },
+      { id: 'store', label: 'Store / Location' },
+      { id: 'reorderLevel', label: 'Reorder Level' },
+      { id: 'maxStock', label: 'Max Stock' },
+      { id: 'dom', label: 'Date of Mfg (DOM)' },
+      { id: 'doe', label: 'Date of Expiry (DOE)' },
+      { id: 'imageUrl', label: 'Image URL / Path' },
+      { id: 'description', label: 'Description' },
+      { id: 'sellingMode', label: 'Selling Mode (Packaged / Loose)' },
+      { id: 'ignore', label: '🚫 Ignore Column' }
+    ];
+
+    function toggleExcelImportModal() {
+      const modal = document.getElementById("excel-import-modal");
+      modal.classList.toggle("active");
+      if (modal.classList.contains("active")) {
+        resetImportWizard();
+      }
+    }
+
+    function resetImportWizard() {
+      currentImportStep = 1;
+      currentImportWorkbook = null;
+      currentImportRawMatrix = [];
+      currentImportHeaders = [];
+      currentImportColumnMapping = {};
+      currentImportFieldExplanations = {};
+      currentImportPreviewData = null;
+      currentImportTableFilter = 'ALL';
+
+      document.getElementById("excel-file-input").value = "";
+      document.getElementById("excel-file-name").innerText = "No file chosen";
+      document.getElementById("import-sheet-selector-box").style.display = "none";
+      document.getElementById("import-why-panel").style.display = "none";
+      document.getElementById("import-btn-back").style.display = "none";
+      document.getElementById("import-btn-next").disabled = true;
+      document.getElementById("import-btn-next").innerText = "Next →";
+
+      // Populate store dropdown in preview
+      const storeSelect = document.getElementById("import-store-select");
+      if (storeSelect) {
+        const stores = (state.stores && state.stores.length > 0) ? state.stores : state.businesses;
+        storeSelect.innerHTML = (stores || []).map(s => `<option value="${s.id}">${escapeHTML(s.name)}</option>`).join('');
+      }
+
+      showImportStepView(1);
+    }
+
+    function showImportStepView(step) {
+      currentImportStep = step;
+      for (let i = 1; i <= 4; i++) {
+        const view = document.getElementById(`import-step-${i}`);
+        const node = document.getElementById(`step-node-${i}`);
+        if (view) view.style.display = i === step ? "block" : "none";
+        if (node) {
+          if (i < step) {
+            node.className = "import-step-node completed";
+            node.style.color = "var(--accent-green)";
+            node.querySelector("span").style.background = "var(--accent-green)";
+            node.querySelector("span").style.color = "#fff";
+          } else if (i === step) {
+            node.className = "import-step-node active";
+            node.style.color = "var(--accent-green)";
+            node.querySelector("span").style.background = "var(--accent-green)";
+            node.querySelector("span").style.color = "#fff";
+          } else {
+            node.className = "import-step-node";
+            node.style.color = "var(--text-muted)";
+            node.querySelector("span").style.background = "var(--border-color)";
+            node.querySelector("span").style.color = "var(--text-primary)";
+          }
+        }
+      }
+
+      const backBtn = document.getElementById("import-btn-back");
+      const nextBtn = document.getElementById("import-btn-next");
+
+      if (step === 1) {
+        backBtn.style.display = "none";
+        nextBtn.innerText = "Next (Map Columns) →";
+        nextBtn.disabled = currentImportRawMatrix.length === 0;
+      } else if (step === 2) {
+        backBtn.style.display = "inline-flex";
+        nextBtn.innerText = "Generate Preview →";
+        nextBtn.disabled = false;
+      } else if (step === 3) {
+        backBtn.style.display = "inline-flex";
+        const readyCount = currentImportPreviewData ? (currentImportPreviewData.summary.readyRows || 0) : 0;
+        const warningCount = currentImportPreviewData ? (currentImportPreviewData.summary.warningRows || 0) : 0;
+        const safeCount = readyCount + warningCount;
+        nextBtn.innerText = `Proceed with ${safeCount} Safe Rows ✅`;
+        nextBtn.disabled = safeCount === 0;
+      } else if (step === 4) {
+        backBtn.style.display = "none";
+        nextBtn.innerText = "Done";
+        nextBtn.disabled = false;
+      }
+    }
+
+    function navigateImportStep(direction) {
+      if (direction === 1) {
+        if (currentImportStep === 1) {
+          if (currentImportRawMatrix.length === 0) return;
+          renderImportColumnMappingTable();
+          showImportStepView(2);
+        } else if (currentImportStep === 2) {
+          collectColumnMappingsFromUI();
+          generateImportPreview();
+        } else if (currentImportStep === 3) {
+          executeImportCommit();
+        } else if (currentImportStep === 4) {
+          toggleExcelImportModal();
+        }
+      } else if (direction === -1) {
+        if (currentImportStep > 1 && currentImportStep < 4) {
+          showImportStepView(currentImportStep - 1);
+        }
+      }
+    }
+
+    function handleExcelFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      document.getElementById("excel-file-name").innerText = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          currentImportWorkbook = workbook;
+
+          const sheetSelect = document.getElementById("import-sheet-select");
+          const sheetBox = document.getElementById("import-sheet-selector-box");
+          if (workbook.SheetNames.length > 1) {
+            sheetSelect.innerHTML = workbook.SheetNames.map(name => `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`).join('');
+            sheetBox.style.display = "block";
+          } else {
+            sheetBox.style.display = "none";
+          }
+
+          loadRowsFromSheet(workbook.SheetNames[0]);
+        } catch (err) {
+          console.error("Excel parse error:", err);
+          triggerAlert("Failed to parse file. Please verify format.", "danger");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
     function onImportSheetChange() {
       const sheetName = document.getElementById("import-sheet-select").value;
       if (sheetName && currentImportWorkbook) {
@@ -13093,84 +13281,83 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
 
     function loadRowsFromSheet(sheetName) {
       const worksheet = currentImportWorkbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+      // Read raw 2D array to preserve multi-row header structure cleanly
+      const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
       
-      if (!rows || rows.length === 0) {
+      if (!rawMatrix || rawMatrix.length === 0) {
         triggerAlert(`Sheet "${sheetName}" has no data rows!`, "warning");
-        currentImportRawRows = [];
+        currentImportRawMatrix = [];
         document.getElementById("import-btn-next").disabled = true;
         return;
       }
 
-      currentImportRawRows = rows;
-      currentImportHeaders = Object.keys(rows[0] || {});
+      currentImportRawMatrix = rawMatrix;
       document.getElementById("import-btn-next").disabled = false;
-      triggerAlert(`Loaded ${rows.length} rows from sheet "${sheetName}".`, "success");
-    }
-
-    function cleanKeySimple(key) {
-      if (!key) return '';
-      return String(key).replace(/^\uFEFF/, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      triggerAlert(`Loaded sheet "${sheetName}" (${rawMatrix.length} total matrix rows).`, "success");
     }
 
     function renderImportColumnMappingTable() {
       const tbody = document.getElementById("import-mapping-table-body");
       if (!tbody) return;
-      tbody.innerHTML = "";
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:15px; color:var(--text-muted)">⏳ Profiling spreadsheet columns...</td></tr>`;
 
-      const sampleRow = currentImportRawRows[0] || {};
-      const ALIASES = {
-        productName: ['productname', 'name', 'itemname', 'title', 'product', 'item', 'description', 'itemdescription', 'particulars', 'productservice', 'nameofitem', 'producttitle'],
-        sku: ['sku', 'productsku', 'itemsku', 'skucode', 'itemcode', 'code', 'productcode'],
-        barcode: ['barcode', 'barcodenumber', 'upc', 'ean', 'gtin', 'bar_code', 'eancode'],
-        category: ['category', 'categoryname', 'group', 'type', 'section', 'class'],
-        brand: ['brand', 'brandname', 'company', 'manufacturer', 'make'],
-        supplier: ['supplier', 'suppliername', 'vendor', 'source'],
-        type: ['producttype', 'ownexternal', 'ownership'],
-        unit: ['unit', 'uom', 'pack', 'packaging', 'measure', 'size'],
-        weight: ['weight', 'volume', 'netweight'],
-        weightUnit: ['weightunit', 'volumeunit'],
-        purchasePrice: ['purchaseprice', 'buyingprice', 'costprice', 'cost', 'buying', 'cp', 'unitcost', 'purchase', 'wholesale'],
-        sellingPrice: ['sellingprice', 'saleprice', 'retailprice', 'price', 'mrp', 'sp', 'rate', 'retail', 'selling'],
-        mrp: ['mrp', 'maximumretailprice', 'maxprice'],
-        gst: ['gst', 'gstslab', 'tax', 'vat', 'taxrate'],
-        openingStock: ['openingstock', 'stock', 'initialstock', 'qty', 'quantity', 'count', 'onhand'],
-        store: ['store', 'location', 'outlet', 'locationid'],
-        reorderLevel: ['reorderlevel', 'reorder', 'minstock', 'safety'],
-        maxStock: ['maxstock', 'limit'],
-        dom: ['dom', 'mfgdate', 'mfg'],
-        doe: ['doe', 'expiry', 'expdate'],
-        imageUrl: ['imageurl', 'image', 'imagepath', 'picture'],
-        description: ['details', 'notes', 'remarks'],
-        sellingMode: ['sellingmode', 'mode', 'weightmode']
-      };
-
-      currentImportHeaders.forEach((header, idx) => {
-        const clean = cleanKeySimple(header);
-        let detected = 'ignore';
-
-        for (const [canon, aliasList] of Object.entries(ALIASES)) {
-          if (aliasList.includes(clean)) {
-            detected = canon;
-            break;
-          }
+      // Call preview simulation to get intelligent auto-detection and confidence scoring
+      const defaultStore = document.getElementById("import-store-select")?.value || "default";
+      api.products.importPreview({
+        rows: currentImportRawMatrix,
+        defaultLocationId: defaultStore
+      }).then(res => {
+        if (!res.success) {
+          triggerAlert(res.message || "Failed to profile columns", "danger");
+          return;
         }
 
-        currentImportColumnMapping[header] = detected;
-        const sampleVal = sampleRow[header] !== undefined ? String(sampleRow[header]).slice(0, 35) : '';
+        currentImportColumnMapping = res.columnMapping || {};
+        currentImportFieldExplanations = res.fieldExplanations || {};
+        tbody.innerHTML = "";
 
-        const tr = document.createElement("tr");
-        tr.style.borderBottom = "1px solid var(--border-color)";
-        tr.innerHTML = `
-          <td style="padding:8px 12px"><strong>${escapeHTML(header)}</strong></td>
-          <td style="padding:8px 12px; color:var(--text-muted); font-family:monospace">${escapeHTML(sampleVal || '-')}</td>
-          <td style="padding:8px 12px">
-            <select class="import-col-map-select" data-header="${escapeHTML(header)}" style="padding:4px 8px; font-size:12px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-weight:700; width:100%">
-              ${CANONICAL_FIELD_OPTIONS.map(opt => `<option value="${opt.id}" ${opt.id === detected ? 'selected' : ''}>${opt.label}</option>`).join('')}
-            </select>
-          </td>
-        `;
-        tbody.appendChild(tr);
+        let ignoredCount = 0;
+        const headers = Object.keys(currentImportColumnMapping);
+
+        headers.forEach((header) => {
+          const mappedField = currentImportColumnMapping[header] || 'ignore';
+          const info = currentImportFieldExplanations[header] || { confidence: 'LOW', reason: 'Unrecognized' };
+          if (mappedField === 'ignore') ignoredCount++;
+
+          const sampleVal = res.rows && res.rows.length > 0 ? (res.rows[0].rawRow[header] || '') : '';
+
+          const confBadges = {
+            HIGH: { bg: 'var(--accent-green-soft)', color: 'var(--accent-green)', text: 'HIGH' },
+            MEDIUM: { bg: 'rgba(234, 179, 8, 0.15)', color: 'var(--accent-gold)', text: 'MEDIUM' },
+            LOW: { bg: 'var(--bg-primary)', color: 'var(--text-muted)', text: 'LOW' }
+          };
+          const badge = confBadges[info.confidence] || confBadges.LOW;
+
+          const tr = document.createElement("tr");
+          tr.style.borderBottom = "1px solid var(--border-color)";
+          tr.innerHTML = `
+            <td style="padding:8px 12px"><strong>${escapeHTML(header)}</strong></td>
+            <td style="padding:8px 12px">
+              <span style="font-size:9.5px; font-weight:800; padding:2px 5px; border-radius:3px; background:${badge.bg}; color:${badge.color}; margin-right:4px">${badge.text}</span>
+              <small style="color:var(--text-muted)">${escapeHTML(info.reason || '')}</small>
+            </td>
+            <td style="padding:8px 12px; color:var(--text-muted); font-family:monospace">${escapeHTML(String(sampleVal || '-').slice(0, 25))}</td>
+            <td style="padding:8px 12px">
+              <select class="import-col-map-select" data-header="${escapeHTML(header)}" style="padding:4px 8px; font-size:12px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-weight:700; width:100%">
+                ${CANONICAL_FIELD_OPTIONS.map(opt => `<option value="${opt.id}" ${opt.id === mappedField ? 'selected' : ''}>${opt.label}</option>`).join('')}
+              </select>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        const ignoredBadge = document.getElementById("import-ignored-cols-badge");
+        if (ignoredBadge) {
+          ignoredBadge.innerText = `${ignoredCount} Unused Columns Ignored`;
+        }
+      }).catch(err => {
+        console.error("Error profiling columns:", err);
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--accent-danger); padding:10px">Failed to profile columns. Check file format.</td></tr>`;
       });
     }
 
@@ -13192,7 +13379,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
 
       try {
         const res = await api.products.importPreview({
-          rows: currentImportRawRows,
+          rows: currentImportRawMatrix,
           columnMapping: currentImportColumnMapping,
           strategy: strategy,
           defaultLocationId: defaultStore
@@ -13207,9 +13394,11 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         renderImportPreviewKPIs(res.summary);
         renderImportPreviewTableRows(res.rows);
 
+        const safeCount = (res.summary.readyRows || 0) + (res.summary.warningRows || 0);
         const nextBtn = document.getElementById("import-btn-next");
         if (nextBtn) {
-          nextBtn.disabled = res.summary.readyRows === 0;
+          nextBtn.innerText = `Proceed with ${safeCount} Safe Rows ✅`;
+          nextBtn.disabled = safeCount === 0;
         }
       } catch (err) {
         console.error("Preview API error:", err);
@@ -13223,19 +13412,18 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       }
     }
 
-    function renderImportPreviewKPIs(summary) {
-      document.getElementById("kpi-total-rows").innerText = summary.totalRows;
-      document.getElementById("kpi-ready-rows").innerText = summary.readyRows;
-      document.getElementById("kpi-new-rows").innerText = summary.newRows;
-      document.getElementById("kpi-update-rows").innerText = summary.existingRows;
-      document.getElementById("kpi-conflict-rows").innerText = summary.conflictRows + summary.invalidRows;
+    function renderImportPreviewKPIs(summary = {}) {
+      document.getElementById("kpi-total-rows").innerText = summary.totalRows || 0;
+      document.getElementById("kpi-ready-rows").innerText = summary.readyRows || 0;
+      document.getElementById("kpi-warning-rows").innerText = summary.warningRows || 0;
+      document.getElementById("kpi-review-rows").innerText = summary.reviewRequiredRows || 0;
+      document.getElementById("kpi-blocked-rows").innerText = summary.blockedRows || 0;
 
-      document.getElementById("count-pill-all").innerText = summary.totalRows;
-      document.getElementById("count-pill-ready").innerText = summary.readyRows;
-      document.getElementById("count-pill-new").innerText = summary.newRows;
-      document.getElementById("count-pill-update").innerText = summary.existingRows;
-      document.getElementById("count-pill-conflict").innerText = summary.conflictRows;
-      document.getElementById("count-pill-invalid").innerText = summary.invalidRows;
+      document.getElementById("count-pill-all").innerText = summary.totalRows || 0;
+      document.getElementById("count-pill-ready").innerText = summary.readyRows || 0;
+      document.getElementById("count-pill-warning").innerText = summary.warningRows || 0;
+      document.getElementById("count-pill-review").innerText = summary.reviewRequiredRows || 0;
+      document.getElementById("count-pill-blocked").innerText = summary.blockedRows || 0;
     }
 
     function filterImportPreviewTable(filter) {
@@ -13253,10 +13441,9 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       const filtered = rows.filter(r => {
         if (currentImportTableFilter === 'ALL') return true;
         if (currentImportTableFilter === 'READY') return r.status === 'READY';
-        if (currentImportTableFilter === 'NEW') return r.classification === 'NEW' && r.status === 'READY';
-        if (currentImportTableFilter === 'UPDATE') return r.classification === 'UPDATE' || (r.classification === 'EXISTING' && r.status === 'READY');
-        if (currentImportTableFilter === 'CONFLICT') return r.status === 'CONFLICT';
-        if (currentImportTableFilter === 'INVALID') return r.status === 'INVALID';
+        if (currentImportTableFilter === 'WARNING') return r.status === 'WARNING';
+        if (currentImportTableFilter === 'REVIEW_REQUIRED') return r.status === 'REVIEW_REQUIRED';
+        if (currentImportTableFilter === 'BLOCKED') return r.status === 'BLOCKED';
         return true;
       });
 
@@ -13268,15 +13455,19 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       filtered.forEach(row => {
         const norm = row.normalizedData;
         const statusColors = {
-          READY: { bg: 'var(--accent-green-soft)', text: 'var(--accent-green)', label: norm.matchedProductId ? 'UPDATE' : 'NEW' },
-          CONFLICT: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--accent-danger)', label: 'CONFLICT' },
-          INVALID: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--accent-danger)', label: 'INVALID' },
+          READY: { bg: 'var(--accent-green-soft)', text: 'var(--accent-green)', label: 'READY' },
+          WARNING: { bg: 'rgba(234, 179, 8, 0.15)', text: 'var(--accent-gold)', label: 'WARNING' },
+          REVIEW_REQUIRED: { bg: 'rgba(249, 115, 22, 0.15)', text: '#f97316', label: 'REVIEW REQ' },
+          BLOCKED: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--accent-danger)', label: 'BLOCKED' },
           SKIPPED: { bg: 'var(--bg-primary)', text: 'var(--text-muted)', label: 'SKIPPED' }
         };
         const badge = statusColors[row.status] || { bg: '#eee', text: '#333', label: row.status };
 
-        const issueList = [...(row.issues || []), ...(row.warnings || [])];
-        const detailHtml = issueList.map(iss => `<span style="font-size:10px; color:${row.issues.includes(iss) ? 'var(--accent-danger)' : 'var(--accent-gold)'}">• ${escapeHTML(iss.message)}</span>`).join('<br>');
+        const allNotes = [
+          ...(row.blockReasons || []).map(b => `<span style="color:var(--accent-danger)">⛔ ${escapeHTML(b.message)}</span>`),
+          ...(row.reviewRequests || []).map(r => `<span style="color:#f97316">⚠ ${escapeHTML(r.message)}</span>`),
+          ...(row.warnings || []).map(w => `<span style="color:var(--accent-gold)">ℹ ${escapeHTML(w.message)}</span>`)
+        ];
 
         const tr = document.createElement("tr");
         tr.style.borderBottom = "1px solid var(--border-color)";
@@ -13286,25 +13477,74 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
             <span style="font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; background:${badge.bg}; color:${badge.text}">${badge.label}</span>
           </td>
           <td style="padding:6px 10px">
-            <strong>${escapeHTML(norm.productName || 'Missing Name')}</strong><br>
-            <small style="color:var(--text-muted)">${escapeHTML(norm.category)} | ${escapeHTML(norm.brand)}</small>
-          </td>
-          <td style="padding:6px 10px; font-family:monospace">
-            ${escapeHTML(norm.barcode)}<br>
-            <small style="color:var(--text-muted)">SKU: ${escapeHTML(norm.sku)}</small>
+            <strong>${escapeHTML(norm.productName || 'Unnamed Product')}</strong><br>
+            <small style="color:var(--text-muted)">${escapeHTML(norm.category || 'No Category')} | ${escapeHTML(norm.brand || 'No Brand')}</small>
           </td>
           <td style="padding:6px 10px">
-            ₹${(norm.purchasePrice || 0).toFixed(2)} / <strong>₹${(norm.sellingPrice || 0).toFixed(2)}</strong>
+            ${escapeHTML(norm.unit || '1 Unit')} ${norm.inferredUnits ? '<span style="color:var(--accent-green); font-size:10px; font-weight:700">✓ Derived</span>' : ''}
+          </td>
+          <td style="padding:6px 10px">
+            ${norm.purchasePrice !== null ? `Cost: ₹${norm.purchasePrice.toFixed(2)}` : 'Cost: -'}<br>
+            <strong>${norm.sellingPrice !== null ? `Price: ₹${norm.sellingPrice.toFixed(2)}` : 'Price: -'}</strong>
           </td>
           <td style="padding:6px 10px; text-align:center; font-weight:800">
             ${norm.openingStock > 0 ? `<span style="color:var(--accent-green)">+${norm.openingStock}</span>` : '0'}
           </td>
           <td style="padding:6px 10px">
-            ${detailHtml || '<span style="color:var(--accent-green); font-size:10.5px">✓ Valid</span>'}
+            <div style="font-size:10.5px; max-height:40px; overflow-y:auto; line-height:1.3">
+              ${allNotes.length > 0 ? allNotes.join('<br>') : '<span style="color:var(--accent-green)">✓ Ready to Import</span>'}
+            </div>
+            <button type="button" class="secondary-btn" onclick="inspectImportRow(${row.rowNumber})" style="padding:1px 6px; font-size:9.5px; margin-top:3px">Why? 🔍</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    function inspectImportRow(rowNumber) {
+      if (!currentImportPreviewData || !currentImportPreviewData.rows) return;
+      const row = currentImportPreviewData.rows.find(r => r.rowNumber === rowNumber);
+      if (!row) return;
+
+      const norm = row.normalizedData;
+      const panel = document.getElementById("import-why-panel");
+      const content = document.getElementById("import-why-content");
+      const title = document.getElementById("import-why-title");
+
+      title.innerText = `🔍 Row ${rowNumber}: ${norm.productName || 'Unnamed Item'} (${row.status})`;
+
+      let html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:8px">`;
+      html += `<div><strong>Product Name:</strong> ${escapeHTML(norm.productName || 'Not supplied (New product requires name)')}</div>`;
+      html += `<div><strong>Barcode / SKU:</strong> ${escapeHTML(norm.barcode || 'None')} (${escapeHTML(norm.sku || 'None')})</div>`;
+      html += `<div><strong>Purchase Cost:</strong> ${norm.purchasePrice !== null ? `₹${norm.purchasePrice}` : 'Unset'}</div>`;
+      html += `<div><strong>Selling Price:</strong> ${norm.sellingPrice !== null ? `₹${norm.sellingPrice}` : 'Unset'}</div>`;
+      html += `<div><strong>Derived Unit / Weight:</strong> ${escapeHTML(norm.unit || '1 Unit')} (${norm.weight || 0} ${norm.weightUnit || 'g'})</div>`;
+      html += `<div><strong>Opening Stock:</strong> ${norm.openingStock} units (Allocating to store: ${norm.resolvedLocationId || 'None'})</div>`;
+      html += `</div>`;
+
+      if (row.blockReasons && row.blockReasons.length > 0) {
+        html += `<div style="background:rgba(239,68,68,0.1); padding:8px; border-radius:4px; margin-bottom:6px; color:var(--accent-danger)">`;
+        html += `<strong>⛔ Blocking Reason:</strong><br>`;
+        html += row.blockReasons.map(b => `• ${escapeHTML(b.message)}`).join('<br>');
+        html += `</div>`;
+      }
+
+      if (row.reviewRequests && row.reviewRequests.length > 0) {
+        html += `<div style="background:rgba(249,115,22,0.1); padding:8px; border-radius:4px; margin-bottom:6px; color:#f97316">`;
+        html += `<strong>⚠ Review Request:</strong><br>`;
+        html += row.reviewRequests.map(r => `• ${escapeHTML(r.message)}`).join('<br>');
+        html += `</div>`;
+      }
+
+      if (row.warnings && row.warnings.length > 0) {
+        html += `<div style="background:rgba(234,179,8,0.1); padding:8px; border-radius:4px; margin-bottom:6px; color:var(--accent-gold)">`;
+        html += `<strong>ℹ Informational Notices:</strong><br>`;
+        html += row.warnings.map(w => `• ${escapeHTML(w.message)}`).join('<br>');
+        html += `</div>`;
+      }
+
+      content.innerHTML = html;
+      panel.style.display = "block";
     }
 
     async function executeImportCommit() {
@@ -13340,7 +13580,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
           <li>New Products Created: <strong style="color:var(--accent-green)">${summary.imported || 0}</strong></li>
           <li>Existing Products Updated: <strong style="color:var(--accent-gold)">${summary.updated || 0}</strong></li>
           <li>Inventory Opening Stock Allocations: <strong style="color:var(--accent-green)">${summary.inventoryMovements || 0}</strong></li>
-          <li>Skipped Rows: <strong>${summary.skipped || 0}</strong></li>
+          <li>Skipped / Blocked Rows: <strong>${summary.skipped || 0}</strong></li>
           <li>Failed Rows: <strong style="color:${summary.failed > 0 ? 'var(--accent-danger)' : 'inherit'}">${summary.failed || 0}</strong></li>
         `;
 

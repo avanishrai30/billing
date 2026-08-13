@@ -6,7 +6,7 @@ const HEADER_ALIASES = {
   productName: [
     'productname', 'name', 'itemname', 'title', 'product', 'item', 'description',
     'itemdescription', 'particulars', 'productservice', 'nameofitem', 'producttitle',
-    'itemdesc', 'item_name', 'product_name', 'item_description'
+    'itemdesc', 'item_name', 'product_name', 'item_description', 'products', 'items'
   ],
   sku: [
     'sku', 'productsku', 'itemsku', 'skucode', 'itemcode', 'code', 'productcode',
@@ -30,7 +30,7 @@ const HEADER_ALIASES = {
     'producttype', 'ownexternal', 'ownership', 'itemtype', 'type'
   ],
   unit: [
-    'unit', 'uom', 'pack', 'packaging', 'measure', 'size', 'package', 'packsize'
+    'unit', 'uom', 'pack', 'packaging', 'measure', 'size', 'package', 'packsize', 'weight'
   ],
   weight: [
     'weight', 'volume', 'netweight', 'quantityperpack', 'netweightvolume'
@@ -40,11 +40,11 @@ const HEADER_ALIASES = {
   ],
   purchasePrice: [
     'purchaseprice', 'buyingprice', 'costprice', 'cost', 'buying', 'cp',
-    'unitcost', 'purchase', 'wholesale', 'wholesaleprice', 'purchase_price', 'buying_price', 'cost_price'
+    'unitcost', 'purchase_price', 'buying_price', 'cost_price', 'wholesaleprice', 'purchase'
   ],
   sellingPrice: [
     'sellingprice', 'saleprice', 'retailprice', 'price', 'mrp', 'sp', 'rate',
-    'retail', 'selling', 'selling_price', 'sale_price', 'retail_price', 'unitprice'
+    'retail', 'selling', 'selling_price', 'sale_price', 'retail_price', 'unitprice', 'mrp_rate'
   ],
   mrp: [
     'mrp', 'maximumretailprice', 'maxprice', 'listprice'
@@ -93,74 +93,312 @@ function cleanHeaderKey(key) {
     .trim();
 }
 
-// Auto-detect matching canonical field for a raw spreadsheet column header
-function detectCanonicalField(rawHeader) {
-  const clean = cleanHeaderKey(rawHeader);
-  if (!clean) return null;
+// Extract weight and unit from strings like "1 LTR", "1LTR", "500 ML", "1KG", "250g"
+function parseWeightAndUnit(rawStr) {
+  if (!rawStr) return null;
+  const str = String(rawStr).trim();
+  const match = str.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)$/);
+  if (!match) return null;
 
-  for (const [canonicalField, aliases] of Object.entries(HEADER_ALIASES)) {
-    if (aliases.includes(clean)) {
-      return canonicalField;
-    }
-  }
-  return null;
+  const val = parseFloat(match[1]);
+  const rawUnit = match[2].toLowerCase();
+
+  let weightUnit = 'unit';
+  if (['ltr', 'liter', 'litres', 'l'].includes(rawUnit)) weightUnit = 'L';
+  else if (['ml', 'milli'].includes(rawUnit)) weightUnit = 'ml';
+  else if (['kg', 'kilo', 'kilogram'].includes(rawUnit)) weightUnit = 'kg';
+  else if (['g', 'gm', 'gram', 'grams'].includes(rawUnit)) weightUnit = 'g';
+  else weightUnit = match[2];
+
+  return {
+    weight: val,
+    weightUnit,
+    unit: `${val}${weightUnit}`
+  };
 }
 
-// Generate automatic column mapping from array of raw headers
-function autoMapHeaders(rawHeaders = []) {
-  const mapping = {};
-  const usedCanonical = new Set();
+/**
+ * Profile column values from sample rows
+ */
+function profileColumnData(values = []) {
+  const cleanVals = values.filter(v => v !== undefined && v !== null && String(v).trim() !== '');
+  if (cleanVals.length === 0) return { type: 'EMPTY' };
 
-  for (const header of rawHeaders) {
-    const canonical = detectCanonicalField(header);
-    if (canonical && !usedCanonical.has(canonical)) {
-      mapping[header] = canonical;
-      usedCanonical.add(canonical);
+  let numericCount = 0;
+  let weightUnitCount = 0;
+  let textLengthSum = 0;
+
+  for (const v of cleanVals) {
+    const s = String(v).trim();
+    if (!isNaN(parseFloat(s)) && isFinite(s)) {
+      numericCount++;
+    } else if (parseWeightAndUnit(s)) {
+      weightUnitCount++;
+    }
+    textLengthSum += s.length;
+  }
+
+  const count = cleanVals.length;
+  if (weightUnitCount / count > 0.5) {
+    return { type: 'WEIGHT_UNIT', confidence: 'HIGH' };
+  }
+  if (numericCount / count > 0.8) {
+    const nums = cleanVals.map(v => parseFloat(v)).filter(n => !isNaN(n));
+    const allInts = nums.every(n => Number.isInteger(n));
+    const maxVal = Math.max(...nums);
+    if (allInts && maxVal <= 500) {
+      return { type: 'QUANTITY_CANDIDATE', confidence: 'MEDIUM' };
+    }
+    return { type: 'CURRENCY_CANDIDATE', confidence: 'MEDIUM' };
+  }
+  if (textLengthSum / count > 3) {
+    return { type: 'PRODUCT_NAME_CANDIDATE', confidence: 'MEDIUM' };
+  }
+
+  return { type: 'TEXT', confidence: 'LOW' };
+}
+
+/**
+ * Multi-Row Header Extraction
+ * Supports 1-row, 2-row, or 3-row headers (e.g. HEMA.xlsx with Row 1 & Row 2 headers)
+ */
+function extractHeadersAndRowsFromMatrix(matrix = []) {
+  if (!matrix || matrix.length === 0) return { headers: [], rows: [] };
+
+  let headerRowEndIndex = 0;
+  let isMultiRow = false;
+
+  // Inspect first 3 rows
+  const row0 = matrix[0] || [];
+  const row1 = matrix[1] || [];
+  const row2 = matrix[2] || [];
+
+  // Check if row 1 contains sub-headers (like WEIGHT, COST, QTY under parent headers)
+  const row0NonEmpty = row0.filter(c => c !== undefined && String(c).trim() !== '').length;
+  const row1NonEmpty = row1.filter(c => c !== undefined && String(c).trim() !== '').length;
+
+  // If row 1 has header-like words (WEIGHT, COST, QTY, RATE, UNIT, PRICE)
+  const row1IsSubHeader = row1.some(cell => {
+    const k = cleanHeaderKey(cell);
+    return ['weight', 'cost', 'qty', 'quantity', 'price', 'rate', 'unit', 'mrp'].includes(k);
+  });
+
+  if (row1IsSubHeader || (row0NonEmpty < row1NonEmpty && row1NonEmpty > 1)) {
+    isMultiRow = true;
+    headerRowEndIndex = 1;
+  }
+
+  const numCols = Math.max(row0.length, row1.length, (row2 ? row2.length : 0));
+  const headers = [];
+
+  for (let c = 0; c < numCols; c++) {
+    let headerName = '';
+    if (isMultiRow) {
+      const topCell = row0[c] !== undefined ? String(row0[c]).trim() : '';
+      const subCell = row1[c] !== undefined ? String(row1[c]).trim() : '';
+
+      if (subCell && topCell && cleanHeaderKey(subCell) !== cleanHeaderKey(topCell)) {
+        headerName = `${topCell} ${subCell}`.trim();
+      } else if (subCell) {
+        headerName = subCell;
+      } else if (topCell) {
+        headerName = topCell;
+      } else {
+        headerName = `Column_${c + 1}`;
+      }
     } else {
-      mapping[header] = 'ignore';
+      const cell = row0[c] !== undefined ? String(row0[c]).trim() : '';
+      headerName = cell || `Column_${c + 1}`;
     }
+    headers.push(headerName);
   }
-  return mapping;
+
+  const dataRows = [];
+  const startRowIdx = isMultiRow ? 2 : 1;
+
+  for (let r = startRowIdx; r < matrix.length; r++) {
+    const rawRow = matrix[r] || [];
+    // Skip completely empty rows
+    const hasData = rawRow.some(c => c !== undefined && c !== null && String(c).trim() !== '');
+    if (!hasData) continue;
+
+    const rowObj = {};
+    for (let c = 0; c < headers.length; c++) {
+      rowObj[headers[c]] = rawRow[c] !== undefined ? rawRow[c] : '';
+    }
+    dataRows.push(rowObj);
+  }
+
+  return {
+    headers,
+    rows: dataRows,
+    isMultiRow
+  };
 }
 
-// Normalize a single raw row object using column mapping
+/**
+ * Intelligent Column Mapping with Confidence Scoring & Semantic Analysis
+ */
+function detectSmartFieldMapping(rawHeaders = [], sampleRows = []) {
+  const mapping = {};
+  const fieldExplanations = {};
+  const usedCanonical = new Set();
+  const unmappedColumns = [];
+
+  const SERIAL_NO_ALIASES = ['slno', 'sno', 'srno', 'serialno', 'serialnumber', 'no', 'num', 'sl', 'index'];
+
+  // PASS 1: Direct Header Keywords & Canonical Aliases
+  for (let c = 0; c < rawHeaders.length; c++) {
+    const header = rawHeaders[c];
+    const clean = cleanHeaderKey(header);
+
+    if (SERIAL_NO_ALIASES.includes(clean)) {
+      mapping[header] = 'ignore';
+      fieldExplanations[header] = {
+        field: 'ignore',
+        sourceColumn: header,
+        confidence: 'HIGH',
+        state: 'IGNORED',
+        reason: 'Serial number / row sequence column'
+      };
+      continue;
+    }
+
+    let aliasMatch = null;
+    for (const [canon, aliases] of Object.entries(HEADER_ALIASES)) {
+      if (aliases.includes(clean)) {
+        aliasMatch = canon;
+        break;
+      }
+    }
+
+    if (clean === 'purchase') {
+      const hasCostNeighbor = rawHeaders.some(h => cleanHeaderKey(h) === 'cost');
+      if (hasCostNeighbor || usedCanonical.has('purchasePrice')) {
+        mapping[header] = 'sellingPrice';
+        fieldExplanations[header] = {
+          field: 'sellingPrice',
+          sourceColumn: header,
+          confidence: 'MEDIUM',
+          state: 'AMBIGUOUS',
+          reason: 'Header is labeled "PURCHASE" alongside "COST". Candidate Selling Price — please confirm.'
+        };
+        usedCanonical.add('sellingPrice');
+      } else {
+        mapping[header] = 'purchasePrice';
+        fieldExplanations[header] = {
+          field: 'purchasePrice',
+          sourceColumn: header,
+          confidence: 'HIGH',
+          state: 'DETECTED',
+          reason: 'Direct header keyword match for "purchasePrice"'
+        };
+        usedCanonical.add('purchasePrice');
+      }
+    } else if (aliasMatch && !usedCanonical.has(aliasMatch)) {
+      mapping[header] = aliasMatch;
+      fieldExplanations[header] = {
+        field: aliasMatch,
+        sourceColumn: header,
+        confidence: 'HIGH',
+        state: 'DETECTED',
+        reason: `Direct header keyword match for "${aliasMatch}"`
+      };
+      usedCanonical.add(aliasMatch);
+    } else {
+      unmappedColumns.push(header);
+    }
+  }
+
+  // PASS 2: Data-Profiling Inference for Remaining Unmapped Columns
+  for (const header of unmappedColumns) {
+    const colValues = sampleRows.map(r => r[header]);
+    const profile = profileColumnData(colValues);
+
+    let mappedField = 'ignore';
+    let confidence = 'LOW';
+    let state = 'IGNORED';
+    let reason = 'Unrecognized column';
+
+    if (profile.type === 'WEIGHT_UNIT' && !usedCanonical.has('unit')) {
+      mappedField = 'unit';
+      confidence = 'HIGH';
+      state = 'INFERRED';
+      reason = 'Column values match measurement patterns (e.g. "1 LTR", "500 ML", "1KG")';
+    } else if (profile.type === 'PRODUCT_NAME_CANDIDATE' && !usedCanonical.has('productName')) {
+      mappedField = 'productName';
+      confidence = 'MEDIUM';
+      state = 'INFERRED';
+      reason = 'Text-heavy column containing descriptive product names';
+    } else if (profile.type === 'QUANTITY_CANDIDATE' && !usedCanonical.has('openingStock')) {
+      mappedField = 'openingStock';
+      confidence = 'MEDIUM';
+      state = 'INFERRED';
+      reason = 'Integer values matching stock quantity candidate';
+    }
+
+    if (mappedField !== 'ignore') {
+      usedCanonical.add(mappedField);
+    }
+
+    mapping[header] = mappedField;
+    fieldExplanations[header] = {
+      field: mappedField,
+      sourceColumn: header,
+      confidence,
+      state,
+      reason
+    };
+  }
+
+  return {
+    mapping,
+    fieldExplanations
+  };
+}
+
+/**
+ * Normalize single raw row using column mapping + safe derivations
+ */
 function normalizeRowData(rawRow, columnMapping = {}) {
   const normalized = {
     productName: '',
     sku: '',
     barcode: '',
-    category: 'Dairy & Ghee',
-    brand: 'VC Organic',
-    supplier: 'Direct Farmer Market',
+    category: '',
+    brand: '',
+    supplier: '',
     type: 'OWN',
     unit: '1 Unit',
     weight: 0,
     weightUnit: 'g',
-    purchasePrice: 0,
-    sellingPrice: 0,
-    mrp: 0,
+    purchasePrice: null,
+    sellingPrice: null,
+    mrp: null,
     gst: 5,
     openingStock: 0,
-    store: 'default',
+    store: '',
     reorderLevel: 10,
     maxStock: 100,
-    dom: new Date().toISOString().split('T')[0],
+    dom: '',
     doe: '',
     imageUrl: '',
     description: '',
-    sellingMode: 'packaged'
+    sellingMode: 'packaged',
+    inferredUnits: false
   };
 
   for (const [rawCol, val] of Object.entries(rawRow)) {
-    const canonicalField = columnMapping[rawCol] || detectCanonicalField(rawCol);
+    const canonicalField = columnMapping[rawCol];
     if (canonicalField && canonicalField !== 'ignore' && val !== undefined && val !== null) {
       const strVal = String(val).trim();
+      if (!strVal) continue;
+
       switch (canonicalField) {
         case 'purchasePrice':
         case 'sellingPrice':
         case 'mrp':
-        case 'weight':
-          normalized[canonicalField] = parseFloat(strVal) || 0;
+          normalized[canonicalField] = parseFloat(strVal);
           break;
         case 'openingStock':
         case 'reorderLevel':
@@ -169,6 +407,18 @@ function normalizeRowData(rawRow, columnMapping = {}) {
           break;
         case 'gst':
           normalized.gst = parseInt(strVal, 10) || 0;
+          break;
+        case 'unit':
+          // Attempt safe parsing of weight and unit from string like "1 LTR"
+          const parsed = parseWeightAndUnit(strVal);
+          if (parsed) {
+            normalized.unit = parsed.unit;
+            normalized.weight = parsed.weight;
+            normalized.weightUnit = parsed.weightUnit;
+            normalized.inferredUnits = true;
+          } else {
+            normalized.unit = strVal;
+          }
           break;
         case 'type':
           normalized.type = strVal.toUpperCase().includes('EXT') ? 'EXTERNAL' : 'OWN';
@@ -182,12 +432,12 @@ function normalizeRowData(rawRow, columnMapping = {}) {
     }
   }
 
-  // Derive MRP if empty
-  if (!normalized.mrp && normalized.sellingPrice > 0) {
+  // Derive MRP if empty but sellingPrice present
+  if (normalized.mrp === null && normalized.sellingPrice !== null) {
     normalized.mrp = normalized.sellingPrice;
   }
 
-  // Barcode / SKU fallback derivation
+  // Barcode / SKU derivation if missing
   if (!normalized.sku && normalized.barcode) {
     normalized.sku = normalized.barcode;
   }
@@ -199,59 +449,66 @@ function normalizeRowData(rawRow, columnMapping = {}) {
 }
 
 /**
- * Validate and simulate import (Read-Only Preview)
+ * Validate and simulate import (Read-Only Preview with Flexible Safety Rules)
  */
 async function validateAndPreview(db, rawRows = [], options = {}) {
-  const columnMapping = options.columnMapping || autoMapHeaders(Object.keys(rawRows[0] || {}));
+  // Support both 2D array matrix and JSON row objects
+  let parsedHeaders = [];
+  let workingRows = rawRows;
+
+  if (Array.isArray(rawRows) && rawRows.length > 0 && Array.isArray(rawRows[0])) {
+    const extracted = extractHeadersAndRowsFromMatrix(rawRows);
+    parsedHeaders = extracted.headers;
+    workingRows = extracted.rows;
+  } else if (workingRows.length > 0) {
+    parsedHeaders = Object.keys(workingRows[0] || {});
+  }
+
+  const smartDetection = detectSmartFieldMapping(parsedHeaders, workingRows.slice(0, 10));
+  const columnMapping = options.columnMapping || smartDetection.mapping;
+  const fieldExplanations = smartDetection.fieldExplanations;
   const importId = options.importId || `imp-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-  const defaultLocationId = options.defaultLocationId || 'default';
-  const strategy = options.strategy || 'ADD_AND_UPDATE'; // 'ADD_AND_UPDATE', 'ADD_NEW_ONLY', 'UPDATE_EXISTING_ONLY'
+  const defaultLocationId = options.defaultLocationId || options.defaultStore || 'default';
+  const strategy = options.strategy || 'ADD_AND_UPDATE';
 
   const processedRows = [];
   let readyCount = 0;
-  let newCount = 0;
-  let existingCount = 0;
-  let conflictCount = 0;
-  let invalidCount = 0;
   let warningCount = 0;
+  let reviewRequiredCount = 0;
+  let blockedCount = 0;
+  let skippedCount = 0;
 
   const seenBarcodesInBatch = new Map();
   const seenSkusInBatch = new Map();
 
-  for (let i = 0; i < rawRows.length; i++) {
-    const rawRow = rawRows[i];
+  for (let i = 0; i < workingRows.length; i++) {
+    const rawRow = workingRows[i];
     const rowNumber = i + 1;
     const row = normalizeRowData(rawRow, columnMapping);
-    const issues = [];
     const warnings = [];
+    const reviewRequests = [];
+    const blockReasons = [];
     let classification = 'NEW';
     let matchedProduct = null;
 
-    // 1. Mandatory Validations
-    if (!row.productName) {
-      issues.push({ field: 'productName', code: 'MISSING_NAME', message: 'Product name is required' });
+    // 1. Database Matching Priority (Exact Barcode -> Exact SKU -> Variant Barcode -> Variant SKU)
+    if (db && row.barcode) {
+      const barcodeRecord = await db.collection('product_barcodes').findOne({ barcode: row.barcode });
+      if (barcodeRecord) {
+        matchedProduct = await db.collection('products').findOne({ id: barcodeRecord.productId });
+      } else {
+        matchedProduct = await db.collection('products').findOne({ barcode: row.barcode });
+      }
     }
 
-    if (row.sellingPrice <= 0 && row.purchasePrice <= 0) {
-      issues.push({ field: 'sellingPrice', code: 'INVALID_PRICE', message: 'Selling price and purchase price must be greater than zero' });
-    }
-
-    const validGsts = [0, 5, 12, 18, 28];
-    if (!validGsts.includes(row.gst)) {
-      warnings.push({ field: 'gst', code: 'UNUSUAL_GST', message: `GST rate ${row.gst}% is non-standard. Valid slabs: 0, 5, 12, 18, 28%` });
-    }
-
-    // Auto-generate barcode/sku if missing
-    if (!row.barcode && !row.sku) {
-      row.barcode = `VC${String(Date.now()).slice(-6)}${rowNumber}`;
-      row.sku = row.barcode;
-      warnings.push({ field: 'barcode', code: 'AUTO_GENERATED_BARCODE', message: `Auto-generated barcode ${row.barcode}` });
+    if (db && !matchedProduct && row.sku) {
+      matchedProduct = await db.collection('products').findOne({ sku: row.sku });
     }
 
     // 2. Intra-Batch Duplicate Check
     if (row.barcode) {
       if (seenBarcodesInBatch.has(row.barcode)) {
-        issues.push({
+        blockReasons.push({
           field: 'barcode',
           code: 'DUPLICATE_BARCODE_IN_BATCH',
           message: `Barcode '${row.barcode}' appears multiple times in spreadsheet (first seen at row ${seenBarcodesInBatch.get(row.barcode)})`
@@ -263,7 +520,7 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
 
     if (row.sku) {
       if (seenSkusInBatch.has(row.sku)) {
-        issues.push({
+        blockReasons.push({
           field: 'sku',
           code: 'DUPLICATE_SKU_IN_BATCH',
           message: `SKU '${row.sku}' appears multiple times in spreadsheet (first seen at row ${seenSkusInBatch.get(row.sku)})`
@@ -273,82 +530,129 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
       }
     }
 
-    // 3. Database Matching Priority (Exact Barcode -> Exact SKU -> Variant Barcode -> Variant SKU)
-    if (db && row.barcode) {
-      // 3.1 Check barcode table / primary product barcode
-      const barcodeRecord = await db.collection('product_barcodes').findOne({ barcode: row.barcode });
-      if (barcodeRecord) {
-        matchedProduct = await db.collection('products').findOne({ id: barcodeRecord.productId });
-      } else {
-        matchedProduct = await db.collection('products').findOne({ barcode: row.barcode });
-      }
-    }
-
-    if (db && !matchedProduct && row.sku) {
-      // 3.2 Check SKU match
-      matchedProduct = await db.collection('products').findOne({ sku: row.sku });
-    }
-
-    // 4. Classify Row & Detect Cross-Product Conflicts
+    // 3. Product Identity & Classification
     if (matchedProduct) {
       classification = 'EXISTING';
 
-      // Verify that if both barcode and SKU are supplied, they don't belong to two different products
+      // Check cross-product conflicts
       if (db && row.sku && matchedProduct.sku !== row.sku) {
         const skuProduct = await db.collection('products').findOne({ sku: row.sku });
         if (skuProduct && skuProduct.id !== matchedProduct.id) {
-          issues.push({
+          blockReasons.push({
             field: 'sku',
             code: 'SKU_CROSS_PRODUCT_CONFLICT',
             message: `Barcode belongs to '${matchedProduct.name}' but SKU '${row.sku}' belongs to '${skuProduct.name}'`
           });
-          classification = 'CONFLICT';
         }
       }
 
       // Check price changes
-      if (row.sellingPrice !== matchedProduct.sellingPrice || row.purchasePrice !== matchedProduct.purchasePrice) {
+      if (row.sellingPrice !== null && row.sellingPrice !== matchedProduct.sellingPrice) {
         warnings.push({
-          field: 'price',
+          field: 'sellingPrice',
           code: 'PRICE_CHANGE',
-          message: `Price change detected: Purchase ₹${matchedProduct.purchasePrice} -> ₹${row.purchasePrice}, Selling ₹${matchedProduct.sellingPrice} -> ₹${row.sellingPrice}`
+          message: `Selling price update: ₹${matchedProduct.sellingPrice} -> ₹${row.sellingPrice}`
         });
-        if (classification !== 'CONFLICT') classification = 'UPDATE';
+        classification = 'UPDATE';
       }
-    } else if (db && row.productName) {
-      // Check if product with identical name exists under a different barcode (Notice: DO NOT auto-merge)
-      const nameMatch = await db.collection('products').findOne({ name: { $regex: new RegExp(`^${row.productName.trim()}$`, 'i') } });
-      if (nameMatch) {
+
+      // If product name is missing on existing product, we can inherit it from DB
+      if (!row.productName) {
+        row.productName = matchedProduct.name;
         warnings.push({
           field: 'productName',
-          code: 'POSSIBLE_NAME_MATCH',
-          message: `Product with similar name '${nameMatch.name}' already exists with different barcode '${nameMatch.barcode}'. Will create as distinct new product.`
+          code: 'INHERITED_EXISTING_NAME',
+          message: `Using existing product name "${matchedProduct.name}" from catalog`
+        });
+      }
+    } else {
+      classification = 'NEW';
+
+      // For NEW products, Product Name is strictly required
+      if (!row.productName) {
+        blockReasons.push({
+          field: 'productName',
+          code: 'MISSING_NAME_FOR_NEW_PRODUCT',
+          message: 'Product Name is required to register a new product profile'
+        });
+      }
+
+      // Check if product with identical name exists under different barcode (Warning, not auto-merge)
+      if (db && row.productName) {
+        const nameMatch = await db.collection('products').findOne({ name: { $regex: new RegExp(`^${row.productName.trim()}$`, 'i') } });
+        if (nameMatch) {
+          warnings.push({
+            field: 'productName',
+            code: 'POSSIBLE_NAME_MATCH',
+            message: `Product with similar name '${nameMatch.name}' already exists (Barcode: ${nameMatch.barcode}). Will create as distinct new product.`
+          });
+        }
+      }
+
+      // Auto-generate barcode if missing (optional)
+      if (!row.barcode && !row.sku) {
+        row.barcode = `VC${String(Date.now()).slice(-6)}${rowNumber}`;
+        row.sku = row.barcode;
+        warnings.push({
+          field: 'barcode',
+          code: 'AUTO_GENERATED_BARCODE',
+          message: `Barcode not supplied in sheet. Auto-generated internal code: ${row.barcode}`
         });
       }
     }
 
-    // 5. Store / Location Resolution
+    // 4. Price & Valuation Safety
+    if (classification === 'NEW') {
+      if (row.sellingPrice === null && row.purchasePrice === null) {
+        blockReasons.push({
+          field: 'sellingPrice',
+          code: 'MISSING_PRICES',
+          message: 'Either Selling Price or Purchase Price must be specified'
+        });
+      } else if (row.sellingPrice === null && row.purchasePrice !== null) {
+        reviewRequests.push({
+          field: 'sellingPrice',
+          code: 'SELLING_PRICE_UNSET',
+          message: `Selling price is unset (Cost is ₹${row.purchasePrice}). Confirm registration.`
+        });
+      }
+    }
+
+    // 5. Store & Location Validation (Conditional)
     let resolvedLocationId = defaultLocationId;
-    if (row.store && row.store !== 'default' && db) {
-      const storeDoc = await db.collection('stores').findOne({
-        $or: [{ id: row.store }, { name: { $regex: new RegExp(`^${row.store.trim()}$`, 'i') } }]
-      });
-      if (storeDoc) {
-        resolvedLocationId = storeDoc.id;
-      } else {
-        const bizDoc = await db.collection('businesses').findOne({
+    if (row.openingStock > 0) {
+      if (row.store && row.store !== 'default' && db) {
+        const storeDoc = await db.collection('stores').findOne({
           $or: [{ id: row.store }, { name: { $regex: new RegExp(`^${row.store.trim()}$`, 'i') } }]
         });
-        if (bizDoc) {
-          resolvedLocationId = bizDoc.id;
-        } else if (row.openingStock > 0) {
-          warnings.push({
-            field: 'store',
-            code: 'UNKNOWN_STORE_FALLBACK',
-            message: `Store '${row.store}' not found. Opening stock will allocate to default store '${defaultLocationId}'.`
+        if (storeDoc) {
+          resolvedLocationId = storeDoc.id;
+        } else {
+          const bizDoc = await db.collection('businesses').findOne({
+            $or: [{ id: row.store }, { name: { $regex: new RegExp(`^${row.store.trim()}$`, 'i') } }]
           });
+          if (bizDoc) {
+            resolvedLocationId = bizDoc.id;
+          } else {
+            warnings.push({
+              field: 'store',
+              code: 'DEFAULT_STORE_ALLOCATION',
+              message: `Store '${row.store}' not found. Opening stock (${row.openingStock}) will allocate to default store '${defaultLocationId}'.`
+            });
+          }
         }
       }
+    } else {
+      // Catalog only import (stock = 0) -> Location is optional
+      resolvedLocationId = null;
+    }
+
+    // Optional fields notifications (Do NOT block)
+    if (!row.category) {
+      warnings.push({ field: 'category', code: 'CATEGORY_OPTIONAL', message: 'Category not specified (optional).' });
+    }
+    if (!row.brand) {
+      warnings.push({ field: 'brand', code: 'BRAND_OPTIONAL', message: 'Brand not specified (optional).' });
     }
 
     // 6. Strategy Filtering
@@ -361,23 +665,24 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
       isBlockedByStrategy = true;
     }
 
-    // 7. Overall Row Status
+    // 7. Determine Final Row State
     let status = 'READY';
-    if (classification === 'CONFLICT') {
-      status = 'CONFLICT';
-      conflictCount++;
-    } else if (issues.length > 0) {
-      status = 'INVALID';
-      invalidCount++;
-    } else if (classification === 'SKIPPED') {
+    if (isBlockedByStrategy) {
       status = 'SKIPPED';
+      skippedCount++;
+    } else if (blockReasons.length > 0) {
+      status = 'BLOCKED';
+      blockedCount++;
+    } else if (reviewRequests.length > 0) {
+      status = 'REVIEW_REQUIRED';
+      reviewRequiredCount++;
+    } else if (warnings.length > 0) {
+      status = 'WARNING';
+      warningCount++;
     } else {
+      status = 'READY';
       readyCount++;
-      if (classification === 'NEW') newCount++;
-      if (classification === 'EXISTING' || classification === 'UPDATE') existingCount++;
     }
-
-    if (warnings.length > 0) warningCount++;
 
     processedRows.push({
       rowNumber,
@@ -390,7 +695,8 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
         resolvedLocationId,
         matchedProductId: matchedProduct ? matchedProduct.id : null
       },
-      issues,
+      blockReasons,
+      reviewRequests,
       warnings
     });
   }
@@ -400,15 +706,15 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
     importId,
     strategy,
     summary: {
-      totalRows: rawRows.length,
+      totalRows: workingRows.length,
       readyRows: readyCount,
-      newRows: newCount,
-      existingRows: existingCount,
-      conflictRows: conflictCount,
-      invalidRows: invalidCount,
-      warningRows: warningCount
+      warningRows: warningCount,
+      reviewRequiredRows: reviewRequiredCount,
+      blockedRows: blockedCount,
+      skippedRows: skippedCount
     },
     columnMapping,
+    fieldExplanations,
     rows: processedRows
   };
 }
@@ -436,7 +742,6 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
   const username = user ? user.username : 'system';
   const now = new Date().toISOString();
 
-  // Create or update import session record
   await db.collection('import_sessions').updateOne(
     { importId },
     {
@@ -463,11 +768,11 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
   const errorLogs = [];
   const successfulProducts = [];
 
-  // Group opening stock items by target location for batch allocation
   const stockByLocation = new Map();
 
   for (const item of validatedRows) {
-    if (item.status === 'INVALID' || item.status === 'CONFLICT' || item.status === 'SKIPPED') {
+    // Only import rows that are READY, WARNING, or confirmed REVIEW_REQUIRED
+    if (item.status === 'BLOCKED' || item.status === 'SKIPPED') {
       skippedCount++;
       continue;
     }
@@ -477,9 +782,11 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
 
     try {
       // 1. Server-side Revalidation
-      const existingBarcode = await db.collection('product_barcodes').findOne({ barcode: row.barcode });
-      if (existingBarcode && (!row.matchedProductId || existingBarcode.productId !== row.matchedProductId)) {
-        throw new Error(`Server revalidation failed: Barcode '${row.barcode}' was assigned to another product concurrently.`);
+      if (row.barcode) {
+        const existingBarcode = await db.collection('product_barcodes').findOne({ barcode: row.barcode });
+        if (existingBarcode && (!row.matchedProductId || existingBarcode.productId !== row.matchedProductId)) {
+          throw new Error(`Server revalidation failed: Barcode '${row.barcode}' was assigned to another product concurrently.`);
+        }
       }
 
       const productId = row.matchedProductId || `prd-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
@@ -491,23 +798,23 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
         name: row.productName,
         sku: cleanSku,
         barcode: primaryBarcode,
-        category: row.category || 'Dairy & Ghee',
-        brand: row.brand || 'VC Organic',
-        supplier: row.supplier || 'Direct Farmer Market',
+        category: row.category || '',
+        brand: row.brand || '',
+        supplier: row.supplier || '',
         type: (row.type || 'OWN').toUpperCase(),
         unit: row.unit || '1 Unit',
         weight: row.weight || 0,
         weightUnit: row.weightUnit || 'g',
-        purchasePrice: row.purchasePrice,
-        sellingPrice: row.sellingPrice,
-        mrp: row.mrp || row.sellingPrice,
-        cost: row.purchasePrice, // legacy alias
-        price: row.sellingPrice, // legacy alias
-        costPrice: row.purchasePrice, // legacy alias
-        gst: row.gst,
+        purchasePrice: row.purchasePrice !== null ? row.purchasePrice : 0,
+        sellingPrice: row.sellingPrice !== null ? row.sellingPrice : (row.purchasePrice || 0),
+        mrp: row.mrp !== null ? row.mrp : (row.sellingPrice || 0),
+        cost: row.purchasePrice !== null ? row.purchasePrice : 0,
+        price: row.sellingPrice !== null ? row.sellingPrice : 0,
+        costPrice: row.purchasePrice !== null ? row.purchasePrice : 0,
+        gst: row.gst || 0,
         reorderLevel: row.reorderLevel || 10,
         maxStock: row.maxStock || 100,
-        dom: row.dom || now.split('T')[0],
+        dom: row.dom || '',
         doe: row.doe || '',
         image: row.imageUrl || '/uploads/system/default-product.webp',
         description: row.description || '',
@@ -545,8 +852,8 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
       successfulProducts.push(productDoc);
 
       // 4. Queue Opening Stock for Authoritative Inventory Allocation
-      if (row.openingStock > 0) {
-        const locId = row.resolvedLocationId || options.defaultLocationId || 'default';
+      if (row.openingStock > 0 && row.resolvedLocationId) {
+        const locId = row.resolvedLocationId;
         if (!stockByLocation.has(locId)) {
           stockByLocation.set(locId, []);
         }
@@ -554,7 +861,7 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
           productId,
           name: row.productName,
           quantity: row.openingStock,
-          unitCost: row.purchasePrice,
+          unitCost: row.purchasePrice || 0,
           unit: row.unit || 'unit'
         });
       }
@@ -623,7 +930,6 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
 
   await auditService.writeAuditLog('IMPORT_COMPLETED', 'inventory', importId, null, summary, req);
 
-  // Emit granular socket events
   if (io) {
     io.to('sync_global').emit('products_imported', { importId, count: importedCount + updatedCount });
     io.to('sync_global').emit('import_completed', { importId, summary });
@@ -640,8 +946,10 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
 module.exports = {
   HEADER_ALIASES,
   cleanHeaderKey,
-  detectCanonicalField,
-  autoMapHeaders,
+  parseWeightAndUnit,
+  profileColumnData,
+  extractHeadersAndRowsFromMatrix,
+  detectSmartFieldMapping,
   normalizeRowData,
   validateAndPreview,
   commitImport
