@@ -12701,17 +12701,17 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
               return fallback;
             };
 
-            const name = String(getVal(["name", "productname", "itemname"]) || "").trim();
-            const barcodeRaw = getVal(["barcode", "sku", "itemcode", "upc", "ean"]);
+            const name = String(getVal(["name", "productname", "itemname", "title", "product", "item", "description"]) || "").trim();
+            const barcodeRaw = getVal(["barcode", "sku", "itemcode", "upc", "ean", "code", "id", "productid"]);
             const barcode = barcodeRaw !== undefined && barcodeRaw !== null ? String(barcodeRaw).trim() : "";
-            const category = String(getVal(["category", "group", "type"]) || "Dairy & Ghee").trim();
-            const buyPrice = parseFloat(getVal(["buyingprice", "wholesale", "cost", "buyingprice", "wholesaleprice"])) || 0;
-            const sellPrice = parseFloat(getVal(["sellingprice", "price", "mrp", "sellingprice"])) || 0;
-            const stock = parseInt(getVal(["stock", "initialstock", "qty", "quantity"])) || 0;
-            const gst = parseInt(getVal(["gst", "gstslab", "tax"])) || 12;
-            const unit = String(getVal(["unit", "pack", "packaging"]) || "1 Unit").trim();
-            const brand = String(getVal(["brand", "company"]) || "AIAVRO").trim();
-            const supplier = String(getVal(["supplier", "vendor"]) || "Direct Farmer Market").trim();
+            const category = String(getVal(["category", "group", "type", "section", "class"]) || "Dairy & Ghee").trim();
+            const buyPrice = parseFloat(getVal(["buyingprice", "wholesale", "cost", "purchaseprice", "buying", "costprice", "cp", "unitcost", "purchase"])) || 0;
+            const sellPrice = parseFloat(getVal(["sellingprice", "price", "mrp", "selling", "retail", "sp", "saleprice", "retailprice", "rate"])) || 0;
+            const stock = parseInt(getVal(["stock", "initialstock", "qty", "quantity", "count", "onhand"])) || 0;
+            const gst = parseInt(getVal(["gst", "gstslab", "tax", "vat", "taxrate"])) || 12;
+            const unit = String(getVal(["unit", "pack", "packaging", "measure", "size"]) || "1 Unit").trim();
+            const brand = String(getVal(["brand", "company", "manufacturer", "make"]) || "AIAVRO").trim();
+            const supplier = String(getVal(["supplier", "vendor", "source"]) || "Direct Farmer Market").trim();
             const dom = String(getVal(["dom", "mfgdate", "mfg"]) || new Date().toISOString().split("T")[0]).trim();
             const doe = String(getVal(["doe", "expiry", "expdate"]) || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]).trim();
             const minStock = parseInt(getVal(["minstock", "reorder", "safety"])) || 10;
@@ -12836,16 +12836,30 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       renderInventoryTable();
       triggerAlert(`Successfully imported ${excelImportData.length} products!`, "success");
       
+      const token = localStorage.getItem("aiavro_jwt_token");
       fetch(`${state.backendUrl}/api/products/import`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           newProducts: excelImportData,
           logs: importLogs
         })
-      }).catch(err => console.log("Backend offline, skipped sync"));
+      }).then(res => {
+        if (res.ok) {
+          triggerAlert(`Successfully synchronized ${excelImportData.length} products to central database!`, "success");
+          syncStateWithServer();
+        } else {
+          res.json().then(err => {
+            triggerAlert(`Backend synchronization failed: ${err.message || 'Unauthorized access request'}`, "danger");
+          });
+        }
+      }).catch(err => {
+        console.error("Bulk sync network error:", err);
+        triggerAlert("Network error occurred during backend synchronization.", "danger");
+      });
 
       toggleExcelImportModal();
     }
