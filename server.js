@@ -53,8 +53,15 @@ const inventoryRouter = require('./modules/inventory');
 const billingRouter = require('./modules/billing');
 const purchasesRouter = require('./modules/purchases');
 const franchiseRouter = require('./modules/franchise');
+const businessesRouter = require('./modules/businesses');
+const storesRouter = require('./modules/stores');
+const customersRouter = require('./modules/customers');
+const suppliersRouter = require('./modules/suppliers');
+const scannerRouter = require('./modules/scanner');
+const uploadRouter = require('./modules/upload');
 const auditRouter = require('./modules/audit');
 const settingsRouter = require('./modules/settings');
+const systemRouter = require('./modules/system');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -218,117 +225,27 @@ async function initDB() {
       next();
     });
 
-    // Initialize all modular routers
+    // Initialize all domain routers
     app.use('/api/v1/auth', authRouter);
     app.use('/api/v1/users', usersRouter);
     app.use('/api/v1/products', productsRouter);
     app.use('/api/v1/inventory', inventoryRouter);
     app.use('/api/v1/invoices', billingRouter);
     app.use('/api/v1/purchases', purchasesRouter);
+    app.use('/api/v1/businesses', businessesRouter);
+    app.use('/api/v1/stores', storesRouter);
+    app.use('/api/v1/customers', customersRouter);
+    app.use('/api/v1/suppliers', suppliersRouter);
     app.use('/api/v1/audit-logs', auditRouter);
     app.use('/api/v1', franchiseRouter); // mounts /franchises and /franchise-supply-orders
     app.use('/api/v1', settingsRouter); // mounts /role-permissions and /settings
+    app.use('/api/v1', systemRouter);   // mounts /server-info
+    app.use('/api/v1/scan', scannerRouter);
+    app.use('/api/v1/upload', uploadRouter);
 
-    // Image Upload Endpoint (optimizes base64 images via Sharp and saves to disk)
-    const handleImageUpload = async (req, res) => {
-      const { fileName, base64Data } = req.body;
-      const uploadType = req.query.type || 'products'; // products, invoices, logos, employees
-      
-      if (!fileName || !base64Data) {
-        return res.status(400).json({ success: false, message: "Missing fileName or image base64Data" });
-      }
-
-      const targetDir = UPLOAD_SUBDIRS[uploadType] || UPLOAD_SUBDIRS.products;
-
-      try {
-        const base64Str = base64Data.replace(/^data:image\/\w+;base64,/, "");
-        const buffer = Buffer.from(base64Str, 'base64');
-
-        const cleanBaseName = path.basename(fileName, path.extname(fileName))
-                                  .toLowerCase()
-                                  .replace(/[^a-z0-9\-]/g, '-');
-        const outputFileName = `${cleanBaseName}-${Date.now()}.webp`;
-        const targetPath = path.join(targetDir, outputFileName);
-
-        await sharp(buffer)
-          .resize(800, 800, {
-            fit: 'inside',
-            withoutEnlargement: true
-          })
-          .webp({ quality: 80 })
-          .toFile(targetPath);
-
-        let stats = fs.statSync(targetPath);
-        if (stats.size > 200 * 1024) {
-          await sharp(targetPath)
-            .webp({ quality: 60 })
-            .toFile(targetPath);
-          stats = fs.statSync(targetPath);
-        }
-
-        const imagePath = `/uploads/${uploadType}/${outputFileName}`;
-        const imageId = `img-${Date.now()}`;
-
-        if (uploadType === 'products') {
-          await db.collection('product_images').insertOne({
-            id: imageId,
-            productId: req.query.productId || "",
-            filename: outputFileName,
-            filepath: targetPath,
-            webpPath: imagePath,
-            size: `${Math.round(stats.size / 1024)}KB`,
-            mimeType: "image/webp",
-            width: 800,
-            height: 800,
-            uploadedBy: req.user ? req.user.username : "system",
-            createdAt: new Date().toISOString()
-          });
-        }
-
-        res.json({ success: true, imagePath, imageId });
-      } catch (err) {
-        console.error("Image upload failed:", err);
-        res.status(500).json({ success: false, message: "Failed to optimize and upload product image" });
-      }
-    };
-
-    // Scanner Endpoint
-    const handleScannerScan = async (req, res) => {
-      const { sessionId, barcode } = req.body;
-      if (!sessionId || !barcode) {
-        return res.status(400).json({ success: false, message: "Missing sessionId or barcode number" });
-      }
-
-      try {
-        let product = await db.collection('products').findOne({ $or: [{ barcode: barcode }, { sku: barcode }] });
-        
-        if (!product) {
-          const barcodeMapping = await db.collection('product_barcodes').findOne({ barcode: barcode });
-          if (barcodeMapping) {
-            product = await db.collection('products').findOne({ id: barcodeMapping.productId });
-            if (product) {
-              product.scannedVariantName = barcodeMapping.variantName;
-            }
-          }
-        }
-
-        if (product) {
-          io.to(sessionId).emit('PRODUCT_ADDED', { product });
-          return res.json({ success: true, product });
-        } else {
-          io.to(sessionId).emit('PRODUCT_NOT_FOUND', { barcode });
-          return res.status(404).json({ success: false, message: "Product not found" });
-        }
-      } catch (err) {
-        res.status(500).json({ success: false, message: "Barcode scanner check failed" });
-      }
-    };
-
-    app.post('/api/upload', verifyJWT, handleImageUpload);
-    app.post('/api/v1/upload', verifyJWT, handleImageUpload);
-
-    app.post('/api/scan', handleScannerScan);
-    app.post('/api/v1/scan', handleScannerScan);
+    // Compatibility aliases for legacy frontend routes
+    app.use('/api/scan', scannerRouter);
+    app.use('/api/upload', uploadRouter);
 
     app.get('/health', (req, res) => {
       res.json({
