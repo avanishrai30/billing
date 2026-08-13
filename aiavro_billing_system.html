@@ -2578,6 +2578,7 @@
               
               if (category !== 'super admin') {
                 const style = document.createElement('style');
+                style.id = "sidebar-flicker-protection-style";
                 // Hide all data-role elements by default unless overridden later by the JS logic
                 style.textContent = `li[data-role] { display: none !important; }`;
                 document.head.appendChild(style);
@@ -2585,6 +2586,7 @@
             } else {
                 // If not logged in, just hide them all to prevent flicker
                 const style = document.createElement('style');
+                style.id = "sidebar-flicker-protection-style";
                 style.textContent = `li[data-role] { display: none !important; }`;
                 document.head.appendChild(style);
             }
@@ -6533,6 +6535,12 @@
     }
 
     function syncRoleBasedUI() {
+      // Remove sidebar flicker protection style tag so JS inline display rules can take effect
+      const protectionStyle = document.getElementById("sidebar-flicker-protection-style");
+      if (protectionStyle) {
+        protectionStyle.remove();
+      }
+
       const user = state.currentUser;
       if (!user) return;
 
