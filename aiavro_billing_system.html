@@ -6,7 +6,7 @@
       const savedWidth = localStorage.getItem("aiavro_sidebar_width");
       if (savedWidth && savedWidth.endsWith('px')) {
         const val = parseInt(savedWidth);
-        if (!isNaN(val) && val >= 200 && val <= 600) {
+        if (!isNaN(val) && val >= 240 && val <= 450) {
           document.documentElement.style.setProperty('--sidebar-width', savedWidth);
         }
       }
@@ -2532,7 +2532,9 @@
             const cachedName = localStorage.getItem("aiavro_active_biz_name");
             const cachedSubtitle = localStorage.getItem("aiavro_active_biz_subtitle");
             const cachedLogo = localStorage.getItem("aiavro_active_biz_logo");
+            const cachedGstin = localStorage.getItem("aiavro_active_biz_gstin");
             const backendUrl = localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com';
+            
             if (cachedName) {
               const nameEl = document.getElementById("sidebar-brand-name");
               if (nameEl) {
@@ -2565,6 +2567,26 @@
               }
               const imgEl = document.getElementById("sidebar-brand-logo-img");
               if (imgEl) imgEl.src = logoUrl;
+            }
+            
+            // Generate dynamic CSS to hide unauthorized sidebar menus on startup
+            const userStr = localStorage.getItem("aiavro_logged_in_user");
+            if (userStr) {
+              const user = JSON.parse(userStr);
+              let category = (user.category || user.role || '').toLowerCase();
+              if (category === 'super_admin' || category === 'admin_super') category = 'super admin';
+              
+              if (category !== 'super admin') {
+                const style = document.createElement('style');
+                // Hide all data-role elements by default unless overridden later by the JS logic
+                style.textContent = `li[data-role] { display: none !important; }`;
+                document.head.appendChild(style);
+              }
+            } else {
+                // If not logged in, just hide them all to prevent flicker
+                const style = document.createElement('style');
+                style.textContent = `li[data-role] { display: none !important; }`;
+                document.head.appendChild(style);
             }
           } catch(e) {}
         })();
@@ -2736,6 +2758,26 @@
           </div>
           <span class="status-badge paid" id="dashboard-active-outlet-status" style="font-size:10.5px">Consolidated enterprise mode</span>
         </div>
+        <script>
+          (function() {
+            try {
+              const cachedBizId = localStorage.getItem("aiavro_active_biz_id");
+              const cachedBizName = localStorage.getItem("aiavro_active_biz_name");
+              if (cachedBizId && cachedBizName) {
+                const bannerName = document.getElementById("dashboard-active-outlet-name");
+                const bannerStatus = document.getElementById("dashboard-active-outlet-status");
+                if (bannerName) {
+                  bannerName.innerText = cachedBizName;
+                  bannerName.style.color = "var(--accent-blue)";
+                }
+                if (bannerStatus) {
+                  bannerStatus.innerText = "Single Store Filtering Active";
+                  bannerStatus.className = "status-badge low-stock";
+                }
+              }
+            } catch(e) {}
+          })();
+        </script>
 
         <!-- Metric Cards Dashboard -->
         <!-- Section: Financial Performance & Valuations -->
@@ -5861,43 +5903,55 @@
       
       // Sanitize stored width
       const val = parseInt(lastWidth);
-      if (isNaN(val) || val < 200 || val > 600) {
+      if (isNaN(val) || val < 240 || val > 450) {
         lastWidth = "300px";
       }
       
       // Force initial value synchronously on load
       document.documentElement.style.setProperty('--sidebar-width', lastWidth);
 
-      resizer.addEventListener('mousedown', (e) => {
+      resizer.addEventListener('pointerdown', (e) => {
         isDragging = true;
         resizer.classList.add('dragging');
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
+        resizer.setPointerCapture(e.pointerId);
         e.preventDefault(); // Prevent text selection
       });
 
-      document.addEventListener('mousemove', (e) => {
+      resizer.addEventListener('pointermove', (e) => {
         if (!isDragging) return;
-        // Clamp sidebar width between 200px and 600px
-        const newWidth = Math.max(200, Math.min(600, e.clientX));
+        // Clamp sidebar width between 240px and 450px
+        const newWidth = Math.max(240, Math.min(450, e.clientX));
         lastWidth = `${newWidth}px`;
         document.documentElement.style.setProperty('--sidebar-width', lastWidth);
       });
 
-      document.addEventListener('mouseup', () => {
+      resizer.addEventListener('pointerup', (e) => {
         if (isDragging) {
           isDragging = false;
           resizer.classList.remove('dragging');
           document.body.style.cursor = '';
           document.body.style.userSelect = '';
+          resizer.releasePointerCapture(e.pointerId);
           localStorage.setItem('aiavro_sidebar_width', lastWidth);
+        }
+      });
+      
+      resizer.addEventListener('pointercancel', (e) => {
+        if (isDragging) {
+          isDragging = false;
+          resizer.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          resizer.releasePointerCapture(e.pointerId);
         }
       });
     }
 
     async function loadPublicSettings() {
       try {
-        const res = await fetch(`${state.backendUrl}/api/public/settings`);
+        const res = await fetch(`${state.backendUrl}/api/v1/public/settings`);
         const data = await res.json();
         if (data.title) {
           document.getElementById("login-brand-name").innerText = data.title;
@@ -5951,7 +6005,7 @@
         const base64Data = evt.target.result;
         try {
           const token = localStorage.getItem("aiavro_jwt_token");
-          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=logos`, {
+          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=logos`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -5989,7 +6043,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/settings`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/settings`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -6118,7 +6172,7 @@
       }, 10000);
 
       // Listeners for targeted, granular events
-      syncSocket.on('inventory_updated', (data) => {
+      syncSocket.on('inventory.updated', (data) => {
         console.log(`[Sync] Inventory updated:`, data);
         const inv = state.inventory.find(i => i.productId === data.productId && i.storeId === data.storeId);
         if (inv) {
@@ -6135,7 +6189,7 @@
         renderInventoryTable();
       });
 
-      syncSocket.on('product_created', (data) => {
+      syncSocket.on('product.created', (data) => {
         console.log(`[Sync] Product created:`, data.product);
         const idx = state.products.findIndex(p => p.id === data.product.id);
         if (idx === -1) {
@@ -6147,7 +6201,7 @@
         renderProductsTable();
       });
 
-      syncSocket.on('product_updated', (data) => {
+      syncSocket.on('product.updated', (data) => {
         console.log(`[Sync] Product updated:`, data.product);
         const idx = state.products.findIndex(p => p.id === data.product.id);
         if (idx !== -1) {
@@ -6157,7 +6211,7 @@
         renderProductsTable();
       });
 
-      syncSocket.on('invoice_created', (data) => {
+      syncSocket.on('invoice.created', (data) => {
         console.log(`[Sync] Invoice created:`, data.invoice);
         const idx = state.invoices.findIndex(i => i.invoiceNumber === data.invoice.invoiceNumber);
         if (idx === -1) {
@@ -6166,20 +6220,52 @@
         renderInvoicesTable();
       });
 
-      syncSocket.on('settings_updated', (data) => {
+      syncSocket.on('settings.updated', (data) => {
         console.log(`[Sync] Settings updated:`, data);
         loadPublicSettings();
       });
 
-      syncSocket.on('business_updated', () => syncStateWithServer());
-      syncSocket.on('business_deleted', () => syncStateWithServer());
-      syncSocket.on('user_updated', () => syncStateWithServer());
-      syncSocket.on('purchase_created', () => syncStateWithServer());
-      syncSocket.on('franchise_updated', () => syncStateWithServer());
-      syncSocket.on('franchise_deleted', () => syncStateWithServer());
-      syncSocket.on('franchise_order_created', () => syncStateWithServer());
-      syncSocket.on('invoice_updated', () => syncStateWithServer());
-      syncSocket.on('rbac_updated', (permissions) => {
+      syncSocket.on('business.updated', (data) => {
+        const b = data.business;
+        const idx = state.businesses.findIndex(x => x.id === b.id);
+        if (idx !== -1) state.businesses[idx] = b;
+        renderBusinessesTable();
+      });
+      syncSocket.on('business.deleted', (data) => {
+        state.businesses = state.businesses.filter(b => b.id !== data.id);
+        renderBusinessesTable();
+      });
+      syncSocket.on('user.updated', (data) => {
+        const u = data.user;
+        const idx = state.users.findIndex(x => x.id === u.id);
+        if (idx !== -1) state.users[idx] = u;
+        renderUsersTable();
+      });
+      syncSocket.on('purchase.created', (data) => {
+        state.purchases.push(data.purchase);
+        renderPurchaseTable();
+      });
+      syncSocket.on('franchise.updated', (data) => {
+        const f = data.franchise;
+        const idx = state.franchises.findIndex(x => x.id === f.id);
+        if (idx !== -1) state.franchises[idx] = f;
+        renderFranchisesTable();
+      });
+      syncSocket.on('franchise.deleted', (data) => {
+        state.franchises = state.franchises.filter(f => f.id !== data.id);
+        renderFranchisesTable();
+      });
+      syncSocket.on('franchise_order.created', (data) => {
+        state.franchiseSupplyOrders.push(data.order);
+        renderFranchisesTable();
+      });
+      syncSocket.on('invoice.updated', (data) => {
+        const inv = data.invoice;
+        const idx = state.invoices.findIndex(i => i.invoiceNumber === inv.invoiceNumber);
+        if (idx !== -1) state.invoices[idx] = inv;
+        renderInvoicesTable();
+      });
+      syncSocket.on('rbac.updated', (permissions) => {
         console.log(`[Sync] RBAC permissions updated in database:`, permissions);
         state.rolePermissions = permissions;
         localStorage.setItem("aiavro_role_permissions", JSON.stringify(permissions));
@@ -6229,7 +6315,7 @@
       };
 
       // Fetch businesses
-      const bizData = await safeFetch(`${state.backendUrl}/api/businesses`);
+      const bizData = await safeFetch(`${state.backendUrl}/api/v1/businesses`);
       if (bizData) {
         state.businesses = bizData;
         if (!state.activeBusinessId && state.businesses.length > 0) {
@@ -6238,45 +6324,45 @@
       }
 
       // Fetch products
-      const prodData = await safeFetch(`${state.backendUrl}/api/products`);
+      const prodData = await safeFetch(`${state.backendUrl}/api/v1/products`);
       if (prodData) state.products = prodData;
 
       // Fetch customers
-      const custData = await safeFetch(`${state.backendUrl}/api/customers`);
+      const custData = await safeFetch(`${state.backendUrl}/api/v1/customers`);
       if (custData) state.customers = custData;
 
       // Fetch invoices
-      const invData = await safeFetch(`${state.backendUrl}/api/invoices`);
+      const invData = await safeFetch(`${state.backendUrl}/api/v1/invoices`);
       if (invData) state.invoices = invData;
 
       // Fetch purchases
-      const purchaseData = await safeFetch(`${state.backendUrl}/api/purchases`);
+      const purchaseData = await safeFetch(`${state.backendUrl}/api/v1/purchases`);
       if (purchaseData) state.purchases = purchaseData;
 
       // Fetch franchises
-      const franchisesData = await safeFetch(`${state.backendUrl}/api/franchises`);
+      const franchisesData = await safeFetch(`${state.backendUrl}/api/v1/franchises`);
       if (franchisesData) state.franchises = franchisesData;
 
       // Fetch franchise supply orders
-      const franSupplyOrdersData = await safeFetch(`${state.backendUrl}/api/franchise-supply-orders`);
+      const franSupplyOrdersData = await safeFetch(`${state.backendUrl}/api/v1/franchise-supply-orders`);
       if (franSupplyOrdersData) state.franchiseSupplyOrders = franSupplyOrdersData;
 
       // Fetch suppliers
-      const supData = await safeFetch(`${state.backendUrl}/api/suppliers`);
+      const supData = await safeFetch(`${state.backendUrl}/api/v1/suppliers`);
       if (supData) {
         state.suppliers = supData;
         populatePurchaseSupplierDropdown();
       }
 
       // Fetch stores
-      const storeData = await safeFetch(`${state.backendUrl}/api/stores`);
+      const storeData = await safeFetch(`${state.backendUrl}/api/v1/stores`);
       if (storeData) {
         state.stores = storeData;
         state.customStoreLocations = storeData;
       }
 
       // Fetch dynamic role permissions from server
-      const rbacData = await safeFetch(`${state.backendUrl}/api/role-permissions`);
+      const rbacData = await safeFetch(`${state.backendUrl}/api/v1/role-permissions`);
       if (rbacData) {
         state.rolePermissions = rbacData;
         localStorage.setItem("aiavro_role_permissions", JSON.stringify(rbacData));
@@ -6285,12 +6371,12 @@
       // Fetch users based on role permissions
       const category = getUserCategory(state.currentUser);
       if (category === 'super admin' || category === 'admin') {
-        const userData = await safeFetch(`${state.backendUrl}/api/users`);
+        const userData = await safeFetch(`${state.backendUrl}/api/v1/users`);
         if (userData) state.users = userData;
       }
 
       // Fetch audit logs (backend filters this based on role)
-      const auditData = await safeFetch(`${state.backendUrl}/api/audit-logs`);
+      const auditData = await safeFetch(`${state.backendUrl}/api/v1/audit-logs`);
       if (auditData) {
         state.auditLogs = auditData;
         if (state.activeView === 'permissions' && category !== 'super admin') {
@@ -6299,14 +6385,14 @@
       }
 
       // Fetch store-wise inventory
-      const inventoryData = await safeFetch(`${state.backendUrl}/api/inventory`);
+      const inventoryData = await safeFetch(`${state.backendUrl}/api/v1/inventory`);
       if (inventoryData) {
         state.inventory = inventoryData;
         updateLocalProductStockFromInventory();
       }
 
       // Fetch inventory logs
-      const invLogsData = await safeFetch(`${state.backendUrl}/api/inventory/logs`);
+      const invLogsData = await safeFetch(`${state.backendUrl}/api/v1/inventory/logs`);
       if (invLogsData) state.inventoryLogs = invLogsData;
 
       // Re-render UI grids with whatever data is loaded
@@ -6350,12 +6436,14 @@
           localStorage.setItem("aiavro_active_biz_id", activeBiz.id);
           localStorage.setItem("aiavro_active_biz_name", activeBiz.name || "");
           localStorage.setItem("aiavro_active_biz_subtitle", activeBiz.subtitle || "");
+          localStorage.setItem("aiavro_active_biz_gstin", activeBiz.gstin || "");
           localStorage.setItem("aiavro_active_biz_logo", activeBiz.logo || "");
         }
       } else {
         localStorage.removeItem("aiavro_active_biz_id");
         localStorage.removeItem("aiavro_active_biz_name");
         localStorage.removeItem("aiavro_active_biz_subtitle");
+        localStorage.removeItem("aiavro_active_biz_gstin");
         localStorage.removeItem("aiavro_active_biz_logo");
       }
     }
@@ -6400,7 +6488,7 @@
       if (loginBtn) { loginBtn.disabled = true; loginBtn.innerText = "Authenticating..."; }
 
       try {
-        const res = await fetch(`${state.backendUrl}/api/auth/login`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: usernameInput, password: passwordInput })
@@ -6608,7 +6696,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/role-permissions`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/role-permissions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -7008,7 +7096,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/users`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/users`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -7354,7 +7442,7 @@
       (async () => {
         try {
           const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/franchises`, {
+          const res = await fetch(`${state.backendUrl}/api/v1/franchises`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -7427,7 +7515,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/franchises/${id}`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/franchises/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -7638,7 +7726,7 @@
       (async () => {
         try {
           const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/franchise-supply-orders`, {
+          const res = await fetch(`${state.backendUrl}/api/v1/franchise-supply-orders`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -7758,7 +7846,7 @@
         try {
           const token = localStorage.getItem("aiavro_jwt_token");
           
-          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=employees`, {
+          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=employees`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -7777,7 +7865,7 @@
 
           const imagePath = uploadResult.imagePath;
 
-          const saveRes = await fetch(`${state.backendUrl}/api/users/avatar`, {
+          const saveRes = await fetch(`${state.backendUrl}/api/v1/users/avatar`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -7827,7 +7915,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/users/profile`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/users/profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -7879,7 +7967,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/users/change-password`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/users/change-password`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -7966,7 +8054,7 @@
           const token = localStorage.getItem("aiavro_jwt_token");
           
           // 1. Upload the image to backend employees folder
-          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=employees`, {
+          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=employees`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -7986,7 +8074,7 @@
           const imagePath = uploadResult.imagePath;
 
           // 2. Save the avatar path in the user profile on the server
-          const saveRes = await fetch(`${state.backendUrl}/api/users/avatar`, {
+          const saveRes = await fetch(`${state.backendUrl}/api/v1/users/avatar`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -8047,7 +8135,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/users/change-password`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/users/change-password`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -8777,7 +8865,7 @@
       const logoHiddenValue = document.getElementById("quick-biz-logo").value;
       if (logoHiddenValue && logoHiddenValue.startsWith('data:image')) {
         try {
-          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=logos`, {
+          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=logos`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -8811,7 +8899,7 @@
       // Persist to backend API
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/businesses`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/businesses`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -9428,7 +9516,7 @@
           document.getElementById("prod-form-image-preview").src = webpDataUrl;
 
           // Trigger Upload API call
-          fetch(`${state.backendUrl}/api/upload?type=products`, {
+          fetch(`${state.backendUrl}/api/v1/upload?type=products`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -9537,7 +9625,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/products`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/products`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -9550,7 +9638,7 @@
           // If update & manual adjustment is made
           if (id && manualQty !== 0) {
             const activeStoreId = state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : '');
-            await fetch(`${state.backendUrl}/api/inventory/adjust`, {
+            await fetch(`${state.backendUrl}/api/v1/inventory/adjust`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -9590,7 +9678,7 @@
         const updatedProd = { ...prod, status: 'inactive' };
         try {
           const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/products`, {
+          const res = await fetch(`${state.backendUrl}/api/v1/products`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -9731,7 +9819,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/businesses`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/businesses`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -9768,7 +9856,7 @@
         if (biz.status !== newStatus) {
           try {
             const updatedBiz = { ...biz, status: newStatus };
-            const res = await fetch(`${state.backendUrl}/api/businesses`, {
+            const res = await fetch(`${state.backendUrl}/api/v1/businesses`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -9868,7 +9956,7 @@
       let finalLogo = logo;
       if (logo && logo.startsWith('data:image')) {
         try {
-          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=logos`, {
+          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=logos`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -9898,7 +9986,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/businesses`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/businesses`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -9945,7 +10033,7 @@
       if (confirm("Are you sure you want to completely remove this business profile?")) {
         try {
           const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/businesses/${id}`, {
+          const res = await fetch(`${state.backendUrl}/api/v1/businesses/${id}`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -10059,7 +10147,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/customers`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/customers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -10109,7 +10197,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/suppliers`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/suppliers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -10691,7 +10779,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/invoices`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/invoices`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -11034,7 +11122,7 @@
       if (confirm(`Wipe this transaction? This will declare bill VOID and return sold stocks back to warehouse inventory.`)) {
         try {
           const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/invoices/${inv.id}/void`, {
+          const res = await fetch(`${state.backendUrl}/api/v1/invoices/${inv.id}/void`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -11062,7 +11150,7 @@
       const token = localStorage.getItem("aiavro_jwt_token");
       
       // Open the pdf in a new window or trigger download
-      window.open(`${state.backendUrl}/api/invoices/${inv.invoiceNumber}/pdf?token=${token}`, '_blank');
+      window.open(`${state.backendUrl}/api/v1/invoices/${inv.invoiceNumber}/pdf?token=${token}`, '_blank');
     }
 
     function openTransferStockModal() {
@@ -11140,7 +11228,7 @@
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/inventory/transfer`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/inventory/transfer`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -12043,7 +12131,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         }
 
         // Fetch server info to determine the local network IP address
-        fetch(`${state.backendUrl}/api/server-info`)
+        fetch(`${state.backendUrl}/api/v1/server-info`)
           .then(res => res.json())
           .then(info => {
             let host = window.location.host;
@@ -12256,7 +12344,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       logBox.appendChild(logDiv);
       logBox.scrollTop = logBox.scrollHeight;
 
-      fetch(`${state.backendUrl}/api/scan`, {
+      fetch(`${state.backendUrl}/api/v1/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -12935,7 +13023,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       triggerAlert(`Processed spreadsheet bulk import!`, "success");
       
       const token = localStorage.getItem("aiavro_jwt_token");
-      fetch(`${state.backendUrl}/api/products/import`, {
+      fetch(`${state.backendUrl}/api/v1/products/import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -13254,7 +13342,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
 
       try {
         const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/purchases`, {
+        const res = await fetch(`${state.backendUrl}/api/v1/purchases`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
