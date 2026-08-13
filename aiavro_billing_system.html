@@ -6174,7 +6174,28 @@
         console.log(`[Sync] RBAC permissions updated in database:`, permissions);
         state.rolePermissions = permissions;
         localStorage.setItem("aiavro_role_permissions", JSON.stringify(permissions));
+        
         syncRoleBasedUI();
+
+        // Realtime Enforcement: If active view is no longer allowed, evict immediately
+        const user = state.currentUser;
+        if (user) {
+          const category = getUserCategory(user);
+          if (category !== 'super admin') {
+            const roleAllowedViews = {
+              'admin': permissions.admin || ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
+              'employee': (permissions.employee || ['billing', 'inventory', 'purchase', 'scanner']).concat(['permissions']),
+              'auditor': (permissions.auditor || ['invoices', 'auditor']).concat(['permissions'])
+            };
+            
+            const allowed = roleAllowedViews[category] || [];
+            if (!allowed.includes(state.activeView)) {
+              triggerAlert("Access Revoked! Your permissions for this module have been rolled back by the Super Admin.", "danger");
+              const fallback = allowed[0] || 'permissions';
+              switchView(fallback);
+            }
+          }
+        }
       });
     }
 

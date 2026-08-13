@@ -567,14 +567,44 @@ function validateBody(schema) {
 
 async function writeAuditLog(eventType, entity, entityId, before, after, req) {
   try {
-    // 1. Resolve user info
+    // 1. Resolve user info and store outlets context in real-time
     let userStr = 'System';
     let roleStr = 'SYSTEM';
+    let businessId = 'biz-1';
+    let businessName = 'Main Store';
+
     if (req && req.user) {
-      const activeUser = req.user.name || req.user.username || 'User';
-      const activeUsername = req.user.username || 'user';
-      userStr = `${activeUser} (@${activeUsername})`;
-      roleStr = (req.user.role || req.user.category || 'employee').toUpperCase();
+      const uId = req.user.id || req.user.username;
+      const userDoc = await db.collection('users').findOne({ 
+        $or: [
+          { id: uId },
+          { username: req.user.username }
+        ]
+      });
+      if (userDoc) {
+        userStr = `${userDoc.name || userDoc.username} (@${userDoc.username})`;
+        roleStr = (userDoc.role || userDoc.category || 'employee').toUpperCase();
+        if (userDoc.assignedStoreId && userDoc.assignedStoreId !== 'all') {
+          businessId = userDoc.assignedStoreId;
+        }
+      } else {
+        const activeUser = req.user.name || req.user.username || 'User';
+        const activeUsername = req.user.username || 'user';
+        userStr = `${activeUser} (@${activeUsername})`;
+        roleStr = (req.user.role || req.user.category || 'employee').toUpperCase();
+      }
+    }
+
+    if (after && after.storeId) {
+      businessId = after.storeId;
+    } else if (after && after.id && entity === 'business') {
+      businessId = after.id;
+    }
+    
+    // Resolve store name from active businessId
+    const biz = await db.collection('businesses').findOne({ id: businessId });
+    if (biz) {
+      businessName = biz.name;
     }
 
     // 2. Map eventType to actionType expected by frontend ('create', 'update', 'delete', 'billing', 'auth', etc.)
@@ -598,53 +628,40 @@ async function writeAuditLog(eventType, entity, entityId, before, after, req) {
     if (viewName === 'business') viewName = 'businesses';
     if (viewName === 'rbac_permissions') viewName = 'permissions';
 
-    // 4. Build details description dynamically
+    // 4. Build highly descriptive details description dynamically
     let detailsString = `${eventType} on ${entity} (${entityId})`;
     if (eventType === 'settings_updated') {
       detailsString = `Updated general application portal configurations`;
     } else if (eventType === 'user_updated') {
-      detailsString = `Updated user account details (ID: ${entityId})`;
+      if (req && req.user && req.user.id === entityId) {
+        detailsString = `Updated personal profile details (Name: ${after.name}, Email: ${after.email})`;
+      } else {
+        detailsString = `Modified user account details for '${after.username}' (Designation: ${after.role}, Store Assignment: ${after.assignedStoreId || 'All Outlets'}, Status: ${after.status})`;
+      }
     } else if (eventType === 'user_created') {
-      detailsString = `Registered new user account: ${after.name || after.username || entityId}`;
+      detailsString = `Created new staff account '${after.username}' (Name: ${after.name}, Designation: ${after.role})`;
     } else if (eventType === 'product_created') {
-      detailsString = `Added new product: ${after.name} (SKU: ${after.sku})`;
+      detailsString = `Added product '${after.name}' (SKU: ${after.sku}, Price: ₹${after.price}, Stock: ${after.stock})`;
     } else if (eventType === 'product_updated') {
-      detailsString = `Updated product details: ${after.name} (SKU: ${after.sku})`;
+      detailsString = `Updated product '${after.name}' details (SKU: ${after.sku}, Price: ₹${after.price}, Stock: ${after.stock})`;
     } else if (eventType === 'inventory_updated') {
-      detailsString = `Updated inventory stock levels (Qty: ${after.quantity})`;
+      detailsString = `Adjusted warehouse inventory stock levels for product ID ${entityId} to ${after.quantity} units`;
     } else if (eventType === 'invoice_created') {
-      detailsString = `POS Checkout complete. Created Invoice #${entityId} (Total: ₹${after.grandTotal || after.total || 0})`;
+      detailsString = `Completed POS transaction for customer '${after.customerName || 'Walk-In'}'. Created Invoice #${entityId} (Total: ₹${after.grandTotal || 0})`;
     } else if (eventType === 'invoice_voided') {
-      detailsString = `Voided Invoice #${entityId} and refunded items to inventory`;
+      detailsString = `Voided Invoice #${entityId} and reverted items back to warehouse stock`;
     } else if (eventType === 'purchase_created') {
-      detailsString = `Recorded supplier purchase entry (ID: ${entityId}, Supplier: ${after.supplier})`;
+      detailsString = `Recorded supplier purchase entry (Supplier: ${after.supplier}, Invoice: #${after.invoiceNo || entityId}, Total: ₹${after.grandTotal || 0})`;
     } else if (eventType === 'business_updated') {
       detailsString = `Updated agro-outlet store details: ${after.name}`;
     } else if (eventType === 'business_deleted') {
       detailsString = `Removed agro-outlet store: ${entityId}`;
     } else if (eventType === 'franchise_updated') {
-      detailsString = `Saved franchise profile: ${after.name}`;
+      detailsString = `Saved franchise CRM profile: ${after.name}`;
     } else if (eventType === 'franchise_deleted') {
       detailsString = `Removed franchise profile (ID: ${entityId})`;
     } else if (eventType === 'franchise_order_created') {
-      detailsString = `Dispatched franchise order: #${entityId}`;
-    }
-
-    // 5. Retrieve default active business/store context
-    let businessId = 'biz-1';
-    let businessName = 'Main Store';
-    if (req && req.user && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
-      businessId = req.user.assignedStoreId;
-    } else if (after && after.storeId) {
-      businessId = after.storeId;
-    } else if (after && after.id && entity === 'business') {
-      businessId = after.id;
-    }
-    
-    // Resolve store name from active businessId
-    const biz = await db.collection('businesses').findOne({ id: businessId });
-    if (biz) {
-      businessName = biz.name;
+      detailsString = `Dispatched supply stock order to Franchise Outlet (ID: #${entityId}, Value: ₹${after.grandTotal || 0})`;
     }
 
     await db.collection('audit_logs').insertOne({
