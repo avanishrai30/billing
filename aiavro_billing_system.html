@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
+  <script>
+    (function() {
+      const savedWidth = localStorage.getItem("aiavro_sidebar_width");
+      if (savedWidth && savedWidth.endsWith('px')) {
+        const val = parseInt(savedWidth);
+        if (!isNaN(val) && val >= 200 && val <= 600) {
+          document.documentElement.style.setProperty('--sidebar-width', savedWidth);
+        }
+      }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AIAVRO Billing System - Premium Farmer Business Suite</title>
@@ -17,6 +28,7 @@
   
   <style>
     :root {
+      --sidebar-width: 300px;
       /* SaaS Farmer Color Palette */
       --bg-primary: #f4f7f5;
       --bg-panel: #ffffff;
@@ -108,7 +120,7 @@
     /* Layout */
     .app-container {
       display: grid;
-      grid-template-columns: 280px 1fr;
+      grid-template-columns: var(--sidebar-width, 300px) 1fr;
       width: 100vw;
       min-height: 100vh;
     }
@@ -117,7 +129,7 @@
     aside {
       background-color: var(--bg-panel);
       border-right: 1px solid var(--border-color);
-      padding: 30px 20px;
+      padding: 30px 24px;
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -125,6 +137,29 @@
       top: 0;
       z-index: 10;
       transition: background-color 0.3s, border-color 0.3s;
+      width: var(--sidebar-width, 300px);
+      box-sizing: border-box;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    /* Sidebar Drag Resizer */
+    .sidebar-resizer {
+      grid-column: 1;
+      grid-row: 1;
+      justify-self: end;
+      width: 10px;
+      height: 100vh;
+      cursor: col-resize;
+      z-index: 99999 !important;
+      background: transparent;
+      transition: background-color 0.15s;
+      position: sticky;
+      top: 0;
+      margin-right: -5px;
+    }
+    .sidebar-resizer:hover, .sidebar-resizer.dragging {
+      background-color: var(--accent-green) !important;
     }
 
     .brand-section {
@@ -167,6 +202,8 @@
       flex-direction: column;
       justify-content: center;
       overflow: hidden;
+      flex: 1;
+      min-width: 0;
     }
 
     .brand-name {
@@ -177,7 +214,9 @@
       line-height: 1.2;
       color: var(--text-primary);
       margin: 0;
-      word-break: break-word;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .brand-subtitle {
@@ -188,7 +227,9 @@
       letter-spacing: 1px;
       line-height: 1.25;
       margin-top: 2px;
-      word-break: break-word;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .nav-menu {
@@ -2254,6 +2295,9 @@
     }
 
     @media (max-width: 991px) {
+      .sidebar-resizer {
+        display: none !important;
+      }
       .app-container {
         grid-template-columns: 1fr !important;
       }
@@ -2261,7 +2305,7 @@
         position: fixed !important;
         top: 0;
         left: -290px; /* Hidden by default */
-        width: 280px;
+        width: 280px !important;
         height: 100vh;
         z-index: 100;
         transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
@@ -2404,6 +2448,31 @@
         <img id="login-brand-logo-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>" alt="Brand Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\'%23001845\'/><circle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/><circle cx=\'43\' cy=\'50\' r=\'23\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/></svg>'">
       </div>
       <h2 class="login-title" id="login-brand-name">VC ORGANIC'S Billing OS</h2>
+      <script>
+        (function() {
+          try {
+            const cachedName = localStorage.getItem("aiavro_active_biz_name");
+            const cachedLogo = localStorage.getItem("aiavro_active_biz_logo");
+            const backendUrl = localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com';
+            if (cachedName) {
+              document.getElementById("login-brand-name").innerText = cachedName + " Billing OS";
+            }
+            if (cachedLogo) {
+              const DEFAULT_LOGO_SVG = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>`;
+              let logoUrl = cachedLogo;
+              if (cachedLogo !== 'logo' && cachedLogo !== 'default' && cachedLogo !== 'transparent logo aiavro Background Removed.png') {
+                if (!cachedLogo.startsWith('data:') && !cachedLogo.startsWith('http://') && !cachedLogo.startsWith('https://')) {
+                  const cleanPath = cachedLogo.startsWith('/') ? cachedLogo : '/' + cachedLogo;
+                  logoUrl = backendUrl + cleanPath;
+                }
+              } else {
+                logoUrl = DEFAULT_LOGO_SVG;
+              }
+              document.getElementById("login-brand-logo-img").src = logoUrl;
+            }
+          } catch(e) {}
+        })();
+      </script>
       <p class="login-subtitle">Sign in with your credentials to continue</p>
       
       <div class="login-error" id="login-error-msg"></div>
@@ -2457,6 +2526,49 @@
         <span class="widget-label">Active Seller</span>
         <span class="widget-value" id="sidebar-active-business">VC ORGANIC'S</span>
       </div>
+      <script>
+        (function() {
+          try {
+            const cachedName = localStorage.getItem("aiavro_active_biz_name");
+            const cachedSubtitle = localStorage.getItem("aiavro_active_biz_subtitle");
+            const cachedLogo = localStorage.getItem("aiavro_active_biz_logo");
+            const backendUrl = localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com';
+            if (cachedName) {
+              const nameEl = document.getElementById("sidebar-brand-name");
+              if (nameEl) {
+                nameEl.innerText = cachedName;
+                if (cachedName.length > 22) {
+                  nameEl.style.fontSize = "14px";
+                } else if (cachedName.length > 15) {
+                  nameEl.style.fontSize = "15px";
+                } else {
+                  nameEl.style.fontSize = "16px";
+                }
+              }
+              const activeEl = document.getElementById("sidebar-active-business");
+              if (activeEl) activeEl.innerText = cachedName;
+            }
+            if (cachedSubtitle) {
+              const subEl = document.getElementById("sidebar-brand-subtitle");
+              if (subEl) subEl.innerText = cachedSubtitle;
+            }
+            if (cachedLogo) {
+              const DEFAULT_LOGO_SVG = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>`;
+              let logoUrl = cachedLogo;
+              if (cachedLogo !== 'logo' && cachedLogo !== 'default' && cachedLogo !== 'transparent logo aiavro Background Removed.png') {
+                if (!cachedLogo.startsWith('data:') && !cachedLogo.startsWith('http://') && !cachedLogo.startsWith('https://')) {
+                  const cleanPath = cachedLogo.startsWith('/') ? cachedLogo : '/' + cachedLogo;
+                  logoUrl = backendUrl + cleanPath;
+                }
+              } else {
+                logoUrl = DEFAULT_LOGO_SVG;
+              }
+              const imgEl = document.getElementById("sidebar-brand-logo-img");
+              if (imgEl) imgEl.src = logoUrl;
+            }
+          } catch(e) {}
+        })();
+      </script>
 
       <!-- Sidebar Navigation Menu -->
       <ul class="nav-menu">
@@ -2519,10 +2631,10 @@
             Mobile Scanner View
           </a>
         </li>
-        <li data-role="admin">
+        <li data-role="admin employee auditor">
           <a href="#" class="nav-item" onclick="switchView('permissions')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-            User Permissions
+            <span id="sidebar-permissions-label">User Permissions</span>
           </a>
         </li>
         <li data-role="admin">
@@ -3916,8 +4028,8 @@
                   <div style="color:var(--text-muted)">Waiting for scans...</div>
                 </div>
               </div>
-            </div>
 
+            </div>
           </div>
         </div>
       </div>
@@ -3925,133 +4037,232 @@
       <!-- ==================== USER PERMISSIONS VIEW (ADMIN ONLY) ==================== -->
       <div id="view-permissions" class="app-view">
         
-        <!-- Sub-tab navigation -->
-        <div style="display:flex; gap:0; border-bottom:2px solid var(--border-color); margin-bottom:24px">
-          <button id="perm-tab-btn-users" onclick="switchPermissionsSubTab('users')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--accent-green); cursor:pointer; border-bottom:3px solid var(--accent-green); margin-bottom:-2px; font-family:'Outfit',sans-serif">
-            👥 User Directory
-          </button>
-          <button id="perm-tab-btn-rbac" onclick="switchPermissionsSubTab('rbac')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:'Outfit',sans-serif">
-            🔐 RBAC Permissions
-          </button>
-          <button id="perm-tab-btn-audit" onclick="switchPermissionsSubTab('audit')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:'Outfit',sans-serif">
-            📋 System Audit Logs
-          </button>
-        </div>
+        <!-- Super Admin-only container -->
+        <div id="permissions-super-admin-content">
+          <!-- Sub-tab navigation -->
+          <div style="display:flex; gap:0; border-bottom:2px solid var(--border-color); margin-bottom:24px">
+            <button id="perm-tab-btn-users" onclick="switchPermissionsSubTab('users')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--accent-green); cursor:pointer; border-bottom:3px solid var(--accent-green); margin-bottom:-2px; font-family:'Outfit',sans-serif">
+              👥 User Directory
+            </button>
+            <button id="perm-tab-btn-rbac" onclick="switchPermissionsSubTab('rbac')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:'Outfit',sans-serif">
+              🔐 RBAC Permissions
+            </button>
+            <button id="perm-tab-btn-audit" onclick="switchPermissionsSubTab('audit')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:'Outfit',sans-serif">
+              📋 System Audit Logs
+            </button>
+          </div>
 
-        <!-- Tab: User Directory -->
-        <div id="perm-subtab-users">
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">User Accounts Directory</h3>
-              <div style="display:flex; gap:10px; align-items:center">
-                <span class="status-badge paid" style="font-size:10.5px">Admin Only</span>
-                <button class="primary-btn" onclick="openUserModal()" style="padding:8px 16px">
-                  <svg style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                  Add New User
+          <!-- Tab: User Directory -->
+          <div id="perm-subtab-users">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">User Accounts Directory</h3>
+                <div style="display:flex; gap:10px; align-items:center">
+                  <span class="status-badge paid" style="font-size:10.5px">Admin Only</span>
+                  <button class="primary-btn" onclick="openUserModal()" style="padding:8px 16px">
+                    <svg style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    Add New User
+                  </button>
+                </div>
+              </div>
+              <p style="font-size:13px; color:var(--text-muted); margin: 0 18px 20px 18px; line-height:1.6">
+                Create and manage login credentials for your team. Assign roles and set access permissions. All passwords are stored locally in this browser.
+              </p>
+              <div class="table-wrapper">
+                <table class="inventory-table" style="width:100%">
+                  <thead>
+                    <tr>
+                      <th>Full Name</th>
+                      <th>Username</th>
+                      <th style="text-align:center">Role</th>
+                      <th>Email</th>
+                      <th style="text-align:center">Status</th>
+                      <th>Created</th>
+                      <th style="text-align:center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="users-table-tbody">
+                    <!-- Dynamically populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: RBAC Permissions Matrix -->
+          <div id="perm-subtab-rbac" style="display:none">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Role-Based Access Control (RBAC) Matrix</h3>
+                <span class="status-badge paid" style="font-size:10.5px">Admin Authorization Only</span>
+              </div>
+              <p style="font-size:13px; color:var(--text-muted); margin: 15px 18px 20px 18px; line-height: 1.5">
+                Configure which modules are visible and accessible to the <strong>Admin</strong>, <strong>Employee</strong>, and <strong>Auditor</strong> roles. Super Admin users always retain full unrestricted access.
+              </p>
+              <div class="table-wrapper">
+                <table class="permissions-table">
+                  <thead>
+                    <tr>
+                      <th>Billing Module / Workspace Section</th>
+                      <th style="text-align: center">View ID</th>
+                      <th class="perm-checkbox-cell">Allow Admin</th>
+                      <th class="perm-checkbox-cell">Allow Employee</th>
+                      <th class="perm-checkbox-cell">Allow Auditor</th>
+                    </tr>
+                  </thead>
+                  <tbody id="permissions-matrix-tbody">
+                    <!-- Dynamically populated via JS -->
+                  </tbody>
+                </table>
+              </div>
+              <div style="padding: 20px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end">
+                <button class="primary-btn" onclick="saveRolePermissions()" style="padding: 10px 24px">
+                  Save Permissions Config
                 </button>
               </div>
             </div>
-            <p style="font-size:13px; color:var(--text-muted); margin: 0 18px 20px 18px; line-height:1.6">
-              Create and manage login credentials for your team. Assign roles and set access permissions. All passwords are stored locally in this browser.
-            </p>
-            <div class="table-wrapper">
-              <table class="inventory-table" style="width:100%">
-                <thead>
-                  <tr>
-                    <th>Full Name</th>
-                    <th>Username</th>
-                    <th style="text-align:center">Role</th>
-                    <th>Email</th>
-                    <th style="text-align:center">Status</th>
-                    <th>Created</th>
-                    <th style="text-align:center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="users-table-tbody">
-                  <!-- Dynamically populated -->
-                </tbody>
-              </table>
-            </div>
           </div>
-        </div>
 
-        <!-- Tab: RBAC Permissions Matrix -->
-        <div id="perm-subtab-rbac" style="display:none">
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Role-Based Access Control (RBAC) Matrix</h3>
-              <span class="status-badge paid" style="font-size:10.5px">Admin Authorization Only</span>
-            </div>
-            <p style="font-size:13px; color:var(--text-muted); margin: 15px 18px 20px 18px; line-height: 1.5">
-              Configure which modules are visible and accessible to the <strong>Admin</strong>, <strong>Employee</strong>, and <strong>Auditor</strong> roles. Super Admin users always retain full unrestricted access.
-            </p>
-            <div class="table-wrapper">
-              <table class="permissions-table">
-                <thead>
-                  <tr>
-                    <th>Billing Module / Workspace Section</th>
-                    <th style="text-align: center">View ID</th>
-                    <th class="perm-checkbox-cell">Allow Admin</th>
-                    <th class="perm-checkbox-cell">Allow Employee</th>
-                    <th class="perm-checkbox-cell">Allow Auditor</th>
-                  </tr>
-                </thead>
-                <tbody id="permissions-matrix-tbody">
-                  <!-- Dynamically populated via JS -->
-                </tbody>
-              </table>
-            </div>
-            <div style="padding: 20px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end">
-              <button class="primary-btn" onclick="saveRolePermissions()" style="padding: 10px 24px">
-                Save Permissions Config
-              </button>
-            </div>
-          </div>
-        </div>
+          <!-- Tab: System Audit Logs -->
+          <div id="perm-subtab-audit" style="display:none">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">System Audit Logs</h3>
+                <div style="display:flex; gap:10px; align-items:center">
+                  <span class="status-badge paid" style="font-size:10.5px">Immutable Ledger</span>
+                  <!-- Filter controls -->
+                  <select class="select-dropdown" id="audit-filter-store" onchange="renderAuditLogsTable()" style="padding:6px 12px; font-size:12px; height:auto; width:auto">
+                    <option value="all">All Stores</option>
+                  </select>
+                  <select class="select-dropdown" id="audit-filter-action" onchange="renderAuditLogsTable()" style="padding:6px 12px; font-size:12px; height:auto; width:auto">
+                    <option value="all">All Actions</option>
+                    <option value="create">Creations</option>
+                    <option value="update">Updates / Edits</option>
+                    <option value="delete">Deletions</option>
+                    <option value="billing">POS Checkouts</option>
+                    <option value="auth">Auth Events</option>
+                  </select>
+                </div>
+              </div>
+              
+              <p style="font-size:13px; color:var(--text-muted); margin: 15px 18px 10px 18px; line-height: 1.5">
+                Secure database log tracking all create, update, delete, and POS checkout events. Filterable store-wise for localized audits.
+              </p>
 
-        <!-- Tab: System Audit Logs -->
-        <div id="perm-subtab-audit" style="display:none">
-          <div class="panel">
-            <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
-              <h3 class="panel-title">System Audit & Activity Logs</h3>
-              <div style="display:flex; gap:10px; align-items:center">
-                <span class="status-badge paid" style="font-size:10.5px">Immutable Ledger</span>
-                <!-- Filter controls -->
-                <select class="select-dropdown" id="audit-filter-store" onchange="renderAuditLogsTable()" style="padding:6px 12px; font-size:12px; height:auto; width:auto">
-                  <option value="all">All Stores</option>
-                </select>
-                <select class="select-dropdown" id="audit-filter-action" onchange="renderAuditLogsTable()" style="padding:6px 12px; font-size:12px; height:auto; width:auto">
-                  <option value="all">All Actions</option>
-                  <option value="create">Creations</option>
-                  <option value="update">Updates / Edits</option>
-                  <option value="delete">Deletions</option>
-                  <option value="billing">POS Checkouts</option>
-                  <option value="auth">Auth Events</option>
-                </select>
+              <div class="table-wrapper" style="max-height: 500px; overflow-y: auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>Store Outlet</th>
+                      <th>User</th>
+                      <th>Role</th>
+                      <th>Action</th>
+                      <th>Module / View</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody id="audit-logs-tbody">
+                    <!-- Dynamically populated via JS -->
+                  </tbody>
+                </table>
               </div>
             </div>
-            
-            <p style="font-size:13px; color:var(--text-muted); margin: 15px 18px 10px 18px; line-height: 1.5">
-              Secure database log tracking all create, update, delete, and POS checkout events. Filterable store-wise for localized audits.
-            </p>
+          </div>
+        </div>
 
-            <div class="table-wrapper" style="max-height: 500px; overflow-y: auto;">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Timestamp</th>
-                    <th>Store Outlet</th>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>Action</th>
-                    <th>Module / View</th>
-                    <th>Details</th>
-                  </tr>
-                </thead>
-                <tbody id="audit-logs-tbody">
-                  <!-- Dynamically populated via JS -->
-                </tbody>
-              </table>
+        <!-- Non-super-admin personal container -->
+        <div id="permissions-my-profile-content" style="display:none">
+          <div style="display:grid; grid-template-columns: 1fr 2fr; gap:24px">
+            
+            <!-- Left Side: Profile Details Card -->
+            <div class="panel" style="padding:24px; display:flex; flex-direction:column; align-items:center; gap:20px; text-align:center">
+              <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--text-primary); width:100%; text-align:left; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:8px">👤 Profile Information</h3>
+              
+              <!-- Avatar Upload Container -->
+              <div style="position:relative; width:100px; height:100px; border-radius:50%; background:var(--accent-green); display:flex; align-items:center; justify-content:center; font-size:42px; font-weight:800; color:white; overflow:hidden; border:3px solid var(--border-color); box-shadow:var(--shadow-sm)" id="my-profile-avatar-container">
+                <img id="my-profile-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; display:none" onerror="this.style.display='none'; document.getElementById('my-profile-avatar-initials').style.display='block';">
+                <span id="my-profile-avatar-initials">?</span>
+                <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:9px; text-align:center; padding:3px 0; font-weight:700; cursor:pointer">EDIT</div>
+                <input type="file" id="my-profile-avatar-input" accept="image/*" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; z-index:10" onchange="uploadMyProfileAvatar(event)">
+              </div>
+              
+              <!-- Fields Grid -->
+              <div style="width:100%; display:flex; flex-direction:column; gap:14px; text-align:left">
+                <div class="form-group" style="margin:0">
+                  <label>Full Name</label>
+                  <input type="text" id="my-profile-name" placeholder="Your full name" style="padding:10px; width:100%">
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label>Username</label>
+                  <input type="text" id="my-profile-username" readonly disabled style="padding:10px; width:100%; background:var(--bg-primary); cursor:not-allowed">
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label>Email Address</label>
+                  <input type="email" id="my-profile-email" placeholder="Your email address" style="padding:10px; width:100%">
+                </div>
+                <div class="form-group" style="margin:0">
+                  <label>Designation / Role</label>
+                  <div style="display:flex; align-items:center; gap:8px">
+                    <input type="text" id="my-profile-role" readonly disabled style="padding:10px; flex:1; background:var(--bg-primary); cursor:not-allowed; font-weight:700">
+                    <span class="status-badge paid" style="font-size:10px; padding:4px 8px; border-radius:4px" id="my-profile-role-badge">STAFF</span>
+                  </div>
+                  <small style="color:var(--text-muted); font-size:10.5px; margin-top:4px; display:block">ℹ️ Designations can only be updated by a Super Admin.</small>
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:8px; border-top:1px solid var(--border-color); padding-top:12px; text-align:center" id="my-profile-created-date">
+                  Credentials Created: --
+                </div>
+              </div>
+              
+              <button class="primary-btn" onclick="saveMyProfileChanges()" style="width:100%; padding:10px">Save Profile Details</button>
+            </div>
+
+            <!-- Right Side: Password & Own Audit Logs -->
+            <div style="display:flex; flex-direction:column; gap:24px">
+              
+              <!-- Password Card -->
+              <div class="panel" style="padding:24px">
+                <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px">🔑 Change Password</h3>
+                <div id="my-profile-pw-error" style="display:none; color:var(--accent-danger); font-size:12px; font-weight:600; padding:8px 12px; background:rgba(239,68,68,0.08); border-radius:6px; margin-bottom:12px; border-left:3px solid var(--accent-danger)"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px">
+                  <div class="form-group" style="margin:0">
+                    <label>Current Password</label>
+                    <input type="password" id="my-profile-current-pw" placeholder="Enter current password" style="padding:10px">
+                  </div>
+                  <div class="form-group" style="margin:0">
+                    <label>New Password</label>
+                    <input type="password" id="my-profile-new-pw" placeholder="Min. 6 characters" style="padding:10px">
+                  </div>
+                  <div class="form-group" style="margin:0; grid-column:span 2">
+                    <label>Confirm New Password</label>
+                    <input type="password" id="my-profile-confirm-pw" placeholder="Re-enter new password" style="padding:10px">
+                  </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; margin-top:16px">
+                  <button class="primary-btn" onclick="saveMyProfilePasswordChange()" style="padding:10px 24px">Update Password</button>
+                </div>
+              </div>
+
+              <!-- Own Audit Logs Panel -->
+              <div class="panel" style="padding:24px; flex:1; display:flex; flex-direction:column">
+                <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px">📋 My Recent Activity Audits</h3>
+                <div class="table-wrapper" style="flex:1; overflow-y:auto; max-height:300px">
+                  <table class="inventory-table" style="width:100%">
+                    <thead>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>Action</th>
+                        <th>Module</th>
+                        <th>Activity Details</th>
+                      </tr>
+                    </thead>
+                    <tbody id="my-profile-audit-tbody">
+                      <!-- Populated dynamically with user's own logs -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -5616,6 +5827,7 @@
       loadDatabaseState();
       initAuthentication();
       renderOnboardingQueue();
+      initSidebarDragResizer();
 
       // Fallback: poll server database for state alignment every 90 seconds
       setInterval(() => {
@@ -5624,6 +5836,55 @@
         }
       }, 90000);
     });
+
+    function initSidebarDragResizer() {
+      const sidebar = document.querySelector('aside');
+      const appContainer = document.querySelector('.app-container');
+      if (!sidebar || !appContainer) return;
+
+      // Create resizer handle element as child of appContainer (sibling overlay in Grid)
+      const resizer = document.createElement('div');
+      resizer.className = 'sidebar-resizer';
+      appContainer.appendChild(resizer);
+
+      let isDragging = false;
+      let lastWidth = localStorage.getItem("aiavro_sidebar_width") || "300px";
+      
+      // Sanitize stored width
+      const val = parseInt(lastWidth);
+      if (isNaN(val) || val < 200 || val > 600) {
+        lastWidth = "300px";
+      }
+      
+      // Force initial value synchronously on load
+      document.documentElement.style.setProperty('--sidebar-width', lastWidth);
+
+      resizer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault(); // Prevent text selection
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        // Clamp sidebar width between 200px and 600px
+        const newWidth = Math.max(200, Math.min(600, e.clientX));
+        lastWidth = `${newWidth}px`;
+        document.documentElement.style.setProperty('--sidebar-width', lastWidth);
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          resizer.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          localStorage.setItem('aiavro_sidebar_width', lastWidth);
+        }
+      });
+    }
 
     async function loadPublicSettings() {
       try {
@@ -5905,6 +6166,16 @@
       syncSocket.on('business_deleted', () => syncStateWithServer());
       syncSocket.on('user_updated', () => syncStateWithServer());
       syncSocket.on('purchase_created', () => syncStateWithServer());
+      syncSocket.on('franchise_updated', () => syncStateWithServer());
+      syncSocket.on('franchise_deleted', () => syncStateWithServer());
+      syncSocket.on('franchise_order_created', () => syncStateWithServer());
+      syncSocket.on('invoice_updated', () => syncStateWithServer());
+      syncSocket.on('rbac_updated', (permissions) => {
+        console.log(`[Sync] RBAC permissions updated in database:`, permissions);
+        state.rolePermissions = permissions;
+        localStorage.setItem("aiavro_role_permissions", JSON.stringify(permissions));
+        syncRoleBasedUI();
+      });
     }
 
     async function syncStateWithServer() {
@@ -5952,6 +6223,14 @@
       const purchaseData = await safeFetch(`${state.backendUrl}/api/purchases`);
       if (purchaseData) state.purchases = purchaseData;
 
+      // Fetch franchises
+      const franchisesData = await safeFetch(`${state.backendUrl}/api/franchises`);
+      if (franchisesData) state.franchises = franchisesData;
+
+      // Fetch franchise supply orders
+      const franSupplyOrdersData = await safeFetch(`${state.backendUrl}/api/franchise-supply-orders`);
+      if (franSupplyOrdersData) state.franchiseSupplyOrders = franSupplyOrdersData;
+
       // Fetch suppliers
       const supData = await safeFetch(`${state.backendUrl}/api/suppliers`);
       if (supData) {
@@ -5966,14 +6245,27 @@
         state.customStoreLocations = storeData;
       }
 
-      // Fetch users and audit logs if Admin or Super Admin
+      // Fetch dynamic role permissions from server
+      const rbacData = await safeFetch(`${state.backendUrl}/api/role-permissions`);
+      if (rbacData) {
+        state.rolePermissions = rbacData;
+        localStorage.setItem("aiavro_role_permissions", JSON.stringify(rbacData));
+      }
+
+      // Fetch users based on role permissions
       const category = getUserCategory(state.currentUser);
       if (category === 'super admin' || category === 'admin') {
         const userData = await safeFetch(`${state.backendUrl}/api/users`);
         if (userData) state.users = userData;
+      }
 
-        const auditData = await safeFetch(`${state.backendUrl}/api/audit-logs`);
-        if (auditData) state.auditLogs = auditData;
+      // Fetch audit logs (backend filters this based on role)
+      const auditData = await safeFetch(`${state.backendUrl}/api/audit-logs`);
+      if (auditData) {
+        state.auditLogs = auditData;
+        if (state.activeView === 'permissions' && category !== 'super admin') {
+          initMyProfileView();
+        }
       }
 
       // Fetch store-wise inventory
@@ -5993,6 +6285,7 @@
       renderInvoicesTable();
       renderBusinessesListDropdowns();
       renderBusinessesCards();
+      renderFranchiseCards();
       updateActiveBrandUI();
       populateUserFormStoreDropdown();
       populateInvoiceStoreDropdown();
@@ -6050,7 +6343,7 @@
         const category = getUserCategory(state.currentUser);
         const roleAllowedViews = {
           'super admin': ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
-          'admin': ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
+          'admin': state.rolePermissions.admin || ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
           'employee': state.rolePermissions.employee || ['billing', 'inventory', 'purchase', 'scanner'],
           'auditor': state.rolePermissions.auditor || ['invoices', 'auditor']
         };
@@ -6154,11 +6447,17 @@
       const roleAllowedViews = {
         'super admin': ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
         'admin': ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
-        'employee': rolePermissions.employee || ['billing', 'inventory', 'purchase', 'scanner'],
-        'auditor': rolePermissions.auditor || ['invoices', 'auditor']
+        'employee': (rolePermissions.employee || ['billing', 'inventory', 'purchase', 'scanner']).concat(['permissions']),
+        'auditor': (rolePermissions.auditor || ['invoices', 'auditor']).concat(['permissions'])
       };
 
       const allowedViews = roleAllowedViews[category] || [];
+
+      // Update the permissions navigation label
+      const permissionsLabel = document.getElementById("sidebar-permissions-label");
+      if (permissionsLabel) {
+        permissionsLabel.textContent = category === 'super admin' ? "User Permissions" : "My Profile & Audits";
+      }
 
       // Show/hide navigation items dynamically
       const navItems = document.querySelectorAll(".nav-menu li");
@@ -6252,7 +6551,7 @@
       });
     }
 
-    function saveRolePermissions() {
+    async function saveRolePermissions() {
       const admChks = document.querySelectorAll(".adm-perm-chk:checked");
       const empChks = document.querySelectorAll(".emp-perm-chk:checked");
       const audChks = document.querySelectorAll(".aud-perm-chk:checked");
@@ -6271,16 +6570,34 @@
         return;
       }
 
-      state.rolePermissions = {
+      const permissions = {
         admin: newAdmPerms,
         employee: newEmpPerms,
         auditor: newAudPerms
       };
 
-      logActivity('update', `Saved Access Permissions (RBAC) Matrix config. Admin: [${newAdmPerms.join(', ')}], Employee: [${newEmpPerms.join(', ')}], Auditor: [${newAudPerms.join(', ')}]`);
-      localStorage.setItem("aiavro_role_permissions", JSON.stringify(state.rolePermissions));
-      syncRoleBasedUI();
-      triggerAlert("User Role Permissions Matrix successfully saved & updated!", "success");
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/role-permissions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ permissions })
+        });
+        const result = await res.json();
+        if (result.success) {
+          state.rolePermissions = permissions;
+          localStorage.setItem("aiavro_role_permissions", JSON.stringify(permissions));
+          syncRoleBasedUI();
+          triggerAlert("User Role Permissions Matrix successfully saved to MongoDB database & updated!", "success");
+        } else {
+          triggerAlert(result.message || "Failed to save role permissions config", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error saving role permissions config.", "danger");
+      }
     }
 
     /* ==================== USER MANAGEMENT SYSTEM ==================== */
@@ -6995,28 +7312,38 @@
         }
       });
 
-      if (id) {
-        const idx = state.franchises.findIndex(f => f.id === id);
-        if (idx !== -1) {
-          state.franchises[idx] = { ...state.franchises[idx], name, location, owner, phone, email, gstin, supplyList };
-          triggerAlert(`Franchise Partner '${name}' updated!`, "success");
-        }
-      } else {
-        const newId = "fran-" + Date.now();
-        state.franchises.push({
-          id: newId,
-          name, location, owner, phone, email, gstin,
-          status: "active",
-          createdAt: new Date().toISOString(),
-          supplyList
-        });
-        triggerAlert(`New Franchise Partner '${name}' added!`, "success");
-      }
+      const docId = id || "fran-" + Date.now();
+      const franObj = {
+        id: docId,
+        name, location, owner, phone, email, gstin,
+        status: id ? (state.franchises.find(f => f.id === id)?.status || "active") : "active",
+        createdAt: id ? (state.franchises.find(f => f.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+        supplyList
+      };
 
-      saveStateToLocalStorage();
-      closeFranchiseModal();
-      renderFranchiseCards();
-      initDashboardAnalytics();
+      (async () => {
+        try {
+          const token = localStorage.getItem("aiavro_jwt_token");
+          const res = await fetch(`${state.backendUrl}/api/franchises`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(franObj)
+          });
+          const result = await res.json();
+          if (result.success) {
+            triggerAlert(`Franchise Partner '${name}' saved successfully!`, "success");
+            closeFranchiseModal();
+            await syncStateWithServer();
+          } else {
+            triggerAlert(result.message || "Failed to save franchise profile", "danger");
+          }
+        } catch (err) {
+          triggerAlert("Error connecting to server gateway.", "danger");
+        }
+      })();
     }
 
     function handleFranchiseExcelImport(e) {
@@ -7063,16 +7390,29 @@
       reader.readAsBinaryString(file);
     }
 
-    function deleteFranchise(id) {
+    async function deleteFranchise(id) {
       const fran = state.franchises.find(f => f.id === id);
       if (!fran) return;
       if (!confirm(`Are you sure you want to delete the franchise partner '${fran.name}'?`)) return;
 
-      state.franchises = state.franchises.filter(f => f.id !== id);
-      saveStateToLocalStorage();
-      renderFranchiseCards();
-      initDashboardAnalytics();
-      triggerAlert(`Franchise partner deleted successfully.`, "info");
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/franchises/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert(`Franchise partner deleted successfully.`, "info");
+          await syncStateWithServer();
+        } else {
+          triggerAlert(result.message || "Failed to delete franchise profile", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error connecting to server gateway.", "danger");
+      }
     }
 
     function openFranchiseSupplyModal(franchiseId) {
@@ -7265,20 +7605,272 @@
         notes
       };
 
-      if (!state.franchiseSupplyOrders) state.franchiseSupplyOrders = [];
-      state.franchiseSupplyOrders.push(newOrder);
+      (async () => {
+        try {
+          const token = localStorage.getItem("aiavro_jwt_token");
+          const res = await fetch(`${state.backendUrl}/api/franchise-supply-orders`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(newOrder)
+          });
+          const result = await res.json();
+          if (result.success) {
+            logActivity('billing', `Dispatched supply order to franchise '${franObj ? franObj.name : 'Outlet'}'. Grand Total: ₹${newOrder.grandTotal.toFixed(2)}`);
+            closeFranchiseSupplyModal();
+            await syncStateWithServer();
+            triggerAlert("Franchise supply order dispatched and inventory levels synchronized!", "success");
+          } else {
+            triggerAlert(result.message || "Failed to submit franchise supply order", "danger");
+          }
+        } catch (err) {
+          triggerAlert("Error connecting to server gateway.", "danger");
+        }
+      })();
+    }
 
-      // Log security ledger activity
-      logActivity('billing', `Dispatched supply order to franchise '${franObj ? franObj.name : 'Outlet'}'. Grand Total: ₹${newOrder.grandTotal.toFixed(2)}`);
+    /* ==================== PERSONAL ACCOUNT PROFILE (NON-SUPER-ADMINS) ==================== */
+    function initMyProfileView() {
+      const user = state.currentUser;
+      if (!user) return;
 
-      saveStateToLocalStorage();
-      closeFranchiseSupplyModal();
-      renderFranchiseCards();
-      initDashboardAnalytics();
-      if (state.activeView === 'inventory') renderInventoryTable();
-      if (state.activeView === 'auditor') initAuditorDashboard();
+      document.getElementById('my-profile-name').value = user.name || '';
+      document.getElementById('my-profile-username').value = user.username || '';
+      document.getElementById('my-profile-email').value = user.email || '';
+      
+      const category = getUserCategory(user);
+      document.getElementById('my-profile-role').value = (user.role || 'employee').toUpperCase();
+      document.getElementById('my-profile-role-badge').textContent = category.toUpperCase();
+      document.getElementById('my-profile-role-badge').className = `status-badge ${category === 'admin' ? 'paid' : category === 'auditor' ? 'partial' : 'unpaid'}`;
 
-      triggerAlert("Franchise supply order dispatched and inventory levels synchronized!", "success");
+      const created = user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+      document.getElementById('my-profile-created-date').textContent = `Credentials Created: ${created}`;
+
+      const avatarImg = document.getElementById("my-profile-avatar-img");
+      const avatarInitials = document.getElementById("my-profile-avatar-initials");
+      if (avatarImg && avatarInitials) {
+        if (user.avatar) {
+          avatarImg.src = state.backendUrl + user.avatar;
+          avatarImg.style.display = "block";
+          avatarInitials.style.display = "none";
+        } else {
+          avatarImg.style.display = "none";
+          avatarInitials.style.display = "block";
+          avatarInitials.textContent = getInitials(user.name || user.username);
+        }
+      }
+
+      document.getElementById('my-profile-current-pw').value = '';
+      document.getElementById('my-profile-new-pw').value = '';
+      document.getElementById('my-profile-confirm-pw').value = '';
+      document.getElementById('my-profile-pw-error').style.display = 'none';
+
+      renderMyProfileAuditLogs();
+    }
+
+    function renderMyProfileAuditLogs() {
+      const tbody = document.getElementById("my-profile-audit-tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const user = state.currentUser;
+      if (!user) return;
+
+      if (!state.auditLogs || state.auditLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px">No activity logs recorded yet.</td></tr>`;
+        return;
+      }
+
+      const myLogs = state.auditLogs.slice().reverse().filter(log => {
+        return log.user === user.username || log.performedBy === user.username;
+      });
+
+      if (myLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px">No activity logs found for your account.</td></tr>`;
+        return;
+      }
+
+      myLogs.forEach(log => {
+        const row = document.createElement("tr");
+        const dateStr = new Date(log.timestamp).toLocaleString();
+        
+        let actionBadge = "";
+        const act = (log.action || log.eventType || '').toLowerCase();
+        if (act === 'create' || act === 'user_created') {
+          actionBadge = `<span class="status-badge paid" style="background-color:rgba(16,185,129,0.1); color:var(--accent-green); font-size:10px">CREATE</span>`;
+        } else if (act === 'update' || act === 'user_updated') {
+          actionBadge = `<span class="status-badge partial" style="background-color:rgba(245,158,11,0.1); color:var(--accent-warning); font-size:10px">UPDATE</span>`;
+        } else if (act === 'delete' || act === 'user_deleted') {
+          actionBadge = `<span class="status-badge unpaid" style="background-color:rgba(239,68,68,0.1); color:var(--accent-danger); font-size:10px">DELETE</span>`;
+        } else {
+          actionBadge = `<span class="status-badge" style="background-color:rgba(107,114,128,0.1); color:var(--text-muted); font-size:10px">${safeUpper(log.action || log.eventType)}</span>`;
+        }
+
+        row.innerHTML = `
+          <td style="font-size:11.5px; color:var(--text-muted); white-space:nowrap">${dateStr}</td>
+          <td>${actionBadge}</td>
+          <td><code style="font-size:11px; font-weight:700; color:var(--text-muted)">${escapeHTML(log.view || log.entity || 'system')}</code></td>
+          <td style="font-size:12px; color:var(--text-primary); max-width: 250px; word-wrap: break-word">${escapeHTML(log.details || log.eventType || '')}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function uploadMyProfileAvatar(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        const base64Data = evt.target.result;
+        try {
+          const token = localStorage.getItem("aiavro_jwt_token");
+          
+          const uploadRes = await fetch(`${state.backendUrl}/api/upload?type=employees`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              base64Data: base64Data
+            })
+          });
+          const uploadResult = await uploadRes.json();
+          if (!uploadResult.success) {
+            triggerAlert(uploadResult.message || "Failed to upload avatar image", "danger");
+            return;
+          }
+
+          const imagePath = uploadResult.imagePath;
+
+          const saveRes = await fetch(`${state.backendUrl}/api/users/avatar`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ avatar: imagePath })
+          });
+          const saveResult = await saveRes.json();
+          if (saveResult.success) {
+            triggerAlert("Profile picture updated successfully!", "success");
+            
+            state.currentUser.avatar = imagePath;
+            localStorage.setItem("aiavro_logged_in_user", JSON.stringify(state.currentUser));
+            
+            const myAvatarImg = document.getElementById("my-profile-avatar-img");
+            const myAvatarInitials = document.getElementById("my-profile-avatar-initials");
+            if (myAvatarImg && myAvatarInitials) {
+              myAvatarImg.src = state.backendUrl + imagePath;
+              myAvatarImg.style.display = "block";
+              myAvatarInitials.style.display = "none";
+            }
+            
+            const sidebarAvatarImg = document.getElementById("sidebar-avatar-img");
+            const sidebarAvatarInitials = document.getElementById("sidebar-avatar-initials");
+            if (sidebarAvatarImg && sidebarAvatarInitials) {
+              sidebarAvatarImg.src = state.backendUrl + imagePath;
+              sidebarAvatarImg.style.display = "block";
+              sidebarAvatarInitials.style.display = "none";
+            }
+          } else {
+            triggerAlert(saveResult.message || "Failed to save profile picture", "danger");
+          }
+        } catch (err) {
+          triggerAlert("Error uploading avatar picture.", "danger");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function saveMyProfileChanges() {
+      const name = document.getElementById('my-profile-name').value.trim();
+      const email = document.getElementById('my-profile-email').value.trim();
+      if (!name) {
+        triggerAlert("Profile name cannot be empty!", "warning");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/users/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ name, email })
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert("Profile details updated successfully!", "success");
+          
+          state.currentUser.name = name;
+          state.currentUser.email = email;
+          localStorage.setItem("aiavro_logged_in_user", JSON.stringify(state.currentUser));
+          
+          const sidebarName = document.getElementById("sidebar-username");
+          if (sidebarName) sidebarName.textContent = name;
+        } else {
+          triggerAlert(result.message || "Failed to save profile details", "danger");
+        }
+      } catch (err) {
+        triggerAlert("Error updating profile details.", "danger");
+      }
+    }
+
+    async function saveMyProfilePasswordChange() {
+      const currentPw = document.getElementById('my-profile-current-pw').value;
+      const newPw = document.getElementById('my-profile-new-pw').value;
+      const confirmPw = document.getElementById('my-profile-confirm-pw').value;
+      const errBox = document.getElementById('my-profile-pw-error');
+
+      errBox.style.display = 'none';
+
+      if (!currentPw || !newPw || !confirmPw) {
+        errBox.textContent = 'Please fill out all password fields!';
+        errBox.style.display = 'block';
+        return;
+      }
+      if (newPw.length < 6) {
+        errBox.textContent = 'New password must be at least 6 characters long!';
+        errBox.style.display = 'block';
+        return;
+      }
+      if (newPw !== confirmPw) {
+        errBox.textContent = 'New password confirmation does not match!';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("aiavro_jwt_token");
+        const res = await fetch(`${state.backendUrl}/api/users/change-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw })
+        });
+        const result = await res.json();
+        if (result.success) {
+          triggerAlert("Password updated successfully!", "success");
+          document.getElementById('my-profile-current-pw').value = '';
+          document.getElementById('my-profile-new-pw').value = '';
+          document.getElementById('my-profile-confirm-pw').value = '';
+        } else {
+          errBox.textContent = result.message || 'Failed to update password';
+          errBox.style.display = 'block';
+        }
+      } catch (err) {
+        errBox.textContent = 'Error updating password. Please try again.';
+        errBox.style.display = 'block';
+      }
     }
 
     /* ==================== MY ACCOUNT MODAL ==================== */
@@ -7843,6 +8435,7 @@
 
       // 2. Validate role-based view permissions
       const rolePermissions = state.rolePermissions || {
+        admin: ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
         employee: ['billing', 'inventory', 'purchase', 'scanner'],
         auditor: ['invoices', 'auditor']
       };
@@ -7850,7 +8443,7 @@
       const category = getUserCategory(user);
       const roleAllowedViews = {
         'super admin': ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
-        'admin': ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
+        'admin': rolePermissions.admin || ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner'],
         'employee': rolePermissions.employee || ['billing', 'inventory', 'purchase', 'scanner'],
         'auditor': rolePermissions.auditor || ['invoices', 'auditor']
       };
@@ -7914,9 +8507,20 @@
         viewSubtitle.innerText = "Tax ledger statements, category GST splits and CSV downloads";
         initAuditorDashboard();
       } else if (viewName === 'permissions') {
-        viewTitle.innerText = "User Management & Access Control";
-        viewSubtitle.innerText = "Manage user accounts, credentials, and role-based module permissions";
-        switchPermissionsSubTab('users');
+        const cat = getUserCategory(user);
+        if (cat === 'super admin') {
+          document.getElementById('permissions-super-admin-content').style.display = 'block';
+          document.getElementById('permissions-my-profile-content').style.display = 'none';
+          viewTitle.innerText = "User Management & Access Control";
+          viewSubtitle.innerText = "Manage user accounts, credentials, and role-based module permissions";
+          switchPermissionsSubTab('users');
+        } else {
+          document.getElementById('permissions-super-admin-content').style.display = 'none';
+          document.getElementById('permissions-my-profile-content').style.display = 'block';
+          viewTitle.innerText = "My Account Profile";
+          viewSubtitle.innerText = "View your credentials, upload profile picture, and review your activity log";
+          initMyProfileView();
+        }
       } else if (viewName === 'settings') {
         viewTitle.innerText = "Backups & settings";
         viewSubtitle.innerText = "Backup complete local files or wipe database completely";
@@ -10382,7 +10986,7 @@
       document.getElementById("invoice-modal").classList.remove("active");
     }
 
-    function processInvoiceRefund() {
+    async function processInvoiceRefund() {
       if (!currentViewingInvoiceId) return;
 
       const user = state.currentUser;
@@ -10398,23 +11002,26 @@
       if (!inv || inv.status === 'refunded') return;
 
       if (confirm(`Wipe this transaction? This will declare bill VOID and return sold stocks back to warehouse inventory.`)) {
-        // Return quantities
-        inv.items.forEach(item => {
-          const prod = state.products.find(p => p.id === item.productId);
-          if (prod) {
-            prod.stock += item.quantity;
-            logInventoryMovement(prod.id, "Return", item.quantity, inv.id, "Sales Invoice Void Return");
+        try {
+          const token = localStorage.getItem("aiavro_jwt_token");
+          const res = await fetch(`${state.backendUrl}/api/invoices/${inv.id}/void`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const result = await res.json();
+          if (result.success) {
+            logActivity('delete', `Voided/refunded invoice: ${inv.id}. Stocks returned to inventory.`);
+            closeInvoiceModal();
+            await syncStateWithServer();
+            triggerAlert("Invoice declared VOID! Warehouse stocks returned.", "warning");
+          } else {
+            triggerAlert(result.message || "Failed to void invoice on server", "danger");
           }
-        });
-
-        inv.status = 'refunded';
-        logActivity('delete', `Voided/refunded invoice: ${inv.id}. Stocks returned to inventory.`);
-        saveStateToLocalStorage();
-        triggerAlert("Invoice declared VOID! Warehouse stocks returned.", "warning");
-        closeInvoiceModal();
-        renderInvoicesTable();
-        renderPOSProducts();
-        initDashboardAnalytics();
+        } catch (err) {
+          triggerAlert("Error connecting to server gateway.", "danger");
+        }
       }
     }
 

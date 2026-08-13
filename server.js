@@ -645,6 +645,73 @@ app.post('/api/users/change-password', verifyJWT, async (req, res) => {
   }
 });
 
+// REST API - Update logged-in user profile details (Name & Email)
+app.post('/api/users/profile', verifyJWT, async (req, res) => {
+  const { name, email } = req.body;
+  if (!name) return res.status(400).json({ success: false, message: "Name is required" });
+
+  try {
+    const updateFields = { name, email, updatedAt: new Date().toISOString() };
+    await db.collection('users').updateOne(
+      { id: req.user.id },
+      { $set: updateFields }
+    );
+    await writeAuditLog('user_updated', 'user', req.user.id, null, { name, email }, req);
+    io.to('sync_global').emit('user_updated', { userId: req.user.id, name, email });
+    res.json({ success: true, name, email });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to update profile details" });
+  }
+});
+
+// REST API - Fetch Role-Based Access Control (RBAC) Permissions Matrix
+app.get('/api/role-permissions', verifyJWT, async (req, res) => {
+  try {
+    const doc = await db.collection('settings').findOne({ key: "role_permissions" });
+    if (doc) {
+      res.json(doc.permissions);
+    } else {
+      // Default fallback permissions
+      const defaults = {
+        admin: ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner', 'verification', 'remote-scanner', 'refunds'],
+        employee: ['billing', 'inventory', 'purchase', 'scanner', 'verification'],
+        auditor: ['invoices', 'auditor']
+      };
+      res.json(defaults);
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch role permissions" });
+  }
+});
+
+// REST API - Save Role-Based Access Control (RBAC) Permissions Matrix
+app.post('/api/role-permissions', verifyJWT, async (req, res) => {
+  const category = (req.user.category || req.user.role || 'employee').toLowerCase().trim();
+  const isSuperAdmin = category.includes('super');
+  
+  if (!isSuperAdmin) {
+    return res.status(403).json({ success: false, message: "Forbidden: Only Super Admins can configure RBAC permissions" });
+  }
+
+  const { permissions } = req.body;
+  if (!permissions) {
+    return res.status(400).json({ success: false, message: "Missing permissions config payload" });
+  }
+
+  try {
+    await db.collection('settings').updateOne(
+      { key: "role_permissions" },
+      { $set: { permissions, updatedAt: new Date().toISOString() } },
+      { upsert: true }
+    );
+    await writeAuditLog('settings_updated', 'rbac_permissions', 'role_permissions', null, permissions, req);
+    io.to('sync_global').emit('rbac_updated', permissions);
+    res.json({ success: true, permissions });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to save role permissions config" });
+  }
+});
+
 // REST API - Fetch all products
 app.get('/api/products', verifyJWT, async (req, res) => {
   try {
@@ -1105,7 +1172,12 @@ app.post('/api/inventory/transfer', verifyJWT, async (req, res) => {
 app.get('/api/invoices', verifyJWT, async (req, res) => {
   try {
     const invoices = await db.collection('invoices').find().toArray();
-    res.json(invoices);
+    const normalizedInvoices = invoices.map(inv => ({
+      ...inv,
+      id: inv.id || inv.invoiceNumber || (inv._id ? inv._id.toString() : ""),
+      date: inv.date || inv.createdAt || new Date().toISOString()
+    }));
+    res.json(normalizedInvoices);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch invoices" });
   }
@@ -1203,6 +1275,8 @@ app.post('/api/invoices', verifyJWT, async (req, res) => {
     inv.invoiceNumber = `VC-${new Date().getFullYear()}-${(count + 1).toString().padStart(4, '0')}`;
     inv.createdAt = new Date().toISOString();
     inv.cashierId = req.user.id;
+    inv.id = inv.invoiceNumber;
+    inv.date = inv.createdAt;
 
     // Deduct stock levels per product for the assigned store
     for (const item of inv.items) {
@@ -1270,6 +1344,83 @@ app.post('/api/invoices', verifyJWT, async (req, res) => {
   } catch (err) {
     console.error("Save invoice transaction failed:", err);
     res.status(500).json({ success: false, message: "Transaction submission failed" });
+  }
+});
+
+// REST API - Void sales invoice and revert inventory
+app.post('/api/invoices/:id/void', verifyJWT, async (req, res) => {
+  const invoiceId = req.params.id;
+  try {
+    const invoice = await db.collection('invoices').findOne({ 
+      $or: [ { id: invoiceId }, { invoiceNumber: invoiceId } ] 
+    });
+    
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: "Invoice not found in system registry." });
+    }
+    
+    if (invoice.status === 'refunded' || invoice.status === 'void') {
+      return res.status(400).json({ success: false, message: "This invoice is already voided/refunded." });
+    }
+
+    // Update status in invoices collection
+    await db.collection('invoices').updateOne(
+      { _id: invoice._id },
+      { $set: { status: 'refunded', voidedAt: new Date().toISOString(), voidedBy: req.user.username } }
+    );
+
+    // Revert inventory stocks for each item in the invoice
+    if (invoice.items && Array.isArray(invoice.items)) {
+      for (const item of invoice.items) {
+        await db.collection('inventory').updateOne(
+          { productId: item.productId, storeId: invoice.storeId },
+          { $inc: { quantity: parseFloat(item.quantity) }, $set: { updatedAt: new Date().toISOString() } }
+        );
+
+        const logId = `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+        await db.collection('inventory_logs').insertOne({
+          id: logId,
+          productId: item.productId,
+          storeId: invoice.storeId,
+          quantityAdjusted: parseFloat(item.quantity),
+          notes: `Sales Invoice Void Return: ${invoice.invoiceNumber}`,
+          userId: req.user.id,
+          timestamp: new Date().toISOString()
+        });
+
+        await db.collection('inventory_transactions').insertOne({
+          id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          type: "IN",
+          productId: item.productId,
+          storeId: invoice.storeId,
+          quantity: parseFloat(item.quantity),
+          referenceType: "VOID_INVOICE",
+          referenceId: invoice.invoiceNumber,
+          performedBy: req.user.username,
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+
+    await writeAuditLog('invoice_voided', 'invoice', invoice.invoiceNumber, null, { status: 'refunded' }, req);
+    io.to('sync_global').emit('invoice_updated', { invoiceNumber: invoice.invoiceNumber, status: 'refunded' });
+
+    // Broadcast updated inventory levels to the store room
+    if (invoice.items && Array.isArray(invoice.items)) {
+      for (const item of invoice.items) {
+        const updatedInv = await db.collection('inventory').findOne({ productId: item.productId, storeId: invoice.storeId });
+        io.to(`store_${invoice.storeId}`).emit('inventory_updated', {
+          productId: item.productId,
+          storeId: invoice.storeId,
+          quantity: updatedInv ? updatedInv.quantity : 0
+        });
+      }
+    }
+
+    res.json({ success: true, message: "Invoice voided successfully and warehouse inventory reverted." });
+  } catch (err) {
+    console.error("Void invoice failed:", err);
+    res.status(500).json({ success: false, message: "Server error during invoice voiding." });
   }
 });
 
@@ -1461,8 +1612,148 @@ app.delete('/api/businesses/:id', verifyJWT, async (req, res) => {
   }
 });
 
+// REST API - Fetch all franchises
+app.get('/api/franchises', verifyJWT, async (req, res) => {
+  try {
+    const franchises = await db.collection('franchises').find().toArray();
+    res.json(franchises);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch franchises" });
+  }
+});
+
+// REST API - Create or modify franchise
+app.post('/api/franchises', verifyJWT, async (req, res) => {
+  const fran = req.body;
+  if (!fran.name) {
+    return res.status(400).json({ success: false, message: "Franchise store name is required" });
+  }
+  
+  const userRole = (req.user.role || '').toLowerCase();
+  const userCategory = (req.user.category || '').toLowerCase();
+  const allowedRoles = ['owner', 'super admin', 'admin'];
+  if (!allowedRoles.includes(userRole) && userCategory !== 'super admin' && userCategory !== 'admin') {
+    return res.status(403).json({ success: false, message: "Forbidden: Only Admin or Owner can manage franchise profiles" });
+  }
+
+  try {
+    const docId = fran.id || "fran-" + Date.now();
+    const cleanFran = {
+      id: docId,
+      name: fran.name,
+      location: fran.location || "",
+      owner: fran.owner || "",
+      phone: fran.phone || "",
+      email: fran.email || "",
+      gstin: fran.gstin || "",
+      status: fran.status || "active",
+      createdAt: fran.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      supplyList: fran.supplyList || []
+    };
+
+    await db.collection('franchises').updateOne(
+      { id: docId },
+      { $set: cleanFran },
+      { upsert: true }
+    );
+
+    await writeAuditLog('franchise_updated', 'franchise', docId, null, cleanFran, req);
+    io.to('sync_global').emit('franchise_updated', { franchise: cleanFran });
+
+    res.json({ success: true, id: docId, franchise: cleanFran });
+  } catch (err) {
+    console.error("Save franchise failed:", err);
+    res.status(500).json({ success: false, message: "Failed to save franchise profile" });
+  }
+});
+
+// REST API - Delete franchise
+app.delete('/api/franchises/:id', verifyJWT, async (req, res) => {
+  const franId = req.params.id;
+  
+  const userRole = (req.user.role || '').toLowerCase();
+  const userCategory = (req.user.category || '').toLowerCase();
+  const allowedRoles = ['owner', 'super admin', 'admin'];
+  if (!allowedRoles.includes(userRole) && userCategory !== 'super admin' && userCategory !== 'admin') {
+    return res.status(403).json({ success: false, message: "Forbidden: Only Admin or Owner can manage franchise profiles" });
+  }
+
+  try {
+    const result = await db.collection('franchises').deleteOne({ id: franId });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: "Franchise profile not found" });
+    }
+
+    await writeAuditLog('franchise_deleted', 'franchise', franId, null, null, req);
+    io.to('sync_global').emit('franchise_deleted', { franchiseId: franId });
+
+    res.json({ success: true, message: "Franchise profile successfully deleted" });
+  } catch (err) {
+    console.error("Delete franchise failed:", err);
+    res.status(500).json({ success: false, message: "Failed to delete franchise" });
+  }
+});
+
+// REST API - Fetch franchise supply orders
+app.get('/api/franchise-supply-orders', verifyJWT, async (req, res) => {
+  try {
+    const orders = await db.collection('franchise_supply_orders').find().toArray();
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch franchise supply orders" });
+  }
+});
+
+// REST API - Dispatch franchise supply order
+app.post('/api/franchise-supply-orders', verifyJWT, async (req, res) => {
+  const order = req.body;
+  if (!order.franchiseId || !order.items || order.items.length === 0) {
+    return res.status(400).json({ success: false, message: "Invalid franchise supply order transaction" });
+  }
+
+  try {
+    const orderId = order.id || "fso-" + Date.now();
+    const cleanOrder = {
+      id: orderId,
+      franchiseId: order.franchiseId,
+      date: order.date || new Date().toISOString(),
+      items: order.items,
+      subtotal: parseFloat(order.subtotal || 0),
+      tax: parseFloat(order.tax || 0),
+      grandTotal: parseFloat(order.grandTotal || 0),
+      paymentStatus: order.paymentStatus || "pending",
+      notes: order.notes || "",
+      cashierId: req.user.id,
+      createdAt: new Date().toISOString()
+    };
+
+    await db.collection('franchise_supply_orders').updateOne(
+      { id: orderId },
+      { $set: cleanOrder },
+      { upsert: true }
+    );
+
+    await writeAuditLog('franchise_order_created', 'franchise_order', orderId, null, cleanOrder, req);
+    io.to('sync_global').emit('franchise_order_created', { order: cleanOrder });
+
+    res.json({ success: true, id: orderId, order: cleanOrder });
+  } catch (err) {
+    console.error("Save franchise supply order failed:", err);
+    res.status(500).json({ success: false, message: "Failed to save franchise supply order" });
+  }
+});
+
 // REST API - Fetch all user accounts
 app.get('/api/users', verifyJWT, async (req, res) => {
+  const category = (req.user.category || req.user.role || 'employee').toLowerCase().trim();
+  const isSuperAdmin = category.includes('super');
+  const isAdmin = category.includes('admin') || req.user.role.toLowerCase().includes('admin');
+  
+  if (!isSuperAdmin && !isAdmin) {
+    return res.status(403).json({ success: false, message: "Forbidden: Only administrators can view the user directory" });
+  }
+
   try {
     // Exclude password hashes from the return payload
     const users = await db.collection('users').find({}, { projection: { password: 0 } }).toArray();
@@ -1523,7 +1814,13 @@ app.post('/api/users', verifyJWT, async (req, res) => {
 // REST API - Fetch system audit logs
 app.get('/api/audit-logs', verifyJWT, async (req, res) => {
   try {
-    const logs = await db.collection('audit_logs').find().toArray();
+    const category = (req.user.category || req.user.role || 'employee').toLowerCase().trim();
+    let query = {};
+    if (!category.includes('super')) {
+      // Non-super-admin: ONLY retrieve their own activities
+      query = { performedBy: req.user.username };
+    }
+    const logs = await db.collection('audit_logs').find(query).toArray();
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch audit log logs" });
