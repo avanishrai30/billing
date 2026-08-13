@@ -1,17 +1,39 @@
 // Central Frontend API Client Core (V3)
-function getApiBaseUrl() {
-  const customUrl = localStorage.getItem("aiavro_backend_url");
-  if (customUrl && customUrl.trim()) {
-    return customUrl.trim().replace(/\/+$/, '');
-  }
-  if (typeof window !== 'undefined') {
-    if (window.VC_API_URL) return window.VC_API_URL.replace(/\/+$/, '');
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
+
+/**
+ * Resolves the backend API base URL with strict environment distinction:
+ * - Production (Vercel, *.vercel.app, *.vcorganics.com, custom domains):
+ *   Always fixed to 'https://api.vcorganics.com'.
+ *   Stale localStorage values CANNOT override production unless explicit debug mode is enabled.
+ * - Development (localhost, 127.0.0.1, file://):
+ *   Allows local dev overrides or defaults to 'http://localhost:8181' (or window.location.origin if on port 8181).
+ * - Debug Mode: Enabled via localStorage.getItem("aiavro_debug_mode") === "true" or query ?debug_api=true.
+ */
+function resolveBackendUrl() {
+  if (typeof window === 'undefined') return 'https://api.vcorganics.com';
+
+  const host = window.location.hostname;
+  const isLocalDev = host === 'localhost' || host === '127.0.0.1' || host === '' || window.location.protocol === 'file:';
+  const isExplicitDebug = localStorage.getItem("aiavro_debug_mode") === "true" ||
+                          new URLSearchParams(window.location.search).get("debug_api") === "true";
+
+  // Development environment or explicit debug override
+  if (isLocalDev || isExplicitDebug) {
+    const customUrl = localStorage.getItem("aiavro_backend_url");
+    if (customUrl && customUrl.trim()) {
+      return customUrl.trim().replace(/\/+$/, '');
+    }
+    if (isLocalDev) {
       return window.location.port === '8181' ? window.location.origin : 'http://localhost:8181';
     }
   }
+
+  // Production environment: Always fixed production API
   return 'https://api.vcorganics.com';
+}
+
+function getApiBaseUrl() {
+  return resolveBackendUrl();
 }
 
 async function request(url, options = {}) {
@@ -69,5 +91,7 @@ async function request(url, options = {}) {
 // Global api namespace
 window.api = {
   request,
-  getBaseUrl: getApiBaseUrl
+  getBaseUrl: getApiBaseUrl,
+  resolveBackendUrl
 };
+window.resolveBackendUrl = resolveBackendUrl;

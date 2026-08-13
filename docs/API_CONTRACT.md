@@ -1,6 +1,18 @@
-# API Contract Specifications - VC Organic ERP V3 (Stage 05 Clean Architecture)
+# API Contract Specifications - VC Organic ERP V3
 
-This document lists the strict specification constraints for every frontend network request and its matching backend endpoint handler.
+This document lists the strict specification constraints for every frontend network request, environment base URL resolution, and backend endpoint handler.
+
+---
+
+## 0. Frontend Production API Resolution Architecture
+
+All frontend network requests dispatch through `frontend-api/client.js` (`resolveBackendUrl()`):
+
+| Environment / Host | Resolved API Base URL | Behavior & Overrides |
+| :--- | :--- | :--- |
+| **Production** (`*.vercel.app`, `*.vcorganics.com`, custom domains) | `https://api.vcorganics.com` | **STRICT FIXED PRODUCTION**. Stale `localStorage` keys (`aiavro_backend_url`) are ignored to prevent misdirected traffic unless explicit Debug Mode is active (`aiavro_debug_mode === 'true'` or `?debug_api=true`). |
+| **Local Development** (`localhost`, `127.0.0.1`, `file://`) | `http://localhost:8181` | Defaults to local gateway or `window.location.origin` (if running on port 8181). `localStorage` custom override is permitted for local testing. |
+| **Debug Mode** | `localStorage.getItem("aiavro_backend_url")` | Explicitly enabled when configuring a custom server URL via UI or `?debug_api=true`. |
 
 ---
 

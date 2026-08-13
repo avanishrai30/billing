@@ -2453,7 +2453,7 @@
           try {
             const cachedName = localStorage.getItem("aiavro_active_biz_name");
             const cachedLogo = localStorage.getItem("aiavro_active_biz_logo");
-            const backendUrl = localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com';
+            const backendUrl = (typeof window.resolveBackendUrl === 'function') ? window.resolveBackendUrl() : 'https://api.vcorganics.com';
             if (cachedName) {
               document.getElementById("login-brand-name").innerText = cachedName + " Billing OS";
             }
@@ -2533,7 +2533,7 @@
             const cachedSubtitle = localStorage.getItem("aiavro_active_biz_subtitle");
             const cachedLogo = localStorage.getItem("aiavro_active_biz_logo");
             const cachedGstin = localStorage.getItem("aiavro_active_biz_gstin");
-            const backendUrl = localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com';
+            const backendUrl = (typeof window.resolveBackendUrl === 'function') ? window.resolveBackendUrl() : 'https://api.vcorganics.com';
             
             if (cachedName) {
               const nameEl = document.getElementById("sidebar-brand-name");
@@ -5741,7 +5741,7 @@
       // Socket Remote Scanner State
       scannerConnected: false,
       scannerSessionId: null,
-      backendUrl: localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com',
+      backendUrl: (typeof window.resolveBackendUrl === 'function') ? window.resolveBackendUrl() : 'https://api.vcorganics.com',
       socket: null
     };
 
@@ -6007,8 +6007,13 @@
         return;
       }
       localStorage.setItem("aiavro_backend_url", val);
-      state.backendUrl = val;
-      triggerAlert(`API Server URL updated to: ${val}`, "success");
+      if (val !== 'https://api.vcorganics.com') {
+        localStorage.setItem("aiavro_debug_mode", "true");
+      } else {
+        localStorage.removeItem("aiavro_debug_mode");
+      }
+      state.backendUrl = (typeof window.resolveBackendUrl === 'function') ? window.resolveBackendUrl() : val;
+      triggerAlert(`API Server URL updated to: ${state.backendUrl}`, "success");
       document.getElementById("login-url-config-box").style.display = "none";
       loadPublicSettings(); // Reload settings from new URL
     }
@@ -6066,16 +6071,9 @@
     }
 
     function loadDatabaseState() {
-      // Auto-correct misspelled backend URL in localStorage if present from previous sessions
-      const storedUrl = localStorage.getItem("aiavro_backend_url");
-      if (storedUrl && storedUrl.includes("vcorganic.com") && !storedUrl.includes("vcorganics.com")) {
-        console.log("[Engine] Correcting misspelled backend URL in localStorage...");
-        localStorage.setItem("aiavro_backend_url", "https://api.vcorganics.com");
-      }
-
       state.theme = localStorage.getItem("aiavro_theme") || 'light';
       state.showProductImagesInTables = localStorage.getItem("aiavro_show_product_images") !== 'false';
-      state.backendUrl = localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com';
+      state.backendUrl = (typeof window.resolveBackendUrl === 'function') ? window.resolveBackendUrl() : 'https://api.vcorganics.com';
 
       // Load cached business details to prevent layout/logo flickers on refresh
       const cachedBizId = localStorage.getItem("aiavro_active_biz_id");
