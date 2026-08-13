@@ -410,7 +410,83 @@ router.delete('/:id', verifyJWT, async (req, res) => {
   }
 });
 
-// POST /api/v1/products/import - Bulk import products
+// ==================== STAGE 09 INTELLIGENT BULK IMPORT ENDPOINTS ====================
+const bulkImportService = require('../services/bulkImportService');
+
+// POST /api/v1/products/import/preview - Read-only Pre-validation & Preview
+router.post('/import/preview', verifyJWT, async (req, res) => {
+  const { db } = getContext();
+  const rawRows = req.body.rows || req.body.products || req.body.newProducts;
+  if (!Array.isArray(rawRows)) {
+    return res.status(400).json({ success: false, message: "Rows array is required for preview" });
+  }
+
+  try {
+    const previewResult = await bulkImportService.validateAndPreview(db, rawRows, {
+      columnMapping: req.body.columnMapping,
+      importId: req.body.importId,
+      strategy: req.body.strategy,
+      defaultLocationId: req.body.defaultLocationId || req.user?.assignedStoreId || 'default'
+    });
+
+    res.json(previewResult);
+  } catch (err) {
+    console.error("[BulkImport] Preview error:", err);
+    res.status(500).json({ success: false, message: err.message || "Error generating import preview" });
+  }
+});
+
+// POST /api/v1/products/import/commit - Transactional Batch Commit with Authoritative Inventory
+router.post('/import/commit', verifyJWT, async (req, res) => {
+  const { db, io } = getContext();
+  const { importId, rows, options } = req.body;
+  if (!importId || !Array.isArray(rows)) {
+    return res.status(400).json({ success: false, message: "importId and rows array are required for commit" });
+  }
+
+  try {
+    const commitResult = await bulkImportService.commitImport(
+      db,
+      io,
+      importId,
+      rows,
+      options || {},
+      req.user,
+      req
+    );
+
+    res.json(commitResult);
+  } catch (err) {
+    console.error("[BulkImport] Commit error:", err);
+    res.status(500).json({ success: false, message: err.message || "Error executing import commit" });
+  }
+});
+
+// GET /api/v1/products/import/:importId - Status of an import session
+router.get('/import/:importId', verifyJWT, async (req, res) => {
+  const { db } = getContext();
+  try {
+    const session = await db.collection('import_sessions').findOne({ importId: req.params.importId });
+    if (!session) return res.status(404).json({ success: false, message: "Import session not found" });
+    res.json({ success: true, session });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error fetching import session status" });
+  }
+});
+
+// GET /api/v1/products/import/:importId/errors - Detailed error log for an import session
+router.get('/import/:importId/errors', verifyJWT, async (req, res) => {
+  const { db } = getContext();
+  try {
+    const session = await db.collection('import_sessions').findOne({ importId: req.params.importId });
+    if (!session) return res.status(404).json({ success: false, message: "Import session not found" });
+    res.json({ success: true, errors: session.summary?.errors || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error fetching import error log" });
+  }
+});
+
+// POST /api/v1/products/import - Legacy Wrapper (backward-compatible)
 router.post('/import', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
   const products = req.body.newProducts || req.body.products;
@@ -419,51 +495,27 @@ router.post('/import', verifyJWT, async (req, res) => {
   }
 
   try {
-    let importedCount = 0;
-    const now = new Date().toISOString();
+    const importId = `imp-leg-${Date.now()}`;
+    const preview = await bulkImportService.validateAndPreview(db, products, {
+      strategy: 'ADD_AND_UPDATE',
+      defaultLocationId: req.user?.assignedStoreId || 'default'
+    });
 
-    for (const prod of products) {
-      if (!prod.sku || !prod.name) continue;
+    const commitResult = await bulkImportService.commitImport(
+      db,
+      io,
+      importId,
+      preview.rows,
+      { strategy: 'ADD_AND_UPDATE', defaultLocationId: req.user?.assignedStoreId || 'default' },
+      req.user,
+      req
+    );
 
-      const productId = prod.id || `prd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-      const cleanSku = String(prod.sku).trim();
-      const primaryBarcode = String(prod.barcode || cleanSku).trim();
-      const sellingPrice = prod.sellingPrice !== undefined ? prod.sellingPrice : (prod.price || 0);
-      const purchasePrice = prod.purchasePrice !== undefined ? prod.purchasePrice : (prod.costPrice !== undefined ? prod.costPrice : (prod.cost || 0));
-
-      const productDoc = {
-        ...prod,
-        id: productId,
-        sku: cleanSku,
-        barcode: primaryBarcode,
-        sellingPrice,
-        purchasePrice,
-        price: sellingPrice,
-        cost: purchasePrice,
-        costPrice: purchasePrice,
-        type: (prod.type || 'OWN').toUpperCase(),
-        sellingMode: prod.sellingMode || 'packaged',
-        status: prod.status || 'active',
-        isArchived: false,
-        updatedAt: now
-      };
-
-      await db.collection('products').updateOne(
-        { sku: cleanSku },
-        {
-          $set: productDoc,
-          $setOnInsert: { createdAt: now }
-        },
-        { upsert: true }
-      );
-
-      await syncProductBarcodes(db, productId, primaryBarcode, prod.barcodes || [], prod.variants || []);
-      importedCount++;
-    }
-
-    await auditService.writeAuditLog('product_imported', 'inventory', 'bulk', null, { count: importedCount }, req);
-    if (io) io.to('sync_global').emit('products_imported', { count: importedCount });
-    res.json({ success: true, imported: importedCount });
+    res.json({
+      success: true,
+      imported: (commitResult.summary.imported || 0) + (commitResult.summary.updated || 0),
+      summary: commitResult.summary
+    });
   } catch (err) {
     console.error("Bulk import failed:", err);
     res.status(500).json({ success: false, message: "Server error importing products" });
@@ -471,3 +523,5 @@ router.post('/import', verifyJWT, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.syncProductBarcodes = syncProductBarcodes;
+

@@ -46,6 +46,33 @@ window.api.products = {
     });
   },
 
+  // Bulk Import Preview (Read-Only)
+  async importPreview(previewData) {
+    return await window.api.request('/api/v1/products/import/preview', {
+      method: 'POST',
+      body: JSON.stringify(previewData)
+    });
+  },
+
+  // Bulk Import Commit (Transactional)
+  async importCommit(commitData) {
+    return await window.api.request('/api/v1/products/import/commit', {
+      method: 'POST',
+      body: JSON.stringify(commitData)
+    });
+  },
+
+  // Bulk Import Session Status
+  async importStatus(importId) {
+    return await window.api.request(`/api/v1/products/import/${encodeURIComponent(importId)}`);
+  },
+
+  // Bulk Import Error Log
+  async importErrors(importId) {
+    return await window.api.request(`/api/v1/products/import/${encodeURIComponent(importId)}/errors`);
+  },
+
+  // Legacy Bulk Import Wrapper
   async import(importData) {
     return await window.api.request('/api/v1/products/import', {
       method: 'POST',
