@@ -158,11 +158,42 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+const ALLOWED_CORS_ORIGINS = [
+  'https://billing.vcorganics.com',
+  'https://vcorganics.com',
+  'https://www.vcorganics.com',
+  'http://localhost:8181',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:8181',
+  'http://127.0.0.1:5500'
+];
+
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (
+      ALLOWED_CORS_ORIGINS.includes(origin) ||
+      origin.endsWith('.vcorganics.com') ||
+      origin.endsWith('.vercel.app') ||
+      /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  credentials: true
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'X-Request-Id',
+    'x-request-id'
+  ],
+  credentials: true,
+  optionsSuccessStatus: 204
 }));
 
 app.use(express.json({ limit: '15mb' }));
