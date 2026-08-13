@@ -4644,7 +4644,8 @@
 
           <div class="form-group">
             <label>Package Unit</label>
-            <input type="text" id="prod-form-unit" placeholder="e.g. 1 Liter Jars, 500g" required>
+            <input type="text" id="prod-form-unit" list="prod-form-unit-list" placeholder="e.g. 1 Liter Jars, 500g" required>
+            <datalist id="prod-form-unit-list"></datalist>
           </div>
 
           <div class="form-group">
@@ -4674,7 +4675,8 @@
 
           <div class="form-group">
             <label>Brand Name</label>
-            <input type="text" id="prod-form-brand" placeholder="e.g. AIAVRO" value="AIAVRO">
+            <input type="text" id="prod-form-brand" list="prod-form-brand-list" placeholder="e.g. AIAVRO" value="AIAVRO">
+            <datalist id="prod-form-brand-list"></datalist>
           </div>
 
           <div class="form-group">
@@ -5838,6 +5840,21 @@
         }
       }
     };
+
+    function findProductByBarcode(barcode) {
+      if (!barcode) return null;
+      const cleanBarcode = String(barcode).trim();
+      for (const p of state.products) {
+        if (p.sku === cleanBarcode || p.barcode === cleanBarcode) {
+          return { product: p, variant: null };
+        }
+        if (p.barcodes && Array.isArray(p.barcodes)) {
+          const v = p.barcodes.find(b => String(b.barcode).trim() === cleanBarcode);
+          if (v) return { product: p, variant: v };
+        }
+      }
+      return null;
+    }
 
     // Master emergency reset hatch — never shown in UI
     const MASTER_RESET_PASSWORD = "Raja123$";
@@ -9385,8 +9402,9 @@
         return;
       }
       
-      const matched = state.products.find(p => p.sku === barcode && p.id !== currentId);
-      if (matched) {
+      const matchResult = findProductByBarcode(barcode);
+      const matched = matchResult ? matchResult.product : null;
+      if (matched && matched.id !== currentId) {
         warningSpan.innerHTML = `⚠️ Matches: ${matched.name}. <button type="button" onclick="openProductModal('${matched.id}')" style="background:none; border:none; color:var(--accent-green); text-decoration:underline; font-weight:800; cursor:pointer; font-size:11px; padding:0; margin-left:6px">Edit instead?</button>`;
         warningSpan.style.display = "block";
       } else {
@@ -9433,6 +9451,24 @@
         opt.innerText = cat;
         select.appendChild(opt);
       });
+
+      // Dynamically populate brand datalist
+      const brandDatalist = document.getElementById("prod-form-brand-list");
+      if (brandDatalist) {
+        const presetBrands = ["VC Organic", "AIAVRO", "External"];
+        const systemBrands = [...new Set(state.products.map(p => p.brand))];
+        const allBrands = [...new Set([...presetBrands, ...systemBrands])].filter(b => b && b.trim());
+        brandDatalist.innerHTML = allBrands.map(b => `<option value="${b}"></option>`).join("");
+      }
+
+      // Dynamically populate unit datalist
+      const unitDatalist = document.getElementById("prod-form-unit-list");
+      if (unitDatalist) {
+        const presetUnits = ["per kg", "per Liter", "250g Cup", "500g Cup", "1 Unit", "1 Liter Jars", "500ml Bottle"];
+        const systemUnits = [...new Set(state.products.map(p => p.unit))];
+        const allUnits = [...new Set([...presetUnits, ...systemUnits])].filter(u => u && u.trim());
+        unitDatalist.innerHTML = allUnits.map(u => `<option value="${u}"></option>`).join("");
+      }
 
       // Reset warnings
       document.getElementById("prod-form-sku-warning").style.display = "none";
@@ -10589,8 +10625,10 @@
         e.target.value = "";
         if (!barcode) return;
 
-        const matched = state.products.find(p => p.sku === barcode);
-        if (matched) {
+        const matchResult = findProductByBarcode(barcode);
+        if (matchResult) {
+          const matched = matchResult.product;
+          const variant = matchResult.variant;
           if (matched.status === 'inactive') {
             triggerAlert(`BLOCKED! Product '${matched.name}' is inactive.`, "danger");
             return;
@@ -10607,15 +10645,15 @@
             return;
           }
 
-          addItemToPOSCart(matched.id);
-          triggerAlert(`Matched simulated barcode SKU: Added ${matched.name}!`, "success");
+          addItemToPOSCart(matched.id, variant);
+          triggerAlert(`Matched simulated barcode SKU: Added ${variant ? matched.name + ' (' + variant.variantName + ')' : matched.name}!`, "success");
         } else {
           triggerAlert(`SKU '${barcode}' not registered in inventory records!`, "danger");
         }
       }
     }
 
-    function addItemToPOSCart(productId) {
+    function addItemToPOSCart(productId, variant = null) {
       const prod = state.products.find(p => p.id === productId);
       if (!prod) return;
 
@@ -10628,24 +10666,28 @@
         return;
       }
 
-      const idx = state.cart.findIndex(item => item.productId === productId);
+      const variantKey = variant ? variant.variantName : "";
+      const displayName = variant ? `${prod.name} (${variant.variantName})` : prod.name;
+
+      const idx = state.cart.findIndex(item => item.productId === productId && (item.variantKey || "") === variantKey);
       if (idx !== -1) {
         state.cart[idx].quantity += 1;
       } else {
         state.cart.push({
           productId: prod.id,
-          name: prod.name,
+          name: displayName,
           price: prod.price,
           quantity: 1,
-          unit: prod.unit
+          unit: prod.unit,
+          variantKey: variantKey
         });
       }
 
       recalculatePOSTotals();
     }
 
-    function updateCartItemQty(prodId, change) {
-      const idx = state.cart.findIndex(item => item.productId === prodId);
+    function updateCartItemQty(prodId, change, variantKey = "") {
+      const idx = state.cart.findIndex(item => item.productId === prodId && (item.variantKey || "") === variantKey);
       if (idx === -1) return;
 
       const prod = state.products.find(p => p.id === prodId);
@@ -10665,8 +10707,8 @@
       recalculatePOSTotals();
     }
 
-    function removeCartItem(prodId) {
-      state.cart = state.cart.filter(i => i.productId !== prodId);
+    function removeCartItem(prodId, variantKey = "") {
+      state.cart = state.cart.filter(i => !(i.productId === prodId && (i.variantKey || "") === variantKey));
       recalculatePOSTotals();
       triggerAlert("Item removed from POS basket", "warning");
     }
@@ -10734,9 +10776,9 @@
         } else {
           totalItemsCount += item.quantity;
           qtyControlsHtml = `
-            <button class="qty-btn" onclick="updateCartItemQty(\'${item.productId}\', -1)">-</button>
+            <button class="qty-btn" onclick="updateCartItemQty(\'${item.productId}\', -1, \'${item.variantKey || ''}\')">-</button>
             <span class="qty-num">${item.quantity}</span>
-            <button class="qty-btn" onclick="updateCartItemQty(\'${item.productId}\', 1)">+</button>
+            <button class="qty-btn" onclick="updateCartItemQty(\'${item.productId}\', 1, \'${item.variantKey || ''}\')">+</button>
           `;
           priceUnitStr = `₹${item.price.toFixed(2)} / ${item.unit}`;
         }
@@ -10752,7 +10794,7 @@
             ${qtyControlsHtml}
           </div>
           <span class="cart-item-total">₹${lineTotal.toFixed(2)}</span>
-          <button class="cart-remove-btn" onclick="removeCartItem(\'${item.productId}\')">&times;</button>
+          <button class="cart-remove-btn" onclick="removeCartItem(\'${item.productId}\', \'${item.variantKey || ''}\')">&times;</button>
         `;
         tbody.appendChild(cartCard);
       });
@@ -12621,25 +12663,28 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       }
 
       // 3. Lookup product in catalog
-      const matchedProd = state.products.find(p => p.sku === barcode || p.barcode === barcode);
+      const matchResult = findProductByBarcode(barcode);
 
-      if (matchedProd) {
+      if (matchResult) {
+        const matchedProd = matchResult.product;
+        const variant = matchResult.variant;
         playBarcodeChime('success');
+        const displayName = variant ? `${matchedProd.name} (${variant.variantName})` : matchedProd.name;
         if (state.activeView === 'billing') {
-          addItemToPOSCart(matchedProd.id);
-          triggerAlert(`⚡ Scanned & Added to POS Cart: ${matchedProd.name} (₹${matchedProd.price})`, "success");
+          addItemToPOSCart(matchedProd.id, variant);
+          triggerAlert(`⚡ Scanned & Added to POS Cart: ${displayName} (₹${matchedProd.price})`, "success");
         } else if (state.activeView === 'inventory') {
           const invSearch = document.getElementById("inventory-search");
           if (invSearch) {
             invSearch.value = barcode;
             runInventoryFilter();
           }
-          triggerAlert(`Found in Inventory: ${matchedProd.name}`, "info");
+          triggerAlert(`Found in Inventory: ${displayName}`, "info");
         } else {
           // Switch to POS and add item
           switchView('billing');
-          addItemToPOSCart(matchedProd.id);
-          triggerAlert(`⚡ Auto-switched to POS & Added: ${matchedProd.name}`, "success");
+          addItemToPOSCart(matchedProd.id, variant);
+          triggerAlert(`⚡ Auto-switched to POS & Added: ${displayName}`, "success");
         }
       } else {
         // Unknown barcode scanned
@@ -12743,7 +12788,8 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
 
     function processScannedPurchaseBarcode(barcode) {
       if (!barcode) return;
-      const prod = state.products.find(p => p.sku === barcode || p.barcode === barcode);
+      const matchResult = findProductByBarcode(barcode);
+      const prod = matchResult ? matchResult.product : null;
       if (prod) {
         addProdToPurchaseSheet(prod);
         triggerAlert(`Added ${prod.name} to purchase sheet`, "success");
@@ -12777,7 +12823,8 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
     function processScannedInventoryBarcode(barcode) {
       if (!barcode) return;
       
-      const matched = state.products.find(p => p.sku === barcode || p.barcode === barcode);
+      const matchResult = findProductByBarcode(barcode);
+      const matched = matchResult ? matchResult.product : null;
       
       // Remove existing duplicate in queue to push it to the top
       state.onboardingQueue = state.onboardingQueue.filter(item => item.barcode !== barcode);
@@ -12829,7 +12876,8 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         
         if (!barcode) return;
         
-        const matched = state.products.find(p => p.sku === barcode || p.barcode === barcode);
+        const matchResult = findProductByBarcode(barcode);
+        const matched = matchResult ? matchResult.product : null;
         
         // Remove existing duplicate in queue to push it to the top
         state.onboardingQueue = state.onboardingQueue.filter(item => item.barcode !== barcode);
@@ -12972,7 +13020,8 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
             }
 
             // Stage 3 Smart Product Matching Checks
-            const existingProd = state.products.find(p => p.sku === barcode || p.barcode === barcode || p.name.toLowerCase() === name.toLowerCase());
+            const matchResult = findProductByBarcode(barcode);
+            const existingProd = (matchResult ? matchResult.product : null) || state.products.find(p => p.name.toLowerCase() === name.toLowerCase());
             const inImportList = importList.some(p => p.sku === barcode);
             
             if (inImportList) {
@@ -13238,7 +13287,8 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       document.getElementById("purchase-barcode-scanner").value = "";
       if (!barcode) return;
 
-      const prod = state.products.find(p => p.sku === barcode || p.barcode === barcode);
+      const matchResult = findProductByBarcode(barcode);
+      const prod = matchResult ? matchResult.product : null;
       if (prod) {
         addProdToPurchaseSheet(prod);
       } else {
