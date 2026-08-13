@@ -1,9 +1,12 @@
 const express = require('express');
-const { getContext, verifyJWT, writeAuditLog, recordInventoryMovement } = require('./context');
+const { getContext, verifyJWT } = require('./context');
+const inventoryService = require('../services/inventoryService');
+const auditService = require('../services/auditService');
 const PDFDocument = require('pdfkit');
 
 const router = express.Router();
 
+// GET /api/v1/invoices - Fetch all non-archived invoices
 router.get('/', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
@@ -19,6 +22,21 @@ router.get('/', verifyJWT, async (req, res) => {
   }
 });
 
+// GET /api/v1/invoices/:id - Fetch single invoice
+router.get('/:id', verifyJWT, async (req, res) => {
+  const { db } = getContext();
+  try {
+    const invoice = await db.collection('invoices').findOne({
+      $or: [{ invoiceNumber: req.params.id }, { id: req.params.id }]
+    });
+    if (!invoice) return res.status(404).json({ success: false, message: "Invoice not found" });
+    res.json(invoice);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch invoice" });
+  }
+});
+
+// POST /api/v1/invoices - Create POS invoice & consume inventory stock via inventoryService
 router.post('/', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
   const invoiceData = req.body;
@@ -37,92 +55,90 @@ router.post('/', verifyJWT, async (req, res) => {
 
     await db.collection('invoices').insertOne(invoiceDoc);
 
-    // Record inventory movements for sold items
-    for (const item of invoiceDoc.items) {
-      if (item.productId) {
-        await recordInventoryMovement(
-          item.productId,
-          invoiceDoc.storeId,
-          'sale',
-          -Math.abs(item.quantity),
-          'invoice',
-          invoiceNumber,
-          req.user.username
-        );
-      }
-    }
+    // Consume stock via domain inventoryService
+    await inventoryService.consumeStock(
+      invoiceDoc.items,
+      invoiceDoc.storeId,
+      invoiceNumber,
+      req.user ? req.user.username : 'system'
+    );
 
-    await writeAuditLog('invoice_created', 'billing', invoiceNumber, null, invoiceDoc, req);
-    io.to(`store_${invoiceDoc.storeId}`).emit('invoice_created', { invoiceNumber });
+    await auditService.writeAuditLog('invoice_created', 'billing', invoiceNumber, null, invoiceDoc, req);
+    if (io) {
+      io.to(`store_${invoiceDoc.storeId}`).emit('invoice_created', { invoiceNumber });
+    }
     res.json({ success: true, invoice: invoiceDoc });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error creating invoice" });
   }
 });
 
+// POST /api/v1/invoices/:id/void - Void invoice & revert stock via inventoryService
 router.post('/:id/void', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
   const invoiceId = req.params.id;
 
   try {
-    const invoice = await db.collection('invoices').findOne({ invoiceNumber: invoiceId });
+    const invoice = await db.collection('invoices').findOne({
+      $or: [{ invoiceNumber: invoiceId }, { id: invoiceId }]
+    });
     if (!invoice) return res.status(404).json({ success: false, message: "Invoice not found" });
     if (invoice.isArchived) return res.status(400).json({ success: false, message: "Invoice already voided" });
 
     await db.collection('invoices').updateOne(
-      { invoiceNumber: invoiceId },
+      { _id: invoice._id },
       { $set: { isArchived: true, voidedAt: new Date().toISOString() } }
     );
 
-    // Revert inventory
+    // Revert stock via domain inventoryService
     if (invoice.items) {
-      for (const item of invoice.items) {
-        if (item.productId) {
-          await recordInventoryMovement(
-            item.productId,
-            invoice.storeId,
-            'void_return',
-            Math.abs(item.quantity),
-            'invoice_void',
-            invoiceId,
-            req.user.username
-          );
-        }
-      }
+      await inventoryService.revertStock(
+        invoice.items,
+        invoice.storeId,
+        'void_sale',
+        'invoice_void',
+        invoice.invoiceNumber || invoiceId,
+        req.user ? req.user.username : 'system'
+      );
     }
 
-    await writeAuditLog('invoice_voided', 'billing', invoiceId, null, null, req);
-    io.to(`store_${invoice.storeId}`).emit('invoice_voided', { invoiceId });
+    await auditService.writeAuditLog('invoice_voided', 'billing', invoice.invoiceNumber || invoiceId, null, null, req);
+    if (io) {
+      io.to(`store_${invoice.storeId}`).emit('invoice_voided', { invoiceId });
+    }
     res.json({ success: true, message: "Invoice voided" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error voiding invoice" });
   }
 });
 
+// GET /api/v1/invoices/:invoiceNumber/pdf - PDF Generation
 router.get('/:invoiceNumber/pdf', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
-    const invoice = await db.collection('invoices').findOne({ invoiceNumber: req.params.invoiceNumber });
+    const invoice = await db.collection('invoices').findOne({
+      $or: [{ invoiceNumber: req.params.invoiceNumber }, { id: req.params.invoiceNumber }]
+    });
     if (!invoice) return res.status(404).send("Not found");
 
     const doc = new PDFDocument();
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=Invoice-${invoice.invoiceNumber}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=Invoice-${invoice.invoiceNumber || invoice.id}.pdf`);
     doc.pipe(res);
 
-    doc.fontSize(20).text(`Invoice ${invoice.invoiceNumber}`, { align: 'center' });
+    doc.fontSize(20).text(`Invoice ${invoice.invoiceNumber || invoice.id}`, { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12).text(`Date: ${invoice.createdAt}`);
+    doc.fontSize(12).text(`Date: ${invoice.createdAt || invoice.date}`);
     doc.text(`Store ID: ${invoice.storeId}`);
     doc.text(`Customer: ${invoice.customerName || 'Walk-in'}`);
     doc.moveDown();
 
     (invoice.items || []).forEach(item => {
-      doc.text(`${item.name} - Qty: ${item.quantity} - Price: ${item.price}`);
+      doc.text(`${item.name} - Qty: ${item.quantity} - Price: ₹${item.price}`);
     });
 
     doc.moveDown();
-    doc.text(`Total: ${invoice.grandTotal || 0}`);
+    doc.text(`Total: ₹${invoice.grandTotal || invoice.grandtotal || 0}`);
     doc.end();
   } catch (err) {
     res.status(500).send("Error generating PDF");
