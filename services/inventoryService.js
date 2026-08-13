@@ -283,10 +283,13 @@ const inventoryService = {
       return { success: true, movements: completedDeductions };
     } catch (err) {
       // 3. Rollback any completed deductions if an error occurs
-      console.error(`[InventoryService] Error in consumeStockBatch for ref ${referenceId}, initiating rollback...`, err);
+      console.error(`[InventoryService] Error in consumeStockBatch for ref ${referenceId}, initiating compensating rollback...`, err);
+      const rollbackSuccesses = [];
+      const rollbackFailures = [];
+
       for (const comp of completedDeductions) {
         try {
-          await this.recordMovementAtomic({
+          const rbRes = await this.recordMovementAtomic({
             productId: comp.productId,
             locationId,
             locationType: 'STORE',
@@ -295,12 +298,32 @@ const inventoryService = {
             referenceType: 'rollback',
             referenceId,
             performedBy: 'system',
-            notes: `Rollback failed batch checkout #${referenceId}`
+            notes: `Compensating rollback for failed checkout #${referenceId}`
           });
+          rollbackSuccesses.push({ productId: comp.productId, quantity: comp.quantity, res: rbRes });
         } catch (rbErr) {
-          console.error(`[InventoryService] Rollback error for product ${comp.productId}:`, rbErr);
+          console.error(`[InventoryService] Critical rollback failure for product ${comp.productId}:`, rbErr);
+          rollbackFailures.push({ productId: comp.productId, quantity: comp.quantity, error: rbErr.message });
         }
       }
+
+      if (rollbackFailures.length > 0) {
+        await auditService.writeAuditLog(
+          'CRITICAL_ROLLBACK_FAILURE',
+          'inventory',
+          referenceId,
+          null,
+          { referenceId, locationId, rollbackFailures, rollbackSuccesses },
+          null
+        );
+      }
+
+      err.rollbackStatus = {
+        attempted: completedDeductions.length,
+        succeeded: rollbackSuccesses.length,
+        failed: rollbackFailures.length,
+        failures: rollbackFailures
+      };
       throw err;
     }
   },
@@ -340,10 +363,13 @@ const inventoryService = {
 
       return { success: true, movements: completedAdditions };
     } catch (err) {
-      console.error(`[InventoryService] Error in addStockBatch for ref ${referenceId}, initiating rollback...`, err);
+      console.error(`[InventoryService] Error in addStockBatch for ref ${referenceId}, initiating compensating rollback...`, err);
+      const rollbackSuccesses = [];
+      const rollbackFailures = [];
+
       for (const comp of completedAdditions) {
         try {
-          await this.recordMovementAtomic({
+          const rbRes = await this.recordMovementAtomic({
             productId: comp.productId,
             locationId,
             locationType: 'STORE',
@@ -352,13 +378,33 @@ const inventoryService = {
             referenceType: 'rollback',
             referenceId,
             performedBy: 'system',
-            notes: `Rollback failed purchase entry #${referenceId}`,
+            notes: `Compensating rollback for failed purchase #${referenceId}`,
             allowNegative: true
           });
+          rollbackSuccesses.push({ productId: comp.productId, quantity: comp.quantity, res: rbRes });
         } catch (rbErr) {
-          console.error(`[InventoryService] Purchase rollback error:`, rbErr);
+          console.error(`[InventoryService] Critical purchase rollback failure for product ${comp.productId}:`, rbErr);
+          rollbackFailures.push({ productId: comp.productId, quantity: comp.quantity, error: rbErr.message });
         }
       }
+
+      if (rollbackFailures.length > 0) {
+        await auditService.writeAuditLog(
+          'CRITICAL_ROLLBACK_FAILURE',
+          'inventory',
+          referenceId,
+          null,
+          { referenceId, locationId, rollbackFailures, rollbackSuccesses },
+          null
+        );
+      }
+
+      err.rollbackStatus = {
+        attempted: completedAdditions.length,
+        succeeded: rollbackSuccesses.length,
+        failed: rollbackFailures.length,
+        failures: rollbackFailures
+      };
       throw err;
     }
   },

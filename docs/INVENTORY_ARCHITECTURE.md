@@ -84,23 +84,19 @@ const updateResult = await db.collection('inventory').findOneAndUpdate(
 );
 ```
 
-### Batch Checkout & Rollback Workflow
-```
-POS Checkout Request (Items: A, B, C)
-  │
-  ├── 1. checkStockAvailability(items, locationId)
-  │        ├── If ANY item < requested ──► ABORT with HTTP 400 (INSUFFICIENT_STOCK)
-  │
-  ├── 2. Deduct Item A atomically (OK)
-  ├── 3. Deduct Item B atomically (OK)
-  ├── 4. Deduct Item C atomically (Failed due to race condition)
-  │        └── Catch Error ──► Trigger Automatic Rollback:
-  │              ├── Revert Item B (+B.qty, type: 'VOID')
-  │              ├── Revert Item A (+A.qty, type: 'VOID')
-  │              └── Reject Invoice Creation (Zero partial stock mutations)
-  │
-  └── 5. Commit Invoice & Emit Realtime Socket Event ('inventory.updated')
-```
+### Compensating Rollback Writes Architecture & Failure Modes
+
+Because standard self-hosted single-node MongoDB instances (`mongod` without replica sets) do not support multi-document ACID transactions (`session.withTransaction()`), `consumeStockBatch` and `addStockBatch` employ **Compensating Rollback Writes**:
+
+1. **Pre-flight Availability**: `checkStockAvailability` pre-validates stock levels to prevent failed deductions.
+2. **Item-level Atomic Increments**: Each item is decremented with atomic `$gte: requested` conditions.
+3. **Compensating Rollback Execution**: If any item fails during batch processing:
+   - All completed preceding item deductions are immediately credited back via compensating atomic writes (`type: 'VOID'`).
+   - The invoice creation is aborted with HTTP `400` (`INSUFFICIENT_STOCK`).
+4. **Zero Silent Failures**:
+   - Every compensating write is tracked.
+   - If any compensating write itself fails (e.g. database network disconnect midway through rollback), a high-severity `CRITICAL_ROLLBACK_FAILURE` audit event is logged with full item tracing, and the error object contains `err.rollbackStatus = { attempted, succeeded, failed, failures }`.
+5. **Replica-Set Compatibility**: If MongoDB is upgraded to a replica set in the future, `session.withTransaction()` can wrap these calls seamlessly.
 
 ---
 
