@@ -13992,7 +13992,11 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       let overallPass = true;
 
       modules.forEach(m => {
-        const link = document.querySelector(`.nav-menu a[onclick*="switchView('${m.viewId}')"]`);
+        const links = Array.from(document.querySelectorAll(".nav-menu a"));
+        const link = links.find(a => {
+          const onclickAttr = a.getAttribute("onclick") || "";
+          return onclickAttr.includes(`switchView('${m.viewId}')`);
+        });
         const viewContainer = document.getElementById(`view-${m.viewId}`);
         const rendererFunc = typeof window[m.renderer] === 'function';
 

@@ -1,180 +1,141 @@
-# VC Organic Billing / ERP — Architecture Audit
+# Architecture Audit - VC Organic ERP V3
 
-This document presents a complete audit of the codebase, highlighting configurations, databases, routes, security, and technical debt in preparation for the ERP V3 Enterprise transition.
-
----
-
-## 1. Current Frontend Architecture
-- **Location**: [aiavro_billing_system.html](file:///Users/avanish/Documents/billing%20system/aiavro_billing_system.html)
-- **Framework & Libraries**: Pure Single Page Application (SPA) written in raw HTML5/CSS3 and Vanilla JS.
-  - Load-in scripts via CDNs: FontAwesome (icons), Google Fonts (Montserrat & Inter), Socket.IO client, SheetJS (`xlsx.full.min.js`), PDFKit (stubbed client side).
-- **Core Modules**: POS billing grid, live product listings, customer registry directories, supplier entry boards, franchise CRM registries, user profile management cards, and administrative settings panels.
-- **Routing & State**: Handled using a global `state` object. View changes toggle CSS `.active` classes on dashboard modules.
-- **Asset Loading**: Cached brand preferences (logo, name) are loaded synchronously from local storage on bootstrap before server-side fetch to eliminate old VC Organic placeholders blinking.
+This document presents a complete audit of the codebase, detailing configurations, databases, routes, security mechanisms, and outstanding technical debt under the 16 checklist specifications.
 
 ---
 
-## 2. Current Backend Architecture
-- **Location**: [server.js](file:///Users/avanish/Documents/billing%20system/server.js)
+## 1. Current Architecture
+The system is built as a client-server web application:
+- **Frontend**: A single large HTML file `aiavro_billing_system.html` containing CSS, HTML structures, and Vanilla JavaScript. It communicates with the backend via REST endpoints and Socket.IO real-time channels.
+- **Backend**: Node.js and Express server structured with versioned endpoints (`/api/v1/...`) and modular sub-routers located in the `modules/` directory, backed by a MongoDB database.
+- **Realtime**: Socket.IO handles event broadcasts and pairing scanner connections.
+
+---
+
+## 2. Current Frontend Architecture
+- **Location**: [`aiavro_billing_system.html`](file:///Users/avanish/Documents/billing%20system/aiavro_billing_system.html)
+- **Framework & Libraries**: Pure Single Page Application (SPA) written in raw HTML5, Vanilla CSS, and JavaScript.
+- **State Management**: Managed locally in a global `state` object. Toggling views changes CSS `.active` classes on sections.
+- **Branding**: Sync bootstrap reads cached logo, name, and subtitle from `localStorage` to avoid flash of default templates on initial cold-starts.
+- **API Access Layer**: Calls the central `api` namespace client module, normalizing list query results into flat arrays.
+
+---
+
+## 3. Current Backend Architecture
+- **Location**: [`server.js`](file:///Users/avanish/Documents/billing%20system/server.js) (app listener entry point) and [`modules/`](file:///Users/avanish/Documents/billing%20system/modules) (domain routing components).
 - **Framework**: Express application integrated with HTTP server and Socket.IO listener.
-- **Security & Middlewares**:
-  - **Helmet**: Secures response headers, with Content Security Policy (CSP) and Cross-Origin Resource Policy (CORP) disabled to accommodate remote billing terminals.
-  - **CORS**: Dynamically reflects request origin with authorization credentials enabled.
-  - **Rate Limiting**: Configured for `/api/auth/` (150 requests/15 mins) and `/api/upload` (100 requests/15 mins).
-  - **Express Trust Proxy**: Configured (`app.set('trust proxy', 1)`) to handle reverse proxy routing under Nginx securely.
+- **Sub-routers**: Decoupled from the root context and mounted as middlewares under `/api/v1/`:
+  - `auth` -> [`modules/auth.js`](file:///Users/avanish/Documents/billing%20system/modules/auth.js)
+  - `users` -> [`modules/users.js`](file:///Users/avanish/Documents/billing%20system/modules/users.js)
+  - `products` -> [`modules/products.js`](file:///Users/avanish/Documents/billing%20system/modules/products.js)
+  - `inventory` -> [`modules/inventory.js`](file:///Users/avanish/Documents/billing%20system/modules/inventory.js)
+  - `purchases` -> [`modules/purchases.js`](file:///Users/avanish/Documents/billing%20system/modules/purchases.js)
+  - `billing` -> [`modules/billing.js`](file:///Users/avanish/Documents/billing%20system/modules/billing.js)
+  - `franchise` -> [`modules/franchise.js`](file:///Users/avanish/Documents/billing%20system/modules/franchise.js)
+  - `audit` -> [`modules/audit.js`](file:///Users/avanish/Documents/billing%20system/modules/audit.js)
+  - `settings` -> [`modules/settings.js`](file:///Users/avanish/Documents/billing%20system/modules/settings.js)
+  - `context` -> [`modules/context.js`](file:///Users/avanish/Documents/billing%20system/modules/context.js) (holds Shared MongoDB Context, JWT auth, schema checkers)
 
 ---
 
-## 3. Existing MongoDB Collections
-- `users`: Log-in credentials, hashed passwords, active designations, and assigned store outlets.
-- `stores`: Active retail store outlets registries.
-- `businesses`: Tenant profile parameters (name, subtitle, GSTIN, bank details).
-- `products`: Master product specifications catalog.
-- `product_images`: File storage paths mapped to products.
-- `customers`: CRM directory for retail client phones, emails, and GSTINs.
-- `inventory`: Stock records mapped to store outlets (compound key).
-- `product_barcodes`: Alternative SKU barcodes mapped to products.
-- `purchases`: Supplier stock delivery receipts.
-- `franchises`: CRM registry for franchise partners.
-- `franchise_supply_orders`: Dispatched warehouse orders log.
-- `audit_logs`: Immutable logs tracking user activity.
-- `settings`: Persistent administrative matrices (specifically `role_permissions`).
+## 4. Current MongoDB Collections
+- `users`: Credentials, hashed passwords, active designations, and store outlets.
+- `stores`: Registries for active retail outlets.
+- `businesses`: Tenant profile configurations (name, subtitle, GSTIN, bank info).
+- `products`: Master product catalog.
+- `product_images`: Multi-path image references.
+- `customers`: Client CRM details.
+- `suppliers`: Supplier directory.
+- `inventory`: Stock balances indexed by compound keys `{ productId, storeId }`.
+- `invoices`: Sales records and checks.
+- `purchases`: Supplier stock receipts.
+- `franchises`: Partner parameters.
+- `franchise_supply_orders`: Warehouse dispatch orders.
+- `audit_logs`: Activity log entries.
+- `role_permissions`: Roles and matrix configurations (stored under `{ key: "matrix" }`).
+- `settings`: System configurations (specifically landing logo/titles).
 
 ---
 
-## 4. Existing Indexes
-- `users`: `{ username: 1 }` (unique), `{ email: 1 }` (unique, sparse), `{ phone: 1 }`, `{ role: 1 }`
-- `stores`: `{ code: 1 }` (unique), `{ id: 1 }` (unique)
-- `products`: `{ sku: 1 }` (unique), `{ barcode: 1 }` (unique, sparse), `{ name: "text" }`
-- `product_images`: `{ id: 1 }` (unique), `{ productId: 1 }`
-- `customers`: `{ phone: 1 }`, `{ email: 1 }`, `{ gstin: 1 }`
-- `inventory`: `{ productId: 1, storeId: 1 }` (unique)
-- `invoices`: `{ invoiceNumber: 1 }` (unique), `{ transactionId: 1 }` (unique, sparse)
-- `product_barcodes`: `{ barcode: 1 }`, `{ productId: 1 }`
-- `businesses`: `{ id: 1 }` (unique)
+## 5. Current API Routes
+See [`docs/CURRENT_API_MAP.md`](file:///Users/avanish/Documents/billing%20system/docs/CURRENT_API_MAP.md) for full endpoint schemas. All REST routes are prefix-versioned under `/api/v1`.
 
 ---
 
-## 5. Existing API Endpoints
-- **Authentication**:
-  - `POST /api/auth/login` (Verify credentials and issue JWT)
-  - `GET /api/auth/verify` (Token checks)
-- **User Directories**:
-  - `GET /api/users` (List user directories; admin-only)
-  - `POST /api/users` (Add user account; admin-only)
-  - `POST /api/users/profile` (Update own name and email)
-  - `POST /api/users/change-password` (Update own login password)
-- **Product Catalog**:
-  - `GET /api/products` (Retrieve all products)
-  - `POST /api/products` (Create/Update single product specifications)
-  - `POST /api/products/import` (Sync batch uploaded products)
-- **Invoices & Billing**:
-  - `GET /api/invoices` (Retrieve sales logs)
-  - `POST /api/invoices` (Record POS invoice checkout)
-  - `POST /api/invoices/:id/void` (Void invoice and restore inventory levels)
-- **Purchase Logs**:
-  - `GET /api/purchases` (Retrieve supplier invoices)
-  - `POST /api/purchases` (Record supplier invoice stock intake)
-- **Franchise CRM**:
-  - `GET /api/franchises`
-  - `POST /api/franchises`
-  - `DELETE /api/franchises/:id`
-  - `GET /api/franchise-supply-orders`
-  - `POST /api/franchise-supply-orders`
-- **Audit Logs & RBAC Settings**:
-  - `GET /api/audit-logs` (Personal or global log history)
-  - `GET /api/role-permissions` (Retrieve permissions matrices)
-  - `POST /api/role-permissions` (Save permissions matrices)
-- **Asset Uploads**:
-  - `POST /api/upload/image` (Multer file storage and Sharp compression)
+## 6. Current Socket.IO Events
+- **Client to Server**:
+  - `JOIN_SESSION`: Joins active scanner socket room.
+  - `JOIN_SYNC`: Joins general global updates room (`sync_global`) or store room (`store_<storeId>`).
+  - `USER_HEARTBEAT`: Dispatches heartbeat signals for cashier map.
+- **Server to Client (Broadcast)**:
+  - `rbac_updated`: Evicts users instantly if dynamic permissions change.
+  - `settings_updated`: Synchronizes branding layout.
+  - `products_updated` / `product.updated`: Triggers catalog refreshes.
+  - `invoice_created` / `invoice.created`: Updates billing tables.
 
 ---
 
-## 6. Existing Socket.IO Events
-- **Incoming events**:
-  - `JOIN_SESSION`: Client joins a pairing session room for mobile camera scanners.
-  - `JOIN_SYNC`: Client joins global sync rooms (`sync_global` and `store_<storeId>`).
-  - `USER_HEARTBEAT`: Tracks cashier status in active maps.
-- **Outgoing / Broadcast events**:
-  - `rbac_updated`: Emits permissions matrix updates to force-evict revoked clients immediately.
-  - `PRODUCTS_UPDATED` / `invoice_updated` / `purchase_created` / `franchise_updated` / `franchise_order_created`: Triggers frontend data updates.
+## 7. Current RBAC
+- Dynamic matrix configuration is fetched from `role_permissions` under `{ key: "matrix" }`.
+- Enforces view restrictions for roles: `admin`, `employee`, and `auditor`.
+- **Super Admin Bypass**: Accounts configured with `category: "super admin"` bypass frontend checks and are allowed global access.
 
 ---
 
-## 7. Existing RBAC Implementation
-- Permission configuration is dynamic and retrieved from database matrices (`settings` collection).
-- Toggles view list access permissions for roles: `admin`, `employee`, and `auditor`.
-- **Super Admin Bypass**: Accounts with `category: "super admin"` bypass client-side checks and access restriction logic.
-- **Backend Authorization**: Verified using token credentials extracted inside route handlers (e.g. `req.user.role === 'admin'`).
+## 8. Current Audit System
+- Logs track `performedBy` (username), `role`, `action` (e.g. `billing`, `inventory_updated`), `view` (target module), `details` (human-readable mutations), `storeOutlet`, `timestamp`, and client `ip`.
+- Self-healing migrations run automatically on startup to normalize legacy structure fields.
 
 ---
 
-## 8. Existing Audit Implementation
-- Structured logs record:
-  - `performedBy` (Username)
-  - `role` (Role Designation)
-  - `action` (e.g., `create`, `update`, `delete`, `billing`)
-  - `view` (Target module name)
-  - `details` (Exact product names, prices, invoice codes, or user names altered)
-  - `storeOutlet` (Associated branch outlet)
-  - `timestamp` & `ip` (Server resolved metadata)
-- Self-healing log migration (`migrateAuditLogs()`) runs automatically on startup to backfill structural fields for legacy logs.
+## 9. Current Inventory Model
+- Quantity metrics are tracked per store inside the compound-indexed `inventory` collection.
+- Real-time stock levels are synchronized during checkout, voids, and purchase entry.
+- Dynamic decimal calculations handle weight-based/volume-based loose items (grams, milliliters, etc.) matching rate structures (per kg, per L).
 
 ---
 
-## 9. Existing Product/Inventory Logic
-- **Inventory Mapping**: Map stock levels inside `inventory` records matching unique compound indexes of `{ productId, storeId }`.
-- **Stock adjustments**: Direct POS checkouts decrement target quantities, voided invoices increment values back, and supplier receipts increment quantities.
-- **Loose Items Weighing Modals**: Allows gram/ml quantity scaling matching unit base prices (e.g., *Loose Fresh Cow Milk* using per-liter rates).
+## 10. Current Product Model
+- Single entry per product containing fields: `sku` (primary barcode), `barcode`, `name`, `category`, `brand`, `supplier`, `costPrice`, `sellingPrice`, `gst`, `unit`, `weightUnit`, `sellingMode` (loose vs packaged), and `barcodes` (nested array of variant alternate barcodes).
 
 ---
 
-## 10. Existing Import Logic
-- **Header normalization mapping**: Translates column names using aliases (`Name`, `Barcode`, `Qty`, `Cost`, `Purchase`, etc.) to support varying spreadsheet templates.
-- **Deduplication Check**: Performs duplicate checks on incoming rows. Offers dynamic strategies in the import modal:
-  - *Merge Stock*: Increments current database counts.
-  - *Replace Details*: Overwrites all fields.
-  - *Skip Duplicates*: Skips existing records.
-- **Missing Barcode Autofill**: Generates unique `VC[Timestamp][Index]` tags for local brands without standard EAN codes.
+## 11. Current Deployment Flow
+- **Frontend**: Configured in root [`vercel.json`](file:///Users/avanish/Documents/billing%20system/vercel.json) to serve `aiavro_billing_system.html` directly at `/`.
+- **Backend**: Ecosystem configured in root [`ecosystem.config.js`](file:///Users/avanish/Documents/billing%20system/ecosystem.config.js) to run via PM2 on port 8181 under reverse-proxy routing via Nginx on the VPS.
 
 ---
 
-## 11. Existing localStorage Usage
-- `aiavro_jwt_token`: Active authenticated session token.
-- `aiavro_role_permissions`: Stored RBAC permissions matrix.
-- `aiavro_brand_config`: Cached branding configuration (logo, name, subtitle, active outlet code). Used for synchronous hydration on cold-start to eliminate layout flicker.
-- `aiavro_sidebar_width`: User preferred layout widths.
-- `aiavro_offline_queue`: Stored offline checkouts waiting for network recovery.
+## 12. Architecture Pieces That Already Exist
+- Decoupled Express versioned routers (`/api/v1/...`).
+- Compound-indexed per-store inventory allocation collection (`inventory` model).
+- Defensive client-side normalizations mapping list collections to arrays (`state.products = [...]`).
+- Synchronous hydration checks in IIFE to prevent branding flicker.
+- Granular event mappings supporting dot-notation real-time broadcasts.
 
 ---
 
-## 12. Existing Vercel Deployment Configuration
-- Configured via [vercel.json](file:///Users/avanish/Documents/billing%20system/vercel.json) in the root.
-- Routes path `/` to `/aiavro_billing_system.html` so it is served directly.
+## 13. Architecture Pieces That Are Incomplete
+- **Inventory Ledger**: Real-time sales checkouts directly update inventory quantities without logging transactional ledger changes under `inventory_ledger`.
+- **Cross-Domain Mutation**: POS invoices and Purchase receipts mutate `inventory` counts directly instead of calling a centralized Inventory Service.
 
 ---
 
-## 13. Existing VPS Deployment Configuration
-- Managed using PM2 ecosystem configurations [ecosystem.config.js](file:///Users/avanish/Documents/billing%20system/ecosystem.config.js).
-- Runs `server.js` from `/opt/vc-organic` at port 8181 under reverse-proxy routing via Nginx.
+## 14. Architecture Pieces That Are Missing
+- **Aggregation APIs**: POS dashboard charts download the complete historical dataset of invoices and purchases into client memory instead of requesting summarized aggregations from the backend.
+- **Soft Deletion Flags**: Deleting items removes them physically from MongoDB rather than setting soft archive flags.
 
 ---
 
-## 14. Existing Security Problems
-1. **Fallback JWT Secret**: Uses a hardcoded string `vc_organic_master_jwt_secret_2026` if `process.env.JWT_SECRET` is missing.
-2. **Open Socket.IO Connections**: Anyone can connect to Socket.IO and join channel sync lists without validating JWT credentials.
-3. **Local Database Connection Fallback**: Falls back to local `mongodb://127.0.0.1:27017` if `MONGODB_URI` env is missing.
-4. **Runtime Executable Run Blocks**: Runs automatic dependency verification engines executing `execSync('npm install ...')` at backend initialization.
+## 15. Conflicts Between Current & Target Architecture
+- POS checkouts mutate inventory collections directly rather than passing through a dedicated backend Inventory Ledger Service.
+- The dashboard is not optimized; it queries all database entries to build metrics locally in client memory.
 
 ---
 
-## 15. Existing Performance Problems
-1. **Full Database Sync Payload**: Frontend retrieves complete product catalogs, invoice datasets, and user listings into browser memory on startup. This will cause lag as records scale.
-2. **CDN Reliance**: All major stylesheet libraries and scripts are fetched from external CDNs, impacting offline capabilities and load speeds.
-
----
-
-## 16. Existing Technical Debt
-1. **Monolithic Files**: Root `server.js` and `aiavro_billing_system.html` contain all logic, styles, and modules.
-2. **Unused Workspaces**: Nested folders under `apps/frontend`, `apps/backend`, and `packages/` are currently stubs or boilerplates. The application relies entirely on root legacy configurations.
-3. **Database-Level Deletions**: Deletion endpoints remove raw entries physically rather than flagging them with soft archive states.
+## 16. Existing Functionality That Must Not Be Lost
+- Dynamic weight-based pricing calculator (g/ml preset configurations).
+- Invoices void/refund flow (must accurately restore inventory).
+- Bulk spreadsheet importer (aliases, mapping header normalizations, duplicate merge strategies).
+- Offline-fallback billing queue (`aiavro_offline_queue`).
+- Socket.IO pairing scanner controller for mobile scanning terminals.
