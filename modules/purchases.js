@@ -7,9 +7,9 @@ router.get('/', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
     const purchases = await db.collection('purchases').find({ isArchived: { $ne: true } }).toArray();
-    res.json({ success: true, purchases });
+    res.json(purchases);
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ error: "Failed to fetch purchases" });
   }
 });
 

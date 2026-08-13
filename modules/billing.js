@@ -8,9 +8,14 @@ router.get('/', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
     const invoices = await db.collection('invoices').find({ isArchived: { $ne: true } }).toArray();
-    res.json({ success: true, invoices });
+    const normalizedInvoices = invoices.map(inv => ({
+      ...inv,
+      id: inv.id || inv.invoiceNumber || (inv._id ? inv._id.toString() : ""),
+      date: inv.date || inv.createdAt || new Date().toISOString()
+    }));
+    res.json(normalizedInvoices);
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ error: "Failed to fetch invoices" });
   }
 });
 

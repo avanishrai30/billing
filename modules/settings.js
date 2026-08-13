@@ -6,34 +6,40 @@ const router = express.Router();
 router.get('/role-permissions', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
-    const roles = await db.collection('role_permissions').find({}).toArray();
-    res.json({ success: true, roles });
+    const doc = await db.collection('role_permissions').findOne({ key: "matrix" });
+    if (doc) {
+      res.json(doc.permissions);
+    } else {
+      const defaults = {
+        admin: ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner', 'verification', 'remote-scanner', 'refunds'],
+        employee: ['billing', 'inventory', 'purchase', 'scanner', 'verification'],
+        auditor: ['invoices', 'auditor']
+      };
+      res.json(defaults);
+    }
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ error: "Failed to fetch permissions" });
   }
 });
 
 router.post('/role-permissions', verifyJWT, async (req, res) => {
   const { db, io } = getContext();
-  const roleData = req.body;
+  const permissions = req.body;
   if (req.user.role !== 'SUPER ADMIN' && req.user.role !== 'OWNER' && req.user.category !== 'super admin') {
     return res.status(403).json({ success: false, message: "Forbidden" });
   }
 
   try {
-    const roleId = roleData.id || `role-${Date.now()}`;
-    const roleDoc = { ...roleData, id: roleId, updatedAt: new Date().toISOString() };
-
     await db.collection('role_permissions').updateOne(
-      { id: roleId },
-      { $set: roleDoc },
+      { key: "matrix" },
+      { $set: { permissions, updatedAt: new Date().toISOString() } },
       { upsert: true }
     );
-    await writeAuditLog('rbac_updated', 'permissions', roleId, null, roleDoc, req);
-    io.to('sync_global').emit('rbac_updated', { roleId });
-    res.json({ success: true, role: roleDoc });
+    await writeAuditLog('rbac_updated', 'permissions', 'matrix', null, permissions, req);
+    io.to('sync_global').emit('rbac_updated', permissions);
+    res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Failed to save permissions" });
   }
 });
 

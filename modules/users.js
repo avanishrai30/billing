@@ -8,10 +8,15 @@ router.get('/', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
     const users = await db.collection('users').find({}).project({ passwordHash: 0, password: 0 }).toArray();
-    res.json({ success: true, users });
+    res.json(users); // Return array directly
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ error: "Failed to fetch users" });
   }
+});
+
+router.get('/presences', verifyJWT, (req, res) => {
+  const { activePresences } = getContext();
+  res.json(Array.from(activePresences.values()));
 });
 
 router.post('/', verifyJWT, validateBody(schemas.userSchema), async (req, res) => {
@@ -29,9 +34,11 @@ router.post('/', verifyJWT, validateBody(schemas.userSchema), async (req, res) =
     const userDoc = {
       ...userData,
       id: userId,
-      passwordHash,
       updatedAt: new Date().toISOString()
     };
+    if (passwordHash) {
+      userDoc.passwordHash = passwordHash;
+    }
     delete userDoc.password;
 
     if (!userData.id) {
@@ -43,7 +50,7 @@ router.post('/', verifyJWT, validateBody(schemas.userSchema), async (req, res) =
       await writeAuditLog('user_updated', 'user', userId, null, userDoc, req);
     }
 
-    io.to('sync_global').emit('user_updated', { userId });
+    io.to('sync_global').emit('user_updated', { user: userDoc });
     res.json({ success: true, user: userDoc });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
@@ -58,11 +65,64 @@ router.post('/profile', verifyJWT, async (req, res) => {
       { id: req.user.id },
       { $set: { name, email, phone, updatedAt: new Date().toISOString() } }
     );
+    const updated = await db.collection('users').findOne({ id: req.user.id }, { projection: { passwordHash: 0, password: 0 } });
     await writeAuditLog('user_updated', 'user', req.user.id, null, { name, email, phone }, req);
-    io.to('sync_global').emit('user_updated', { userId: req.user.id });
+    io.to('sync_global').emit('user_updated', { user: updated });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.post('/avatar', verifyJWT, async (req, res) => {
+  const { db, io } = getContext();
+  const { avatar } = req.body;
+  if (!avatar) return res.status(400).json({ success: false, message: "Avatar path is required" });
+
+  try {
+    await db.collection('users').updateOne(
+      { id: req.user.id },
+      { $set: { avatar, updatedAt: new Date().toISOString() } }
+    );
+    const updated = await db.collection('users').findOne({ id: req.user.id }, { projection: { passwordHash: 0, password: 0 } });
+    await writeAuditLog('user_updated', 'user', req.user.id, null, { avatar }, req);
+    io.to('sync_global').emit('user_updated', { user: updated });
+    res.json({ success: true, avatar });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to update avatar" });
+  }
+});
+
+router.post('/change-password', verifyJWT, async (req, res) => {
+  const { db, io } = getContext();
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: "Missing current or new password" });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: "New password must be at least 6 characters long" });
+  }
+
+  try {
+    const user = await db.collection('users').findOne({ id: req.user.id });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    const match = bcrypt.compareSync(currentPassword, user.passwordHash || user.password);
+    if (!match) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    const newHash = bcrypt.hashSync(newPassword, 12);
+    await db.collection('users').updateOne(
+      { id: req.user.id },
+      { $set: { passwordHash: newHash, updatedAt: new Date().toISOString() } }
+    );
+
+    await writeAuditLog('user_updated', 'user', req.user.id, null, null, req);
+    io.to('sync_global').emit('user_updated', { userId: req.user.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to update password" });
   }
 });
 

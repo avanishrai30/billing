@@ -2569,27 +2569,6 @@
               if (imgEl) imgEl.src = logoUrl;
             }
             
-            // Generate dynamic CSS to hide unauthorized sidebar menus on startup
-            const userStr = localStorage.getItem("aiavro_logged_in_user");
-            if (userStr) {
-              const user = JSON.parse(userStr);
-              let category = (user.category || user.role || '').toLowerCase();
-              if (category === 'super_admin' || category === 'admin_super') category = 'super admin';
-              
-              if (category !== 'super admin') {
-                const style = document.createElement('style');
-                style.id = "sidebar-flicker-protection-style";
-                // Hide all data-role elements by default unless overridden later by the JS logic
-                style.textContent = `li[data-role] { display: none !important; }`;
-                document.head.appendChild(style);
-              }
-            } else {
-                // If not logged in, just hide them all to prevent flicker
-                const style = document.createElement('style');
-                style.id = "sidebar-flicker-protection-style";
-                style.textContent = `li[data-role] { display: none !important; }`;
-                document.head.appendChild(style);
-            }
           } catch(e) {}
         })();
       </script>
@@ -6174,7 +6153,8 @@
       }, 10000);
 
       // Listeners for targeted, granular events
-      syncSocket.on('inventory.updated', (data) => {
+      // Listeners for targeted, granular events
+      const handleInventoryUpdated = (data) => {
         console.log(`[Sync] Inventory updated:`, data);
         const inv = state.inventory.find(i => i.productId === data.productId && i.storeId === data.storeId);
         if (inv) {
@@ -6189,9 +6169,12 @@
         }
         renderPOSProducts();
         renderInventoryTable();
-      });
+      };
+      syncSocket.on('inventory.updated', handleInventoryUpdated);
+      syncSocket.on('inventory_updated', handleInventoryUpdated);
 
-      syncSocket.on('product.created', (data) => {
+      const handleProductCreated = (data) => {
+        if (!data || !data.product) return;
         console.log(`[Sync] Product created:`, data.product);
         const idx = state.products.findIndex(p => p.id === data.product.id);
         if (idx === -1) {
@@ -6201,9 +6184,12 @@
         }
         renderPOSProducts();
         renderProductsTable();
-      });
+      };
+      syncSocket.on('product.created', handleProductCreated);
+      syncSocket.on('product_created', handleProductCreated);
 
-      syncSocket.on('product.updated', (data) => {
+      const handleProductUpdated = (data) => {
+        if (!data || !data.product) return;
         console.log(`[Sync] Product updated:`, data.product);
         const idx = state.products.findIndex(p => p.id === data.product.id);
         if (idx !== -1) {
@@ -6211,63 +6197,102 @@
         }
         renderPOSProducts();
         renderProductsTable();
-      });
+      };
+      syncSocket.on('product.updated', handleProductUpdated);
+      syncSocket.on('product_updated', handleProductUpdated);
 
-      syncSocket.on('invoice.created', (data) => {
+      const handleInvoiceCreated = (data) => {
+        if (!data || !data.invoice) return;
         console.log(`[Sync] Invoice created:`, data.invoice);
         const idx = state.invoices.findIndex(i => i.invoiceNumber === data.invoice.invoiceNumber);
         if (idx === -1) {
           state.invoices.push(data.invoice);
         }
         renderInvoicesTable();
-      });
+      };
+      syncSocket.on('invoice.created', handleInvoiceCreated);
+      syncSocket.on('invoice_created', handleInvoiceCreated);
 
-      syncSocket.on('settings.updated', (data) => {
+      const handleSettingsUpdated = (data) => {
         console.log(`[Sync] Settings updated:`, data);
         loadPublicSettings();
-      });
+      };
+      syncSocket.on('settings.updated', handleSettingsUpdated);
+      syncSocket.on('settings_updated', handleSettingsUpdated);
 
-      syncSocket.on('business.updated', (data) => {
+      const handleBusinessUpdated = (data) => {
+        if (!data || !data.business) return;
         const b = data.business;
         const idx = state.businesses.findIndex(x => x.id === b.id);
         if (idx !== -1) state.businesses[idx] = b;
         renderBusinessesTable();
-      });
-      syncSocket.on('business.deleted', (data) => {
+      };
+      syncSocket.on('business.updated', handleBusinessUpdated);
+      syncSocket.on('business_updated', handleBusinessUpdated);
+
+      const handleBusinessDeleted = (data) => {
+        if (!data) return;
         state.businesses = state.businesses.filter(b => b.id !== data.id);
         renderBusinessesTable();
-      });
-      syncSocket.on('user.updated', (data) => {
+      };
+      syncSocket.on('business.deleted', handleBusinessDeleted);
+      syncSocket.on('business_deleted', handleBusinessDeleted);
+
+      const handleUserUpdated = (data) => {
+        if (!data || !data.user) return;
         const u = data.user;
         const idx = state.users.findIndex(x => x.id === u.id);
         if (idx !== -1) state.users[idx] = u;
         renderUsersTable();
-      });
-      syncSocket.on('purchase.created', (data) => {
+      };
+      syncSocket.on('user.updated', handleUserUpdated);
+      syncSocket.on('user_updated', handleUserUpdated);
+
+      const handlePurchaseCreated = (data) => {
+        if (!data || !data.purchase) return;
         state.purchases.push(data.purchase);
         renderPurchaseTable();
-      });
-      syncSocket.on('franchise.updated', (data) => {
+      };
+      syncSocket.on('purchase.created', handlePurchaseCreated);
+      syncSocket.on('purchase_created', handlePurchaseCreated);
+
+      const handleFranchiseUpdated = (data) => {
+        if (!data || !data.franchise) return;
         const f = data.franchise;
         const idx = state.franchises.findIndex(x => x.id === f.id);
         if (idx !== -1) state.franchises[idx] = f;
         renderFranchisesTable();
-      });
-      syncSocket.on('franchise.deleted', (data) => {
+      };
+      syncSocket.on('franchise.updated', handleFranchiseUpdated);
+      syncSocket.on('franchise_updated', handleFranchiseUpdated);
+
+      const handleFranchiseDeleted = (data) => {
+        if (!data) return;
         state.franchises = state.franchises.filter(f => f.id !== data.id);
         renderFranchisesTable();
-      });
-      syncSocket.on('franchise_order.created', (data) => {
+      };
+      syncSocket.on('franchise.deleted', handleFranchiseDeleted);
+      syncSocket.on('franchise_deleted', handleFranchiseDeleted);
+
+      const handleFranchiseOrderCreated = (data) => {
+        if (!data || !data.order) return;
         state.franchiseSupplyOrders.push(data.order);
         renderFranchisesTable();
-      });
-      syncSocket.on('invoice.updated', (data) => {
+      };
+      syncSocket.on('franchise_order.created', handleFranchiseOrderCreated);
+      syncSocket.on('franchise_order_created', handleFranchiseOrderCreated);
+
+      const handleInvoiceUpdated = (data) => {
+        if (!data || !data.invoice) return;
         const inv = data.invoice;
         const idx = state.invoices.findIndex(i => i.invoiceNumber === inv.invoiceNumber);
         if (idx !== -1) state.invoices[idx] = inv;
         renderInvoicesTable();
-      });
-      syncSocket.on('rbac.updated', (permissions) => {
+      };
+      syncSocket.on('invoice.updated', handleInvoiceUpdated);
+      syncSocket.on('invoice_updated', handleInvoiceUpdated);
+
+      const handleRbacUpdated = (permissions) => {
         console.log(`[Sync] RBAC permissions updated in database:`, permissions);
         state.rolePermissions = permissions;
         localStorage.setItem("aiavro_role_permissions", JSON.stringify(permissions));
@@ -6293,7 +6318,9 @@
             }
           }
         }
-      });
+      };
+      syncSocket.on('rbac.updated', handleRbacUpdated);
+      syncSocket.on('rbac_updated', handleRbacUpdated);
     }
 
     async function syncStateWithServer() {
@@ -6535,12 +6562,6 @@
     }
 
     function syncRoleBasedUI() {
-      // Remove sidebar flicker protection style tag so JS inline display rules can take effect
-      const protectionStyle = document.getElementById("sidebar-flicker-protection-style");
-      if (protectionStyle) {
-        protectionStyle.remove();
-      }
-
       const user = state.currentUser;
       if (!user) return;
 
@@ -13811,6 +13832,48 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         renderPurchaseSheet();
       }
     }
+
+    // Diagnostic verification engine for frontend navigation integrity
+    window.__NAV_DIAGNOSTICS__ = function() {
+      const modules = [
+        { name: 'Dashboard', viewId: 'dashboard', renderer: 'renderDashboard' },
+        { name: 'POS Billing', viewId: 'billing', renderer: 'recalculatePOSTotals' },
+        { name: 'Product Inventory', viewId: 'inventory', renderer: 'renderInventoryTable' },
+        { name: 'Purchase Entry', viewId: 'purchase', renderer: 'renderPurchaseTable' },
+        { name: 'My Businesses', viewId: 'businesses', renderer: 'renderBusinessesTable' },
+        { name: 'Customers CRM', viewId: 'customers', renderer: 'renderCustomersTable' },
+        { name: 'Invoices Database', viewId: 'invoices', renderer: 'renderInvoicesTable' },
+        { name: 'Tax & GST Audit', viewId: 'auditor', renderer: 'renderAuditLogsTable' },
+        { name: 'Mobile Scanner View', viewId: 'scanner', renderer: 'openScannerModal' },
+        { name: 'User Permissions', viewId: 'permissions', renderer: 'syncRoleBasedUI' },
+        { name: 'System Backups', viewId: 'settings', renderer: 'syncRoleBasedUI' }
+      ];
+
+      const report = [];
+      let overallPass = true;
+
+      modules.forEach(m => {
+        const link = document.querySelector(`.nav-menu a[onclick*="switchView('${m.viewId}')"]`);
+        const viewContainer = document.getElementById(`view-${m.viewId}`);
+        const rendererFunc = typeof window[m.renderer] === 'function';
+
+        const pass = !!link && !!viewContainer && rendererFunc;
+        if (!pass) overallPass = false;
+
+        report.push({
+          module: m.name,
+          elementExists: !!link ? "PASS" : "FAIL",
+          handlerExists: typeof switchView === 'function' ? "PASS" : "FAIL",
+          viewExists: !!viewContainer ? "PASS" : "FAIL",
+          rendererExists: rendererFunc ? "PASS" : "FAIL",
+          status: pass ? "PASS" : "FAIL"
+        });
+      });
+
+      console.log(`=== Navigation Integrity Diagnostics (Overall: ${overallPass ? 'PASS' : 'FAIL'}) ===`);
+      console.table(report);
+      return { overallPass, report };
+    };
   </script>
 
 </body>
