@@ -1,207 +1,196 @@
-# VC Organic V3 - API Contract Specifications
+# API Contract Specifications - VC Organic ERP V3
 
-This document catalogs the version 1 API contracts, schemas, authorization requirements, and client-side normalization details for the Retail ERP integration.
-
----
-
-## 1. Authentication Domain (`api.auth`)
-
-### Login Request
-- **Endpoint**: `/api/v1/auth/login`
-- **Method**: `POST`
-- **Auth**: `None`
-- **Response Shape**:
-  ```json
-  {
-    "success": true,
-    "token": "eyJhbGciOi...",
-    "user": {
-      "id": "usr-12345",
-      "name": "Administrator",
-      "username": "admin",
-      "role": "Super Admin",
-      "assignedStoreId": "all"
-    }
-  }
-  ```
+This document lists the strict specification constraints for every frontend network request and its matching backend endpoint handler.
 
 ---
 
-## 2. User Directory Domain (`api.users`)
+## 1. Authentication Domain
 
-### Fetch Users
-- **Endpoint**: `/api/v1/users`
-- **Method**: `GET`
-- **Auth**: `verifyJWT` (Strict Admin/Owner role)
-- **Response Shape**: `Array<User>`
-- **Frontend State Shape**: `state.users: Array<User>`
-- **Normalization Function**:
-  `api.users.list()` -> `Array.isArray(res) ? res : res.users || []`
+### Login (`POST /api/v1/auth/login`)
+1. **URL**: `/api/v1/auth/login`
+2. **HTTP Method**: `POST`
+3. **Authentication**: None
+4. **RBAC Permission**: None (Pre-auth endpoint)
+5. **Request Body**: `{ username, password }`
+6. **Query Parameters**: None
+7. **Backend Route**: `POST /api/v1/auth/login` in [`modules/auth.js`](file:///Users/avanish/Documents/billing%20system/modules/auth.js)
+8. **Response Shape**: `{ success: true, token, user }`
+9. **Frontend Expected Shape**: `{ success, token, user }`
+10. **Error Behavior**: Returns `400` / `401` with error message.
+11. **Socket Event**: None
 
-### Fetch Presences
-- **Endpoint**: `/api/v1/users/presences`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<Presence>`
-- **Frontend State Shape**: Direct console/UI binding
-- **Normalization Function**:
-  `api.users.presences()` -> `Array.isArray(res) ? res : res.presences || []`
-
----
-
-## 3. Product Catalog Domain (`api.products`)
-
-### Fetch Products
-- **Endpoint**: `/api/v1/products`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<Product>`
-- **Frontend State Shape**: `state.products: Array<Product>`
-- **Normalization Function**:
-  `api.products.list()` -> `Array.isArray(res) ? res : res.products || []`
+### Token Verification (`GET /api/v1/auth/verify`)
+1. **URL**: `/api/v1/auth/verify`
+2. **HTTP Method**: `GET`
+3. **Authentication**: `verifyJWT` (Bearer token in header)
+4. **RBAC Permission**: None
+5. **Request Body**: None
+6. **Query Parameters**: None
+7. **Backend Route**: `GET /api/v1/auth/verify` in [`modules/auth.js`](file:///Users/avanish/Documents/billing%20system/modules/auth.js)
+8. **Response Shape**: `{ success: true, user }`
+9. **Frontend Expected Shape**: `{ success, user }`
+10. **Error Behavior**: Returns `401` on invalid token.
+11. **Socket Event**: None
 
 ---
 
-## 4. Inventory Domain (`api.inventory`)
+## 2. User Directory Domain
 
-### Fetch Store Inventory
-- **Endpoint**: `/api/v1/inventory`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**:
-  ```json
-  {
-    "success": true,
-    "inventory": [
-      {
-        "productId": "prd-893",
-        "storeId": "biz-8947",
-        "quantity": 482.5,
-        "updatedAt": "2026-08-13T14:41:08Z"
-      }
-    ]
-  }
-  ```
-- **Frontend State Shape**: `state.inventory: Array<InventoryRecord>`
-- **Normalization Function**:
-  `api.inventory.list()` -> `Array.isArray(res) ? res : res.inventory || []`
+### Fetch Users (`GET /api/v1/users`)
+1. **URL**: `/api/v1/users`
+2. **HTTP Method**: `GET`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `admin` or `super admin`
+5. **Request Body**: None
+6. **Query Parameters**: None
+7. **Backend Route**: `GET /api/v1/users` in [`modules/users.js`](file:///Users/avanish/Documents/billing%20system/modules/users.js)
+8. **Response Shape**: `Array<User>` (passwords excluded)
+9. **Frontend Expected Shape**: `Array<User>`
+10. **Error Behavior**: Returns `500` on database failure.
+11. **Socket Event**: None
 
-### Fetch Inventory Logs
-- **Endpoint**: `/api/v1/inventory/logs`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<InventoryLog>`
-- **Frontend State Shape**: `state.inventoryLogs: Array<InventoryLog>`
-- **Normalization Function**:
-  `api.inventory.logs()` -> `Array.isArray(res) ? res : res.logs || []`
+### Create/Update User (`POST /api/v1/users`)
+1. **URL**: `/api/v1/users`
+2. **HTTP Method**: `POST`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `owner` or `super admin`
+5. **Request Body**: `{ name, username, role, assignedStoreId, password }`
+6. **Query Parameters**: None
+7. **Backend Route**: `POST /api/v1/users` in [`modules/users.js`](file:///Users/avanish/Documents/billing%20system/modules/users.js)
+8. **Response Shape**: `{ success: true, user }`
+9. **Frontend Expected Shape**: `{ success, user }`
+10. **Error Behavior**: Returns `400` on validation error, `403` if forbidden.
+11. **Socket Event**: Broadcasts `user_updated` room sync.
 
----
-
-## 5. Billing Invoices Domain (`api.invoices`)
-
-### Fetch Invoices
-- **Endpoint**: `/api/v1/invoices`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<Invoice>`
-- **Frontend State Shape**: `state.invoices: Array<Invoice>`
-- **Normalization Function**:
-  `api.invoices.list()` -> `Array.isArray(res) ? res : res.invoices || []`
+### Change Password (`POST /api/v1/users/change-password`)
+1. **URL**: `/api/v1/users/change-password`
+2. **HTTP Method**: `POST`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: None
+5. **Request Body**: `{ currentPassword, newPassword }`
+6. **Query Parameters**: None
+7. **Backend Route**: `POST /api/v1/users/change-password` in [`modules/users.js`](file:///Users/avanish/Documents/billing%20system/modules/users.js)
+8. **Response Shape**: `{ success: true }`
+9. **Frontend Expected Shape**: `{ success }`
+10. **Error Behavior**: Returns `400` on wrong current password.
+11. **Socket Event**: Broadcasts `user_updated` room sync.
 
 ---
 
-## 6. Purchase Domain (`api.purchases`)
+## 3. Product Catalog Domain
 
-### Fetch Supplier Purchases
-- **Endpoint**: `/api/v1/purchases`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<Purchase>`
-- **Frontend State Shape**: `state.purchases: Array<Purchase>`
-- **Normalization Function**:
-  `api.purchases.list()` -> `Array.isArray(res) ? res : res.purchases || []`
+### Fetch Products (`GET /api/v1/products`)
+1. **URL**: `/api/v1/products`
+2. **HTTP Method**: `GET`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `billing`, `inventory`, `purchase`
+5. **Request Body**: None
+6. **Query Parameters**: None
+7. **Backend Route**: `GET /api/v1/products` in [`modules/products.js`](file:///Users/avanish/Documents/billing%20system/modules/products.js)
+8. **Response Shape**: `Array<Product>`
+9. **Frontend Expected Shape**: `Array<Product>`
+10. **Error Behavior**: Returns `500` on backend query failure.
+11. **Socket Event**: None
 
----
-
-## 7. Business Registry Domain (`api.businesses`)
-
-### Fetch Businesses
-- **Endpoint**: `/api/v1/businesses`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<Business>`
-- **Frontend State Shape**: `state.businesses: Array<Business>`
-- **Normalization Function**:
-  `api.businesses.list()` -> `Array.isArray(res) ? res : res.businesses || []`
-
----
-
-## 8. Store Locations Domain (`api.stores`)
-
-### Fetch Stores
-- **Endpoint**: `/api/v1/stores`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<Store>`
-- **Frontend State Shape**: `state.stores: Array<Store>`
-- **Normalization Function**:
-  `api.stores.list()` -> `Array.isArray(res) ? res : res.stores || []`
+### Create/Update Product (`POST /api/v1/products`)
+1. **URL**: `/api/v1/products`
+2. **HTTP Method**: `POST`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `inventory`
+5. **Request Body**: `{ id, name, category, emoji, sku, price, cost, stock, reorder, maxStock, brand, supplier, store, image, images, status, dom, doe, gst, type, sellingMode, weightUnit, barcodes }`
+6. **Query Parameters**: None
+7. **Backend Route**: `POST /api/v1/products` in [`modules/products.js`](file:///Users/avanish/Documents/billing%20system/modules/products.js)
+8. **Response Shape**: `{ success: true, product }`
+9. **Frontend Expected Shape**: `{ success, product }`
+10. **Error Behavior**: Returns `400` on validator failures.
+11. **Socket Event**: Broadcasts `product.updated` granular socket notifications.
 
 ---
 
-## 9. Customers CRM Domain (`api.customers`)
+## 4. Inventory Domain
 
-### Fetch Customers
-- **Endpoint**: `/api/v1/customers`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<Customer>`
-- **Frontend State Shape**: `state.customers: Array<Customer>`
-- **Normalization Function**:
-  `api.customers.list()` -> `Array.isArray(res) ? res : res.customers || []`
+### Fetch Inventory Allocations (`GET /api/v1/inventory`)
+1. **URL**: `/api/v1/inventory`
+2. **HTTP Method**: `GET`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `inventory`
+5. **Request Body**: None
+6. **Query Parameters**: None
+7. **Backend Route**: `GET /api/v1/inventory` in [`modules/inventory.js`](file:///Users/avanish/Documents/billing%20system/modules/inventory.js)
+8. **Response Shape**: `{ success: true, inventory: [...] }`
+9. **Frontend Expected Shape**: `Array<InventoryRecord>` (Normalized in client layer)
+10. **Error Behavior**: Returns `500` on database error.
+11. **Socket Event**: None
 
----
-
-## 10. Suppliers Registry Domain (`api.suppliers`)
-
-### Fetch Suppliers
-- **Endpoint**: `/api/v1/suppliers`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<Supplier>`
-- **Frontend State Shape**: `state.suppliers: Array<Supplier>`
-- **Normalization Function**:
-  `api.suppliers.list()` -> `Array.isArray(res) ? res : res.suppliers || []`
-
----
-
-## 11. Security Audit Logs Domain (`api.auditLogs`)
-
-### Fetch Audit Trails
-- **Endpoint**: `/api/v1/audit-logs`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**: `Array<AuditLog>`
-- **Frontend State Shape**: `state.auditLogs: Array<AuditLog>`
-- **Normalization Function**:
-  `api.auditLogs.list()` -> `Array.isArray(res) ? res : res.logs || []`
+### Adjust Stock (`POST /api/v1/inventory/adjust`)
+1. **URL**: `/api/v1/inventory/adjust`
+2. **HTTP Method**: `POST`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `inventory`
+5. **Request Body**: `{ productId, storeId, quantity, type, referenceId }`
+6. **Query Parameters**: None
+7. **Backend Route**: `POST /api/v1/inventory/adjust` in [`modules/inventory.js`](file:///Users/avanish/Documents/billing%20system/modules/inventory.js)
+8. **Response Shape**: `{ success: true, quantity }`
+9. **Frontend Expected Shape**: `{ success, quantity }`
+10. **Error Behavior**: Returns `400` on missing required parameters.
+11. **Socket Event**: Broadcasts `inventory_updated` or audit log.
 
 ---
 
-## 12. Settings Configuration Domain (`api.rolePermissions`)
+## 5. Billing Invoices Domain
 
-### Fetch Permissions Matrix
-- **Endpoint**: `/api/v1/role-permissions`
-- **Method**: `GET`
-- **Auth**: `verifyJWT`
-- **Response Shape**:
-  ```json
-  {
-    "admin": ["dashboard", "billing", "inventory", "purchase", "businesses", "customers", "invoices", "settings", "auditor", "permissions", "scanner", "verification", "remote-scanner", "refunds"],
-    "employee": ["billing", "inventory", "purchase", "scanner", "verification"],
-    "auditor": ["invoices", "auditor"]
-  }
-  ```
-- **Frontend State Shape**: `state.rolePermissions: Object`
-- **Normalization Function**:
-  `api.rolePermissions.get()` -> `res || {}`
+### Fetch Invoices (`GET /api/v1/invoices`)
+1. **URL**: `/api/v1/invoices`
+2. **HTTP Method**: `GET`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `invoices`, `auditor`
+5. **Request Body**: None
+6. **Query Parameters**: None
+7. **Backend Route**: `GET /api/v1/invoices` in [`modules/billing.js`](file:///Users/avanish/Documents/billing%20system/modules/billing.js)
+8. **Response Shape**: `Array<Invoice>`
+9. **Frontend Expected Shape**: `Array<Invoice>`
+10. **Error Behavior**: Returns `500` on query failure.
+11. **Socket Event**: None
+
+### Checkout Cart (`POST /api/v1/invoices`)
+1. **URL**: `/api/v1/invoices`
+2. **HTTP Method**: `POST`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `billing`
+5. **Request Body**: `{ customerName, customerPhone, items: [...], total, paymentMethod, transactionId }`
+6. **Query Parameters**: None
+7. **Backend Route**: `POST /api/v1/invoices` in [`modules/billing.js`](file:///Users/avanish/Documents/billing%20system/modules/billing.js)
+8. **Response Shape**: `{ success: true, invoice }`
+9. **Frontend Expected Shape**: `{ success, invoice }`
+10. **Error Behavior**: Returns `400` on invalid payload or double transactions.
+11. **Socket Event**: Broadcasts `invoice_created` room sync.
+
+---
+
+## 6. Purchase Receipts Domain
+
+### Fetch Purchases (`GET /api/v1/purchases`)
+1. **URL**: `/api/v1/purchases`
+2. **HTTP Method**: `GET`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `purchase`
+5. **Request Body**: None
+6. **Query Parameters**: None
+7. **Backend Route**: `GET /api/v1/purchases` in [`modules/purchases.js`](file:///Users/avanish/Documents/billing%20system/modules/purchases.js)
+8. **Response Shape**: `Array<Purchase>`
+9. **Frontend Expected Shape**: `Array<Purchase>`
+10. **Error Behavior**: Returns `500` on query error.
+11. **Socket Event**: None
+
+### Record Purchase (`POST /api/v1/purchases`)
+1. **URL**: `/api/v1/purchases`
+2. **HTTP Method**: `POST`
+3. **Authentication**: `verifyJWT`
+4. **RBAC Permission**: `purchase`
+5. **Request Body**: `{ supplierId, storeId, items: [...], grandTotal, billNo, paymentMethod }`
+6. **Query Parameters**: None
+7. **Backend Route**: `POST /api/v1/purchases` in [`modules/purchases.js`](file:///Users/avanish/Documents/billing%20system/modules/purchases.js)
+8. **Response Shape**: `{ success: true, purchase }`
+9. **Frontend Expected Shape**: `{ success, purchase }`
+10. **Error Behavior**: Returns `400` on validation failures.
+11. **Socket Event**: Broadcasts `purchase_created` sync.
