@@ -5648,6 +5648,15 @@
         <div id="excel-import-report" style="display:none; background:var(--bg-primary); padding:15px; border-radius:8px; margin-bottom:15px">
           <h4 style="margin-bottom:8px">Import Report Analysis:</h4>
           <ul style="font-size:12px; padding-left:15px; line-height:1.6; text-align:left" id="excel-report-list"></ul>
+          
+          <div id="excel-duplicate-actions" style="margin-top:12px; display:none">
+            <label style="font-weight:700; font-size:11.5px; display:block; margin-bottom:6px; color:var(--text-primary)">🔄 Strategy for existing products (Name/Barcode match):</label>
+            <select id="excel-duplicate-strategy" style="padding:8px 12px; width:100%; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-size:13px; font-weight:700">
+              <option value="merge">➕ Merge Incoming Stock with Existing Stock</option>
+              <option value="replace">🔄 Replace Existing Details with Spreadsheet Data</option>
+              <option value="skip">⏭️ Skip & Leave Existing Product Unchanged</option>
+            </select>
+          </div>
         </div>
 
         <div class="modal-footer" style="padding:15px 0 0 0; border:none">
@@ -12651,12 +12660,13 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
 
     /* ==================== BULK EXCEL IMPORT CONTROLLERS ==================== */
     let excelImportData = [];
-    function toggleExcelImportModal() {
+     function toggleExcelImportModal() {
       const modal = document.getElementById("excel-import-modal");
       modal.classList.toggle("active");
       document.getElementById("excel-file-input").value = "";
       document.getElementById("excel-file-name").innerText = "No file chosen";
       document.getElementById("excel-import-report").style.display = "none";
+      document.getElementById("excel-duplicate-actions").style.display = "none";
       document.getElementById("excel-import-submit-btn").disabled = true;
       excelImportData = [];
     }
@@ -12727,14 +12737,25 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
               diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2}: Missing "Product Name" column data.</span>`);
               return;
             }
+
+            // Stage 2 Own Products Barcode Auto Generation
+            let barcode = barcodeRaw !== undefined && barcodeRaw !== null ? String(barcodeRaw).trim() : "";
             if (!barcode) {
-              invalidCount++;
-              diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2} (${name}): Missing "Barcode / SKU" column data.</span>`);
-              return;
+              barcode = `VC${String(Date.now()).slice(-6)}${i}`;
             }
-            if (buyPrice <= 0 || sellPrice <= 0) {
+
+            // Adjust buyPrice/sellPrice logic for inversion: if cost is retail and purchase is wholesale
+            let realBuy = buyPrice;
+            let realSell = sellPrice;
+            const rowKeys = Object.keys(row).map(k => k.toLowerCase().trim());
+            if (rowKeys.includes('cost') && rowKeys.includes('purchase')) {
+              realBuy = parseFloat(getVal(["purchase"])) || buyPrice;
+              realSell = parseFloat(getVal(["cost"])) || sellPrice;
+            }
+
+            if (realBuy <= 0 || realSell <= 0) {
               invalidCount++;
-              diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2} (${name}): Price and Cost must be greater than zero! (Cost: ₹${buyPrice}, Price: ₹${sellPrice})</span>`);
+              diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2} (${name}): Price and Cost must be greater than zero! (Cost: ₹${realBuy}, Price: ₹${realSell})</span>`);
               return;
             }
             const validGSTs = [0, 5, 12, 18, 28];
@@ -12744,24 +12765,33 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
               return;
             }
 
-            const isDup = state.products.some(p => p.sku === barcode || p.barcode === barcode) || importList.some(p => p.sku === barcode);
-            if (isDup) {
+            // Stage 3 Smart Product Matching Checks
+            const existingProd = state.products.find(p => p.sku === barcode || p.barcode === barcode || p.name.toLowerCase() === name.toLowerCase());
+            const inImportList = importList.some(p => p.sku === barcode);
+            
+            if (inImportList) {
               duplicateCount++;
-              diagnosticDetails.push(`<span style="color:var(--accent-gold)">Row ${i + 2} (${name}): Duplicate barcode "${barcode}" skipped.</span>`);
+              diagnosticDetails.push(`<span style="color:var(--accent-gold)">Row ${i + 2} (${name}): Duplicate barcode "${barcode}" within spreadsheet skipped.</span>`);
               return;
+            }
+
+            const isDuplicate = !!existingProd;
+            if (isDuplicate) {
+              duplicateCount++;
+              diagnosticDetails.push(`<span style="color:var(--accent-gold)">Row ${i + 2} (${name}): Matches existing product '${existingProd.name}' (Barcode: ${barcode}).</span>`);
             }
 
             validCount++;
             importList.push({
-              id: "prod-" + (Date.now() + i),
+              id: isDuplicate ? existingProd.id : "prod-" + (Date.now() + i),
               name,
               category,
               emoji: row.Emoji || "🌾",
               sku: barcode,
               barcode: barcode,
               unit: unit,
-              cost: buyPrice,
-              price: sellPrice,
+              cost: realBuy,
+              price: realSell,
               stock: stock,
               reorder: minStock,
               maxStock: maxStock,
@@ -12773,15 +12803,16 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
               store: store,
               image: image,
               images: images,
-              status: "active"
+              status: "active",
+              isDuplicate: isDuplicate
             });
           });
 
           excelImportData = importList;
           
           reportLines.push(`Total rows in sheet: <strong>${rows.length}</strong>`);
-          reportLines.push(`Ready to Import: <strong style="color:var(--accent-green)">${validCount}</strong>`);
-          reportLines.push(`Skipped Duplicates: <strong style="color:var(--accent-gold)">${duplicateCount}</strong>`);
+          reportLines.push(`Ready to Import / Process: <strong style="color:var(--accent-green)">${validCount}</strong>`);
+          reportLines.push(`Matching Existing Products: <strong style="color:var(--accent-gold)">${duplicateCount}</strong>`);
           reportLines.push(`Skipped Invalid: <strong style="color:var(--accent-danger)">${invalidCount}</strong>`);
 
           const reportList = document.getElementById("excel-report-list");
@@ -12797,6 +12828,13 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
           }
           
           document.getElementById("excel-import-report").style.display = "block";
+          
+          // Show duplicate strategy configuration panel if matching products are detected
+          if (duplicateCount > 0) {
+            document.getElementById("excel-duplicate-actions").style.display = "block";
+          } else {
+            document.getElementById("excel-duplicate-actions").style.display = "none";
+          }
 
           if (validCount > 0) {
             document.getElementById("excel-import-submit-btn").disabled = false;
@@ -12813,28 +12851,88 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
     function processExcelImport() {
       if (excelImportData.length === 0) return;
 
+      const strategy = document.getElementById("excel-duplicate-strategy").value || "merge";
+      const finalProductsToSync = [];
       const importLogs = [];
+
       excelImportData.forEach(prod => {
-        state.products.push(prod);
-        
-        const logEntry = {
-          id: "LOG-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-          productId: prod.id,
-          productName: prod.name,
-          type: "Purchase",
-          qty: prod.stock,
-          date: new Date().toISOString(),
-          referenceId: "IMPORT-" + Date.now().toString().slice(-4),
-          user: state.currentUser ? state.currentUser.name : "admin",
-          notes: "Batch Excel Import Setup"
-        };
-        state.inventoryLogs.push(logEntry);
-        importLogs.push(logEntry);
+        if (prod.isDuplicate) {
+          const idx = state.products.findIndex(p => p.id === prod.id || p.sku === prod.sku || p.name.toLowerCase() === prod.name.toLowerCase());
+          if (idx !== -1) {
+            if (strategy === 'skip') {
+              // Skip entirely
+              return;
+            } else if (strategy === 'merge') {
+              // Merge incoming stock with existing
+              state.products[idx].stock = (parseFloat(state.products[idx].stock) || 0) + (parseFloat(prod.stock) || 0);
+              
+              // Copy to sync list
+              const syncProd = { ...state.products[idx] };
+              finalProductsToSync.push(syncProd);
+              
+              // Create log
+              const logEntry = {
+                id: "LOG-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+                productId: state.products[idx].id,
+                productName: state.products[idx].name,
+                type: "Stock Change",
+                qty: prod.stock,
+                date: new Date().toISOString(),
+                referenceId: "MERGE-" + Date.now().toString().slice(-4),
+                user: state.currentUser ? state.currentUser.name : "admin",
+                notes: `Import Merge: Added ${prod.stock} units to stock`
+              };
+              state.inventoryLogs.push(logEntry);
+              importLogs.push(logEntry);
+            } else if (strategy === 'replace') {
+              // Replace existing fields
+              state.products[idx] = { ...prod };
+              delete state.products[idx].isDuplicate;
+              
+              // Copy to sync list
+              finalProductsToSync.push(state.products[idx]);
+              
+              // Create log
+              const logEntry = {
+                id: "LOG-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+                productId: prod.id,
+                productName: prod.name,
+                type: "Purchase",
+                qty: prod.stock,
+                date: new Date().toISOString(),
+                referenceId: "REPLACE-" + Date.now().toString().slice(-4),
+                user: state.currentUser ? state.currentUser.name : "admin",
+                notes: `Import Replace: Overwrote details, set stock to ${prod.stock}`
+              };
+              state.inventoryLogs.push(logEntry);
+              importLogs.push(logEntry);
+            }
+          }
+        } else {
+          // New product
+          delete prod.isDuplicate;
+          state.products.push(prod);
+          finalProductsToSync.push(prod);
+
+          const logEntry = {
+            id: "LOG-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+            productId: prod.id,
+            productName: prod.name,
+            type: "Purchase",
+            qty: prod.stock,
+            date: new Date().toISOString(),
+            referenceId: "IMPORT-" + Date.now().toString().slice(-4),
+            user: state.currentUser ? state.currentUser.name : "admin",
+            notes: "Batch Spreadsheet Import Setup"
+          };
+          state.inventoryLogs.push(logEntry);
+          importLogs.push(logEntry);
+        }
       });
 
       saveStateToLocalStorage();
       renderInventoryTable();
-      triggerAlert(`Successfully imported ${excelImportData.length} products!`, "success");
+      triggerAlert(`Processed spreadsheet bulk import!`, "success");
       
       const token = localStorage.getItem("aiavro_jwt_token");
       fetch(`${state.backendUrl}/api/products/import`, {
@@ -12844,12 +12942,12 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          newProducts: excelImportData,
+          newProducts: finalProductsToSync,
           logs: importLogs
         })
       }).then(res => {
         if (res.ok) {
-          triggerAlert(`Successfully synchronized ${excelImportData.length} products to central database!`, "success");
+          triggerAlert(`Successfully synchronized ${finalProductsToSync.length} products to database!`, "success");
           syncStateWithServer();
         } else {
           res.json().then(err => {
