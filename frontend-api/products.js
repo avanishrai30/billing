@@ -1,4 +1,6 @@
-api.products = {
+window.api = window.api || {};
+
+window.api.products = {
   async list(params = {}) {
     const query = new URLSearchParams();
     if (params.search) query.set('search', params.search);
@@ -11,20 +13,20 @@ api.products = {
     if (params.page) query.set('page', params.page);
 
     const queryString = query.toString() ? `?${query.toString()}` : '';
-    const res = await request(`/api/v1/products${queryString}`);
+    const res = await window.api.request(`/api/v1/products${queryString}`);
     return Array.isArray(res) ? res : res?.products || [];
   },
 
   async getById(id) {
-    return await request(`/api/v1/products/${encodeURIComponent(id)}`);
+    return await window.api.request(`/api/v1/products/${encodeURIComponent(id)}`);
   },
 
   async getBySku(sku) {
-    return await request(`/api/v1/products/by-sku/${encodeURIComponent(sku)}`);
+    return await window.api.request(`/api/v1/products/by-sku/${encodeURIComponent(sku)}`);
   },
 
   async getByBarcode(barcode) {
-    return await request(`/api/v1/products/by-barcode/${encodeURIComponent(barcode)}`);
+    return await window.api.request(`/api/v1/products/by-barcode/${encodeURIComponent(barcode)}`);
   },
 
   async search(queryText, options = {}) {
@@ -32,20 +34,20 @@ api.products = {
   },
 
   async save(productData) {
-    return await request('/api/v1/products', {
+    return await window.api.request('/api/v1/products', {
       method: 'POST',
       body: JSON.stringify(productData)
     });
   },
 
   async delete(id) {
-    return await request(`/api/v1/products/${encodeURIComponent(id)}`, {
+    return await window.api.request(`/api/v1/products/${encodeURIComponent(id)}`, {
       method: 'DELETE'
     });
   },
 
   async import(importData) {
-    return await request('/api/v1/products/import', {
+    return await window.api.request('/api/v1/products/import', {
       method: 'POST',
       body: JSON.stringify(importData)
     });

@@ -6152,12 +6152,26 @@
     function initSyncSocket() {
       if (syncSocket) return;
       console.log("[Sync] Establishing background real-time synchronization socket...");
-      syncSocket = io(state.backendUrl);
+      const token = localStorage.getItem("aiavro_jwt_token") || '';
+      try {
+        syncSocket = io(state.backendUrl, {
+          auth: { token },
+          transports: ['websocket', 'polling'],
+          timeout: 5000,
+          reconnectionAttempts: 5
+        });
 
-      syncSocket.on('connect', () => {
-        console.log("[Sync] Persisted database synchronization channel established.");
-        joinStoreSyncRoom();
-      });
+        syncSocket.on('connect', () => {
+          console.log("[Sync] Persisted database synchronization channel established.");
+          joinStoreSyncRoom();
+        });
+
+        syncSocket.on('connect_error', (err) => {
+          console.warn("[Sync] Socket connection non-fatal warning (REST sync active):", err.message);
+        });
+      } catch (sockErr) {
+        console.warn("[Sync] Failed to initialize socket connection:", sockErr);
+      }
 
       // Presence heartbeats (every 10 seconds)
       setInterval(() => {
@@ -6346,6 +6360,28 @@
       if (!state.currentUser) return;
       const token = localStorage.getItem("aiavro_jwt_token");
       if (!token) return;
+
+      console.table({
+        auth: !!window.api?.auth,
+        users: !!window.api?.users,
+        businesses: !!window.api?.businesses,
+        stores: !!window.api?.stores,
+        products: !!window.api?.products,
+        categories: !!window.api?.categories,
+        brands: !!window.api?.brands,
+        inventory: !!window.api?.inventory,
+        purchases: !!window.api?.purchases,
+        invoices: !!window.api?.invoices,
+        customers: !!window.api?.customers,
+        suppliers: !!window.api?.suppliers,
+        audit: !!window.api?.audit,
+        settings: !!window.api?.settings,
+        franchise: !!window.api?.franchise,
+        franchises: !!window.api?.franchises,
+        franchiseSupplyOrders: !!window.api?.franchiseSupplyOrders,
+        dashboard: !!window.api?.dashboard,
+        scanner: !!window.api?.scanner
+      });
 
       initSyncSocket();
 

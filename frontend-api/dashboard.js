@@ -1,5 +1,7 @@
-api.dashboard = {
+window.api = window.api || {};
+
+window.api.dashboard = {
   async getMetrics() {
-    return await request('/api/v1/public/settings');
+    return await window.api.request('/api/v1/public/settings');
   }
 };

@@ -1,32 +1,34 @@
-api.users = {
+window.api = window.api || {};
+
+window.api.users = {
   async list() {
-    const res = await request('/api/v1/users');
+    const res = await window.api.request('/api/v1/users');
     return Array.isArray(res) ? res : res?.users || [];
   },
   async presences() {
-    const res = await request('/api/v1/users/presences');
+    const res = await window.api.request('/api/v1/users/presences');
     return Array.isArray(res) ? res : res?.presences || [];
   },
   async save(userData) {
-    return await request('/api/v1/users', {
+    return await window.api.request('/api/v1/users', {
       method: 'POST',
       body: JSON.stringify(userData)
     });
   },
   async updateProfile(profileData) {
-    return await request('/api/v1/users/profile', {
+    return await window.api.request('/api/v1/users/profile', {
       method: 'POST',
       body: JSON.stringify(profileData)
     });
   },
   async updateAvatar(avatarData) {
-    return await request('/api/v1/users/avatar', {
+    return await window.api.request('/api/v1/users/avatar', {
       method: 'POST',
       body: JSON.stringify(avatarData)
     });
   },
   async changePassword(passwordData) {
-    return await request('/api/v1/users/change-password', {
+    return await window.api.request('/api/v1/users/change-password', {
       method: 'POST',
       body: JSON.stringify(passwordData)
     });

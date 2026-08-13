@@ -1,4 +1,6 @@
-api.inventory = {
+window.api = window.api || {};
+
+window.api.inventory = {
   async list(params = {}) {
     const query = new URLSearchParams();
     if (params.locationId) query.set('locationId', params.locationId);
@@ -6,7 +8,7 @@ api.inventory = {
     if (params.productId) query.set('productId', params.productId);
 
     const qs = query.toString() ? `?${query.toString()}` : '';
-    const res = await request(`/api/v1/inventory${qs}`);
+    const res = await window.api.request(`/api/v1/inventory${qs}`);
     if (res && res.inventory) {
       return Array.isArray(res.inventory) ? res.inventory : [];
     }
@@ -23,7 +25,7 @@ api.inventory = {
     if (params.cursor) query.set('cursor', params.cursor);
 
     const qs = query.toString() ? `?${query.toString()}` : '';
-    const res = await request(`/api/v1/inventory/logs${qs}`);
+    const res = await window.api.request(`/api/v1/inventory/logs${qs}`);
     if (res && res.data) {
       return Array.isArray(res.data) ? res.data : [];
     }
@@ -36,25 +38,25 @@ api.inventory = {
     if (params.storeId) query.set('storeId', params.storeId);
 
     const qs = query.toString() ? `?${query.toString()}` : '';
-    return await request(`/api/v1/inventory/summary${qs}`);
+    return await window.api.request(`/api/v1/inventory/summary${qs}`);
   },
 
   async checkAvailability(items, locationId) {
-    return await request('/api/v1/inventory/check-availability', {
+    return await window.api.request('/api/v1/inventory/check-availability', {
       method: 'POST',
       body: JSON.stringify({ items, locationId, storeId: locationId })
     });
   },
 
   async adjust(adjustData) {
-    return await request('/api/v1/inventory/adjust', {
+    return await window.api.request('/api/v1/inventory/adjust', {
       method: 'POST',
       body: JSON.stringify(adjustData)
     });
   },
 
   async transfer(transferData) {
-    return await request('/api/v1/inventory/transfer', {
+    return await window.api.request('/api/v1/inventory/transfer', {
       method: 'POST',
       body: JSON.stringify(transferData)
     });
