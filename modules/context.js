@@ -6,6 +6,28 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required")
 });
 
+const variantSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().optional(),
+  sku: z.string().trim().optional(),
+  barcode: z.string().trim().optional(),
+  sellingPrice: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  purchasePrice: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  price: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  cost: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  unit: z.string().trim().optional(),
+  weight: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  status: z.string().trim().default('active')
+});
+
+const barcodeMappingSchema = z.object({
+  barcode: z.string().trim().min(1, "Barcode is required"),
+  type: z.string().trim().default('ALTERNATE'),
+  variantId: z.string().trim().optional(),
+  variantName: z.string().trim().optional(),
+  active: z.boolean().default(true)
+});
+
 const productSchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(1, "Product name is required"),
@@ -17,30 +39,34 @@ const productSchema = z.object({
   brand: z.string().trim().optional(),
   supplierId: z.string().trim().optional(),
   supplier: z.string().trim().optional(),
+  purchasePrice: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
   costPrice: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
   cost: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
   sellingPrice: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
   price: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
-  stock: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  stock: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(), // Legacy non-authoritative stock
   reorder: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
+  reorderLevel: z.number().or(z.string().transform(v => parseFloat(v) || 0)).optional(),
   maxStock: z.number().or(z.string().transform(v => parseFloat(v) || 100)).optional(),
   gst: z.number().or(z.string().transform(v => parseInt(v) || 0)).optional(),
   unit: z.string().trim().optional(),
   weightUnit: z.string().trim().optional(),
-  sellingMode: z.string().trim().optional(),
-  type: z.string().trim().optional(),
+  sellingMode: z.string().trim().default('packaged'),
+  type: z.string().trim().default('OWN'),
   dom: z.string().trim().optional(),
   doe: z.string().trim().optional(),
   emoji: z.string().trim().optional(),
-  status: z.string().trim().optional(),
+  status: z.string().trim().default('active'),
+  description: z.string().trim().optional(),
   imageId: z.string().trim().optional(),
   image: z.string().trim().optional(),
   images: z.array(z.string()).optional(),
-  store: z.string().trim().optional(),
-  barcodes: z.array(z.object({
+  store: z.string().trim().optional(), // Legacy store reference
+  barcodes: z.array(barcodeMappingSchema.or(z.object({
     barcode: z.string().trim(),
     variantName: z.string().trim()
-  })).optional()
+  }))).optional(),
+  variants: z.array(variantSchema).optional()
 });
 
 const userSchema = z.object({

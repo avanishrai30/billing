@@ -11,17 +11,29 @@ router.post('/', async (req, res) => {
   }
 
   const { db, io } = getContext();
+  const cleanBarcode = String(barcode).trim();
+
   try {
+    // 1. Match primary product document
     let product = await db.collection('products').findOne({
-      $or: [{ barcode: String(barcode).trim() }, { sku: String(barcode).trim() }]
+      $or: [{ barcode: cleanBarcode }, { sku: cleanBarcode }],
+      isArchived: { $ne: true }
     });
 
+    // 2. Fallback to active variant/alternate barcode in product_barcodes table
     if (!product) {
-      const barcodeMapping = await db.collection('product_barcodes').findOne({ barcode: String(barcode).trim() });
+      const barcodeMapping = await db.collection('product_barcodes').findOne({
+        barcode: cleanBarcode,
+        active: true
+      });
       if (barcodeMapping) {
-        product = await db.collection('products').findOne({ id: barcodeMapping.productId });
+        product = await db.collection('products').findOne({
+          id: barcodeMapping.productId,
+          isArchived: { $ne: true }
+        });
         if (product) {
           product.scannedVariantName = barcodeMapping.variantName;
+          product.scannedBarcodeType = barcodeMapping.type;
         }
       }
     }
@@ -30,7 +42,7 @@ router.post('/', async (req, res) => {
       if (io) io.to(sessionId).emit('PRODUCT_ADDED', { product });
       return res.json({ success: true, product });
     } else {
-      if (io) io.to(sessionId).emit('PRODUCT_NOT_FOUND', { barcode });
+      if (io) io.to(sessionId).emit('PRODUCT_NOT_FOUND', { barcode: cleanBarcode });
       return res.status(404).json({ success: false, message: "Product not found" });
     }
   } catch (err) {

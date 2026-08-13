@@ -206,6 +206,18 @@ async function initDB() {
     // Call setupContext to make db and io available to all routers
     setupContext(db, io, JWT_SECRET, UPLOAD_ROOT, UPLOAD_SUBDIRS, activePresences);
 
+    // Non-destructive performance indexes
+    try {
+      await db.collection('products').createIndex({ sku: 1 }, { unique: true, sparse: true });
+      await db.collection('products').createIndex({ barcode: 1 }, { sparse: true });
+      await db.collection('products').createIndex({ name: "text", category: "text", brand: "text" });
+      await db.collection('product_barcodes').createIndex({ barcode: 1 });
+      await db.collection('product_barcodes').createIndex({ productId: 1 });
+      await db.collection('inventory_ledger').createIndex({ createdAt: -1, productId: 1, locationId: 1 });
+    } catch (idxErr) {
+      console.warn("[Database] Index setup warning (non-fatal):", idxErr.message);
+    }
+
     // Serve central API client JS files dynamically
     app.get('/api/:file.js', (req, res, next) => {
       const fileName = req.params.file;
