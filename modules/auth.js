@@ -1,7 +1,9 @@
 const express = require('express');
-const { getContext, verifyJWT, validateBody, schemas, writeAuditLog } = require('./context');
+const { getContext, verifyJWT, validateBody, schemas } = require('./context');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const userService = require('../services/userService');
+const auditService = require('../services/auditService');
 
 const router = express.Router();
 
@@ -30,6 +32,8 @@ router.post('/login', validateBody(schemas.loginSchema), async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    await auditService.writeAuditLog('auth_login', 'auth', user.id, null, { username: user.username }, req);
+
     res.json({
       success: true,
       token,
@@ -55,35 +59,12 @@ router.get('/verify', verifyJWT, (req, res) => {
 });
 
 router.post('/change-password', verifyJWT, async (req, res) => {
-  const { db, io } = getContext();
   const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ success: false, message: "Missing current or new password" });
-  }
-  if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: "New password must be at least 6 characters long" });
-  }
-
   try {
-    const user = await db.collection('users').findOne({ id: req.user.id });
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    const match = bcrypt.compareSync(currentPassword, user.passwordHash || user.password);
-    if (!match) {
-      return res.status(400).json({ success: false, message: "Current password is incorrect" });
-    }
-
-    const newHash = bcrypt.hashSync(newPassword, 12);
-    await db.collection('users').updateOne(
-      { id: req.user.id },
-      { $set: { passwordHash: newHash, updatedAt: new Date().toISOString() } }
-    );
-
-    await writeAuditLog('user_updated', 'user', req.user.id, null, null, req);
-    io.to('sync_global').emit('user_updated', { userId: req.user.id });
-    res.json({ success: true, message: "Password updated successfully" });
+    const result = await userService.changePassword(req.user.id, currentPassword, newPassword, req);
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error updating password" });
+    res.status(err.statusCode || 400).json({ success: false, message: err.message || "Failed to update password" });
   }
 });
 

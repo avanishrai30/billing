@@ -1,26 +1,38 @@
 const express = require('express');
-const { getContext, verifyJWT, validateBody, schemas, writeAuditLog } = require('./context');
-const bcrypt = require('bcryptjs');
+const { getContext, verifyJWT, validateBody, schemas } = require('./context');
+const userService = require('../services/userService');
 
 const router = express.Router();
 
+// GET /api/v1/users - Fetch all users
 router.get('/', verifyJWT, async (req, res) => {
-  const { db } = getContext();
   try {
-    const users = await db.collection('users').find({}).project({ passwordHash: 0, password: 0 }).toArray();
-    res.json(users); // Return array directly
+    const users = await userService.listUsers();
+    res.json(users); // Return array directly for backward compatibility
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 
+// GET /api/v1/users/presences - Fetch active user presences
 router.get('/presences', verifyJWT, (req, res) => {
   const { activePresences } = getContext();
   res.json(Array.from(activePresences.values()));
 });
 
+// GET /api/v1/users/:id - Fetch single user
+router.get('/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await userService.getUserById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
+// POST /api/v1/users - Create or update user account (Admin / Super Admin only)
 router.post('/', verifyJWT, validateBody(schemas.userSchema), async (req, res) => {
-  const { db, io } = getContext();
   const userData = req.validatedBody;
   
   if (req.user.role !== 'SUPER ADMIN' && req.user.role !== 'OWNER' && req.user.category !== 'super admin') {
@@ -28,101 +40,45 @@ router.post('/', verifyJWT, validateBody(schemas.userSchema), async (req, res) =
   }
 
   try {
-    const userId = userData.id || `usr-${Date.now()}`;
-    const passwordHash = userData.password ? bcrypt.hashSync(userData.password, 12) : undefined;
-    
-    const userDoc = {
-      ...userData,
-      id: userId,
-      updatedAt: new Date().toISOString()
-    };
-    if (passwordHash) {
-      userDoc.passwordHash = passwordHash;
-    }
-    delete userDoc.password;
-
-    if (!userData.id) {
-      userDoc.createdAt = new Date().toISOString();
-      await db.collection('users').insertOne(userDoc);
-      await writeAuditLog('user_created', 'user', userId, null, userDoc, req);
-    } else {
-      await db.collection('users').updateOne({ id: userId }, { $set: userDoc });
-      await writeAuditLog('user_updated', 'user', userId, null, userDoc, req);
-    }
-
-    io.to('sync_global').emit('user_updated', { user: userDoc });
+    const userDoc = await userService.saveUser(userData, req);
     res.json({ success: true, user: userDoc });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error saving user" });
   }
 });
 
+// POST /api/v1/users/profile - Update own profile details
 router.post('/profile', verifyJWT, async (req, res) => {
-  const { db, io } = getContext();
   const { name, email, phone } = req.body;
   try {
-    await db.collection('users').updateOne(
-      { id: req.user.id },
-      { $set: { name, email, phone, updatedAt: new Date().toISOString() } }
-    );
-    const updated = await db.collection('users').findOne({ id: req.user.id }, { projection: { passwordHash: 0, password: 0 } });
-    await writeAuditLog('user_updated', 'user', req.user.id, null, { name, email, phone }, req);
-    io.to('sync_global').emit('user_updated', { user: updated });
-    res.json({ success: true });
+    const updated = await userService.updateProfile(req.user.id, { name, email, phone }, req);
+    res.json({ success: true, user: updated });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error updating profile" });
   }
 });
 
+// POST /api/v1/users/avatar - Update own avatar path
 router.post('/avatar', verifyJWT, async (req, res) => {
-  const { db, io } = getContext();
   const { avatar } = req.body;
   if (!avatar) return res.status(400).json({ success: false, message: "Avatar path is required" });
 
   try {
-    await db.collection('users').updateOne(
-      { id: req.user.id },
-      { $set: { avatar, updatedAt: new Date().toISOString() } }
-    );
-    const updated = await db.collection('users').findOne({ id: req.user.id }, { projection: { passwordHash: 0, password: 0 } });
-    await writeAuditLog('user_updated', 'user', req.user.id, null, { avatar }, req);
-    io.to('sync_global').emit('user_updated', { user: updated });
+    await userService.updateAvatar(req.user.id, avatar, req);
     res.json({ success: true, avatar });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to update avatar" });
   }
 });
 
+// POST /api/v1/users/change-password - Change own password (calls central userService)
 router.post('/change-password', verifyJWT, async (req, res) => {
-  const { db, io } = getContext();
   const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ success: false, message: "Missing current or new password" });
-  }
-  if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: "New password must be at least 6 characters long" });
-  }
-
   try {
-    const user = await db.collection('users').findOne({ id: req.user.id });
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    const match = bcrypt.compareSync(currentPassword, user.passwordHash || user.password);
-    if (!match) {
-      return res.status(400).json({ success: false, message: "Current password is incorrect" });
-    }
-
-    const newHash = bcrypt.hashSync(newPassword, 12);
-    await db.collection('users').updateOne(
-      { id: req.user.id },
-      { $set: { passwordHash: newHash, updatedAt: new Date().toISOString() } }
-    );
-
-    await writeAuditLog('user_updated', 'user', req.user.id, null, null, req);
-    io.to('sync_global').emit('user_updated', { userId: req.user.id });
-    res.json({ success: true });
+    const result = await userService.changePassword(req.user.id, currentPassword, newPassword, req);
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to update password" });
+    res.status(err.statusCode || 400).json({ success: false, message: err.message || "Failed to update password" });
   }
 });
 
