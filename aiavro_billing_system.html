@@ -5708,6 +5708,7 @@
       customers: [],
       invoices: [],
       suppliers: [],
+      inventory: [],
       inventoryLogs: [],
       purchases: [],
       onboardingForPurchaseBarcode: null,
@@ -5722,6 +5723,120 @@
       scannerSessionId: null,
       backendUrl: localStorage.getItem("aiavro_backend_url") || 'https://api.vcorganics.com',
       socket: null
+    };
+
+    // Helper function to safely fetch endpoint and return parsed JSON
+    const safeFetch = async (url) => {
+      const token = localStorage.getItem("aiavro_jwt_token");
+      if (!token) return null;
+      const headers = { 'Authorization': `Bearer ${token}` };
+      try {
+        const res = await fetch(url, { headers });
+        if (res.ok) return await res.json();
+      } catch (e) {
+        console.warn(`[Sync] Failed to fetch: ${url}`, e);
+      }
+      return null;
+    };
+
+    // Central API/Data Normalization Client Layer
+    const api = {
+      auth: {
+        async login(username, password) {
+          const res = await fetch(`${state.backendUrl}/api/v1/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          return await res.json();
+        }
+      },
+      users: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/users`);
+          return Array.isArray(res) ? res : res?.users || [];
+        },
+        async presences() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/users/presences`);
+          return Array.isArray(res) ? res : res?.presences || [];
+        }
+      },
+      products: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/products`);
+          return Array.isArray(res) ? res : res?.products || [];
+        }
+      },
+      inventory: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/inventory`);
+          return Array.isArray(res) ? res : res?.inventory || [];
+        },
+        async logs() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/inventory/logs`);
+          return Array.isArray(res) ? res : res?.logs || [];
+        }
+      },
+      purchases: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/purchases`);
+          return Array.isArray(res) ? res : res?.purchases || [];
+        }
+      },
+      invoices: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/invoices`);
+          return Array.isArray(res) ? res : res?.invoices || [];
+        }
+      },
+      businesses: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/businesses`);
+          return Array.isArray(res) ? res : res?.businesses || [];
+        }
+      },
+      stores: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/stores`);
+          return Array.isArray(res) ? res : res?.stores || [];
+        }
+      },
+      customers: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/customers`);
+          return Array.isArray(res) ? res : res?.customers || [];
+        }
+      },
+      suppliers: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/suppliers`);
+          return Array.isArray(res) ? res : res?.suppliers || [];
+        }
+      },
+      franchises: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/franchises`);
+          return Array.isArray(res) ? res : res?.franchises || [];
+        }
+      },
+      franchiseSupplyOrders: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/franchise-supply-orders`);
+          return Array.isArray(res) ? res : res?.orders || [];
+        }
+      },
+      auditLogs: {
+        async list() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/audit-logs`);
+          return Array.isArray(res) ? res : res?.logs || [];
+        }
+      },
+      rolePermissions: {
+        async get() {
+          const res = await safeFetch(`${state.backendUrl}/api/v1/role-permissions`);
+          return res || {};
+        }
+      }
     };
 
     // Master emergency reset hatch — never shown in UI
@@ -6330,99 +6445,74 @@
 
       initSyncSocket();
 
-      const headers = { 'Authorization': `Bearer ${token}` };
-
-      // Helper function to safely fetch endpoint and return parsed JSON
-      const safeFetch = async (url) => {
-        try {
-          const res = await fetch(url, { headers });
-          if (res.ok) return await res.json();
-        } catch (e) {
-          console.warn(`[Sync] Failed to fetch: ${url}`, e);
-        }
-        return null;
-      };
-
       // Fetch businesses
-      const bizData = await safeFetch(`${state.backendUrl}/api/v1/businesses`);
-      if (bizData) {
-        state.businesses = bizData;
-        if (!state.activeBusinessId && state.businesses.length > 0) {
-          state.activeBusinessId = state.businesses[0].id;
-        }
+      const businesses = await api.businesses.list();
+      state.businesses = Array.isArray(businesses) ? businesses : [];
+      if (!state.activeBusinessId && state.businesses.length > 0) {
+        state.activeBusinessId = state.businesses[0].id;
       }
 
       // Fetch products
-      const prodData = await safeFetch(`${state.backendUrl}/api/v1/products`);
-      if (prodData) state.products = prodData;
+      const products = await api.products.list();
+      state.products = Array.isArray(products) ? products : [];
 
       // Fetch customers
-      const custData = await safeFetch(`${state.backendUrl}/api/v1/customers`);
-      if (custData) state.customers = custData;
+      const customers = await api.customers.list();
+      state.customers = Array.isArray(customers) ? customers : [];
 
       // Fetch invoices
-      const invData = await safeFetch(`${state.backendUrl}/api/v1/invoices`);
-      if (invData) state.invoices = invData;
+      const invoices = await api.invoices.list();
+      state.invoices = Array.isArray(invoices) ? invoices : [];
 
       // Fetch purchases
-      const purchaseData = await safeFetch(`${state.backendUrl}/api/v1/purchases`);
-      if (purchaseData) state.purchases = purchaseData;
+      const purchases = await api.purchases.list();
+      state.purchases = Array.isArray(purchases) ? purchases : [];
 
       // Fetch franchises
-      const franchisesData = await safeFetch(`${state.backendUrl}/api/v1/franchises`);
-      if (franchisesData) state.franchises = franchisesData;
+      const franchises = await api.franchises.list();
+      state.franchises = Array.isArray(franchises) ? franchises : [];
 
       // Fetch franchise supply orders
-      const franSupplyOrdersData = await safeFetch(`${state.backendUrl}/api/v1/franchise-supply-orders`);
-      if (franSupplyOrdersData) state.franchiseSupplyOrders = franSupplyOrdersData;
+      const orders = await api.franchiseSupplyOrders.list();
+      state.franchiseSupplyOrders = Array.isArray(orders) ? orders : [];
 
       // Fetch suppliers
-      const supData = await safeFetch(`${state.backendUrl}/api/v1/suppliers`);
-      if (supData) {
-        state.suppliers = supData;
-        populatePurchaseSupplierDropdown();
-      }
+      const suppliers = await api.suppliers.list();
+      state.suppliers = Array.isArray(suppliers) ? suppliers : [];
+      populatePurchaseSupplierDropdown();
 
       // Fetch stores
-      const storeData = await safeFetch(`${state.backendUrl}/api/v1/stores`);
-      if (storeData) {
-        state.stores = storeData;
-        state.customStoreLocations = storeData;
-      }
+      const stores = await api.stores.list();
+      state.stores = Array.isArray(stores) ? stores : [];
+      state.customStoreLocations = state.stores;
 
       // Fetch dynamic role permissions from server
-      const rbacData = await safeFetch(`${state.backendUrl}/api/v1/role-permissions`);
-      if (rbacData) {
-        state.rolePermissions = rbacData;
-        localStorage.setItem("aiavro_role_permissions", JSON.stringify(rbacData));
-      }
+      const rbacData = await api.rolePermissions.get();
+      state.rolePermissions = rbacData;
+      localStorage.setItem("aiavro_role_permissions", JSON.stringify(rbacData));
 
       // Fetch users based on role permissions
       const category = getUserCategory(state.currentUser);
       if (category === 'super admin' || category === 'admin') {
-        const userData = await safeFetch(`${state.backendUrl}/api/v1/users`);
-        if (userData) state.users = userData;
+        const users = await api.users.list();
+        state.users = Array.isArray(users) ? users : [];
       }
 
       // Fetch audit logs (backend filters this based on role)
-      const auditData = await safeFetch(`${state.backendUrl}/api/v1/audit-logs`);
-      if (auditData) {
-        state.auditLogs = auditData;
-        if (state.activeView === 'permissions' && category !== 'super admin') {
-          initMyProfileView();
-        }
+      const logs = await api.auditLogs.list();
+      state.auditLogs = Array.isArray(logs) ? logs : [];
+      if (state.activeView === 'permissions' && category !== 'super admin') {
+        initMyProfileView();
       }
 
       // Fetch store-wise inventory
-      const inventoryData = await safeFetch(`${state.backendUrl}/api/v1/inventory`);
-      if (inventoryData) {
-        state.inventory = inventoryData;
-        updateLocalProductStockFromInventory();
-      }
+      const inventory = await api.inventory.list();
+      state.inventory = Array.isArray(inventory) ? inventory : [];
+      updateLocalProductStockFromInventory();
 
       // Fetch inventory logs
-      const invLogsData = await safeFetch(`${state.backendUrl}/api/v1/inventory/logs`);
-      if (invLogsData) state.inventoryLogs = invLogsData;
+      const invLogs = await api.inventory.logs();
+      state.inventoryLogs = Array.isArray(invLogs) ? invLogs : [];
 
       // Re-render UI grids with whatever data is loaded
       renderPOSProducts();
