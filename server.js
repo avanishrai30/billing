@@ -199,6 +199,25 @@ async function initDB() {
     // Call setupContext to make db and io available to all routers
     setupContext(db, io, JWT_SECRET, UPLOAD_ROOT, UPLOAD_SUBDIRS, activePresences);
 
+    // Serve central API client JS files dynamically
+    app.get('/api/:file.js', (req, res, next) => {
+      const fileName = req.params.file;
+      const allowedFiles = [
+        'client', 'auth', 'users', 'businesses', 'stores', 'products',
+        'categories', 'brands', 'inventory', 'purchases', 'invoices',
+        'customers', 'suppliers', 'audit', 'settings', 'franchise',
+        'dashboard', 'scanner'
+      ];
+      if (allowedFiles.includes(fileName)) {
+        const filePath = path.join(__dirname, 'api', `${fileName}.js`);
+        if (fs.existsSync(filePath)) {
+          res.setHeader('Content-Type', 'application/javascript');
+          return res.sendFile(filePath);
+        }
+      }
+      next();
+    });
+
     // Initialize all modular routers
     app.use('/api/v1/auth', authRouter);
     app.use('/api/v1/users', usersRouter);

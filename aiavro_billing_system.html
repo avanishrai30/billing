@@ -5694,6 +5694,24 @@
 
 
   <!-- ==================== JS STATE & CONTROLLERS ==================== -->
+  <script src="/api/client.js"></script>
+  <script src="/api/auth.js"></script>
+  <script src="/api/users.js"></script>
+  <script src="/api/businesses.js"></script>
+  <script src="/api/stores.js"></script>
+  <script src="/api/products.js"></script>
+  <script src="/api/categories.js"></script>
+  <script src="/api/brands.js"></script>
+  <script src="/api/inventory.js"></script>
+  <script src="/api/purchases.js"></script>
+  <script src="/api/invoices.js"></script>
+  <script src="/api/customers.js"></script>
+  <script src="/api/suppliers.js"></script>
+  <script src="/api/audit.js"></script>
+  <script src="/api/settings.js"></script>
+  <script src="/api/franchise.js"></script>
+  <script src="/api/dashboard.js"></script>
+  <script src="/api/scanner.js"></script>
   <script>
     /* ==================== STATE MANAGEMENT ==================== */
     let state = {
@@ -5727,119 +5745,6 @@
       socket: null
     };
 
-    // Helper function to safely fetch endpoint and return parsed JSON
-    const safeFetch = async (url) => {
-      const token = localStorage.getItem("aiavro_jwt_token");
-      if (!token) return null;
-      const headers = { 'Authorization': `Bearer ${token}` };
-      try {
-        const res = await fetch(url, { headers });
-        if (res.ok) return await res.json();
-      } catch (e) {
-        console.warn(`[Sync] Failed to fetch: ${url}`, e);
-      }
-      return null;
-    };
-
-    // Central API/Data Normalization Client Layer
-    const api = {
-      auth: {
-        async login(username, password) {
-          const res = await fetch(`${state.backendUrl}/api/v1/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-          });
-          return await res.json();
-        }
-      },
-      users: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/users`);
-          return Array.isArray(res) ? res : res?.users || [];
-        },
-        async presences() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/users/presences`);
-          return Array.isArray(res) ? res : res?.presences || [];
-        }
-      },
-      products: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/products`);
-          return Array.isArray(res) ? res : res?.products || [];
-        }
-      },
-      inventory: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/inventory`);
-          return Array.isArray(res) ? res : res?.inventory || [];
-        },
-        async logs() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/inventory/logs`);
-          return Array.isArray(res) ? res : res?.logs || [];
-        }
-      },
-      purchases: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/purchases`);
-          return Array.isArray(res) ? res : res?.purchases || [];
-        }
-      },
-      invoices: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/invoices`);
-          return Array.isArray(res) ? res : res?.invoices || [];
-        }
-      },
-      businesses: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/businesses`);
-          return Array.isArray(res) ? res : res?.businesses || [];
-        }
-      },
-      stores: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/stores`);
-          return Array.isArray(res) ? res : res?.stores || [];
-        }
-      },
-      customers: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/customers`);
-          return Array.isArray(res) ? res : res?.customers || [];
-        }
-      },
-      suppliers: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/suppliers`);
-          return Array.isArray(res) ? res : res?.suppliers || [];
-        }
-      },
-      franchises: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/franchises`);
-          return Array.isArray(res) ? res : res?.franchises || [];
-        }
-      },
-      franchiseSupplyOrders: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/franchise-supply-orders`);
-          return Array.isArray(res) ? res : res?.orders || [];
-        }
-      },
-      auditLogs: {
-        async list() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/audit-logs`);
-          return Array.isArray(res) ? res : res?.logs || [];
-        }
-      },
-      rolePermissions: {
-        async get() {
-          const res = await safeFetch(`${state.backendUrl}/api/v1/role-permissions`);
-          return res || {};
-        }
-      }
-    };
 
     function findProductByBarcode(barcode) {
       if (!barcode) return null;
@@ -6064,8 +5969,7 @@
 
     async function loadPublicSettings() {
       try {
-        const res = await fetch(`${state.backendUrl}/api/v1/public/settings`);
-        const data = await res.json();
+        const data = await api.settings.getPublicSettings();
         if (data.title) {
           document.getElementById("login-brand-name").innerText = data.title;
           const inputEl = document.getElementById("settings-landing-title");
@@ -6117,19 +6021,13 @@
       reader.onload = async function(evt) {
         const base64Data = evt.target.result;
         try {
-          const token = localStorage.getItem("aiavro_jwt_token");
-          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=logos`, {
+          const uploadResult = await api.request(`/api/v1/upload?type=logos`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify({
               fileName: file.name,
               base64Data: base64Data
             })
           });
-          const uploadResult = await uploadRes.json();
           if (uploadResult.success) {
             const path = uploadResult.imagePath;
             document.getElementById("settings-landing-logo-path").value = path;
@@ -6155,16 +6053,7 @@
       }
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/settings`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ title, logo })
-        });
-        const result = await res.json();
+        const result = await api.settings.saveBranding({ title, logo });
         if (result.success) {
           triggerAlert("Landing page settings saved successfully!", "success");
           await loadPublicSettings();
@@ -6504,7 +6393,7 @@
       state.customStoreLocations = state.stores;
 
       // Fetch dynamic role permissions from server
-      const rbacData = await api.rolePermissions.get();
+      const rbacData = await api.settings.getRolePermissions();
       state.rolePermissions = rbacData;
       localStorage.setItem("aiavro_role_permissions", JSON.stringify(rbacData));
 
@@ -6516,7 +6405,7 @@
       }
 
       // Fetch audit logs (backend filters this based on role)
-      const logs = await api.auditLogs.list();
+      const logs = await api.audit.list();
       state.auditLogs = Array.isArray(logs) ? logs : [];
       if (state.activeView === 'permissions' && category !== 'super admin') {
         initMyProfileView();
@@ -6624,16 +6513,11 @@
       if (loginBtn) { loginBtn.disabled = true; loginBtn.innerText = "Authenticating..."; }
 
       try {
-        const res = await fetch(`${state.backendUrl}/api/v1/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: usernameInput, password: passwordInput })
-        });
-        const result = await res.json();
+        const result = await api.auth.login(usernameInput, passwordInput);
 
         if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Authenticate & Enter"; }
 
-        if (res.ok && result.success) {
+        if (result.success) {
           localStorage.setItem("aiavro_jwt_token", result.token);
           localStorage.setItem("aiavro_logged_in_user", JSON.stringify(result.user));
           state.currentUser = result.user;
@@ -6831,16 +6715,7 @@
       };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/role-permissions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ permissions })
-        });
-        const result = await res.json();
+        const result = await api.settings.saveRolePermissions({ permissions });
         if (result.success) {
           state.rolePermissions = permissions;
           localStorage.setItem("aiavro_role_permissions", JSON.stringify(permissions));
@@ -7231,16 +7106,7 @@
       const userData = { id, name, username, role, category, assignedStoreId, assignedStores: [assignedStoreId], email, password, status };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/users`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(userData)
-        });
-        const result = await res.json();
+        const result = await api.users.save(userData);
         if (result.success) {
           triggerAlert(`User account for ${name} saved successfully!`, 'success');
           closeUserModal();
@@ -7577,16 +7443,7 @@
 
       (async () => {
         try {
-          const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/v1/franchises`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(franObj)
-          });
-          const result = await res.json();
+          const result = await api.franchise.save(franObj);
           if (result.success) {
             triggerAlert(`Franchise Partner '${name}' saved successfully!`, "success");
             closeFranchiseModal();
@@ -7650,14 +7507,7 @@
       if (!confirm(`Are you sure you want to delete the franchise partner '${fran.name}'?`)) return;
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/franchises/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const result = await res.json();
+        const result = await api.franchise.delete(id);
         if (result.success) {
           triggerAlert(`Franchise partner deleted successfully.`, "info");
           await syncStateWithServer();
@@ -7861,16 +7711,7 @@
 
       (async () => {
         try {
-          const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/v1/franchise-supply-orders`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(newOrder)
-          });
-          const result = await res.json();
+          const result = await api.franchise.saveOrder(newOrder);
           if (result.success) {
             logActivity('billing', `Dispatched supply order to franchise '${franObj ? franObj.name : 'Outlet'}'. Grand Total: ₹${newOrder.grandTotal.toFixed(2)}`);
             closeFranchiseSupplyModal();
@@ -7982,18 +7823,13 @@
         try {
           const token = localStorage.getItem("aiavro_jwt_token");
           
-          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=employees`, {
+          const uploadResult = await api.request(`/api/v1/upload?type=employees`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify({
               fileName: file.name,
               base64Data: base64Data
             })
           });
-          const uploadResult = await uploadRes.json();
           if (!uploadResult.success) {
             triggerAlert(uploadResult.message || "Failed to upload avatar image", "danger");
             return;
@@ -8001,15 +7837,7 @@
 
           const imagePath = uploadResult.imagePath;
 
-          const saveRes = await fetch(`${state.backendUrl}/api/v1/users/avatar`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ avatar: imagePath })
-          });
-          const saveResult = await saveRes.json();
+          const saveResult = await api.users.updateAvatar({ avatar: imagePath });
           if (saveResult.success) {
             triggerAlert("Profile picture updated successfully!", "success");
             
@@ -8050,16 +7878,7 @@
       }
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/users/profile`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ name, email })
-        });
-        const result = await res.json();
+        const result = await api.users.updateProfile({ name, email });
         if (result.success) {
           triggerAlert("Profile details updated successfully!", "success");
           
@@ -8102,16 +7921,7 @@
       }
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/users/change-password`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw })
-        });
-        const result = await res.json();
+        const result = await api.users.changePassword({ currentPassword: currentPw, newPassword: newPw });
         if (result.success) {
           triggerAlert("Password updated successfully!", "success");
           document.getElementById('my-profile-current-pw').value = '';
@@ -8190,18 +8000,13 @@
           const token = localStorage.getItem("aiavro_jwt_token");
           
           // 1. Upload the image to backend employees folder
-          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=employees`, {
+          const uploadResult = await api.request(`/api/v1/upload?type=employees`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify({
               fileName: file.name,
               base64Data: base64Data
             })
           });
-          const uploadResult = await uploadRes.json();
           if (!uploadResult.success) {
             triggerAlert(uploadResult.message || "Failed to upload avatar image", "danger");
             return;
@@ -8210,15 +8015,7 @@
           const imagePath = uploadResult.imagePath;
 
           // 2. Save the avatar path in the user profile on the server
-          const saveRes = await fetch(`${state.backendUrl}/api/v1/users/avatar`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ avatar: imagePath })
-          });
-          const saveResult = await saveRes.json();
+          const saveResult = await api.users.updateAvatar({ avatar: imagePath });
           if (saveResult.success) {
             triggerAlert("Profile picture updated successfully!", "success");
             
@@ -8270,16 +8067,7 @@
       }
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/users/change-password`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw })
-        });
-        const result = await res.json();
+        const result = await api.users.changePassword({ currentPassword: currentPw, newPassword: newPw });
         if (result.success) {
           closeAccountModal();
           triggerAlert('✅ Password changed successfully! Use your new password on your next sign in.', 'success');
@@ -9001,18 +8789,13 @@
       const logoHiddenValue = document.getElementById("quick-biz-logo").value;
       if (logoHiddenValue && logoHiddenValue.startsWith('data:image')) {
         try {
-          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=logos`, {
+          const uploadResult = await api.request(`/api/v1/upload?type=logos`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem("aiavro_jwt_token")}`
-            },
             body: JSON.stringify({
               fileName: `brand-logo-${activeBiz.id}.png`,
               base64Data: logoHiddenValue
             })
           });
-          const uploadResult = await uploadRes.json();
           if (uploadResult.success && uploadResult.imagePath) {
             activeBiz.logo = uploadResult.imagePath;
           } else {
@@ -9034,16 +8817,7 @@
 
       // Persist to backend API
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/businesses`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(activeBiz)
-        });
-        const result = await res.json();
+        const result = await api.businesses.save(activeBiz);
         if (result.success) {
           await syncStateWithServer();
           triggerAlert(`Business profile saved to server for '${activeBiz.name}'!`, "success");
@@ -9634,7 +9408,7 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         const img = new Image();
-        img.onload = function() {
+        img.onload = async function() {
           const canvas = document.createElement("canvas");
           let width = img.width;
           let height = img.height;
@@ -9671,22 +9445,15 @@
           document.getElementById("prod-form-image-preview").src = webpDataUrl;
 
           // Trigger Upload API call
-          fetch(`${state.backendUrl}/api/v1/upload?type=products`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem("aiavro_jwt_token")}`
-            },
-            body: JSON.stringify({
-              fileName,
-              base64Data: webpDataUrl
-            })
-          })
-          .then(res => {
-            if (!res.ok) throw new Error("API responded with error");
-            return res.json();
-          })
-          .then(data => {
+          try {
+            const data = await api.request(`/api/v1/upload?type=products`, {
+              method: 'POST',
+              body: JSON.stringify({
+                fileName,
+                base64Data: webpDataUrl
+              })
+            });
+
             if (data.success) {
               document.getElementById("prod-form-image-path").value = data.imagePath;
               document.getElementById("prod-form-image-preview").src = getFullImageUrl(data.imagePath);
@@ -9696,14 +9463,13 @@
             } else {
               throw new Error(data.message || "Failed to upload");
             }
-          })
-          .catch(err => {
+          } catch (err) {
             console.error("Image upload failed:", err);
             // Revert preview on failure
             document.getElementById("prod-form-image-preview").src = DEFAULT_LOGO_SVG;
             document.getElementById("prod-form-image-path").value = '/uploads/system/default-product.webp';
             triggerAlert(`Failed to upload image (${err.message}). Using local preview.`, "warning");
-          });
+          }
         };
         img.src = e.target.result;
       };
@@ -9779,28 +9545,12 @@
       const prod = { id: id || undefined, name, category, emoji, sku, barcode: sku, unit, cost, price, stock, reorder, maxStock, brand, supplier, store, image, images, status, dom, doe, gst, type, sellingMode, weightUnit, barcodes };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/products`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(prod)
-        });
-        const result = await res.json();
+        const result = await api.products.save(prod);
         if (result.success) {
           // If update & manual adjustment is made
           if (id && manualQty !== 0) {
             const activeStoreId = state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : '');
-            await fetch(`${state.backendUrl}/api/v1/inventory/adjust`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ productId: id, storeId: activeStoreId, quantity: stock + manualQty, notes: manualNotes })
-            });
+            await api.inventory.adjust({ productId: id, storeId: activeStoreId, quantity: stock + manualQty, notes: manualNotes });
           }
 
           triggerAlert(`Product '${name}' saved successfully!`, "success");
@@ -9832,16 +9582,7 @@
       if (confirm(`Mark product ${prod.name} as Inactive? (Soft deletion)`)) {
         const updatedProd = { ...prod, status: 'inactive' };
         try {
-          const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/v1/products`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(updatedProd)
-          });
-          const result = await res.json();
+          const result = await api.products.save(updatedProd);
           if (result.success) {
             triggerAlert(`Product '${prod.name}' marked as inactive in catalog!`, "warning");
             await syncStateWithServer();
@@ -9973,16 +9714,7 @@
       const updatedBiz = { ...biz, status: newStatus };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/businesses`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(updatedBiz)
-        });
-        const result = await res.json();
+        const result = await api.businesses.save(updatedBiz);
         if (result.success) {
           if (newStatus === 'inactive' && state.activeBusinessId === bizId) {
             state.activeBusinessId = "";
@@ -10011,15 +9743,7 @@
         if (biz.status !== newStatus) {
           try {
             const updatedBiz = { ...biz, status: newStatus };
-            const res = await fetch(`${state.backendUrl}/api/v1/businesses`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify(updatedBiz)
-            });
-            const result = await res.json();
+            const result = await api.businesses.save(updatedBiz);
             if (result.success) {
               successCount++;
             } else {
@@ -10111,18 +9835,13 @@
       let finalLogo = logo;
       if (logo && logo.startsWith('data:image')) {
         try {
-          const uploadRes = await fetch(`${state.backendUrl}/api/v1/upload?type=logos`, {
+          const uploadResult = await api.request(`/api/v1/upload?type=logos`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem("aiavro_jwt_token")}`
-            },
             body: JSON.stringify({
               fileName: `brand-logo-${id || Date.now()}.png`,
               base64Data: logo
             })
           });
-          const uploadResult = await uploadRes.json();
           if (uploadResult.success && uploadResult.imagePath) {
             finalLogo = uploadResult.imagePath;
           }
@@ -10140,16 +9859,7 @@
       };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/businesses`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(bizData)
-        });
-        const result = await res.json();
+        const result = await api.businesses.save(bizData);
         if (result.success) {
           triggerAlert(`Store Outlet details saved successfully!`, "success");
           closeBusinessModal();
@@ -10187,14 +9897,7 @@
 
       if (confirm("Are you sure you want to completely remove this business profile?")) {
         try {
-          const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/v1/businesses/${id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          const result = await res.json();
+          const result = await api.businesses.delete(id);
           if (result.success) {
             triggerAlert("Farm business profile removed!", "warning");
             await syncStateWithServer();
@@ -10301,16 +10004,7 @@
       const cust = { id, name, phone, email, gstin, address };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/customers`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(cust)
-        });
-        const result = await res.json();
+        const result = await api.customers.save(cust);
         if (result.success) {
           triggerAlert(`Customer '${name}' details saved successfully!`, "success");
           closeCustomerModal();
@@ -10351,16 +10045,7 @@
       const supplierData = { id, name, contact, email, gst, address };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/suppliers`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(supplierData)
-        });
-        const result = await res.json();
+        const result = await api.suppliers.save(supplierData);
         if (result.success) {
           triggerAlert(`Supplier '${name}' successfully registered!`, "success");
           closeSupplierModal();
@@ -10939,16 +10624,7 @@
       };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/invoices`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(newInvoice)
-        });
-        const result = await res.json();
+        const result = await api.invoices.save(newInvoice);
         if (result.success) {
           const invoiceId = result.invoiceNumber;
           triggerAlert(`Invoice ${invoiceId} generated! Warehouse updated.`, "success");
@@ -11282,14 +10958,7 @@
 
       if (confirm(`Wipe this transaction? This will declare bill VOID and return sold stocks back to warehouse inventory.`)) {
         try {
-          const token = localStorage.getItem("aiavro_jwt_token");
-          const res = await fetch(`${state.backendUrl}/api/v1/invoices/${inv.id}/void`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          const result = await res.json();
+          const result = await api.invoices.void(inv.id);
           if (result.success) {
             logActivity('delete', `Voided/refunded invoice: ${inv.id}. Stocks returned to inventory.`);
             closeInvoiceModal();
@@ -11388,16 +11057,7 @@
       }
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/inventory/transfer`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ productId, sourceStoreId, targetStoreId, quantity, notes })
-        });
-        const result = await res.json();
+        const result = await api.inventory.transfer({ productId, fromStoreId: sourceStoreId, toStoreId: targetStoreId, quantity, notes });
         if (result.success) {
           triggerAlert("Inter-store stock transfer completed successfully!", "success");
           closeTransferStockModal();
@@ -12292,8 +11952,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         }
 
         // Fetch server info to determine the local network IP address
-        fetch(`${state.backendUrl}/api/v1/server-info`)
-          .then(res => res.json())
+        api.settings.getServerInfo()
           .then(info => {
             let host = window.location.host;
             let protocol = window.location.protocol;
@@ -12505,20 +12164,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       logBox.appendChild(logDiv);
       logBox.scrollTop = logBox.scrollHeight;
 
-      fetch(`${state.backendUrl}/api/v1/scan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sessionId: state.scannerSessionId,
-          barcode: barcode
-        })
-      })
-      .then(res => {
-        if (!res.ok) throw new Error("Product not found");
-        return res.json();
-      })
+      api.scanner.scan(state.scannerSessionId, barcode)
       .then(data => {
         const prod = data.product;
         const resDiv = document.createElement("div");
@@ -13189,29 +12835,16 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       renderInventoryTable();
       triggerAlert(`Processed spreadsheet bulk import!`, "success");
       
-      const token = localStorage.getItem("aiavro_jwt_token");
-      fetch(`${state.backendUrl}/api/v1/products/import`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          newProducts: finalProductsToSync,
-          logs: importLogs
-        })
-      }).then(res => {
-        if (res.ok) {
-          triggerAlert(`Successfully synchronized ${finalProductsToSync.length} products to database!`, "success");
-          syncStateWithServer();
-        } else {
-          res.json().then(err => {
-            triggerAlert(`Backend synchronization failed: ${err.message || 'Unauthorized access request'}`, "danger");
-          });
-        }
+      api.products.import({
+        newProducts: finalProductsToSync,
+        logs: importLogs
+      }).then(result => {
+        // Central client handles response and throws on error, so if we are here, it was successful
+        triggerAlert(`Successfully synchronized ${finalProductsToSync.length} products to database!`, "success");
+        syncStateWithServer();
       }).catch(err => {
         console.error("Bulk sync network error:", err);
-        triggerAlert("Network error occurred during backend synchronization.", "danger");
+        triggerAlert(`Backend synchronization failed: ${err.message || 'Unauthorized access request'}`, "danger");
       });
 
       toggleExcelImportModal();
@@ -13509,16 +13142,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       };
 
       try {
-        const token = localStorage.getItem("aiavro_jwt_token");
-        const res = await fetch(`${state.backendUrl}/api/v1/purchases`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(newPurchase)
-        });
-        const result = await res.json();
+        const result = await api.purchases.save(newPurchase);
         if (result.success) {
           triggerAlert("Supplier purchase invoice successfully processed and inventory updated!", "success");
           clearPurchaseSheet();
