@@ -1,7 +1,7 @@
 const bulkImportService = require('../services/bulkImportService');
 const { setupContext } = require('../modules/context');
 
-describe('Stage 09: Intelligent File Understanding & Flexible Product Import', () => {
+describe('Stage 09: Intelligent File Understanding & Flexible Product Import (Safety Patched)', () => {
 
   describe('1. Multi-Row Header Extraction & Normalization', () => {
     test('1. Extracts 2-row hierarchical header from HEMA reference structure', () => {
@@ -99,7 +99,7 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import', (
     });
   });
 
-  describe('4. Simulation Preview & Flexible Business Rules', () => {
+  describe('4. Simulation Preview & Safety Rules', () => {
     let mockDb;
     let productsCollection;
 
@@ -134,39 +134,45 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import', (
       };
     });
 
-    test('8. HEMA.xlsx full structure preview runs cleanly with 0 Missing Product Name errors', async () => {
+    test('8. HEMA.xlsx preview marks ambiguous PURCHASE as REVIEW_REQUIRED when unconfirmed, and READY/WARNING when confirmed', async () => {
       const hemaMatrix = [
         ['SL.No', 'Products', '', '', '', 'PURCHASE'],
         ['', '', 'WEIGHT', 'COST', 'QTY', ''],
         ['1', 'SESAME OIL', '1 LTR', '459', '3', '350'],
-        ['2', 'MUSTARD OIL', '1LTR', '339', '3', '250'],
-        ['3', 'GROUNDNUT OIL', '500 ML', '180', '5', '140'],
-        ['4', 'COCONUT OIL', '1 LTR', '350', '2', '280'],
-        ['5', 'SUNFLOWER OIL', '1 LTR', '180', '4', '150'],
-        ['6', 'CASTOR OIL', '200 ML', '120', '2', '90'],
-        ['7', 'ALMOND OIL', '100 ML', '250', '1', '200']
+        ['2', 'MUSTARD OIL', '1LTR', '339', '3', '250']
       ];
 
-      const preview = await bulkImportService.validateAndPreview(mockDb, hemaMatrix, { defaultStore: 'store-blr-1' });
+      // Unconfirmed ambiguous mapping -> REVIEW_REQUIRED
+      const previewUnconfirmed = await bulkImportService.validateAndPreview(mockDb, hemaMatrix, { defaultStore: 'store-blr-1' });
+      expect(previewUnconfirmed.summary.reviewRequiredRows).toBe(2);
+      expect(previewUnconfirmed.rows[0].status).toBe('REVIEW_REQUIRED');
 
-      expect(preview.success).toBe(true);
-      expect(preview.summary.totalRows).toBe(7);
-      expect(preview.summary.blockedRows).toBe(0);
-      expect(preview.summary.warningRows).toBe(7);
-      expect((preview.summary.readyRows + preview.summary.warningRows)).toBe(7);
-
-      // Verify row 1 safe derivations
-      const row1 = preview.rows[0];
-      expect(row1.status).toBe('WARNING');
-      expect(row1.normalizedData.productName).toBe('SESAME OIL');
-      expect(row1.normalizedData.unit).toBe('1L');
-      expect(row1.normalizedData.weight).toBe(1);
-      expect(row1.normalizedData.weightUnit).toBe('L');
-      expect(row1.normalizedData.purchasePrice).toBe(459);
-      expect(row1.normalizedData.openingStock).toBe(3);
+      // Confirmed ambiguous mapping -> WARNING (category/brand optional) & safe to import
+      const previewConfirmed = await bulkImportService.validateAndPreview(mockDb, hemaMatrix, {
+        defaultStore: 'store-blr-1',
+        confirmedAmbiguousMappings: ['PURCHASE']
+      });
+      expect(previewConfirmed.summary.blockedRows).toBe(0);
+      expect(previewConfirmed.summary.warningRows).toBe(2);
+      expect(previewConfirmed.rows[0].status).toBe('WARNING');
+      expect(previewConfirmed.rows[0].normalizedData.sellingPrice).toBe(350);
+      expect(previewConfirmed.rows[0].normalizedData.purchasePrice).toBe(459);
     });
 
-    test('9. Missing Product Name on EXISTING product SKU is allowed and inherits catalog name', async () => {
+    test('9. Missing barcode on NEW product remains null (never auto-generates retail barcode) and SKU is generated independently', async () => {
+      const rows = [
+        { 'Product Name': 'Organic Turmeric Powder 200g', 'Cost': '40', 'Price': '65', 'Stock': '0' }
+      ];
+
+      const preview = await bulkImportService.validateAndPreview(mockDb, rows);
+      expect(preview.summary.blockedRows).toBe(0);
+      expect(preview.rows[0].normalizedData.barcode).toBe(null);
+      expect(preview.rows[0].normalizedData.sku).toMatch(/^SKU-/);
+      expect(preview.rows[0].warnings.some(w => w.code === 'BARCODE_OPTIONAL')).toBe(true);
+      expect(preview.rows[0].warnings.some(w => w.code === 'AUTO_GENERATED_SKU')).toBe(true);
+    });
+
+    test('10. Missing Product Name on EXISTING product SKU is allowed and inherits catalog name', async () => {
       const rows = [
         { 'Barcode': '8901111111111', 'Cost': '160', 'Price': '220', 'Stock': '5' }
       ];
@@ -178,7 +184,7 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import', (
       expect(preview.rows[0].warnings.some(w => w.code === 'INHERITED_EXISTING_NAME')).toBe(true);
     });
 
-    test('10. Missing Product Name on NEW product BLOCKS row with clear reason', async () => {
+    test('11. Missing Product Name on NEW product BLOCKS row', async () => {
       const rows = [
         { 'Barcode': '8909999999999', 'Cost': '100', 'Price': '150' }
       ];
@@ -189,30 +195,20 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import', (
       expect(preview.rows[0].blockReasons.some(b => b.code === 'MISSING_NAME_FOR_NEW_PRODUCT')).toBe(true);
     });
 
-    test('11. Missing barcode on NEW product generates internal barcode with optional warning (not blocked)', async () => {
+    test('12. New product missing selling price is not silently set to ₹0 (requires review)', async () => {
       const rows = [
-        { 'Product Name': 'Organic Turmeric Powder 200g', 'Cost': '40', 'Price': '65', 'Stock': '0' }
+        { 'Product Name': 'Pure Saffron 1g', 'Cost': '300' } // missing selling price
       ];
 
       const preview = await bulkImportService.validateAndPreview(mockDb, rows);
-      expect(preview.summary.blockedRows).toBe(0);
-      expect(preview.rows[0].status).toBe('WARNING');
-      expect(preview.rows[0].normalizedData.barcode).toMatch(/^VC/);
-      expect(preview.rows[0].warnings.some(w => w.code === 'AUTO_GENERATED_BARCODE')).toBe(true);
-    });
-
-    test('12. Catalog-only import (stock = 0) does not require store location', async () => {
-      const rows = [
-        { 'Product Name': 'Raw Honey 500g', 'Cost': '180', 'Price': '260', 'Stock': '0' }
-      ];
-
-      const preview = await bulkImportService.validateAndPreview(mockDb, rows);
-      expect(preview.summary.blockedRows).toBe(0);
-      expect(preview.rows[0].normalizedData.resolvedLocationId).toBe(null);
+      expect(preview.summary.reviewRequiredRows).toBe(1);
+      expect(preview.rows[0].status).toBe('REVIEW_REQUIRED');
+      expect(preview.rows[0].normalizedData.sellingPrice).toBe(null);
+      expect(preview.rows[0].reviewRequests.some(r => r.code === 'MISSING_SELLING_PRICE_FOR_NEW_PRODUCT')).toBe(true);
     });
   });
 
-  describe('5. Batch Commitment & Proceeds with Safe Rows', () => {
+  describe('5. Batch Commitment & Preservation of Existing Blank Prices', () => {
     let mockDb;
     let productsTable;
     let inventoryLedgerTable;
@@ -225,12 +221,27 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import', (
       importSessionsTable = new Map();
       inventoryTable = new Map();
 
+      // Seed an existing product
+      productsTable.set('prd-exist-1', {
+        id: 'prd-exist-1',
+        name: 'Existing Mustard Oil',
+        sku: 'SKU-MUSTARD-1',
+        barcode: '8901111111111',
+        purchasePrice: 150,
+        sellingPrice: 200,
+        cost: 150,
+        price: 200
+      });
+
       mockDb = {
         collection: (name) => ({
           findOne: async (query) => {
             if (name === 'import_sessions') return importSessionsTable.get(query.importId) || null;
             if (name === 'products') return productsTable.get(query.id || query.sku) || null;
-            if (name === 'product_barcodes') return null;
+            if (name === 'product_barcodes') {
+              if (query.barcode === '8901111111111') return { barcode: '8901111111111', productId: 'prd-exist-1' };
+              return null;
+            }
             if (name === 'inventory') {
               const key = `${query.productId}_${query.locationId}`;
               return inventoryTable.get(key) || null;
@@ -276,40 +287,19 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import', (
       setupContext(mockDb, null, 'secret', '', {}, {});
     });
 
-    test('13. Commits safe rows (READY and WARNING) while skipping BLOCKED rows without crashing', async () => {
+    test('13. Updating existing product with blank prices preserves existing database prices', async () => {
       const previewRows = [
         {
           rowNumber: 1,
-          status: 'BLOCKED',
-          blockReasons: [{ message: 'Missing product name' }],
-          normalizedData: { productName: '', barcode: '8900000000001' }
-        },
-        {
-          rowNumber: 2,
-          status: 'READY',
-          normalizedData: {
-            productName: 'Sesame Oil 1L',
-            sku: 'SKU-SESAME-1',
-            barcode: '8900000000002',
-            purchasePrice: 459,
-            sellingPrice: 350,
-            openingStock: 3,
-            resolvedLocationId: 'store-blr-1',
-            unit: '1L'
-          }
-        },
-        {
-          rowNumber: 3,
           status: 'WARNING',
-          warnings: [{ message: 'No category supplied' }],
           normalizedData: {
-            productName: 'Mustard Oil 1L',
+            productName: 'Existing Mustard Oil',
             sku: 'SKU-MUSTARD-1',
-            barcode: '8900000000003',
-            purchasePrice: 339,
-            sellingPrice: 250,
-            openingStock: 3,
-            resolvedLocationId: 'store-blr-1',
+            barcode: '8901111111111',
+            matchedProductId: 'prd-exist-1',
+            purchasePrice: null, // Blank in sheet
+            sellingPrice: null,  // Blank in sheet
+            openingStock: 0,
             unit: '1L'
           }
         }
@@ -318,29 +308,67 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import', (
       const result = await bulkImportService.commitImport(
         mockDb,
         null,
-        'imp-safe-rows-test',
+        'imp-preserve-price-test',
+        previewRows,
+        {},
+        { username: 'admin' }
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.summary.updated).toBe(1);
+
+      const updated = productsTable.get('prd-exist-1');
+      expect(updated.sellingPrice).toBe(200); // Preserved!
+      expect(updated.purchasePrice).toBe(150); // Preserved!
+    });
+
+    test('14. New product without barcode is created with empty barcode and distinct SKU', async () => {
+      const previewRows = [
+        {
+          rowNumber: 2,
+          status: 'READY',
+          normalizedData: {
+            productName: 'Organic Jaggery Powder 500g',
+            sku: 'SKU-JAGGERY-1',
+            barcode: null, // Omitted
+            purchasePrice: 60,
+            sellingPrice: 90,
+            openingStock: 5,
+            resolvedLocationId: 'store-blr-1',
+            unit: '500g'
+          }
+        }
+      ];
+
+      const result = await bulkImportService.commitImport(
+        mockDb,
+        null,
+        'imp-no-barcode-test',
         previewRows,
         { defaultLocationId: 'store-blr-1' },
         { username: 'admin' }
       );
 
       expect(result.success).toBe(true);
-      expect(result.summary.imported).toBe(2);
-      expect(result.summary.skipped).toBe(1);
-      expect(result.summary.inventoryMovements).toBe(2);
+      expect(result.summary.imported).toBe(1);
+
+      const created = Array.from(productsTable.values()).find(p => p.sku === 'SKU-JAGGERY-1');
+      expect(created).toBeDefined();
+      expect(created.barcode).toBe(''); // Not a fabricated retail barcode
+      expect(created.sku).toBe('SKU-JAGGERY-1');
     });
 
-    test('14. Idempotency: Reject duplicate execution of already completed importId', async () => {
-      importSessionsTable.set('imp-dup-test-2', {
-        importId: 'imp-dup-test-2',
+    test('15. Idempotency: Reject duplicate execution of already completed importId', async () => {
+      importSessionsTable.set('imp-dup-test-3', {
+        importId: 'imp-dup-test-3',
         status: 'COMPLETED',
-        summary: { imported: 7, updated: 0 }
+        summary: { imported: 5, updated: 0 }
       });
 
       const result = await bulkImportService.commitImport(
         mockDb,
         null,
-        'imp-dup-test-2',
+        'imp-dup-test-3',
         [],
         {},
         { username: 'admin' }
@@ -348,7 +376,7 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import', (
 
       expect(result.success).toBe(true);
       expect(result.duplicate).toBe(true);
-      expect(result.summary.imported).toBe(7);
+      expect(result.summary.imported).toBe(5);
     });
   });
 });

@@ -437,14 +437,6 @@ function normalizeRowData(rawRow, columnMapping = {}) {
     normalized.mrp = normalized.sellingPrice;
   }
 
-  // Barcode / SKU derivation if missing
-  if (!normalized.sku && normalized.barcode) {
-    normalized.sku = normalized.barcode;
-  }
-  if (!normalized.barcode && normalized.sku) {
-    normalized.barcode = normalized.sku;
-  }
-
   return normalized;
 }
 
@@ -589,14 +581,23 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
         }
       }
 
-      // Auto-generate barcode if missing (optional)
-      if (!row.barcode && !row.sku) {
-        row.barcode = `VC${String(Date.now()).slice(-6)}${rowNumber}`;
-        row.sku = row.barcode;
+      // Barcode remains optional on new product (NEVER auto-fabricate retail barcodes)
+      if (!row.barcode) {
+        row.barcode = null;
         warnings.push({
           field: 'barcode',
-          code: 'AUTO_GENERATED_BARCODE',
-          message: `Barcode not supplied in sheet. Auto-generated internal code: ${row.barcode}`
+          code: 'BARCODE_OPTIONAL',
+          message: 'Barcode not supplied. Product will be created without a barcode.'
+        });
+      }
+
+      // SKU generated only if missing according to Product Master policy
+      if (!row.sku) {
+        row.sku = `SKU-${Date.now().toString().slice(-6)}-${rowNumber}`;
+        warnings.push({
+          field: 'sku',
+          code: 'AUTO_GENERATED_SKU',
+          message: `SKU not supplied. Generated internal SKU: ${row.sku}`
         });
       }
     }
@@ -607,18 +608,33 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
         blockReasons.push({
           field: 'sellingPrice',
           code: 'MISSING_PRICES',
-          message: 'Either Selling Price or Purchase Price must be specified'
+          message: 'Either Selling Price or Purchase Price must be specified for new products'
         });
-      } else if (row.sellingPrice === null && row.purchasePrice !== null) {
+      } else if (row.sellingPrice === null) {
         reviewRequests.push({
           field: 'sellingPrice',
-          code: 'SELLING_PRICE_UNSET',
-          message: `Selling price is unset (Cost is ₹${row.purchasePrice}). Confirm registration.`
+          code: 'MISSING_SELLING_PRICE_FOR_NEW_PRODUCT',
+          message: `Selling price is unset (Cost is ₹${row.purchasePrice}). Confirm before creating.`
         });
       }
     }
 
-    // 5. Store & Location Validation (Conditional)
+    // 5. Ambiguous Mapping Safety Check (e.g. PURCHASE mapped to sellingPrice alongside COST)
+    for (const [rawHeader, mappedField] of Object.entries(columnMapping)) {
+      const explanation = fieldExplanations[rawHeader];
+      if (explanation && explanation.state === 'AMBIGUOUS' && mappedField !== 'ignore') {
+        const isConfirmed = Array.isArray(options.confirmedAmbiguousMappings) && options.confirmedAmbiguousMappings.includes(rawHeader);
+        if (!isConfirmed) {
+          reviewRequests.push({
+            field: mappedField,
+            code: 'AMBIGUOUS_MAPPING_CONFIRMATION_REQUIRED',
+            message: `Column "${rawHeader}" is mapped as ${mappedField} (${explanation.reason}). Please confirm mapping.`
+          });
+        }
+      }
+    }
+
+    // 6. Store & Location Validation (Conditional)
     let resolvedLocationId = defaultLocationId;
     if (row.openingStock > 0) {
       if (row.store && row.store !== 'default' && db) {
@@ -655,7 +671,7 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
       warnings.push({ field: 'brand', code: 'BRAND_OPTIONAL', message: 'Brand not specified (optional).' });
     }
 
-    // 6. Strategy Filtering
+    // 7. Strategy Filtering
     let isBlockedByStrategy = false;
     if (strategy === 'ADD_NEW_ONLY' && (classification === 'EXISTING' || classification === 'UPDATE')) {
       classification = 'SKIPPED';
@@ -665,7 +681,7 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
       isBlockedByStrategy = true;
     }
 
-    // 7. Determine Final Row State
+    // 8. Determine Final Row State
     let status = 'READY';
     if (isBlockedByStrategy) {
       status = 'SKIPPED';
@@ -790,8 +806,9 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
       }
 
       const productId = row.matchedProductId || `prd-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-      const cleanSku = String(row.sku || row.barcode).trim();
-      const primaryBarcode = String(row.barcode || cleanSku).trim();
+      const isExisting = !!row.matchedProductId;
+      const cleanSku = String(row.sku || `SKU-${Date.now().toString().slice(-6)}-${rowNum}`).trim();
+      const primaryBarcode = row.barcode ? String(row.barcode).trim() : '';
 
       const productDoc = {
         id: productId,
@@ -805,12 +822,6 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
         unit: row.unit || '1 Unit',
         weight: row.weight || 0,
         weightUnit: row.weightUnit || 'g',
-        purchasePrice: row.purchasePrice !== null ? row.purchasePrice : 0,
-        sellingPrice: row.sellingPrice !== null ? row.sellingPrice : (row.purchasePrice || 0),
-        mrp: row.mrp !== null ? row.mrp : (row.sellingPrice || 0),
-        cost: row.purchasePrice !== null ? row.purchasePrice : 0,
-        price: row.sellingPrice !== null ? row.sellingPrice : 0,
-        costPrice: row.purchasePrice !== null ? row.purchasePrice : 0,
         gst: row.gst || 0,
         reorderLevel: row.reorderLevel || 10,
         maxStock: row.maxStock || 100,
@@ -824,21 +835,64 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
         updatedAt: now
       };
 
-      // 2. Persist Product Master
-      const isExisting = !!row.matchedProductId;
-      await db.collection('products').updateOne(
-        { id: productId },
-        {
-          $set: productDoc,
-          $setOnInsert: { createdAt: now }
-        },
-        { upsert: true }
-      );
+      // Set pricing without converting blank to zero
+      if (row.purchasePrice !== null) {
+        productDoc.purchasePrice = row.purchasePrice;
+        productDoc.cost = row.purchasePrice;
+        productDoc.costPrice = row.purchasePrice;
+      }
+      if (row.sellingPrice !== null) {
+        productDoc.sellingPrice = row.sellingPrice;
+        productDoc.price = row.sellingPrice;
+        productDoc.mrp = row.mrp !== null ? row.mrp : row.sellingPrice;
+      } else if (!isExisting && row.purchasePrice !== null) {
+        productDoc.sellingPrice = row.purchasePrice;
+        productDoc.price = row.purchasePrice;
+        productDoc.mrp = row.purchasePrice;
+      }
 
-      // 3. Synchronize Barcode Registry
-      const { syncProductBarcodes } = require('../modules/products');
-      if (typeof syncProductBarcodes === 'function') {
-        await syncProductBarcodes(db, productId, primaryBarcode, [], []);
+      // 2. Persist Product Master
+      if (isExisting) {
+        const updateFields = { ...productDoc };
+        if (row.purchasePrice === null) {
+          delete updateFields.purchasePrice;
+          delete updateFields.cost;
+          delete updateFields.costPrice;
+        }
+        if (row.sellingPrice === null) {
+          delete updateFields.sellingPrice;
+          delete updateFields.price;
+          delete updateFields.mrp;
+        }
+        if (!row.barcode) {
+          delete updateFields.barcode;
+        }
+
+        await db.collection('products').updateOne(
+          { id: productId },
+          {
+            $set: updateFields,
+            $setOnInsert: { createdAt: now }
+          },
+          { upsert: true }
+        );
+      } else {
+        await db.collection('products').updateOne(
+          { id: productId },
+          {
+            $set: productDoc,
+            $setOnInsert: { createdAt: now }
+          },
+          { upsert: true }
+        );
+      }
+
+      // 3. Synchronize Barcode Registry only if primaryBarcode exists
+      if (primaryBarcode) {
+        const { syncProductBarcodes } = require('../modules/products');
+        if (typeof syncProductBarcodes === 'function') {
+          await syncProductBarcodes(db, productId, primaryBarcode, [], []);
+        }
       }
 
       if (isExisting) {
