@@ -298,7 +298,7 @@ router.post('/:id/void', verifyJWT, async (req, res) => {
   }
 });
 
-// GET /api/v1/invoices/:invoiceNumber/pdf - PDF Generation
+// GET /api/v1/invoices/:invoiceNumber/pdf - Professional Tax Invoice PDF Generation
 router.get('/:invoiceNumber/pdf', verifyJWT, async (req, res) => {
   const { db } = getContext();
   try {
@@ -307,27 +307,119 @@ router.get('/:invoiceNumber/pdf', verifyJWT, async (req, res) => {
     });
     if (!invoice) return res.status(404).send("Invoice not found");
 
-    const doc = new PDFDocument();
+    // Resolve store branding
+    const storeId = invoice.storeId || invoice.locationId || invoice.businessId;
+    let store = null;
+    if (storeId) {
+      store = await db.collection('stores').findOne({ id: storeId });
+      if (!store) store = await db.collection('businesses').findOne({ id: storeId });
+    }
+    if (!store) {
+      store = await db.collection('businesses').findOne({}) || {};
+    }
+
+    const storeName = store.name || 'VC ORGANIC';
+    const storeAddress = store.address || '';
+    const storeGstin = store.gstin || store.gst || '';
+    const storePhone = store.phone || store.mobile || '';
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=Invoice-${invoice.invoiceNumber || invoice.id}.pdf`);
     doc.pipe(res);
 
-    doc.fontSize(20).text(`Invoice ${invoice.invoiceNumber || invoice.id}`, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`Date: ${invoice.createdAt || invoice.date}`);
-    doc.text(`Store ID: ${invoice.storeId || invoice.locationId}`);
-    doc.text(`Customer: ${invoice.customerName || 'Walk-in'}`);
-    doc.moveDown();
+    // Header: Store Details
+    doc.fontSize(18).font('Helvetica-Bold').text(storeName, { align: 'center' });
+    if (storeAddress) doc.fontSize(10).font('Helvetica').text(storeAddress, { align: 'center' });
+    const metaHeader = [];
+    if (storeGstin) metaHeader.push(`GSTIN: ${storeGstin}`);
+    if (storePhone) metaHeader.push(`Phone: ${storePhone}`);
+    if (metaHeader.length > 0) doc.fontSize(9).text(metaHeader.join(' | '), { align: 'center' });
 
-    (invoice.items || []).forEach(item => {
-      doc.text(`${item.name} - Qty: ${item.quantity} - Price: ₹${item.price || item.sellingPrice}`);
+    doc.moveDown(1);
+    doc.fontSize(12).font('Helvetica-Bold').text('TAX INVOICE', { align: 'center', underline: true });
+    doc.moveDown(0.5);
+
+    // Invoice & Buyer Metadata Box
+    const startY = doc.y;
+    doc.fontSize(9).font('Helvetica-Bold').text(`Invoice #: ${invoice.invoiceNumber || invoice.id}`, 40, startY);
+    doc.font('Helvetica').text(`Date: ${new Date(invoice.createdAt || invoice.date || Date.now()).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`, 40, startY + 14);
+    doc.text(`Payment: ${(invoice.paymentMode || invoice.paymentMethod || 'CASH').toUpperCase()}`, 40, startY + 28);
+
+    doc.font('Helvetica-Bold').text(`Billed To:`, 320, startY);
+    doc.font('Helvetica').text(`${invoice.customerName || 'Walk-in Customer'}`, 320, startY + 14);
+    if (invoice.customerPhone) doc.text(`Phone: ${invoice.customerPhone}`, 320, startY + 28);
+
+    doc.moveDown(3);
+    const tableTop = doc.y;
+
+    // Table Header
+    doc.font('Helvetica-Bold').fontSize(9);
+    doc.text('S.No', 40, tableTop);
+    doc.text('Item Description', 80, tableTop);
+    doc.text('Qty', 300, tableTop, { width: 40, align: 'right' });
+    doc.text('Rate', 350, tableTop, { width: 60, align: 'right' });
+    doc.text('GST %', 420, tableTop, { width: 40, align: 'right' });
+    doc.text('Amount (₹)', 470, tableTop, { width: 80, align: 'right' });
+
+    doc.moveTo(40, tableTop + 14).lineTo(550, tableTop + 14).stroke('#cccccc');
+
+    let currentY = tableTop + 20;
+    const items = invoice.items || [];
+
+    doc.font('Helvetica').fontSize(9);
+    items.forEach((item, idx) => {
+      const price = parseFloat(item.price || item.sellingPrice || item.unitPrice || 0);
+      const qty = parseFloat(item.quantity) || 1;
+      const gst = parseFloat(item.gst || item.gstRate || 0);
+      const total = parseFloat(item.lineTotal || (price * qty));
+
+      doc.text(`${idx + 1}`, 40, currentY);
+      doc.text(`${item.name || 'Product'} (${item.unit || 'unit'})`, 80, currentY, { width: 210 });
+      doc.text(`${qty}`, 300, currentY, { width: 40, align: 'right' });
+      doc.text(`₹${price.toFixed(2)}`, 350, currentY, { width: 60, align: 'right' });
+      doc.text(`${gst}%`, 420, currentY, { width: 40, align: 'right' });
+      doc.text(`₹${total.toFixed(2)}`, 470, currentY, { width: 80, align: 'right' });
+
+      currentY += 18;
     });
 
-    doc.moveDown();
-    doc.text(`Total: ₹${invoice.grandTotal || invoice.grandtotal || 0}`);
+    doc.moveTo(40, currentY + 4).lineTo(550, currentY + 4).stroke('#cccccc');
+    currentY += 12;
+
+    // Totals Section
+    const subtotal = parseFloat(invoice.subtotal) || 0;
+    const discount = parseFloat(invoice.discount) || 0;
+    const tax = parseFloat(invoice.tax) || 0;
+    const grandTotal = parseFloat(invoice.grandTotal || invoice.grandtotal || invoice.total || 0);
+
+    doc.font('Helvetica').fontSize(9);
+    doc.text('Subtotal:', 380, currentY, { width: 80, align: 'right' });
+    doc.text(`₹${subtotal.toFixed(2)}`, 470, currentY, { width: 80, align: 'right' });
+    currentY += 14;
+
+    if (discount > 0) {
+      doc.text('Discount:', 380, currentY, { width: 80, align: 'right' });
+      doc.text(`-₹${discount.toFixed(2)}`, 470, currentY, { width: 80, align: 'right' });
+      currentY += 14;
+    }
+
+    doc.text('Tax (GST):', 380, currentY, { width: 80, align: 'right' });
+    doc.text(`₹${tax.toFixed(2)}`, 470, currentY, { width: 80, align: 'right' });
+    currentY += 14;
+
+    doc.font('Helvetica-Bold').fontSize(11);
+    doc.text('Grand Total:', 380, currentY, { width: 80, align: 'right' });
+    doc.text(`₹${grandTotal.toFixed(2)}`, 470, currentY, { width: 80, align: 'right' });
+
+    // Footer Terms
+    doc.moveDown(3);
+    doc.font('Helvetica').fontSize(8).text('Terms & Conditions: Thank you for shopping with us! Fresh organic items once sold cannot be returned.', 40, doc.y, { align: 'center', color: '#666666' });
+
     doc.end();
   } catch (err) {
-    res.status(500).send("Error generating PDF");
+    console.error('[Billing] Error generating PDF:', err);
+    res.status(500).send("Error generating PDF invoice");
   }
 });
 
