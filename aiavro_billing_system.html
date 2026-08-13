@@ -12830,7 +12830,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
 
             const name = String(getVal(["name", "productname", "itemname", "title", "product", "item", "description"]) || "").trim();
             const barcodeRaw = getVal(["barcode", "sku", "itemcode", "upc", "ean", "code", "id", "productid"]);
-            const barcode = barcodeRaw !== undefined && barcodeRaw !== null ? String(barcodeRaw).trim() : "";
+            let barcode = barcodeRaw !== undefined && barcodeRaw !== null ? String(barcodeRaw).trim() : "";
             const category = String(getVal(["category", "group", "type", "section", "class"]) || "Dairy & Ghee").trim();
             const buyPrice = parseFloat(getVal(["buyingprice", "wholesale", "cost", "purchaseprice", "buying", "costprice", "cp", "unitcost", "purchase"])) || 0;
             const sellPrice = parseFloat(getVal(["sellingprice", "price", "mrp", "selling", "retail", "sp", "saleprice", "retailprice", "rate"])) || 0;
@@ -12856,7 +12856,6 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
             }
 
             // Stage 2 Own Products Barcode Auto Generation
-            let barcode = barcodeRaw !== undefined && barcodeRaw !== null ? String(barcodeRaw).trim() : "";
             if (!barcode) {
               barcode = `VC${String(Date.now()).slice(-6)}${i}`;
             }
