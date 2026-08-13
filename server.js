@@ -391,6 +391,103 @@ async function initDB() {
       console.log("[Database] Seeded default Owner and Raja Super Admin accounts.");
     }
 
+    // Self-healing migration for old audit logs
+    const migrateAuditLogs = async () => {
+      try {
+        const cursor = db.collection('audit_logs').find({
+          $or: [
+            { user: { $exists: false } },
+            { role: { $exists: false } },
+            { action: { $exists: false } },
+            { view: { $exists: false } },
+            { details: { $exists: false } }
+          ]
+        });
+        const unmigrated = await cursor.toArray();
+        if (unmigrated.length > 0) {
+          console.log(`[Database Migration] Found ${unmigrated.length} unmigrated audit logs. Starting migration...`);
+          for (const log of unmigrated) {
+            const updates = {};
+            
+            // 1. user & role
+            const perf = log.performedBy || 'system';
+            updates.user = `${perf} (@${perf})`;
+            updates.role = perf === 'system' ? 'SYSTEM' : 'SUPER ADMIN';
+            
+            // 2. action
+            let actionType = 'update';
+            const ev = (log.eventType || '').toLowerCase();
+            if (ev.includes('create') || ev.includes('dispatch') || ev.includes('import')) {
+              actionType = 'create';
+            } else if (ev.includes('delete') || ev.includes('suspend') || ev.includes('void')) {
+              actionType = 'delete';
+            } else if (ev.includes('checkout') || ev.includes('invoice')) {
+              actionType = 'billing';
+            } else if (ev.includes('auth') || ev.includes('login')) {
+              actionType = 'auth';
+            }
+            updates.action = actionType;
+
+            // 3. view
+            let viewName = log.entity || 'system';
+            if (viewName === 'product') viewName = 'inventory';
+            if (viewName === 'purchase') viewName = 'purchase';
+            if (viewName === 'invoice') viewName = 'invoices';
+            if (viewName === 'business') viewName = 'businesses';
+            if (viewName === 'rbac_permissions') viewName = 'permissions';
+            updates.view = viewName;
+
+            // 4. details
+            let detailsString = `${log.eventType || 'Activity'} on ${log.entity || 'system'} (${log.entityId || ''})`;
+            const entityId = log.entityId || '';
+            const after = log.after || {};
+            const eventType = log.eventType || '';
+            
+            if (eventType === 'settings_updated') {
+              detailsString = `Updated general application portal configurations`;
+            } else if (eventType === 'user_updated') {
+              detailsString = `Updated user account details (ID: ${entityId})`;
+            } else if (eventType === 'user_created') {
+              detailsString = `Registered new user account: ${after.name || after.username || entityId}`;
+            } else if (eventType === 'product_created') {
+              detailsString = `Added new product: ${after.name} (SKU: ${after.sku})`;
+            } else if (eventType === 'product_updated') {
+              detailsString = `Updated product details: ${after.name} (SKU: ${after.sku})`;
+            } else if (eventType === 'inventory_updated') {
+              detailsString = `Updated inventory stock levels (Qty: ${after.quantity})`;
+            } else if (eventType === 'invoice_created') {
+              detailsString = `POS Checkout complete. Created Invoice #${entityId} (Total: ₹${after.grandTotal || after.total || 0})`;
+            } else if (eventType === 'invoice_voided') {
+              detailsString = `Voided Invoice #${entityId} and refunded items to inventory`;
+            } else if (eventType === 'purchase_created') {
+              detailsString = `Recorded supplier purchase entry (ID: ${entityId}, Supplier: ${after.supplier})`;
+            } else if (eventType === 'business_updated') {
+              detailsString = `Updated agro-outlet store details: ${after.name}`;
+            } else if (eventType === 'business_deleted') {
+              detailsString = `Removed agro-outlet store: ${entityId}`;
+            } else if (eventType === 'franchise_updated') {
+              detailsString = `Saved franchise profile: ${after.name}`;
+            } else if (eventType === 'franchise_deleted') {
+              detailsString = `Removed franchise profile (ID: ${entityId})`;
+            } else if (eventType === 'franchise_order_created') {
+              detailsString = `Dispatched franchise order: #${entityId}`;
+            }
+            updates.details = detailsString;
+
+            // 5. businessId & businessName
+            updates.businessId = log.businessId || 'biz-1';
+            updates.businessName = log.businessName || 'Main Store';
+
+            await db.collection('audit_logs').updateOne({ _id: log._id }, { $set: updates });
+          }
+          console.log(`[Database Migration] Audit logs migration completed successfully.`);
+        }
+      } catch (err) {
+        console.error("[Database Migration] Failed to migrate old audit logs:", err);
+      }
+    };
+    await migrateAuditLogs();
+
   } catch (err) {
     console.error("[Database] Initial connection failed:", err);
   }
@@ -470,6 +567,86 @@ function validateBody(schema) {
 
 async function writeAuditLog(eventType, entity, entityId, before, after, req) {
   try {
+    // 1. Resolve user info
+    let userStr = 'System';
+    let roleStr = 'SYSTEM';
+    if (req && req.user) {
+      const activeUser = req.user.name || req.user.username || 'User';
+      const activeUsername = req.user.username || 'user';
+      userStr = `${activeUser} (@${activeUsername})`;
+      roleStr = (req.user.role || req.user.category || 'employee').toUpperCase();
+    }
+
+    // 2. Map eventType to actionType expected by frontend ('create', 'update', 'delete', 'billing', 'auth', etc.)
+    let actionType = 'update';
+    const ev = (eventType || '').toLowerCase();
+    if (ev.includes('create') || ev.includes('dispatch') || ev.includes('import')) {
+      actionType = 'create';
+    } else if (ev.includes('delete') || ev.includes('suspend') || ev.includes('void')) {
+      actionType = 'delete';
+    } else if (ev.includes('checkout') || ev.includes('invoice_created')) {
+      actionType = 'billing';
+    } else if (ev.includes('auth') || ev.includes('login')) {
+      actionType = 'auth';
+    }
+
+    // 3. Resolve current view/module
+    let viewName = entity || 'system';
+    if (viewName === 'product') viewName = 'inventory';
+    if (viewName === 'purchase') viewName = 'purchase';
+    if (viewName === 'invoice') viewName = 'invoices';
+    if (viewName === 'business') viewName = 'businesses';
+    if (viewName === 'rbac_permissions') viewName = 'permissions';
+
+    // 4. Build details description dynamically
+    let detailsString = `${eventType} on ${entity} (${entityId})`;
+    if (eventType === 'settings_updated') {
+      detailsString = `Updated general application portal configurations`;
+    } else if (eventType === 'user_updated') {
+      detailsString = `Updated user account details (ID: ${entityId})`;
+    } else if (eventType === 'user_created') {
+      detailsString = `Registered new user account: ${after.name || after.username || entityId}`;
+    } else if (eventType === 'product_created') {
+      detailsString = `Added new product: ${after.name} (SKU: ${after.sku})`;
+    } else if (eventType === 'product_updated') {
+      detailsString = `Updated product details: ${after.name} (SKU: ${after.sku})`;
+    } else if (eventType === 'inventory_updated') {
+      detailsString = `Updated inventory stock levels (Qty: ${after.quantity})`;
+    } else if (eventType === 'invoice_created') {
+      detailsString = `POS Checkout complete. Created Invoice #${entityId} (Total: ₹${after.grandTotal || after.total || 0})`;
+    } else if (eventType === 'invoice_voided') {
+      detailsString = `Voided Invoice #${entityId} and refunded items to inventory`;
+    } else if (eventType === 'purchase_created') {
+      detailsString = `Recorded supplier purchase entry (ID: ${entityId}, Supplier: ${after.supplier})`;
+    } else if (eventType === 'business_updated') {
+      detailsString = `Updated agro-outlet store details: ${after.name}`;
+    } else if (eventType === 'business_deleted') {
+      detailsString = `Removed agro-outlet store: ${entityId}`;
+    } else if (eventType === 'franchise_updated') {
+      detailsString = `Saved franchise profile: ${after.name}`;
+    } else if (eventType === 'franchise_deleted') {
+      detailsString = `Removed franchise profile (ID: ${entityId})`;
+    } else if (eventType === 'franchise_order_created') {
+      detailsString = `Dispatched franchise order: #${entityId}`;
+    }
+
+    // 5. Retrieve default active business/store context
+    let businessId = 'biz-1';
+    let businessName = 'Main Store';
+    if (req && req.user && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
+      businessId = req.user.assignedStoreId;
+    } else if (after && after.storeId) {
+      businessId = after.storeId;
+    } else if (after && after.id && entity === 'business') {
+      businessId = after.id;
+    }
+    
+    // Resolve store name from active businessId
+    const biz = await db.collection('businesses').findOne({ id: businessId });
+    if (biz) {
+      businessName = biz.name;
+    }
+
     await db.collection('audit_logs').insertOne({
       eventType,
       entity,
@@ -477,6 +654,13 @@ async function writeAuditLog(eventType, entity, entityId, before, after, req) {
       before: before || {},
       after: after || {},
       performedBy: (req && req.user) ? req.user.username : 'system',
+      user: userStr,
+      role: roleStr,
+      action: actionType,
+      view: viewName,
+      details: detailsString,
+      businessId,
+      businessName,
       timestamp: new Date().toISOString()
     });
   } catch (err) {
