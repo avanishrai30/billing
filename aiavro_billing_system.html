@@ -5652,45 +5652,176 @@
 
   <!-- ==================== EXCEL IMPORT MODAL ==================== -->
   <div class="modal-backdrop" id="excel-import-modal">
-    <div class="modal-card" style="max-width:550px">
-      <div class="modal-header">
-        <h3>Bulk Import Products (Excel/CSV)</h3>
+    <div class="modal-card" style="max-width:850px; width:95%; max-height:90vh; display:flex; flex-direction:column">
+      <div class="modal-header" style="border-bottom:1px solid var(--border-color); padding:16px 20px">
+        <div style="display:flex; align-items:center; gap:10px">
+          <div style="width:36px; height:36px; border-radius:8px; background:var(--accent-green-soft); display:grid; place-items:center; font-size:18px">📊</div>
+          <div>
+            <h3 style="margin:0; font-size:16px; font-weight:800">Intelligent Bulk Product Importer</h3>
+            <small style="color:var(--text-muted); font-size:11.5px">Excel (.xlsx, .xls) & CSV Master Importer with Authoritative Inventory</small>
+          </div>
+        </div>
         <button class="modal-close-btn" onclick="toggleExcelImportModal()">&times;</button>
       </div>
-      <div class="modal-body" style="padding:20px">
-        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:15px; line-height:1.5">
-          Select a `.xlsx` or `.csv` spreadsheet file to batch import products. Columns must include: 
-          <code>Name</code>, <code>Barcode</code> (or SKU), <code>Category</code>, <code>Buying Price</code>, <code>Selling Price</code>, <code>Stock</code>, <code>GST</code>. Optional: <code>Brand</code>, <code>Supplier</code>, <code>Unit</code>, <code>Image URL</code>, <code>Store</code>.
-        </p>
-        
-        <div style="border:2px dashed var(--border-color); border-radius:8px; padding:30px; text-align:center; margin-bottom:20px; background:rgba(0,0,0,0.02)">
-          <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display:none" onchange="handleExcelFileSelect(event)">
-          <button class="secondary-btn" onclick="document.getElementById('excel-file-input').click()" style="margin-bottom:10px">Select Spreadsheet File</button>
-          <div id="excel-file-name" style="font-size:12px; font-weight:700; color:var(--accent-green)">No file chosen</div>
-        </div>
 
-        <!-- Import report section -->
-        <div id="excel-import-report" style="display:none; background:var(--bg-primary); padding:15px; border-radius:8px; margin-bottom:15px">
-          <h4 style="margin-bottom:8px">Import Report Analysis:</h4>
-          <ul style="font-size:12px; padding-left:15px; line-height:1.6; text-align:left" id="excel-report-list"></ul>
-          
-          <div id="excel-duplicate-actions" style="margin-top:12px; display:none">
-            <label style="font-weight:700; font-size:11.5px; display:block; margin-bottom:6px; color:var(--text-primary)">🔄 Strategy for existing products (Name/Barcode match):</label>
-            <select id="excel-duplicate-strategy" style="padding:8px 12px; width:100%; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-size:13px; font-weight:700">
-              <option value="merge">➕ Merge Incoming Stock with Existing Stock</option>
-              <option value="replace">🔄 Replace Existing Details with Spreadsheet Data</option>
-              <option value="skip">⏭️ Skip & Leave Existing Product Unchanged</option>
-            </select>
+      <div class="modal-body" style="padding:20px; overflow-y:auto; flex:1">
+        
+        <!-- Import Stepper -->
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px; position:relative" id="import-stepper-header">
+          <div class="import-step-node active" id="step-node-1" style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; color:var(--accent-green)">
+            <span style="width:24px; height:24px; border-radius:50%; background:var(--accent-green); color:#fff; display:grid; place-items:center; font-size:11px">1</span> Upload
+          </div>
+          <div class="import-step-node" id="step-node-2" style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--text-muted)">
+            <span style="width:24px; height:24px; border-radius:50%; background:var(--border-color); color:var(--text-primary); display:grid; place-items:center; font-size:11px">2</span> Map Columns
+          </div>
+          <div class="import-step-node" id="step-node-3" style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--text-muted)">
+            <span style="width:24px; height:24px; border-radius:50%; background:var(--border-color); color:var(--text-primary); display:grid; place-items:center; font-size:11px">3</span> Preview & Verify
+          </div>
+          <div class="import-step-node" id="step-node-4" style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--text-muted)">
+            <span style="width:24px; height:24px; border-radius:50%; background:var(--border-color); color:var(--text-primary); display:grid; place-items:center; font-size:11px">4</span> Results
           </div>
         </div>
 
-        <div class="modal-footer" style="padding:15px 0 0 0; border:none">
-          <button class="secondary-btn" onclick="toggleExcelImportModal()">Close</button>
-          <button class="primary-btn" id="excel-import-submit-btn" onclick="processExcelImport()" disabled>Run Bulk Import</button>
+        <!-- STEP 1: File Upload -->
+        <div id="import-step-1" class="import-step-view">
+          <div id="import-drop-zone" style="border:2px dashed var(--accent-green); border-radius:12px; padding:35px 20px; text-align:center; background:var(--accent-green-soft); cursor:pointer; transition:all 0.2s" onclick="document.getElementById('excel-file-input').click()">
+            <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display:none" onchange="handleExcelFileSelect(event)">
+            <div style="font-size:36px; margin-bottom:8px">📁</div>
+            <h4 style="margin:0 0 6px 0; font-size:15px; font-weight:800">Choose an Excel or CSV File to Import</h4>
+            <p style="font-size:12px; color:var(--text-muted); margin:0 0 12px 0">Supports .xlsx, .xls, and UTF-8 / BOM encoded CSV files</p>
+            <button type="button" class="primary-btn" style="pointer-events:none; padding:8px 16px; font-size:12px">Browse File</button>
+            <div id="excel-file-name" style="font-size:12px; font-weight:800; color:var(--accent-green); margin-top:10px">No file chosen</div>
+          </div>
+
+          <!-- Multi-sheet workbook selector -->
+          <div id="import-sheet-selector-box" style="margin-top:15px; display:none">
+            <label style="font-weight:700; font-size:12px; display:block; margin-bottom:4px">Select Sheet to Import:</label>
+            <select id="import-sheet-select" onchange="onImportSheetChange()" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-size:13px; font-weight:700"></select>
+          </div>
+        </div>
+
+        <!-- STEP 2: Column Mapping -->
+        <div id="import-step-2" class="import-step-view" style="display:none">
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">
+            We automatically detected fields from your spreadsheet headers. Review and adjust column mappings if necessary.
+          </p>
+          <div style="max-height:280px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px">
+            <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left">
+              <thead style="background:var(--bg-primary); position:sticky; top:0; z-index:2">
+                <tr style="border-bottom:1px solid var(--border-color)">
+                  <th style="padding:8px 12px">Spreadsheet Header</th>
+                  <th style="padding:8px 12px">Sample Row Value</th>
+                  <th style="padding:8px 12px">Mapped System Field</th>
+                </tr>
+              </thead>
+              <tbody id="import-mapping-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- STEP 3: Preview & Validation -->
+        <div id="import-step-3" class="import-step-view" style="display:none">
+          <!-- Summary Metrics Cards -->
+          <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:14px" id="import-preview-kpi-grid">
+            <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:8px; text-align:center">
+              <small style="font-size:10px; color:var(--text-muted); font-weight:700">TOTAL ROWS</small>
+              <div id="kpi-total-rows" style="font-size:16px; font-weight:900">0</div>
+            </div>
+            <div style="background:var(--bg-primary); border:1px solid var(--accent-green); border-radius:8px; padding:8px; text-align:center">
+              <small style="font-size:10px; color:var(--accent-green); font-weight:700">READY</small>
+              <div id="kpi-ready-rows" style="font-size:16px; font-weight:900; color:var(--accent-green)">0</div>
+            </div>
+            <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:8px; text-align:center">
+              <small style="font-size:10px; color:var(--text-muted); font-weight:700">NEW PRODS</small>
+              <div id="kpi-new-rows" style="font-size:16px; font-weight:900">0</div>
+            </div>
+            <div style="background:var(--bg-primary); border:1px solid var(--accent-gold); border-radius:8px; padding:8px; text-align:center">
+              <small style="font-size:10px; color:var(--accent-gold); font-weight:700">UPDATES</small>
+              <div id="kpi-update-rows" style="font-size:16px; font-weight:900; color:var(--accent-gold)">0</div>
+            </div>
+            <div style="background:var(--bg-primary); border:1px solid var(--accent-danger); border-radius:8px; padding:8px; text-align:center">
+              <small style="font-size:10px; color:var(--accent-danger); font-weight:700">CONFLICTS/ERR</small>
+              <div id="kpi-conflict-rows" style="font-size:16px; font-weight:900; color:var(--accent-danger)">0</div>
+            </div>
+          </div>
+
+          <!-- Configuration Controls -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; background:var(--bg-primary); padding:10px; border-radius:8px; border:1px solid var(--border-color)">
+            <div>
+              <label style="font-size:11px; font-weight:700; display:block; margin-bottom:4px">Import Strategy:</label>
+              <select id="import-strategy-select" onchange="refreshImportPreview()" style="width:100%; padding:6px 10px; font-size:12px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-weight:700">
+                <option value="ADD_AND_UPDATE">➕ Add New & Update Existing</option>
+                <option value="ADD_NEW_ONLY">🆕 Add New Products Only (Skip Existing)</option>
+                <option value="UPDATE_EXISTING_ONLY">🔄 Update Existing Products Only</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:700; display:block; margin-bottom:4px">Default Opening Stock Store:</label>
+              <select id="import-store-select" onchange="refreshImportPreview()" style="width:100%; padding:6px 10px; font-size:12px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-weight:700"></select>
+            </div>
+          </div>
+
+          <!-- Filter Pills -->
+          <div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap">
+            <button type="button" class="secondary-btn" id="filter-pill-all" onclick="filterImportPreviewTable('ALL')" style="padding:3px 8px; font-size:11px; font-weight:700">All (<span id="count-pill-all">0</span>)</button>
+            <button type="button" class="secondary-btn" id="filter-pill-ready" onclick="filterImportPreviewTable('READY')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-green)">Ready (<span id="count-pill-ready">0</span>)</button>
+            <button type="button" class="secondary-btn" id="filter-pill-new" onclick="filterImportPreviewTable('NEW')" style="padding:3px 8px; font-size:11px; font-weight:700">New (<span id="count-pill-new">0</span>)</button>
+            <button type="button" class="secondary-btn" id="filter-pill-update" onclick="filterImportPreviewTable('UPDATE')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-gold)">Update (<span id="count-pill-update">0</span>)</button>
+            <button type="button" class="secondary-btn" id="filter-pill-conflict" onclick="filterImportPreviewTable('CONFLICT')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-danger)">Conflicts (<span id="count-pill-conflict">0</span>)</button>
+            <button type="button" class="secondary-btn" id="filter-pill-invalid" onclick="filterImportPreviewTable('INVALID')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-danger)">Invalid (<span id="count-pill-invalid">0</span>)</button>
+          </div>
+
+          <!-- Preview Table -->
+          <div style="max-height:260px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px">
+            <table style="width:100%; border-collapse:collapse; font-size:11.5px; text-align:left">
+              <thead style="background:var(--bg-primary); position:sticky; top:0; z-index:2">
+                <tr style="border-bottom:1px solid var(--border-color)">
+                  <th style="padding:6px 10px; width:40px">#</th>
+                  <th style="padding:6px 10px; width:70px">Status</th>
+                  <th style="padding:6px 10px">Product</th>
+                  <th style="padding:6px 10px">Barcode / SKU</th>
+                  <th style="padding:6px 10px">Cost / Price</th>
+                  <th style="padding:6px 10px; text-align:center">Stock</th>
+                  <th style="padding:6px 10px">Details</th>
+                </tr>
+              </thead>
+              <tbody id="import-preview-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- STEP 4: Execution Progress & Results -->
+        <div id="import-step-4" class="import-step-view" style="display:none; text-align:center; padding:20px 0">
+          <div id="import-progress-box" style="margin-bottom:20px">
+            <div style="width:50px; height:50px; border-radius:50%; border:3px solid var(--accent-green); border-top-color:transparent; animation:spin 1s linear infinite; margin:0 auto 15px auto"></div>
+            <h4 style="margin:0 0 6px 0; font-size:15px; font-weight:800">Processing Import Transactions...</h4>
+            <p style="font-size:12px; color:var(--text-muted); margin:0" id="import-progress-status-text">Creating Product Master records and allocating authoritative stock...</p>
+          </div>
+
+          <div id="import-results-box" style="display:none; text-align:left; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:16px">
+            <h4 style="margin:0 0 10px 0; font-size:14px; font-weight:800; color:var(--accent-green)">✅ Import Completed Successfully!</h4>
+            <ul style="font-size:12px; line-height:1.7; margin:0 0 12px 18px; padding:0" id="import-results-summary-list"></ul>
+            <div id="import-results-error-box" style="display:none; margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px">
+              <strong style="color:var(--accent-danger); font-size:11.5px">Errors Encountered:</strong>
+              <div id="import-results-error-list" style="font-size:11px; font-family:monospace; max-height:100px; overflow-y:auto; margin-top:4px"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="padding:14px 20px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center">
+        <div>
+          <button type="button" class="secondary-btn" id="import-btn-back" onclick="navigateImportStep(-1)" style="display:none">← Back</button>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button type="button" class="secondary-btn" onclick="toggleExcelImportModal()">Cancel</button>
+          <button type="button" class="primary-btn" id="import-btn-next" onclick="navigateImportStep(1)" disabled>Next →</button>
         </div>
       </div>
     </div>
   </div>
+
 
 
   <!-- ==================== JS STATE & CONTROLLERS ==================== -->
@@ -12780,296 +12911,459 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       }
     }
 
-    /* ==================== BULK EXCEL IMPORT CONTROLLERS ==================== */
-    let excelImportData = [];
-     function toggleExcelImportModal() {
+    /* ==================== INTELLIGENT BULK IMPORT CONTROLLERS ==================== */
+    let currentImportStep = 1;
+    let currentImportWorkbook = null;
+    let currentImportRawRows = [];
+    let currentImportHeaders = [];
+    let currentImportColumnMapping = {};
+    let currentImportPreviewData = null;
+    let currentImportTableFilter = 'ALL';
+
+    const CANONICAL_FIELD_OPTIONS = [
+      { id: 'productName', label: 'Product Name (Required)' },
+      { id: 'sku', label: 'SKU / Item Code' },
+      { id: 'barcode', label: 'Barcode / EAN / UPC' },
+      { id: 'category', label: 'Category' },
+      { id: 'brand', label: 'Brand' },
+      { id: 'supplier', label: 'Supplier / Vendor' },
+      { id: 'type', label: 'Product Type (OWN / EXTERNAL)' },
+      { id: 'unit', label: 'Unit / Packaging' },
+      { id: 'weight', label: 'Weight / Volume' },
+      { id: 'weightUnit', label: 'Weight Unit (g / ml / kg / L)' },
+      { id: 'purchasePrice', label: 'Purchase Price / Cost' },
+      { id: 'sellingPrice', label: 'Selling Price / Rate' },
+      { id: 'mrp', label: 'MRP' },
+      { id: 'gst', label: 'GST Slab Rate (%)' },
+      { id: 'openingStock', label: 'Opening Stock Quantity' },
+      { id: 'store', label: 'Store / Location' },
+      { id: 'reorderLevel', label: 'Reorder Level' },
+      { id: 'maxStock', label: 'Max Stock' },
+      { id: 'dom', label: 'Date of Mfg (DOM)' },
+      { id: 'doe', label: 'Date of Expiry (DOE)' },
+      { id: 'imageUrl', label: 'Image URL / Path' },
+      { id: 'description', label: 'Description' },
+      { id: 'sellingMode', label: 'Selling Mode (Packaged / Loose)' },
+      { id: 'ignore', label: '🚫 Ignore Column' }
+    ];
+
+    function toggleExcelImportModal() {
       const modal = document.getElementById("excel-import-modal");
       modal.classList.toggle("active");
+      if (modal.classList.contains("active")) {
+        resetImportWizard();
+      }
+    }
+
+    function resetImportWizard() {
+      currentImportStep = 1;
+      currentImportWorkbook = null;
+      currentImportRawRows = [];
+      currentImportHeaders = [];
+      currentImportColumnMapping = {};
+      currentImportPreviewData = null;
+      currentImportTableFilter = 'ALL';
+
       document.getElementById("excel-file-input").value = "";
       document.getElementById("excel-file-name").innerText = "No file chosen";
-      document.getElementById("excel-import-report").style.display = "none";
-      document.getElementById("excel-duplicate-actions").style.display = "none";
-      document.getElementById("excel-import-submit-btn").disabled = true;
-      excelImportData = [];
+      document.getElementById("import-sheet-selector-box").style.display = "none";
+      document.getElementById("import-btn-back").style.display = "none";
+      document.getElementById("import-btn-next").disabled = true;
+      document.getElementById("import-btn-next").innerText = "Next →";
+
+      // Populate store dropdown in preview
+      const storeSelect = document.getElementById("import-store-select");
+      if (storeSelect) {
+        const stores = (state.stores && state.stores.length > 0) ? state.stores : state.businesses;
+        storeSelect.innerHTML = (stores || []).map(s => `<option value="${s.id}">${escapeHTML(s.name)}</option>`).join('');
+      }
+
+      showImportStepView(1);
+    }
+
+    function showImportStepView(step) {
+      currentImportStep = step;
+      for (let i = 1; i <= 4; i++) {
+        const view = document.getElementById(`import-step-${i}`);
+        const node = document.getElementById(`step-node-${i}`);
+        if (view) view.style.display = i === step ? "block" : "none";
+        if (node) {
+          if (i < step) {
+            node.className = "import-step-node completed";
+            node.style.color = "var(--accent-green)";
+            node.querySelector("span").style.background = "var(--accent-green)";
+            node.querySelector("span").style.color = "#fff";
+          } else if (i === step) {
+            node.className = "import-step-node active";
+            node.style.color = "var(--accent-green)";
+            node.querySelector("span").style.background = "var(--accent-green)";
+            node.querySelector("span").style.color = "#fff";
+          } else {
+            node.className = "import-step-node";
+            node.style.color = "var(--text-muted)";
+            node.querySelector("span").style.background = "var(--border-color)";
+            node.querySelector("span").style.color = "var(--text-primary)";
+          }
+        }
+      }
+
+      const backBtn = document.getElementById("import-btn-back");
+      const nextBtn = document.getElementById("import-btn-next");
+
+      if (step === 1) {
+        backBtn.style.display = "none";
+        nextBtn.innerText = "Next (Map Columns) →";
+        nextBtn.disabled = currentImportRawRows.length === 0;
+      } else if (step === 2) {
+        backBtn.style.display = "inline-flex";
+        nextBtn.innerText = "Generate Preview →";
+        nextBtn.disabled = false;
+      } else if (step === 3) {
+        backBtn.style.display = "inline-flex";
+        nextBtn.innerText = "Confirm & Run Bulk Import ✅";
+        const hasReady = currentImportPreviewData && currentImportPreviewData.summary.readyRows > 0;
+        nextBtn.disabled = !hasReady;
+      } else if (step === 4) {
+        backBtn.style.display = "none";
+        nextBtn.innerText = "Done";
+        nextBtn.disabled = false;
+      }
+    }
+
+    function navigateImportStep(direction) {
+      if (direction === 1) {
+        if (currentImportStep === 1) {
+          if (currentImportRawRows.length === 0) return;
+          renderImportColumnMappingTable();
+          showImportStepView(2);
+        } else if (currentImportStep === 2) {
+          // Collect mappings and generate preview
+          collectColumnMappingsFromUI();
+          generateImportPreview();
+        } else if (currentImportStep === 3) {
+          executeImportCommit();
+        } else if (currentImportStep === 4) {
+          toggleExcelImportModal();
+        }
+      } else if (direction === -1) {
+        if (currentImportStep > 1 && currentImportStep < 4) {
+          showImportStepView(currentImportStep - 1);
+        }
+      }
     }
 
     function handleExcelFileSelect(e) {
       const file = e.target.files[0];
       if (!file) return;
 
-      document.getElementById("excel-file-name").innerText = file.name;
+      document.getElementById("excel-file-name").innerText = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
       
       const reader = new FileReader();
       reader.onload = function(evt) {
         try {
           const data = new Uint8Array(evt.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const rows = XLSX.utils.sheet_to_json(worksheet);
-          
-          if (rows.length === 0) {
-            triggerAlert("Selected spreadsheet has no products data rows!", "danger");
-            return;
-          }
+          currentImportWorkbook = workbook;
 
-          let validCount = 0;
-          let duplicateCount = 0;
-          let invalidCount = 0;
-          const importList = [];
-          const reportLines = [];
-          const diagnosticDetails = [];
-
-          rows.forEach((row, i) => {
-            // Helper to match column names case-insensitively and strip special characters
-            const getVal = (possibleKeys, fallback = "") => {
-              const keys = Object.keys(row);
-              for (let key of keys) {
-                const cleanKey = key.toLowerCase().trim().replace(/[^a-z0-9]/g, "");
-                if (possibleKeys.includes(cleanKey)) {
-                  return row[key];
-                }
-              }
-              return fallback;
-            };
-
-            const name = String(getVal(["name", "productname", "itemname", "title", "product", "item", "description"]) || "").trim();
-            const barcodeRaw = getVal(["barcode", "sku", "itemcode", "upc", "ean", "code", "id", "productid"]);
-            let barcode = barcodeRaw !== undefined && barcodeRaw !== null ? String(barcodeRaw).trim() : "";
-            const category = String(getVal(["category", "group", "type", "section", "class"]) || "Dairy & Ghee").trim();
-            const buyPrice = parseFloat(getVal(["buyingprice", "wholesale", "cost", "purchaseprice", "buying", "costprice", "cp", "unitcost", "purchase"])) || 0;
-            const sellPrice = parseFloat(getVal(["sellingprice", "price", "mrp", "selling", "retail", "sp", "saleprice", "retailprice", "rate"])) || 0;
-            const stock = parseInt(getVal(["stock", "initialstock", "qty", "quantity", "count", "onhand"])) || 0;
-            const gst = parseInt(getVal(["gst", "gstslab", "tax", "vat", "taxrate"])) || 12;
-            const unit = String(getVal(["unit", "pack", "packaging", "measure", "size"]) || "1 Unit").trim();
-            const brand = String(getVal(["brand", "company", "manufacturer", "make"]) || "AIAVRO").trim();
-            const supplier = String(getVal(["supplier", "vendor", "source"]) || "Direct Farmer Market").trim();
-            const dom = String(getVal(["dom", "mfgdate", "mfg"]) || new Date().toISOString().split("T")[0]).trim();
-            const doe = String(getVal(["doe", "expiry", "expdate"]) || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]).trim();
-            const minStock = parseInt(getVal(["minstock", "reorder", "safety"])) || 10;
-            const maxStock = parseInt(getVal(["maxstock", "limit"])) || 100;
-            const store = String(getVal(["store", "location", "outlet"]) || "Main Store").trim();
-            
-            const rawImage = String(getVal(["image", "imagepath", "productimage", "picture"]) || "").trim();
-            const image = rawImage || "/uploads/system/default-product.webp";
-            const images = [image];
-
-            if (!name) {
-              invalidCount++;
-              diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2}: Missing "Product Name" column data.</span>`);
-              return;
-            }
-
-            // Stage 2 Own Products Barcode Auto Generation
-            if (!barcode) {
-              barcode = `VC${String(Date.now()).slice(-6)}${i}`;
-            }
-
-            // Adjust buyPrice/sellPrice logic for inversion: if cost is retail and purchase is wholesale
-            let realBuy = buyPrice;
-            let realSell = sellPrice;
-            const rowKeys = Object.keys(row).map(k => k.toLowerCase().trim());
-            if (rowKeys.includes('cost') && rowKeys.includes('purchase')) {
-              realBuy = parseFloat(getVal(["purchase"])) || buyPrice;
-              realSell = parseFloat(getVal(["cost"])) || sellPrice;
-            }
-
-            if (realBuy <= 0 || realSell <= 0) {
-              invalidCount++;
-              diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2} (${name}): Price and Cost must be greater than zero! (Cost: ₹${realBuy}, Price: ₹${realSell})</span>`);
-              return;
-            }
-            const validGSTs = [0, 5, 12, 18, 28];
-            if (!validGSTs.includes(gst)) {
-              invalidCount++;
-              diagnosticDetails.push(`<span style="color:var(--accent-danger)">Row ${i + 2} (${name}): Invalid GST slab rate "${gst}%". Must be 0, 5, 12, 18, or 28%.</span>`);
-              return;
-            }
-
-            // Stage 3 Smart Product Matching Checks
-            const matchResult = findProductByBarcode(barcode);
-            const existingProd = (matchResult ? matchResult.product : null) || state.products.find(p => p.name.toLowerCase() === name.toLowerCase());
-            const inImportList = importList.some(p => p.sku === barcode);
-            
-            if (inImportList) {
-              duplicateCount++;
-              diagnosticDetails.push(`<span style="color:var(--accent-gold)">Row ${i + 2} (${name}): Duplicate barcode "${barcode}" within spreadsheet skipped.</span>`);
-              return;
-            }
-
-            const isDuplicate = !!existingProd;
-            if (isDuplicate) {
-              duplicateCount++;
-              diagnosticDetails.push(`<span style="color:var(--accent-gold)">Row ${i + 2} (${name}): Matches existing product '${existingProd.name}' (Barcode: ${barcode}).</span>`);
-            }
-
-            validCount++;
-            importList.push({
-              id: isDuplicate ? existingProd.id : "prod-" + (Date.now() + i),
-              name,
-              category,
-              emoji: row.Emoji || "🌾",
-              sku: barcode,
-              barcode: barcode,
-              unit: unit,
-              cost: realBuy,
-              price: realSell,
-              stock: stock,
-              reorder: minStock,
-              maxStock: maxStock,
-              brand: brand,
-              supplier: supplier,
-              dom: dom,
-              doe: doe,
-              gst: gst,
-              store: store,
-              image: image,
-              images: images,
-              status: "active",
-              isDuplicate: isDuplicate
-            });
-          });
-
-          excelImportData = importList;
-          
-          reportLines.push(`Total rows in sheet: <strong>${rows.length}</strong>`);
-          reportLines.push(`Ready to Import / Process: <strong style="color:var(--accent-green)">${validCount}</strong>`);
-          reportLines.push(`Matching Existing Products: <strong style="color:var(--accent-gold)">${duplicateCount}</strong>`);
-          reportLines.push(`Skipped Invalid: <strong style="color:var(--accent-danger)">${invalidCount}</strong>`);
-
-          const reportList = document.getElementById("excel-report-list");
-          if (reportList) {
-            let listHTML = reportLines.map(line => `<li>${line}</li>`).join("");
-            if (diagnosticDetails.length > 0) {
-              listHTML += `<hr style="margin:10px 0; border-color:var(--border-color)">`;
-              listHTML += `<div style="max-height:120px; overflow-y:auto; font-size:11px; font-family:monospace; line-height:1.4">`;
-              listHTML += diagnosticDetails.map(detail => `<div>${detail}</div>`).join("");
-              listHTML += `</div>`;
-            }
-            reportList.innerHTML = listHTML;
-          }
-          
-          document.getElementById("excel-import-report").style.display = "block";
-          
-          // Show duplicate strategy configuration panel if matching products are detected
-          if (duplicateCount > 0) {
-            document.getElementById("excel-duplicate-actions").style.display = "block";
+          // Populate sheet selector if multi-sheet workbook
+          const sheetSelect = document.getElementById("import-sheet-select");
+          const sheetBox = document.getElementById("import-sheet-selector-box");
+          if (workbook.SheetNames.length > 1) {
+            sheetSelect.innerHTML = workbook.SheetNames.map(name => `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`).join('');
+            sheetBox.style.display = "block";
           } else {
-            document.getElementById("excel-duplicate-actions").style.display = "none";
+            sheetBox.style.display = "none";
           }
 
-          if (validCount > 0) {
-            document.getElementById("excel-import-submit-btn").disabled = false;
-          }
-
+          loadRowsFromSheet(workbook.SheetNames[0]);
         } catch (err) {
-          console.error(err);
-          triggerAlert("Failed to parse the Excel file. Make sure file format and columns are valid.", "danger");
+          console.error("Excel parse error:", err);
+          triggerAlert("Failed to parse file. Please verify format.", "danger");
         }
       };
       reader.readAsArrayBuffer(file);
     }
 
-    function processExcelImport() {
-      if (excelImportData.length === 0) return;
-
-      const strategy = document.getElementById("excel-duplicate-strategy").value || "merge";
-      const finalProductsToSync = [];
-      const importLogs = [];
-
-      excelImportData.forEach(prod => {
-        if (prod.isDuplicate) {
-          const idx = state.products.findIndex(p => p.id === prod.id || p.sku === prod.sku || p.name.toLowerCase() === prod.name.toLowerCase());
-          if (idx !== -1) {
-            if (strategy === 'skip') {
-              // Skip entirely
-              return;
-            } else if (strategy === 'merge') {
-              // Merge incoming stock with existing
-              state.products[idx].stock = (parseFloat(state.products[idx].stock) || 0) + (parseFloat(prod.stock) || 0);
-              
-              // Copy to sync list
-              const syncProd = { ...state.products[idx] };
-              finalProductsToSync.push(syncProd);
-              
-              // Create log
-              const logEntry = {
-                id: "LOG-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-                productId: state.products[idx].id,
-                productName: state.products[idx].name,
-                type: "Stock Change",
-                qty: prod.stock,
-                date: new Date().toISOString(),
-                referenceId: "MERGE-" + Date.now().toString().slice(-4),
-                user: state.currentUser ? state.currentUser.name : "admin",
-                notes: `Import Merge: Added ${prod.stock} units to stock`
-              };
-              state.inventoryLogs.push(logEntry);
-              importLogs.push(logEntry);
-            } else if (strategy === 'replace') {
-              // Replace existing fields
-              state.products[idx] = { ...prod };
-              delete state.products[idx].isDuplicate;
-              
-              // Copy to sync list
-              finalProductsToSync.push(state.products[idx]);
-              
-              // Create log
-              const logEntry = {
-                id: "LOG-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-                productId: prod.id,
-                productName: prod.name,
-                type: "Purchase",
-                qty: prod.stock,
-                date: new Date().toISOString(),
-                referenceId: "REPLACE-" + Date.now().toString().slice(-4),
-                user: state.currentUser ? state.currentUser.name : "admin",
-                notes: `Import Replace: Overwrote details, set stock to ${prod.stock}`
-              };
-              state.inventoryLogs.push(logEntry);
-              importLogs.push(logEntry);
-            }
-          }
-        } else {
-          // New product
-          delete prod.isDuplicate;
-          state.products.push(prod);
-          finalProductsToSync.push(prod);
-
-          const logEntry = {
-            id: "LOG-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-            productId: prod.id,
-            productName: prod.name,
-            type: "Purchase",
-            qty: prod.stock,
-            date: new Date().toISOString(),
-            referenceId: "IMPORT-" + Date.now().toString().slice(-4),
-            user: state.currentUser ? state.currentUser.name : "admin",
-            notes: "Batch Spreadsheet Import Setup"
-          };
-          state.inventoryLogs.push(logEntry);
-          importLogs.push(logEntry);
-        }
-      });
-
-      saveStateToLocalStorage();
-      renderInventoryTable();
-      triggerAlert(`Processed spreadsheet bulk import!`, "success");
-      
-      api.products.import({
-        newProducts: finalProductsToSync,
-        logs: importLogs
-      }).then(result => {
-        // Central client handles response and throws on error, so if we are here, it was successful
-        triggerAlert(`Successfully synchronized ${finalProductsToSync.length} products to database!`, "success");
-        syncStateWithServer();
-      }).catch(err => {
-        console.error("Bulk sync network error:", err);
-        triggerAlert(`Backend synchronization failed: ${err.message || 'Unauthorized access request'}`, "danger");
-      });
-
-      toggleExcelImportModal();
+    function onImportSheetChange() {
+      const sheetName = document.getElementById("import-sheet-select").value;
+      if (sheetName && currentImportWorkbook) {
+        loadRowsFromSheet(sheetName);
+      }
     }
+
+    function loadRowsFromSheet(sheetName) {
+      const worksheet = currentImportWorkbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+      
+      if (!rows || rows.length === 0) {
+        triggerAlert(`Sheet "${sheetName}" has no data rows!`, "warning");
+        currentImportRawRows = [];
+        document.getElementById("import-btn-next").disabled = true;
+        return;
+      }
+
+      currentImportRawRows = rows;
+      currentImportHeaders = Object.keys(rows[0] || {});
+      document.getElementById("import-btn-next").disabled = false;
+      triggerAlert(`Loaded ${rows.length} rows from sheet "${sheetName}".`, "success");
+    }
+
+    function cleanKeySimple(key) {
+      if (!key) return '';
+      return String(key).replace(/^\uFEFF/, '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+    }
+
+    function renderImportColumnMappingTable() {
+      const tbody = document.getElementById("import-mapping-table-body");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const sampleRow = currentImportRawRows[0] || {};
+      const ALIASES = {
+        productName: ['productname', 'name', 'itemname', 'title', 'product', 'item', 'description', 'itemdescription', 'particulars', 'productservice', 'nameofitem', 'producttitle'],
+        sku: ['sku', 'productsku', 'itemsku', 'skucode', 'itemcode', 'code', 'productcode'],
+        barcode: ['barcode', 'barcodenumber', 'upc', 'ean', 'gtin', 'bar_code', 'eancode'],
+        category: ['category', 'categoryname', 'group', 'type', 'section', 'class'],
+        brand: ['brand', 'brandname', 'company', 'manufacturer', 'make'],
+        supplier: ['supplier', 'suppliername', 'vendor', 'source'],
+        type: ['producttype', 'ownexternal', 'ownership'],
+        unit: ['unit', 'uom', 'pack', 'packaging', 'measure', 'size'],
+        weight: ['weight', 'volume', 'netweight'],
+        weightUnit: ['weightunit', 'volumeunit'],
+        purchasePrice: ['purchaseprice', 'buyingprice', 'costprice', 'cost', 'buying', 'cp', 'unitcost', 'purchase', 'wholesale'],
+        sellingPrice: ['sellingprice', 'saleprice', 'retailprice', 'price', 'mrp', 'sp', 'rate', 'retail', 'selling'],
+        mrp: ['mrp', 'maximumretailprice', 'maxprice'],
+        gst: ['gst', 'gstslab', 'tax', 'vat', 'taxrate'],
+        openingStock: ['openingstock', 'stock', 'initialstock', 'qty', 'quantity', 'count', 'onhand'],
+        store: ['store', 'location', 'outlet', 'locationid'],
+        reorderLevel: ['reorderlevel', 'reorder', 'minstock', 'safety'],
+        maxStock: ['maxstock', 'limit'],
+        dom: ['dom', 'mfgdate', 'mfg'],
+        doe: ['doe', 'expiry', 'expdate'],
+        imageUrl: ['imageurl', 'image', 'imagepath', 'picture'],
+        description: ['details', 'notes', 'remarks'],
+        sellingMode: ['sellingmode', 'mode', 'weightmode']
+      };
+
+      currentImportHeaders.forEach((header, idx) => {
+        const clean = cleanKeySimple(header);
+        let detected = 'ignore';
+
+        for (const [canon, aliasList] of Object.entries(ALIASES)) {
+          if (aliasList.includes(clean)) {
+            detected = canon;
+            break;
+          }
+        }
+
+        currentImportColumnMapping[header] = detected;
+        const sampleVal = sampleRow[header] !== undefined ? String(sampleRow[header]).slice(0, 35) : '';
+
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid var(--border-color)";
+        tr.innerHTML = `
+          <td style="padding:8px 12px"><strong>${escapeHTML(header)}</strong></td>
+          <td style="padding:8px 12px; color:var(--text-muted); font-family:monospace">${escapeHTML(sampleVal || '-')}</td>
+          <td style="padding:8px 12px">
+            <select class="import-col-map-select" data-header="${escapeHTML(header)}" style="padding:4px 8px; font-size:12px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-panel); color:var(--text-primary); font-weight:700; width:100%">
+              ${CANONICAL_FIELD_OPTIONS.map(opt => `<option value="${opt.id}" ${opt.id === detected ? 'selected' : ''}>${opt.label}</option>`).join('')}
+            </select>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function collectColumnMappingsFromUI() {
+      const selects = document.querySelectorAll(".import-col-map-select");
+      selects.forEach(sel => {
+        const header = sel.getAttribute("data-header");
+        currentImportColumnMapping[header] = sel.value;
+      });
+    }
+
+    async function generateImportPreview() {
+      const strategy = document.getElementById("import-strategy-select")?.value || "ADD_AND_UPDATE";
+      const defaultStore = document.getElementById("import-store-select")?.value || "default";
+
+      showImportStepView(3);
+      const tbody = document.getElementById("import-preview-table-body");
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted)">⏳ Analyzing spreadsheet data against database...</td></tr>`;
+
+      try {
+        const res = await api.products.importPreview({
+          rows: currentImportRawRows,
+          columnMapping: currentImportColumnMapping,
+          strategy: strategy,
+          defaultLocationId: defaultStore
+        });
+
+        if (!res.success) {
+          triggerAlert(res.message || "Failed to generate preview", "danger");
+          return;
+        }
+
+        currentImportPreviewData = res;
+        renderImportPreviewKPIs(res.summary);
+        renderImportPreviewTableRows(res.rows);
+
+        const nextBtn = document.getElementById("import-btn-next");
+        if (nextBtn) {
+          nextBtn.disabled = res.summary.readyRows === 0;
+        }
+      } catch (err) {
+        console.error("Preview API error:", err);
+        triggerAlert("Error communicating with server during preview validation", "danger");
+      }
+    }
+
+    function refreshImportPreview() {
+      if (currentImportStep === 3) {
+        generateImportPreview();
+      }
+    }
+
+    function renderImportPreviewKPIs(summary) {
+      document.getElementById("kpi-total-rows").innerText = summary.totalRows;
+      document.getElementById("kpi-ready-rows").innerText = summary.readyRows;
+      document.getElementById("kpi-new-rows").innerText = summary.newRows;
+      document.getElementById("kpi-update-rows").innerText = summary.existingRows;
+      document.getElementById("kpi-conflict-rows").innerText = summary.conflictRows + summary.invalidRows;
+
+      document.getElementById("count-pill-all").innerText = summary.totalRows;
+      document.getElementById("count-pill-ready").innerText = summary.readyRows;
+      document.getElementById("count-pill-new").innerText = summary.newRows;
+      document.getElementById("count-pill-update").innerText = summary.existingRows;
+      document.getElementById("count-pill-conflict").innerText = summary.conflictRows;
+      document.getElementById("count-pill-invalid").innerText = summary.invalidRows;
+    }
+
+    function filterImportPreviewTable(filter) {
+      currentImportTableFilter = filter;
+      if (currentImportPreviewData) {
+        renderImportPreviewTableRows(currentImportPreviewData.rows);
+      }
+    }
+
+    function renderImportPreviewTableRows(rows = []) {
+      const tbody = document.getElementById("import-preview-table-body");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const filtered = rows.filter(r => {
+        if (currentImportTableFilter === 'ALL') return true;
+        if (currentImportTableFilter === 'READY') return r.status === 'READY';
+        if (currentImportTableFilter === 'NEW') return r.classification === 'NEW' && r.status === 'READY';
+        if (currentImportTableFilter === 'UPDATE') return r.classification === 'UPDATE' || (r.classification === 'EXISTING' && r.status === 'READY');
+        if (currentImportTableFilter === 'CONFLICT') return r.status === 'CONFLICT';
+        if (currentImportTableFilter === 'INVALID') return r.status === 'INVALID';
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:15px; color:var(--text-muted)">No items match the selected filter.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(row => {
+        const norm = row.normalizedData;
+        const statusColors = {
+          READY: { bg: 'var(--accent-green-soft)', text: 'var(--accent-green)', label: norm.matchedProductId ? 'UPDATE' : 'NEW' },
+          CONFLICT: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--accent-danger)', label: 'CONFLICT' },
+          INVALID: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--accent-danger)', label: 'INVALID' },
+          SKIPPED: { bg: 'var(--bg-primary)', text: 'var(--text-muted)', label: 'SKIPPED' }
+        };
+        const badge = statusColors[row.status] || { bg: '#eee', text: '#333', label: row.status };
+
+        const issueList = [...(row.issues || []), ...(row.warnings || [])];
+        const detailHtml = issueList.map(iss => `<span style="font-size:10px; color:${row.issues.includes(iss) ? 'var(--accent-danger)' : 'var(--accent-gold)'}">• ${escapeHTML(iss.message)}</span>`).join('<br>');
+
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid var(--border-color)";
+        tr.innerHTML = `
+          <td style="padding:6px 10px">${row.rowNumber}</td>
+          <td style="padding:6px 10px">
+            <span style="font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; background:${badge.bg}; color:${badge.text}">${badge.label}</span>
+          </td>
+          <td style="padding:6px 10px">
+            <strong>${escapeHTML(norm.productName || 'Missing Name')}</strong><br>
+            <small style="color:var(--text-muted)">${escapeHTML(norm.category)} | ${escapeHTML(norm.brand)}</small>
+          </td>
+          <td style="padding:6px 10px; font-family:monospace">
+            ${escapeHTML(norm.barcode)}<br>
+            <small style="color:var(--text-muted)">SKU: ${escapeHTML(norm.sku)}</small>
+          </td>
+          <td style="padding:6px 10px">
+            ₹${(norm.purchasePrice || 0).toFixed(2)} / <strong>₹${(norm.sellingPrice || 0).toFixed(2)}</strong>
+          </td>
+          <td style="padding:6px 10px; text-align:center; font-weight:800">
+            ${norm.openingStock > 0 ? `<span style="color:var(--accent-green)">+${norm.openingStock}</span>` : '0'}
+          </td>
+          <td style="padding:6px 10px">
+            ${detailHtml || '<span style="color:var(--accent-green); font-size:10.5px">✓ Valid</span>'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function executeImportCommit() {
+      if (!currentImportPreviewData || !currentImportPreviewData.rows) return;
+
+      const importId = currentImportPreviewData.importId;
+      const strategy = document.getElementById("import-strategy-select")?.value || "ADD_AND_UPDATE";
+      const defaultStore = document.getElementById("import-store-select")?.value || "default";
+
+      showImportStepView(4);
+      document.getElementById("import-progress-box").style.display = "block";
+      document.getElementById("import-results-box").style.display = "none";
+      document.getElementById("import-btn-next").disabled = true;
+
+      try {
+        const result = await api.products.importCommit({
+          importId,
+          rows: currentImportPreviewData.rows,
+          options: {
+            strategy,
+            defaultLocationId: defaultStore
+          }
+        });
+
+        document.getElementById("import-progress-box").style.display = "none";
+        document.getElementById("import-results-box").style.display = "block";
+        document.getElementById("import-btn-next").disabled = false;
+
+        const summary = result.summary || {};
+        const summaryList = document.getElementById("import-results-summary-list");
+        summaryList.innerHTML = `
+          <li>Import Session ID: <strong>${escapeHTML(importId)}</strong></li>
+          <li>New Products Created: <strong style="color:var(--accent-green)">${summary.imported || 0}</strong></li>
+          <li>Existing Products Updated: <strong style="color:var(--accent-gold)">${summary.updated || 0}</strong></li>
+          <li>Inventory Opening Stock Allocations: <strong style="color:var(--accent-green)">${summary.inventoryMovements || 0}</strong></li>
+          <li>Skipped Rows: <strong>${summary.skipped || 0}</strong></li>
+          <li>Failed Rows: <strong style="color:${summary.failed > 0 ? 'var(--accent-danger)' : 'inherit'}">${summary.failed || 0}</strong></li>
+        `;
+
+        const errorBox = document.getElementById("import-results-error-box");
+        const errorList = document.getElementById("import-results-error-list");
+        if (summary.errors && summary.errors.length > 0) {
+          errorBox.style.display = "block";
+          errorList.innerHTML = summary.errors.map(err => `<div>• Row ${err.rowNumber || '-'}: ${escapeHTML(err.error || '')}</div>`).join('');
+        } else {
+          errorBox.style.display = "none";
+        }
+
+        triggerAlert(`Bulk import completed! Synchronized ${((summary.imported || 0) + (summary.updated || 0))} products.`, "success");
+
+        // Sync local database state from server
+        syncStateWithServer();
+      } catch (err) {
+        console.error("Import commit error:", err);
+        document.getElementById("import-progress-box").style.display = "none";
+        triggerAlert("Error executing bulk import commit. Please try again.", "danger");
+      }
+    }
+
 
     /* ==================== PURCHASE INVOICE ENTRY SYSTEM ==================== */
     let purchaseSheetItems = [];
