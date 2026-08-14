@@ -12014,7 +12014,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
     }
 
     /* ==================== SMART DASHBOARD ANALYTICS & LEDGERS ==================== */
-    function initDashboardAnalytics() {
+    async function initDashboardAnalytics() {
       const activeBizId = state.activeBusinessId;
       const activeBiz = activeBizId ? state.businesses.find(b => b.id === activeBizId) : null;
       
@@ -12033,6 +12033,128 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
           bannerStatus.innerText = "Consolidated enterprise mode";
           bannerStatus.className = "status-badge paid";
         }
+      }
+
+      // Server-side Aggregation Pipeline Integration (Stage 12 P0)
+      try {
+        if (window.api?.dashboard?.getMetrics) {
+          const serverData = await window.api.dashboard.getMetrics({ storeId: activeBizId || '' });
+          if (serverData && serverData.success && serverData.metrics) {
+            const m = serverData.metrics;
+
+            document.getElementById("metric-total-sales").innerText = `₹${m.totalSales.toFixed(2)}`;
+            const netProfitEl = document.getElementById("metric-net-profit");
+            netProfitEl.innerText = `₹${m.netProfit.toFixed(2)}`;
+            netProfitEl.style.color = "var(--accent-green)";
+            document.getElementById("metric-asset-valuation-cost").innerText = `₹${m.stockAssetValuationCost.toFixed(2)}`;
+            document.getElementById("metric-asset-valuation-retail").innerText = `₹${m.stockAssetValuationRetail.toFixed(2)}`;
+            
+            const franEarningsEl = document.getElementById("metric-franchise-earnings");
+            if (franEarningsEl) {
+              franEarningsEl.innerText = `₹${m.franchiseEarnings.toFixed(2)}`;
+            }
+
+            document.getElementById("metric-total-products").innerText = m.totalProducts;
+            document.getElementById("metric-own-products").innerText = m.ownProducts;
+            document.getElementById("metric-external-products").innerText = m.externalProducts;
+            document.getElementById("metric-low-stock-count").innerText = m.lowStockCount;
+            document.getElementById("metric-out-of-stock-count").innerText = m.outOfStockCount;
+            document.getElementById("metric-categories-count").innerText = m.categoriesCount;
+            document.getElementById("metric-brands-count").innerText = m.brandsCount;
+            document.getElementById("metric-suppliers-count").innerText = m.suppliersCount;
+
+            const alertDot = document.getElementById("alert-bell-dot");
+            if (alertDot) {
+              alertDot.style.display = m.expiryWarningsCount > 0 ? "block" : "none";
+            }
+
+            // 2. STAMP LOW STOCK WATCHLIST TABLE
+            const lowStockTbody = document.getElementById("dashboard-low-stock-watchlist");
+            if (lowStockTbody) {
+              lowStockTbody.innerHTML = "";
+              const lowStockItems = serverData.lowStockWatchlist || [];
+              if (lowStockItems.length === 0) {
+                lowStockTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); font-size:12px; padding:20px">No low stock items. Warehouses healthy! 🌾</td></tr>`;
+              } else {
+                lowStockItems.forEach(p => {
+                  const isOut = p.stock <= 0;
+                  const row = document.createElement("tr");
+                  row.innerHTML = `
+                    <td>
+                      <div style="display:flex; align-items:center; gap:8px">
+                        ${getProductListThumbnailHtml(p, 24)}
+                        <strong>${p.name}</strong>
+                      </div>
+                    </td>
+                    <td><code>${p.sku}</code></td>
+                    <td style="text-align:right">${p.reorder} ${p.sellingMode === 'loose' ? (p.unit || 'kg') : 'units'}</td>
+                    <td style="text-align:right"><strong>${Number.isInteger(p.stock) ? p.stock.toString() : p.stock.toFixed(2)} ${p.sellingMode === 'loose' ? (p.unit || 'kg') : 'units'}</strong></td>
+                    <td style="text-align:center">
+                      <button class="primary-btn" style="padding:4px 8px; font-size:10px" onclick="openProductModal('${p.id}')">Restock</button>
+                    </td>
+                  `;
+                  lowStockTbody.appendChild(row);
+                });
+              }
+            }
+
+            // 4. STAMP RECENT SALES TRANSACTIONS LIST
+            const recentTbody = document.getElementById("dashboard-recent-invoices");
+            if (recentTbody) {
+              recentTbody.innerHTML = "";
+              const recents = serverData.recentInvoices || [];
+              if (recents.length === 0) {
+                recentTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px">No sales logs logged yet.</td></tr>`;
+              } else {
+                recents.forEach(inv => {
+                  const custName = inv.customerName || inv.customer?.name || 'Walk-in Buyer';
+                  const row = document.createElement("tr");
+                  const invTotal = inv.grandTotal || inv.grandtotal || 0;
+                  row.innerHTML = `
+                    <td><strong style="color:var(--accent-green)">${inv.invoiceNumber || inv.id}</strong></td>
+                    <td><strong>${custName}</strong></td>
+                    <td style="text-transform:uppercase; font-size:10px"><strong>${inv.paymentMode || inv.paymentMethod || 'CASH'}</strong></td>
+                    <td style="text-align:right"><strong>₹${invTotal.toFixed(2)}</strong></td>
+                    <td style="text-align:center">
+                      <button class="secondary-btn" style="padding:4px 8px; font-size:10px" onclick="openInvoicePreviewModal('${inv.invoiceNumber || inv.id}')">Invoice</button>
+                    </td>
+                  `;
+                  recentTbody.appendChild(row);
+                });
+              }
+            }
+
+            // 5. STAMP RECENT PURCHASES LEDGER TABLE
+            const purchaseTbody = document.getElementById("dashboard-recent-purchases");
+            if (purchaseTbody) {
+              purchaseTbody.innerHTML = "";
+              const recPurchases = serverData.recentPurchases || [];
+              if (recPurchases.length === 0) {
+                purchaseTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px">No supplier purchase invoices recorded.</td></tr>`;
+              } else {
+                recPurchases.forEach(pur => {
+                  const purTotal = pur.grandTotal || pur.total || pur.totalCost || 0;
+                  const itemsCount = pur.items ? pur.items.length : (pur.itemsCount || 0);
+                  const row = document.createElement("tr");
+                  row.innerHTML = `
+                    <td><strong style="color:var(--accent-green)">${pur.purchaseNo || pur.id}</strong></td>
+                    <td><strong>${pur.supplierName || pur.supplier || 'Vendor'}</strong></td>
+                    <td>${pur.storeName || pur.store || pur.locationId || 'Store'}</td>
+                    <td style="text-align:right; font-weight:700">₹${purTotal.toFixed(2)}</td>
+                    <td style="text-align:right"><strong>${itemsCount} items</strong></td>
+                  `;
+                  purchaseTbody.appendChild(row);
+                });
+              }
+            }
+
+            buildSVGSalesChart();
+            buildCategoryPieChart();
+            return;
+          }
+        }
+      } catch (dashErr) {
+        console.warn("[Dashboard] Server aggregation warning, falling back to cached state:", dashErr.message);
       }
 
       const filteredInvoices = activeBizId ? state.invoices.filter(inv => inv.businessId === activeBizId) : state.invoices;
