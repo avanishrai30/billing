@@ -27,7 +27,14 @@ const userService = {
       throw err;
     }
 
-    const match = bcrypt.compareSync(currentPassword, user.passwordHash || user.password);
+    // Verify against passwordHash or legacy plaintext password
+    let match = false;
+    if (user.passwordHash) {
+      match = bcrypt.compareSync(currentPassword, user.passwordHash);
+    } else if (user.password) {
+      match = (currentPassword === user.password);
+    }
+
     if (!match) {
       const err = new Error("Current password is incorrect");
       err.statusCode = 400;
@@ -35,11 +42,13 @@ const userService = {
     }
 
     const newHash = bcrypt.hashSync(newPassword, 12);
+    const nextTokenVersion = (user.tokenVersion && user.tokenVersion >= 1) ? user.tokenVersion + 1 : 2;
+
     await db.collection('users').updateOne(
       { id: userId },
       {
-        $set: { passwordHash: newHash, updatedAt: new Date().toISOString() },
-        $inc: { tokenVersion: 1 }
+        $set: { passwordHash: newHash, tokenVersion: nextTokenVersion, updatedAt: new Date().toISOString() },
+        $unset: { password: "" }
       }
     );
 
@@ -52,7 +61,7 @@ const userService = {
   },
 
   /**
-   * List all users (excluding password hashes)
+   * List all users (excluding password hashes and legacy passwords)
    */
   async listUsers() {
     const { db } = getContext();
@@ -63,7 +72,7 @@ const userService = {
   },
 
   /**
-   * Get user by ID (excluding password hashes)
+   * Get user by ID (excluding password hashes and legacy passwords)
    */
   async getUserById(id) {
     const { db } = getContext();
@@ -72,7 +81,7 @@ const userService = {
   },
 
   /**
-   * Save or create user account
+   * Save or create user account (Guarantees passwordHash only)
    */
   async saveUser(userData, req) {
     const { db, io } = getContext();
@@ -83,24 +92,32 @@ const userService = {
       ...userData,
       id: userId,
       status: userData.status || 'active',
-      tokenVersion: userData.tokenVersion || 1,
       updatedAt: new Date().toISOString()
     };
     if (passwordHash) {
       userDoc.passwordHash = passwordHash;
     }
-    delete userDoc.password;
+    delete userDoc.password; // Plaintext password is NEVER preserved
 
     if (!userData.id) {
       userDoc.createdAt = new Date().toISOString();
+      userDoc.tokenVersion = 1;
       await db.collection('users').insertOne(userDoc);
       await auditService.writeAuditLog('user_created', 'user', userId, null, userDoc, req);
     } else {
-      // If password changed during admin update, increment tokenVersion to revoke old sessions
-      const updatePayload = { $set: userDoc };
+      const existingUser = await db.collection('users').findOne({ id: userId });
+      const updatePayload = {
+        $set: userDoc,
+        $unset: { password: "" }
+      };
+
       if (passwordHash) {
-        updatePayload.$inc = { tokenVersion: 1 };
+        const nextTokenVersion = (existingUser && existingUser.tokenVersion && existingUser.tokenVersion >= 1)
+          ? existingUser.tokenVersion + 1
+          : 2;
+        updatePayload.$set.tokenVersion = nextTokenVersion;
       }
+
       await db.collection('users').updateOne({ id: userId }, updatePayload);
       await auditService.writeAuditLog('user_updated', 'user', userId, null, userDoc, req);
     }
@@ -118,12 +135,15 @@ const userService = {
   async deactivateUser(userId, req) {
     const { db, io } = getContext();
     const now = new Date().toISOString();
+    const existingUser = await db.collection('users').findOne({ id: userId });
+    const nextTokenVersion = (existingUser && existingUser.tokenVersion && existingUser.tokenVersion >= 1)
+      ? existingUser.tokenVersion + 1
+      : 2;
     
     await db.collection('users').updateOne(
       { id: userId },
       {
-        $set: { status: 'suspended', updatedAt: now },
-        $inc: { tokenVersion: 1 }
+        $set: { status: 'suspended', tokenVersion: nextTokenVersion, updatedAt: now }
       }
     );
 

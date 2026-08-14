@@ -29,13 +29,52 @@ router.post('/login', validateBody(schemas.loginSchema), async (req, res) => {
       return res.status(403).json({ success: false, error: { code: "ACCOUNT_SUSPENDED", message: "Your account is suspended" } });
     }
 
-    const match = bcrypt.compareSync(password, user.passwordHash || user.password);
-    if (!match) {
-      await auditService.writeAuditLog('LOGIN_FAILED', 'auth', user.id, null, { username }, req);
+    let authenticated = false;
+    let tokenVersion = (user.tokenVersion && user.tokenVersion >= 1) ? user.tokenVersion : 1;
+
+    // Strict Password Authentication & Controlled Migration
+    if (user.passwordHash) {
+      // Authoritative Bcrypt check (Strictly passwordHash only)
+      authenticated = bcrypt.compareSync(password, user.passwordHash);
+      if (!authenticated) {
+        await auditService.writeAuditLog('LOGIN_FAILED', 'auth', user.id, null, { username }, req);
+        return res.status(401).json({ success: false, error: { code: "INVALID_CREDENTIALS", message: "Invalid username or password" } });
+      }
+    } else if (user.password) {
+      // Controlled Legacy Password Migration: User authenticates with existing credential
+      if (password === user.password) {
+        authenticated = true;
+        // Generate secure Bcrypt hash and remove plaintext password permanently
+        const newHash = bcrypt.hashSync(password, 12);
+        tokenVersion = (user.tokenVersion && user.tokenVersion >= 1) ? user.tokenVersion + 1 : 2;
+        
+        await db.collection('users').updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              passwordHash: newHash,
+              tokenVersion: tokenVersion,
+              updatedAt: new Date().toISOString()
+            },
+            $unset: { password: "" }
+          }
+        );
+
+        user.passwordHash = newHash;
+        user.tokenVersion = tokenVersion;
+        delete user.password;
+
+        await auditService.writeAuditLog('user_updated', 'user', user.id, null, { action: 'LEGACY_PASSWORD_MIGRATED' }, req);
+      } else {
+        await auditService.writeAuditLog('LOGIN_FAILED', 'auth', user.id, null, { username }, req);
+        return res.status(401).json({ success: false, error: { code: "INVALID_CREDENTIALS", message: "Invalid username or password" } });
+      }
+    } else {
+      // Account has neither passwordHash nor legacy password
+      await auditService.writeAuditLog('LOGIN_FAILED', 'auth', user.id, null, { username, reason: 'No password credential set' }, req);
       return res.status(401).json({ success: false, error: { code: "INVALID_CREDENTIALS", message: "Invalid username or password" } });
     }
 
-    const tokenVersion = user.tokenVersion || 1;
     const token = jwt.sign(
       {
         id: user.id,
