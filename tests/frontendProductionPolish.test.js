@@ -38,9 +38,9 @@ describe('Frontend production polish stability pass', () => {
 
   test('3. login uses botanical premium composition without unsupported auth options or phone mockup', () => {
     const loginStart = html.indexOf('id="login-screen-overlay"');
-    const loginEnd = html.indexOf('<div class="app-container">', loginStart);
+    const loginEnd = html.indexOf('<div class="app-container"', loginStart);
     const loginMarkup = html.slice(loginStart, loginEnd);
-    expect(html).toContain('class="login-screen-overlay"');
+    expect(html).toContain('class="login-screen-overlay active" data-auth-state="pending"');
     expect(html).toContain('class="login-card"');
     expect(html).toContain('linear-gradient(105deg');
     expect(html).toMatch(/botanical/i);
@@ -50,7 +50,15 @@ describe('Frontend production polish stability pass', () => {
     expect(loginMarkup).not.toMatch(/Google|Microsoft|Office|phone mockup|mobile mockup/i);
   });
 
-  test('4. view switching uses explicit view states and avoids concurrent active screens', () => {
+  test('4. login first paint hides app shell and renders final login layout directly', () => {
+    expect(html).toContain('<div class="app-container" style="display:none">');
+    expect(html).toContain('appContainer.style.display = "grid"');
+    expect(html).toContain('appContainer.style.display = "none"');
+    expect(html).toContain('loginOverlay.setAttribute("data-auth-state", "login")');
+    expect(html).not.toContain('animation: loginPanelIn');
+  });
+
+  test('5. view switching uses explicit view states and avoids concurrent active screens', () => {
     expect(html).toContain('data-view-state');
     expect(html).toContain('aria-hidden');
     expect(html).toContain('target.setAttribute("data-view-state", "entering")');
@@ -58,7 +66,7 @@ describe('Frontend production polish stability pass', () => {
     expect(html).toContain('v.classList.remove("active")');
   });
 
-  test('5. modal and drawer system has stable overlay, scroll lock, and z-index tokens', () => {
+  test('6. modal and drawer system has stable overlay, scroll lock, and z-index tokens', () => {
     expect(theme).toContain('--z-overlay: 1000');
     expect(theme).toContain('--z-modal: 1100');
     expect(theme).toContain('--z-toast: 2000');
@@ -69,13 +77,13 @@ describe('Frontend production polish stability pass', () => {
     expect(html).not.toContain('z-index: 99999');
   });
 
-  test('6. motion is restrained and respects reduced-motion preference', () => {
+  test('7. motion is restrained and respects reduced-motion preference', () => {
     expect(html).toContain('@media (prefers-reduced-motion: reduce)');
     expect(html).toContain('--transition-normal: 180ms');
     expect(html).toContain('.app-view.active[data-view-state="entering"]');
   });
 
-  test('7. no fake data or backend contract changes were introduced by polish files', () => {
+  test('8. no fake data or backend contract changes were introduced by polish files', () => {
     expect(combined).not.toMatch(/sampleCustomer|sampleSupplier|fake invoice|fake inventory|fake product/);
     const backendFiles = ['server.js', 'modules/customers.js', 'services/authzService.js'];
     backendFiles.forEach(file => {

@@ -3,9 +3,12 @@
 ## 1. Root Causes Of Flicker
 
 - The Stage 13 token file carried a dark default theme while the single-file app declared light inline tokens later in the cascade. This created a risk of dark surface flashes before the inline app styles won.
+- The login overlay was inactive in the initial HTML, so unauthenticated first paint could briefly show the application shell before `initAuthentication()` hid it. This was the source of the large horizontal light block visible during login rendering.
+- `initAuthentication()` restored `.app-container` with `display: flex` even though the shell contract is CSS Grid, creating another possible layout jump after authentication.
 - Views used a simple `display: none` / `display: block` switch with a repeated slide animation. It worked, but it did not expose deterministic view states for auditability or accessibility.
 - Modal open/close state was distributed across many functions. Body scroll was not centrally synchronized with active overlays.
 - The login screen was a centered utility card on a decorative gradient, which did not match the production visual direction or the attached botanical reference.
+- The browser password-manager/autofill dropdown is native browser UI. It was not treated as an application defect and no password-manager behavior was styled, hidden, or modified.
 
 ## 2. Font Issue Resolution
 
@@ -71,6 +74,8 @@ The previous `99999` sidebar resizer layer was replaced with a tokenized header 
 ## 10. Login Redesign
 
 - The login screen now follows the attached visual language: soft botanical background, green/cream tonal range, premium white panel, and layered organic curves.
+- The login overlay is active in the initial HTML and the app shell is hidden until authentication resolves, preventing the horizontal app-shell block during first paint.
+- The authenticated shell restores as CSS Grid instead of Flexbox, matching the actual app layout contract.
 - The existing username/password authentication flow is preserved.
 - No Google, Microsoft, or other unsupported sign-in options were added.
 - Password visibility toggle was added as a frontend-only accessibility/usability improvement.
@@ -112,4 +117,5 @@ The previous `99999` sidebar resizer layer was replaced with a tokenized header 
 
 - `dbc8aa6` - `fix: resolve frontend font loading 404s`
 - `2b90ce4` - `fix: stabilize frontend rendering and visual system`
+- Login first-paint block correction is recorded in the final delivery report because this documentation file was amended into that same commit.
 - Documentation commit recorded in the final delivery report.
