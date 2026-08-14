@@ -73,9 +73,14 @@ graph LR
 - Implemented Immutable Movement Ledger viewer connected to `GET /api/v1/inventory/logs`.
 - Verified with 16 dedicated automated test cases in `tests/inventoryRedesign.test.js` (156/156 passing tests across all 17 test suites).
 
-#### Phase G — Purchases & Sales Invoices
-- Multi-item vendor purchase entry with instant tax calculation.
-- Paginated invoice list with date range picker, detail drawer, and void action modal.
+#### Phase G — Purchases & Sales Invoices [✅ COMPLETED]
+- Redesigned purchases into a paginated supplier purchase ledger with supplier, store, status, date range, and search controls.
+- Implemented polished purchase entry drawer: store, supplier, product add, quantity, unit cost, review summary, duplicate submit lock, and backend idempotency handoff.
+- Added purchase detail drawer with supplier/store/reference/date/items/costs/taxes/status/created-by context and RBAC-aware void confirmation.
+- Redesigned sales invoice history into a paginated financial ledger with customer, store, payment, status, date range, and search controls.
+- Added invoice detail drawer with line items, subtotal, tax, discount, roundoff, grand total, payment mode, status, and existing 58mm/A4/PDF print handoff.
+- Integrated existing `purchase_created`, `purchase_deleted`, `invoice_created`, and `invoice_voided` realtime events through incremental row/detail updates.
+- Documented in `docs/PURCHASE_INVOICE_IMPLEMENTATION.md` and covered by `tests/purchaseInvoiceRedesign.test.js`.
 
 #### Phase H — Customer & Supplier CRM
 - Customer and Supplier directory tables with profile drawers and balance tracking.
