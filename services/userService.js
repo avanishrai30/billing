@@ -53,6 +53,11 @@ const userService = {
     );
 
     await auditService.writeAuditLog('user_updated', 'user', userId, null, { action: 'PASSWORD_CHANGED' }, req);
+    
+    // Revoke active Socket.IO sessions immediately
+    const realtimeService = require('./realtimeService');
+    realtimeService.revokeUserSockets(userId);
+
     if (io) {
       io.to('sync_global').emit('user_updated', { userId });
     }
@@ -116,6 +121,9 @@ const userService = {
           ? existingUser.tokenVersion + 1
           : 2;
         updatePayload.$set.tokenVersion = nextTokenVersion;
+        
+        const realtimeService = require('./realtimeService');
+        realtimeService.revokeUserSockets(userId);
       }
 
       await db.collection('users').updateOne({ id: userId }, updatePayload);
@@ -146,6 +154,10 @@ const userService = {
         $set: { status: 'suspended', tokenVersion: nextTokenVersion, updatedAt: now }
       }
     );
+
+    // Revoke active Socket.IO sessions immediately
+    const realtimeService = require('./realtimeService');
+    realtimeService.revokeUserSockets(userId);
 
     const updated = await this.getUserById(userId);
     await auditService.writeAuditLog('user_deactivated', 'user', userId, null, { status: 'suspended' }, req);

@@ -63,6 +63,8 @@ const auditRouter = require('./modules/audit');
 const settingsRouter = require('./modules/settings');
 const systemRouter = require('./modules/system');
 
+const realtimeService = require('./services/realtimeService');
+
 const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
@@ -77,19 +79,46 @@ const activePresences = new Map();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'vc_organic_master_jwt_secret_2026';
 
-// 5. Authenticate Socket.IO connections via JWT
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  if (!token) return next(new Error("Authentication error"));
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return next(new Error("Authentication error"));
-    socket.user = decoded;
-    next();
+// 5. Authenticate Socket.IO connections via JWT & MongoDB active session validation
+io.use(async (socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (!token) return next(new Error("AUTHENTICATION_REQUIRED"));
+
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
+    if (err) return next(new Error("INVALID_TOKEN"));
+
+    try {
+      if (db && decoded && decoded.id) {
+        const user = await db.collection('users').findOne({ id: decoded.id });
+        if (!user) {
+          return next(new Error("AUTHENTICATION_REQUIRED"));
+        }
+        if (user.status === 'suspended' || user.status === 'inactive') {
+          return next(new Error("ACCOUNT_SUSPENDED"));
+        }
+        const currentVersion = user.tokenVersion || 1;
+        const tokenVersion = decoded.tokenVersion || 1;
+        if (currentVersion !== tokenVersion) {
+          return next(new Error("SESSION_REVOKED"));
+        }
+        socket.user = { ...decoded, ...user };
+      } else {
+        socket.user = decoded;
+      }
+      next();
+    } catch (dbErr) {
+      console.warn("[Socket Auth] User lookup warning:", dbErr.message);
+      socket.user = decoded;
+      next();
+    }
   });
 });
 
 io.on('connection', (socket) => {
-  console.log(`[Socket] Client connected: ${socket.id}`);
+  console.log(`[Socket] Client connected: ${socket.id} (user: ${socket.user?.username || 'anonymous'})`);
+  if (socket.user && socket.user.id) {
+    realtimeService.registerUserSocket(socket.user.id, socket);
+  }
 
   socket.on('JOIN_SESSION', (data) => {
     if (data && data.sessionId) {
@@ -101,9 +130,24 @@ io.on('connection', (socket) => {
   socket.on('JOIN_SYNC', (data) => {
     if (data) {
       // Ensure users only join room sync lists they are authorized to access
-      if (socket.user.assignedStoreId && socket.user.assignedStoreId !== 'all') {
-        if (data.storeId && data.storeId !== socket.user.assignedStoreId) {
-          console.log(`[Socket] Unauthorized room join attempt by ${socket.id} for store ${data.storeId}`);
+      const userRole = socket.user?.role || '';
+      const userCategory = socket.user?.category || '';
+      const userStore = socket.user?.assignedStoreId;
+      const isSuper = userRole.toLowerCase().includes('super') ||
+                      userCategory === 'super admin' ||
+                      userStore === 'all';
+
+      if (!isSuper && data.storeId && data.storeId !== 'default') {
+        const allowedStores = Array.isArray(socket.user?.assignedStores)
+          ? socket.user.assignedStores
+          : (userStore ? [userStore] : []);
+
+        if (!allowedStores.includes(data.storeId)) {
+          console.warn(`[Socket] Unauthorized room join attempt by ${socket.id} for store ${data.storeId}`);
+          socket.emit('AUTHORIZATION_DENIED', {
+            code: 'STORE_ACCESS_DENIED',
+            message: `Access denied to store room 'store_${data.storeId}'`
+          });
           return;
         }
       }
@@ -130,6 +174,9 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`[Socket] Client disconnected: ${socket.id}`);
+    if (socket.user && socket.user.id) {
+      realtimeService.unregisterUserSocket(socket.user.id, socket.id);
+    }
     activePresences.delete(socket.id);
   });
 });
@@ -236,6 +283,7 @@ async function initDB() {
 
     // Call setupContext to make db and io available to all routers
     setupContext(db, io, JWT_SECRET, UPLOAD_ROOT, UPLOAD_SUBDIRS, activePresences);
+    realtimeService.setup(io, () => db);
 
     // Non-destructive performance indexes
     try {
