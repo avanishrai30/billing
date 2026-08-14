@@ -2030,7 +2030,7 @@
       margin-bottom: 2px;
     }
 
-    /* ==================== CINEMATIC GLASSMORPHISM LOGIN OVERLAY ==================== */
+    /* ==================== APPLE-STYLE FLUID GRADIENT & ATMOSPHERE ==================== */
     .login-screen-overlay {
       position: fixed;
       top: 0;
@@ -2043,7 +2043,7 @@
       z-index: 99999;
       opacity: 0;
       pointer-events: none;
-      background: #0b0c16;
+      background: #06070d;
       overflow-y: auto;
       overflow-x: hidden;
       padding: 20px 16px;
@@ -2066,6 +2066,7 @@
       pointer-events: none;
       z-index: 1;
       overflow: hidden;
+      background: #06070d;
     }
 
     .login-bg-video {
@@ -2075,45 +2076,104 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
-      opacity: 0.85;
+      opacity: 0.30;
       z-index: 1;
       pointer-events: none;
+      filter: saturate(130%) contrast(110%);
     }
 
-    .login-bg-ambient {
+    .login-gradient-canvas {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
+      top: -20%;
+      left: -20%;
+      width: 140vw;
+      height: 140vh;
       z-index: 2;
       pointer-events: none;
-      background:
-        radial-gradient(ellipse at 50% 10%, rgba(160, 140, 240, 0.28) 0%, transparent 60%),
-        radial-gradient(ellipse at 85% 70%, rgba(120, 80, 210, 0.25) 0%, transparent 55%),
-        radial-gradient(ellipse at 15% 85%, rgba(60, 40, 150, 0.32) 0%, transparent 50%),
-        linear-gradient(180deg, #090a14 0%, #121029 38%, #1d173c 72%, #100d24 100%);
+      filter: blur(80px);
+      -webkit-filter: blur(80px);
+      opacity: 0.90;
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
     }
 
-    .login-bg-stars {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 3;
-      pointer-events: none;
-      background-image: 
-        radial-gradient(1.5px 1.5px at 15% 15%, rgba(255, 255, 255, 0.7) 100%, transparent),
-        radial-gradient(1px 1px at 35% 25%, rgba(255, 255, 255, 0.5) 100%, transparent),
-        radial-gradient(1.5px 1.5px at 70% 18%, rgba(255, 255, 255, 0.6) 100%, transparent),
-        radial-gradient(1px 1px at 85% 30%, rgba(255, 255, 255, 0.4) 100%, transparent),
-        radial-gradient(2px 2px at 50% 12%, rgba(255, 255, 255, 0.8) 100%, transparent),
-        radial-gradient(1px 1px at 20% 40%, rgba(255, 255, 255, 0.4) 100%, transparent),
-        radial-gradient(1.5px 1.5px at 90% 10%, rgba(255, 255, 255, 0.7) 100%, transparent),
-        radial-gradient(1px 1px at 60% 35%, rgba(255, 255, 255, 0.5) 100%, transparent);
-      background-size: 100% 100%;
-      opacity: 0.8;
+    .login-blob {
+      position: absolute;
+      border-radius: 50%;
+      mix-blend-mode: screen;
+      opacity: 0.65;
+    }
+
+    /* Blob 1: Deep Indigo / Violet Orbit */
+    .login-blob-1 {
+      top: 15%;
+      left: 20%;
+      width: 48vw;
+      height: 48vw;
+      min-width: 400px;
+      min-height: 400px;
+      background: radial-gradient(circle, rgba(124, 58, 237, 0.72) 0%, rgba(91, 33, 182, 0.4) 60%, transparent 80%);
+      animation: blobOrbit1 36s ease-in-out infinite alternate;
+    }
+
+    /* Blob 2: Electric Cyan / Deep Blue Fluid Drift */
+    .login-blob-2 {
+      top: 40%;
+      right: 15%;
+      width: 52vw;
+      height: 52vw;
+      min-width: 420px;
+      min-height: 420px;
+      background: radial-gradient(circle, rgba(37, 99, 235, 0.68) 0%, rgba(30, 58, 138, 0.35) 60%, transparent 80%);
+      animation: blobDrift2 42s ease-in-out infinite alternate;
+    }
+
+    /* Blob 3: Lavender Glow Pulse */
+    .login-blob-3 {
+      bottom: 10%;
+      left: 30%;
+      width: 44vw;
+      height: 44vw;
+      min-width: 360px;
+      min-height: 360px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.58) 0%, rgba(126, 34, 206, 0.28) 60%, transparent 80%);
+      animation: blobBreathe3 28s ease-in-out infinite alternate;
+    }
+
+    /* Blob 4: Midnight Emerald / Organic Accent */
+    .login-blob-4 {
+      top: 5%;
+      right: 30%;
+      width: 38vw;
+      height: 38vw;
+      min-width: 320px;
+      min-height: 320px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(5, 150, 105, 0.15) 60%, transparent 80%);
+      animation: blobDrift4 48s ease-in-out infinite alternate;
+    }
+
+    @keyframes blobOrbit1 {
+      0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+      50%  { transform: translate3d(8vw, 10vh, 0) rotate(180deg) scale(1.12); }
+      100% { transform: translate3d(-6vw, 4vh, 0) rotate(360deg) scale(0.92); }
+    }
+
+    @keyframes blobDrift2 {
+      0%   { transform: translate3d(0, 0, 0) scale(0.95); }
+      50%  { transform: translate3d(-10vw, -8vh, 0) scale(1.14); }
+      100% { transform: translate3d(6vw, -12vh, 0) scale(1.02); }
+    }
+
+    @keyframes blobBreathe3 {
+      0%   { transform: translate3d(0, 0, 0) scale(1); }
+      50%  { transform: translate3d(-5vw, -6vh, 0) scale(1.18); }
+      100% { transform: translate3d(8vw, -2vh, 0) scale(0.88); }
+    }
+
+    @keyframes blobDrift4 {
+      0%   { transform: translate3d(0, 0, 0) scale(1); }
+      50%  { transform: translate3d(-12vw, 12vh, 0) scale(1.15); }
+      100% { transform: translate3d(4vw, 6vh, 0) scale(0.95); }
     }
 
     .login-bg-vignette {
@@ -2124,14 +2184,14 @@
       height: 100vh;
       z-index: 4;
       pointer-events: none;
-      background: radial-gradient(circle at 50% 50%, transparent 40%, rgba(5, 6, 12, 0.68) 100%);
+      background: radial-gradient(circle at 50% 50%, transparent 35%, rgba(4, 5, 10, 0.72) 100%);
     }
 
     /* Glassmorphism Centered Login Card */
     .login-card {
       position: relative;
       z-index: 10;
-      background: rgba(20, 24, 38, 0.60);
+      background: rgba(18, 22, 36, 0.62);
       backdrop-filter: blur(28px) saturate(180%);
       -webkit-backdrop-filter: blur(28px) saturate(180%);
       border: 1px solid rgba(255, 255, 255, 0.14);
@@ -2140,11 +2200,13 @@
         0 10px 24px rgba(0, 0, 0, 0.35),
         inset 0 1px 0 rgba(255, 255, 255, 0.22);
       border-radius: 28px;
-      padding: clamp(28px, 5vw, 42px) clamp(22px, 4vw, 36px);
+      padding: clamp(28px, 5vw, 40px) clamp(22px, 4vw, 36px);
       width: min(460px, calc(100vw - 32px));
       box-sizing: border-box;
       text-align: center;
       margin: auto;
+      display: flex;
+      flex-direction: column;
       animation: loginCardAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
@@ -2153,44 +2215,84 @@
       to { transform: translateY(0); opacity: 1; }
     }
 
-    .login-brand-emblem {
-      width: 52px;
-      height: 52px;
-      margin: 0 auto 16px;
-      border-radius: 50%;
+    /* Fixed-size Logo Container */
+    .login-brand-logo-container {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 12px;
+      border-radius: 18px;
       background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 0 24px rgba(165, 140, 255, 0.25);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 24px rgba(165, 140, 255, 0.3);
-      color: #e2d9ff;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-sizing: border-box;
     }
 
-    .login-brand-emblem img {
-      max-height: 70%;
-      max-width: 70%;
+    @media (max-width: 600px) {
+      .login-brand-logo-container {
+        width: 56px;
+        height: 56px;
+        margin-bottom: 10px;
+        border-radius: 16px;
+      }
+    }
+
+    .login-brand-logo {
+      width: 100%;
+      height: 100%;
       object-fit: contain;
+      padding: 8px;
+      box-sizing: border-box;
+      display: block;
+      transition: opacity 0.25s ease;
     }
 
-    .login-title {
-      font-size: clamp(24px, 5vw, 28px);
+    .login-brand-title {
+      font-size: clamp(20px, 4.5vw, 24px);
+      font-weight: 800;
+      color: #ffffff;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+    }
+
+    .login-brand-badge {
+      display: inline-block;
+      align-self: center;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: rgba(165, 140, 255, 0.15);
+      border: 1px solid rgba(165, 140, 255, 0.3);
+      color: #dcd4ff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin: 0 auto 18px;
+    }
+
+    .login-welcome-heading {
+      font-size: clamp(18px, 4vw, 21px);
       font-weight: 700;
       color: #ffffff;
-      margin: 0 0 6px 0;
-      letter-spacing: -0.5px;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.3px;
     }
 
-    .login-subtitle {
+    .login-welcome-desc {
       font-size: 13px;
       color: rgba(215, 220, 240, 0.72);
-      margin: 0 0 24px 0;
-      line-height: 1.5;
+      margin: 0 0 22px 0;
+      line-height: 1.45;
     }
 
     .login-form-group {
       text-align: left;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .login-label {
@@ -2276,7 +2378,7 @@
       font-size: 15px;
       font-weight: 700;
       cursor: pointer;
-      margin-top: 8px;
+      margin-top: 6px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
       transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
     }
@@ -2303,41 +2405,9 @@
       padding: 10px 14px;
       font-size: 12px;
       font-weight: 600;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       text-align: left;
       display: none;
-    }
-
-    .login-cred-box {
-      margin-top: 24px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px dashed rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 10px 14px;
-      font-size: 11px;
-      text-align: left;
-    }
-
-    .login-cred-title {
-      font-weight: 700;
-      color: rgba(230, 235, 255, 0.85);
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.5px;
-    }
-
-    .login-cred-item {
-      color: rgba(200, 205, 230, 0.65);
-      margin-bottom: 2px;
-    }
-
-    .login-cred-item:last-child {
-      margin-bottom: 0;
-    }
-
-    .login-cred-item strong {
-      color: #ffffff;
     }
 
     @keyframes shake {
@@ -2350,6 +2420,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .login-bg-video { display: none !important; }
+      .login-blob { animation: none !important; }
       .login-card { animation: none !important; }
     }
     /* User role badge styles */
@@ -2615,33 +2686,65 @@
   <!-- ==================== CINEMATIC GLASSMORPHISM LOGIN OVERLAY ==================== -->
   <div id="login-screen-overlay" class="login-screen-overlay active">
     
-    <!-- Atmospheric Ambient & Video Layers -->
-    <div class="login-atmosphere" aria-hidden="true">
-      <video class="login-bg-video" autoplay muted loop playsinline poster="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%230a0b16'/><stop offset='45%25' stop-color='%23171536'/><stop offset='80%25' stop-color='%23221b44'/><stop offset='100%25' stop-color='%23110e26'/></linearGradient></defs><rect width='100%25' height='100%25' fill='url(%23g)'/></svg>">
+    <!-- Apple-Style Fluid Atmospheric & Ambient Layers -->
+    <div class="login-atmosphere" id="login-atmosphere-container" aria-hidden="true">
+      <video class="login-bg-video" autoplay muted loop playsinline poster="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'><rect width='100%25' height='100%25' fill='%2306070d'/></svg>">
         <source src="https://assets.mixkit.co/videos/preview/mixkit-lavender-field-swaying-in-the-wind-under-a-twilight-sky-42410-large.mp4" type="video/mp4">
       </video>
-      <div class="login-bg-ambient"></div>
-      <div class="login-bg-stars"></div>
+      <div class="login-gradient-canvas">
+        <div class="login-blob login-blob-1"></div>
+        <div class="login-blob login-blob-2"></div>
+        <div class="login-blob login-blob-3"></div>
+        <div class="login-blob login-blob-4"></div>
+      </div>
       <div class="login-bg-vignette"></div>
     </div>
 
     <!-- Centered Glassmorphic Authentication Card -->
     <div class="login-card">
-      <div class="login-brand-emblem">
-        <svg class="login-sun-icon" style="width:24px;height:24px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="4.5"></circle>
-          <path d="M12 2v2.5M12 19.5V22M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2 12h2.5M19.5 12H22M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77"></path>
-        </svg>
+      <div class="login-brand-logo-container">
+        <img id="login-brand-logo" class="login-brand-logo" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>" alt="Brand Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\'%23001845\'/><circle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/><circle cx=\'43\' cy=\'50\' r=\'23\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/></svg>'">
       </div>
       
-      <h1 class="login-title" id="login-brand-name">Welcome back!</h1>
-      <p class="login-subtitle">Sign in to access your guided workspace, billing operations, and enterprise ledger</p>
+      <h1 class="login-brand-title" id="login-brand-name">VC ORGANIC'S</h1>
+      <div class="login-brand-badge">Billing OS</div>
+      
+      <script>
+        (function() {
+          try {
+            const cachedName = localStorage.getItem("aiavro_active_biz_name");
+            const cachedLogo = localStorage.getItem("aiavro_active_biz_logo");
+            const backendUrl = (typeof window.resolveBackendUrl === 'function') ? window.resolveBackendUrl() : 'https://api.vcorganics.com';
+            if (cachedName) {
+              const nameEl = document.getElementById("login-brand-name");
+              if (nameEl) nameEl.textContent = cachedName;
+            }
+            if (cachedLogo) {
+              const DEFAULT_LOGO_SVG = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>`;
+              let logoUrl = cachedLogo;
+              if (cachedLogo !== 'logo' && cachedLogo !== 'default' && cachedLogo !== 'transparent logo aiavro Background Removed.png') {
+                if (!cachedLogo.startsWith('data:') && !cachedLogo.startsWith('http://') && !cachedLogo.startsWith('https://')) {
+                  const cleanPath = cachedLogo.startsWith('/') ? cachedLogo : '/' + cachedLogo;
+                  logoUrl = backendUrl + cleanPath;
+                }
+              } else {
+                logoUrl = DEFAULT_LOGO_SVG;
+              }
+              const logoEl = document.getElementById("login-brand-logo");
+              if (logoEl) logoEl.src = logoUrl;
+            }
+          } catch(e) {}
+        })();
+      </script>
+
+      <h2 class="login-welcome-heading">Welcome back</h2>
+      <p class="login-welcome-desc">Sign in to access your business workspace.</p>
       
       <div class="login-error" id="login-error-msg"></div>
       
       <form id="login-form" novalidate onsubmit="triggerLogin(event)">
         <div class="login-form-group">
-          <label class="login-label" for="login-username">Username or Email</label>
+          <label class="login-label" for="login-username">Username or Employee ID</label>
           <div class="login-input-wrapper">
             <input type="text" id="login-username" class="login-input" placeholder="e.g. admin" required autocomplete="username" autofocus>
           </div>
@@ -2659,12 +2762,6 @@
         
         <button type="submit" class="login-btn">Log In</button>
       </form>
-
-      <div class="login-cred-box">
-        <div class="login-cred-title">System Credentials</div>
-        <div class="login-cred-item">Admin: <strong>admin</strong> / <strong>admin123</strong></div>
-        <div class="login-cred-item">Employee: <strong>pos_cashier</strong> / <strong>cashier123</strong></div>
-      </div>
     </div>
   </div>
 
@@ -6210,6 +6307,8 @@
     window.addEventListener("DOMContentLoaded", () => {
       loadDatabaseState();
       initAuthentication();
+      loadPublicSettings();
+      initLoginPointerParallax();
       renderOnboardingQueue();
       initSidebarDragResizer();
 
@@ -6220,6 +6319,43 @@
         }
       }, 90000);
     });
+
+    function initLoginPointerParallax() {
+      const container = document.getElementById("login-atmosphere-container");
+      if (!container || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return; // disable on mobile/touch
+
+      let rafId = null;
+      let targetX = 0;
+      let targetY = 0;
+      let currentX = 0;
+      let currentY = 0;
+
+      window.addEventListener("mousemove", (e) => {
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        targetX = ((e.clientX - cx) / cx) * 12; // clamped subtle 12px drift
+        targetY = ((e.clientY - cy) / cy) * 12;
+
+        if (!rafId) {
+          rafId = requestAnimationFrame(updateParallax);
+        }
+      }, { passive: true });
+
+      function updateParallax() {
+        currentX += (targetX - currentX) * 0.05;
+        currentY += (targetY - currentY) * 0.05;
+        const canvas = container.querySelector(".login-gradient-canvas");
+        if (canvas) {
+          canvas.style.transform = `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0)`;
+        }
+        if (Math.abs(targetX - currentX) > 0.01 || Math.abs(targetY - currentY) > 0.01) {
+          rafId = requestAnimationFrame(updateParallax);
+        } else {
+          rafId = null;
+        }
+      }
+    }
 
     function initSidebarDragResizer() {
       const sidebar = document.querySelector('aside');
@@ -6286,13 +6422,15 @@
       try {
         const data = await api.settings.getPublicSettings();
         if (data.title) {
-          document.getElementById("login-brand-name").innerText = data.title;
+          const titleEl = document.getElementById("login-brand-name");
+          if (titleEl) titleEl.textContent = data.title;
           const inputEl = document.getElementById("settings-landing-title");
           if (inputEl) inputEl.value = data.title;
         }
         if (data.logo) {
           const logoUrl = getFullImageUrl(data.logo);
-          document.getElementById("login-brand-logo-img").src = logoUrl;
+          const logoEl = document.getElementById("login-brand-logo") || document.getElementById("login-brand-logo-img");
+          if (logoEl) logoEl.src = logoUrl;
           
           const previewEl = document.getElementById("settings-landing-logo-preview");
           if (previewEl) previewEl.src = logoUrl;
@@ -6648,6 +6786,16 @@
         if (!data) return;
         if (recordAndCheckDuplicateEvent(data.eventId)) return;
         console.log(`[Sync] Settings updated:`, data);
+        const payload = data.data || data;
+        if (payload.title) {
+          const titleEl = document.getElementById("login-brand-name");
+          if (titleEl) titleEl.textContent = payload.title;
+        }
+        if (payload.logo) {
+          const logoUrl = getFullImageUrl(payload.logo);
+          const logoEl = document.getElementById("login-brand-logo") || document.getElementById("login-brand-logo-img");
+          if (logoEl) logoEl.src = logoUrl;
+        }
         loadPublicSettings();
       };
       syncSocket.on('settings.updated', handleSettingsUpdated);
