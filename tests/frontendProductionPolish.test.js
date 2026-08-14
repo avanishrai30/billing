@@ -6,19 +6,16 @@ describe('Frontend production polish stability pass', () => {
   const htmlPath = path.join(root, 'aiavro_billing_system.html');
   const themePath = path.join(root, 'ui', 'theme.css');
   const componentsPath = path.join(root, 'ui', 'components.css');
-  const v2JsPath = path.join(root, 'ui', 'frontend-v2.js');
 
   let html;
   let theme;
   let components;
-  let v2Js;
   let combined;
 
   beforeAll(() => {
     html = fs.readFileSync(htmlPath, 'utf8');
     theme = fs.readFileSync(themePath, 'utf8');
     components = fs.readFileSync(componentsPath, 'utf8');
-    v2Js = fs.readFileSync(v2JsPath, 'utf8');
     combined = `${html}\n${theme}\n${components}`;
   });
 
@@ -54,7 +51,7 @@ describe('Frontend production polish stability pass', () => {
   });
 
   test('4. login first paint hides app shell and renders final login layout directly', () => {
-    expect(html).toMatch(/<div class="app-container"[^>]*data-render-layer="shell"[^>]*style="display:none"[^>]*>/);
+    expect(html).toContain('<div class="app-container" data-render-layer="shell" style="display:none">');
     expect(html).toContain('appContainer.style.display = "grid"');
     expect(html).toContain('appContainer.style.display = "none"');
     expect(html).toContain('loginOverlay.setAttribute("data-auth-state", "login")');
@@ -64,9 +61,9 @@ describe('Frontend production polish stability pass', () => {
   test('5. view switching uses explicit view states and avoids concurrent active screens', () => {
     expect(html).toContain('data-view-state');
     expect(html).toContain('aria-hidden');
-    expect(v2Js).toContain('function setActiveView(viewId)');
-    expect(v2Js).toContain('view.classList.toggle("active", isTarget)');
-    expect(v2Js).toContain('view.setAttribute("data-view-state", isTarget ? "visible" : "hidden")');
+    expect(html).toContain('target.setAttribute("data-view-state", "entering")');
+    expect(html).toContain('target.setAttribute("data-view-state", "visible")');
+    expect(html).toContain('v.classList.remove("active")');
   });
 
   test('6. modal and drawer system has stable overlay, scroll lock, and z-index tokens', () => {

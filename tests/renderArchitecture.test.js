@@ -21,7 +21,7 @@ describe('Frontend rendering architecture', () => {
   });
 
   test('2. shell is persistent and the initial view contract is explicit', () => {
-    expect(html).toMatch(/<div class="app-container"[^>]*data-render-layer="shell"[^>]*style="display:none"[^>]*>/);
+    expect(html).toContain('<div class="app-container" data-render-layer="shell" style="display:none">');
     expect(html).toContain('id="view-dashboard" class="app-view active" data-view-state="visible"');
     expect(html).toContain('data-view-state="hidden" aria-hidden="true"');
     expect(html).toContain('.app-view[data-view-state="hidden"]');
