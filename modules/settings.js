@@ -1,11 +1,12 @@
 const express = require('express');
 const { getContext, verifyJWT } = require('./context');
+const { requirePermission } = require('../services/authzService');
 const auditService = require('../services/auditService');
 
 const router = express.Router();
 
 // GET /api/v1/role-permissions - Fetch RBAC permissions matrix
-router.get('/role-permissions', verifyJWT, async (req, res) => {
+router.get('/role-permissions', verifyJWT, requirePermission('roles.view'), async (req, res) => {
   const { db } = getContext();
   try {
     const doc = await db.collection('role_permissions').findOne({ key: "matrix" });
@@ -20,17 +21,14 @@ router.get('/role-permissions', verifyJWT, async (req, res) => {
       res.json(defaults);
     }
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch permissions" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to fetch permissions" } });
   }
 });
 
 // POST /api/v1/role-permissions - Save RBAC permissions matrix (Admin / Owner only)
-router.post('/role-permissions', verifyJWT, async (req, res) => {
+router.post('/role-permissions', verifyJWT, requirePermission('roles.update'), async (req, res) => {
   const { db, io } = getContext();
   const permissions = req.body.permissions || req.body;
-  if (req.user.role !== 'SUPER ADMIN' && req.user.role !== 'OWNER' && req.user.category !== 'super admin') {
-    return res.status(403).json({ success: false, message: "Forbidden" });
-  }
 
   try {
     await db.collection('role_permissions').updateOne(
@@ -40,9 +38,9 @@ router.post('/role-permissions', verifyJWT, async (req, res) => {
     );
     await auditService.writeAuditLog('rbac_updated', 'permissions', 'matrix', null, permissions, req);
     if (io) io.to('sync_global').emit('rbac_updated', permissions);
-    res.json({ success: true });
+    res.json({ success: true, message: "Role permissions matrix updated successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to save permissions" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to save permissions" } });
   }
 });
 
@@ -57,17 +55,14 @@ router.get('/public/settings', async (req, res) => {
       res.json({ title: "AIAVRO Business OS", logo: "transparent logo aiavro Background Removed.png" });
     }
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch public settings" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to fetch public settings" } });
   }
 });
 
 // POST /api/v1/settings - Save portal branding settings (Admin / Owner only)
-router.post('/settings', verifyJWT, async (req, res) => {
+router.post('/settings', verifyJWT, requirePermission('settings.update'), async (req, res) => {
   const { db, io } = getContext();
   const { title, logo } = req.body;
-  if (req.user.role !== 'SUPER ADMIN' && req.user.role !== 'OWNER' && req.user.category !== 'super admin') {
-    return res.status(403).json({ success: false, message: "Forbidden" });
-  }
 
   try {
     await db.collection('settings').updateOne(
@@ -77,9 +72,9 @@ router.post('/settings', verifyJWT, async (req, res) => {
     );
     await auditService.writeAuditLog('settings_updated', 'settings', 'landing_settings', null, { title, logo }, req);
     if (io) io.to('sync_global').emit('settings_updated', { title, logo });
-    res.json({ success: true });
+    res.json({ success: true, message: "Settings saved successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to save settings" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to save settings" } });
   }
 });
 

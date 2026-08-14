@@ -37,15 +37,18 @@ const userService = {
     const newHash = bcrypt.hashSync(newPassword, 12);
     await db.collection('users').updateOne(
       { id: userId },
-      { $set: { passwordHash: newHash, updatedAt: new Date().toISOString() } }
+      {
+        $set: { passwordHash: newHash, updatedAt: new Date().toISOString() },
+        $inc: { tokenVersion: 1 }
+      }
     );
 
-    await auditService.writeAuditLog('user_updated', 'user', userId, null, null, req);
+    await auditService.writeAuditLog('user_updated', 'user', userId, null, { action: 'PASSWORD_CHANGED' }, req);
     if (io) {
       io.to('sync_global').emit('user_updated', { userId });
     }
 
-    return { success: true, message: "Password updated successfully" };
+    return { success: true, message: "Password updated successfully. Other active sessions invalidated." };
   },
 
   /**
@@ -79,6 +82,8 @@ const userService = {
     const userDoc = {
       ...userData,
       id: userId,
+      status: userData.status || 'active',
+      tokenVersion: userData.tokenVersion || 1,
       updatedAt: new Date().toISOString()
     };
     if (passwordHash) {
@@ -91,7 +96,12 @@ const userService = {
       await db.collection('users').insertOne(userDoc);
       await auditService.writeAuditLog('user_created', 'user', userId, null, userDoc, req);
     } else {
-      await db.collection('users').updateOne({ id: userId }, { $set: userDoc });
+      // If password changed during admin update, increment tokenVersion to revoke old sessions
+      const updatePayload = { $set: userDoc };
+      if (passwordHash) {
+        updatePayload.$inc = { tokenVersion: 1 };
+      }
+      await db.collection('users').updateOne({ id: userId }, updatePayload);
       await auditService.writeAuditLog('user_updated', 'user', userId, null, userDoc, req);
     }
 
@@ -100,6 +110,31 @@ const userService = {
     }
 
     return userDoc;
+  },
+
+  /**
+   * Deactivate a user account and immediately revoke their active sessions
+   */
+  async deactivateUser(userId, req) {
+    const { db, io } = getContext();
+    const now = new Date().toISOString();
+    
+    await db.collection('users').updateOne(
+      { id: userId },
+      {
+        $set: { status: 'suspended', updatedAt: now },
+        $inc: { tokenVersion: 1 }
+      }
+    );
+
+    const updated = await this.getUserById(userId);
+    await auditService.writeAuditLog('user_deactivated', 'user', userId, null, { status: 'suspended' }, req);
+
+    if (io) {
+      io.to('sync_global').emit('user_updated', { user: updated });
+    }
+
+    return updated;
   },
 
   /**

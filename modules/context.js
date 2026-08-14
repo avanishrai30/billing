@@ -105,17 +105,37 @@ function getContext() {
   return context;
 }
 
-// JWT Verification Middleware
+// JWT Verification Middleware with Session Invalidation Check
 function verifyJWT(req, res, next) {
   let token = req.query.token;
   const authHeader = req.headers['authorization'];
   if (authHeader) {
     token = authHeader.split(' ')[1];
   }
-  if (!token) return res.status(401).json({ success: false, message: "Missing authorization token" });
+  if (!token) return res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message: "Missing authorization token" } });
 
-  jwt.verify(token, context.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(403).json({ success: false, message: "Invalid or expired token" });
+  jwt.verify(token, context.JWT_SECRET, async (err, decoded) => {
+    if (err) return res.status(401).json({ success: false, error: { code: "TOKEN_EXPIRED", message: "Invalid or expired token" } });
+
+    // Validate active session against database if DB is initialized
+    if (context.db && decoded && decoded.id) {
+      try {
+        const dbUser = await context.db.collection('users').findOne({ id: decoded.id });
+        if (dbUser) {
+          if (dbUser.status === 'suspended' || dbUser.status === 'inactive') {
+            return res.status(403).json({ success: false, error: { code: "ACCOUNT_DEACTIVATED", message: "User account is suspended or inactive" } });
+          }
+          const currentVersion = dbUser.tokenVersion || 1;
+          const tokenVersion = decoded.tokenVersion || 1;
+          if (currentVersion !== tokenVersion) {
+            return res.status(401).json({ success: false, error: { code: "SESSION_REVOKED", message: "Session has been invalidated. Please log in again." } });
+          }
+        }
+      } catch (dbErr) {
+        console.warn("[Auth] Token revocation lookup warning (non-fatal):", dbErr.message);
+      }
+    }
+
     req.user = decoded;
     next();
   });

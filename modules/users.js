@@ -1,16 +1,17 @@
 const express = require('express');
 const { getContext, verifyJWT, validateBody, schemas } = require('./context');
+const { requirePermission, requireAnyPermission } = require('../services/authzService');
 const userService = require('../services/userService');
 
 const router = express.Router();
 
 // GET /api/v1/users - Fetch all users
-router.get('/', verifyJWT, async (req, res) => {
+router.get('/', verifyJWT, requirePermission('users.view'), async (req, res) => {
   try {
     const users = await userService.listUsers();
     res.json(users); // Return array directly for backward compatibility
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch users" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to fetch users" } });
   }
 });
 
@@ -21,29 +22,36 @@ router.get('/presences', verifyJWT, (req, res) => {
 });
 
 // GET /api/v1/users/:id - Fetch single user
-router.get('/:id', verifyJWT, async (req, res) => {
+router.get('/:id', verifyJWT, requirePermission('users.view'), async (req, res) => {
   try {
     const user = await userService.getUserById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user) return res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch user" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to fetch user" } });
   }
 });
 
 // POST /api/v1/users - Create or update user account (Admin / Super Admin only)
-router.post('/', verifyJWT, validateBody(schemas.userSchema), async (req, res) => {
+router.post('/', verifyJWT, validateBody(schemas.userSchema), requireAnyPermission(['users.create', 'users.update']), async (req, res) => {
   const userData = req.validatedBody;
-  
-  if (req.user.role !== 'SUPER ADMIN' && req.user.role !== 'OWNER' && req.user.category !== 'super admin') {
-    return res.status(403).json({ success: false, message: "Forbidden" });
-  }
-
   try {
     const userDoc = await userService.saveUser(userData, req);
     res.json({ success: true, user: userDoc });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error saving user" });
+    console.error("[Users] Error saving user:", err);
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Server error saving user" } });
+  }
+});
+
+// POST /api/v1/users/:id/deactivate - Deactivate user account
+router.post('/:id/deactivate', verifyJWT, requirePermission('users.deactivate'), async (req, res) => {
+  try {
+    const deactivated = await userService.deactivateUser(req.params.id, req);
+    if (!deactivated) return res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
+    res.json({ success: true, message: "User account deactivated successfully", user: deactivated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to deactivate user" } });
   }
 });
 
@@ -54,20 +62,20 @@ router.post('/profile', verifyJWT, async (req, res) => {
     const updated = await userService.updateProfile(req.user.id, { name, email, phone }, req);
     res.json({ success: true, user: updated });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Server error updating profile" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Server error updating profile" } });
   }
 });
 
 // POST /api/v1/users/avatar - Update own avatar path
 router.post('/avatar', verifyJWT, async (req, res) => {
   const { avatar } = req.body;
-  if (!avatar) return res.status(400).json({ success: false, message: "Avatar path is required" });
+  if (!avatar) return res.status(400).json({ success: false, error: { code: "INVALID_AVATAR", message: "Avatar path is required" } });
 
   try {
     await userService.updateAvatar(req.user.id, avatar, req);
     res.json({ success: true, avatar });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to update avatar" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to update avatar" } });
   }
 });
 
@@ -78,7 +86,7 @@ router.post('/change-password', verifyJWT, async (req, res) => {
     const result = await userService.changePassword(req.user.id, currentPassword, newPassword, req);
     res.json(result);
   } catch (err) {
-    res.status(err.statusCode || 400).json({ success: false, message: err.message || "Failed to update password" });
+    res.status(err.statusCode || 400).json({ success: false, error: { code: "PASSWORD_CHANGE_FAILED", message: err.message || "Failed to update password" } });
   }
 });
 

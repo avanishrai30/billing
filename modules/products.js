@@ -1,5 +1,6 @@
 const express = require('express');
 const { getContext, verifyJWT, validateBody, schemas } = require('./context');
+const { requirePermission, requireAnyPermission, requireStoreScope } = require('../services/authzService');
 const auditService = require('../services/auditService');
 
 const router = express.Router();
@@ -77,7 +78,7 @@ async function syncProductBarcodes(db, productId, primaryBarcode, barcodeList = 
 }
 
 // GET /api/v1/products - Fetch products with optional search, filter, and pagination
-router.get('/', verifyJWT, async (req, res) => {
+router.get('/', verifyJWT, requirePermission('products.view'), async (req, res) => {
   const { db } = getContext();
   try {
     const {
@@ -184,36 +185,37 @@ router.get('/', verifyJWT, async (req, res) => {
   }
 });
 
-// GET /api/v1/products/by-sku/:sku - Lookup single product by SKU
-router.get('/by-sku/:sku', verifyJWT, async (req, res) => {
+// GET /api/v1/products/by-sku/:sku - Exact SKU lookup
+router.get('/by-sku/:sku', verifyJWT, requirePermission('products.view'), async (req, res) => {
   const { db } = getContext();
   try {
     const product = await db.collection('products').findOne({
-      sku: req.params.sku,
+      sku: req.params.sku.trim(),
       isArchived: { $ne: true }
     });
-    if (!product) return res.status(404).json({ success: false, message: "Product not found by SKU" });
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
     res.json(product);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch product by SKU" });
   }
 });
 
-// GET /api/v1/products/by-barcode/:barcode - Lookup single product by barcode (primary or variant)
-router.get('/by-barcode/:barcode', verifyJWT, async (req, res) => {
+// GET /api/v1/products/by-barcode/:barcode - Universal Barcode resolver
+router.get('/by-barcode/:barcode', verifyJWT, requirePermission('products.view'), async (req, res) => {
   const { db } = getContext();
-  const rawBarcode = String(req.params.barcode).trim();
+  const cleanBarcode = req.params.barcode.trim();
+
   try {
-    // 1. Check primary product document
+    // 1. Direct match on primary barcode or SKU
     let product = await db.collection('products').findOne({
-      $or: [{ barcode: rawBarcode }, { sku: rawBarcode }],
+      $or: [{ barcode: cleanBarcode }, { sku: cleanBarcode }],
       isArchived: { $ne: true }
     });
 
-    // 2. Check product_barcodes lookup table
+    // 2. Secondary match in product_barcodes table
     if (!product) {
       const mapping = await db.collection('product_barcodes').findOne({
-        barcode: rawBarcode,
+        barcode: cleanBarcode,
         active: true
       });
       if (mapping) {
@@ -222,36 +224,27 @@ router.get('/by-barcode/:barcode', verifyJWT, async (req, res) => {
           isArchived: { $ne: true }
         });
         if (product) {
-          product.scannedVariantName = mapping.variantName;
-          product.scannedBarcodeType = mapping.type;
+          product.matchedVariantName = mapping.variantName;
+          product.matchedBarcodeType = mapping.type;
         }
       }
     }
 
-    if (!product) return res.status(404).json({ success: false, message: "Product not found by barcode" });
+    if (!product) return res.status(404).json({ success: false, message: "Barcode not found" });
     res.json(product);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch product by barcode" });
   }
 });
 
-// GET /api/v1/products/:id - Fetch single product by ID (with fallback to SKU/Barcode)
-router.get('/:id', verifyJWT, async (req, res) => {
+// GET /api/v1/products/:id - Fetch single product master record
+router.get('/:id', verifyJWT, requirePermission('products.view'), async (req, res) => {
   const { db } = getContext();
   try {
-    const idParam = req.params.id;
-    let product = await db.collection('products').findOne({
-      id: idParam,
+    const product = await db.collection('products').findOne({
+      $or: [{ id: req.params.id }, { sku: req.params.id }],
       isArchived: { $ne: true }
     });
-
-    // Fallback for legacy calls querying by sku or barcode via :id
-    if (!product) {
-      product = await db.collection('products').findOne({
-        $or: [{ sku: idParam }, { barcode: idParam }],
-        isArchived: { $ne: true }
-      });
-    }
 
     if (!product) return res.status(404).json({ success: false, message: "Product not found" });
     res.json(product);
@@ -261,7 +254,11 @@ router.get('/:id', verifyJWT, async (req, res) => {
 });
 
 // POST /api/v1/products - Create or update product master
-router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res) => {
+router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res, next) => {
+  const isUpdating = !!req.validatedBody.id;
+  const perm = isUpdating ? 'products.update' : 'products.create';
+  return requirePermission(perm)(req, res, next);
+}, async (req, res) => {
   const { db, io } = getContext();
   const productData = req.validatedBody;
 
@@ -382,7 +379,7 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
 });
 
 // DELETE /api/v1/products/:id - Soft delete (archive) product
-router.delete('/:id', verifyJWT, async (req, res) => {
+router.delete('/:id', verifyJWT, requirePermission('products.archive'), async (req, res) => {
   const { db, io } = getContext();
   const productId = req.params.id;
 
@@ -414,7 +411,7 @@ router.delete('/:id', verifyJWT, async (req, res) => {
 const bulkImportService = require('../services/bulkImportService');
 
 // POST /api/v1/products/import/preview - Read-only Pre-validation & Preview
-router.post('/import/preview', verifyJWT, async (req, res) => {
+router.post('/import/preview', verifyJWT, requirePermission('products.import.preview'), async (req, res) => {
   const { db } = getContext();
   const rawRows = req.body.rows || req.body.products || req.body.newProducts;
   if (!Array.isArray(rawRows)) {
@@ -438,7 +435,7 @@ router.post('/import/preview', verifyJWT, async (req, res) => {
 });
 
 // POST /api/v1/products/import/commit - Transactional Batch Commit with Authoritative Inventory
-router.post('/import/commit', verifyJWT, async (req, res) => {
+router.post('/import/commit', verifyJWT, requirePermission('products.import.commit'), requireStoreScope(req => req.body.options?.defaultLocationId || req.body.defaultLocationId), async (req, res) => {
   const { db, io } = getContext();
   const { importId, rows, options } = req.body;
   if (!importId || !Array.isArray(rows)) {
@@ -464,7 +461,7 @@ router.post('/import/commit', verifyJWT, async (req, res) => {
 });
 
 // GET /api/v1/products/import/:importId - Status of an import session
-router.get('/import/:importId', verifyJWT, async (req, res) => {
+router.get('/import/:importId', verifyJWT, requirePermission('products.import.preview'), async (req, res) => {
   const { db } = getContext();
   try {
     const session = await db.collection('import_sessions').findOne({ importId: req.params.importId });
@@ -476,7 +473,7 @@ router.get('/import/:importId', verifyJWT, async (req, res) => {
 });
 
 // GET /api/v1/products/import/:importId/errors - Detailed error log for an import session
-router.get('/import/:importId/errors', verifyJWT, async (req, res) => {
+router.get('/import/:importId/errors', verifyJWT, requirePermission('products.import.preview'), async (req, res) => {
   const { db } = getContext();
   try {
     const session = await db.collection('import_sessions').findOne({ importId: req.params.importId });
@@ -488,7 +485,7 @@ router.get('/import/:importId/errors', verifyJWT, async (req, res) => {
 });
 
 // POST /api/v1/products/import - Legacy Wrapper (backward-compatible)
-router.post('/import', verifyJWT, async (req, res) => {
+router.post('/import', verifyJWT, requirePermission('products.import.commit'), requireStoreScope(req => req.user?.assignedStoreId), async (req, res) => {
   const { db, io } = getContext();
   const products = req.body.newProducts || req.body.products;
   if (!Array.isArray(products)) {

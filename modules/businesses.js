@@ -1,45 +1,38 @@
 const express = require('express');
 const { getContext, verifyJWT, writeAuditLog } = require('./context');
+const { requirePermission, requireAnyPermission } = require('../services/authzService');
 
 const router = express.Router();
 
 // GET /api/v1/businesses - Fetch all businesses
-router.get('/', verifyJWT, async (req, res) => {
+router.get('/', verifyJWT, requirePermission('businesses.view'), async (req, res) => {
   const { db } = getContext();
   try {
     const businesses = await db.collection('businesses').find().toArray();
     res.json(businesses); // Return array directly for backward compatibility
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch business configurations" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to fetch business configurations" } });
   }
 });
 
 // GET /api/v1/businesses/:id - Fetch single business
-router.get('/:id', verifyJWT, async (req, res) => {
+router.get('/:id', verifyJWT, requirePermission('businesses.view'), async (req, res) => {
   const { db } = getContext();
   try {
     const biz = await db.collection('businesses').findOne({ id: req.params.id });
-    if (!biz) return res.status(404).json({ success: false, message: "Business profile not found" });
+    if (!biz) return res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "Business profile not found" } });
     res.json(biz);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch business profile" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to fetch business profile" } });
   }
 });
 
 // POST /api/v1/businesses - Create or update business profile
-router.post('/', verifyJWT, async (req, res) => {
+router.post('/', verifyJWT, requireAnyPermission(['businesses.create', 'businesses.update']), async (req, res) => {
   const { db, io } = getContext();
   const biz = req.body;
   if (!biz.name) {
-    return res.status(400).json({ success: false, message: "Business name is required" });
-  }
-
-  // Permission check: Admin, Owner, or Super Admin
-  const userRole = (req.user.role || '').toLowerCase();
-  const userCategory = (req.user.category || '').toLowerCase();
-  const allowedRoles = ['owner', 'super admin', 'admin'];
-  if (!allowedRoles.includes(userRole) && userCategory !== 'super admin' && userCategory !== 'admin') {
-    return res.status(403).json({ success: false, message: "Forbidden: Only Admin or Owner can manage outlet configurations" });
+    return res.status(400).json({ success: false, error: { code: "INVALID_NAME", message: "Business name is required" } });
   }
 
   try {
@@ -93,21 +86,14 @@ router.post('/', verifyJWT, async (req, res) => {
     res.json({ success: true, message: "Business profile saved successfully", business: bizDoc });
   } catch (err) {
     console.error("Failed to save business configuration:", err);
-    res.status(500).json({ success: false, message: "Failed to save business profile" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to save business profile" } });
   }
 });
 
 // PATCH /api/v1/businesses/:id - Partial update
-router.patch('/:id', verifyJWT, async (req, res) => {
+router.patch('/:id', verifyJWT, requirePermission('businesses.update'), async (req, res) => {
   const { db, io } = getContext();
   const bizId = req.params.id;
-
-  const userRole = (req.user.role || '').toLowerCase();
-  const userCategory = (req.user.category || '').toLowerCase();
-  const allowedRoles = ['owner', 'super admin', 'admin'];
-  if (!allowedRoles.includes(userRole) && userCategory !== 'super admin' && userCategory !== 'admin') {
-    return res.status(403).json({ success: false, message: "Forbidden: Only Admin or Owner can manage outlet configurations" });
-  }
 
   const updates = { ...req.body, updatedAt: new Date().toISOString() };
   delete updates.id;
@@ -120,7 +106,7 @@ router.patch('/:id', verifyJWT, async (req, res) => {
       { returnDocument: 'after' }
     );
     if (!result || !result.value && !result.id) {
-      return res.status(404).json({ success: false, message: "Business profile not found" });
+      return res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "Business profile not found" } });
     }
     const updatedBiz = result.value || result;
 
@@ -138,21 +124,14 @@ router.patch('/:id', verifyJWT, async (req, res) => {
     if (io) io.to('sync_global').emit('business_updated', { business: updatedBiz });
     res.json({ success: true, business: updatedBiz });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to update business profile" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to update business profile" } });
   }
 });
 
 // DELETE /api/v1/businesses/:id - Delete business profile
-router.delete('/:id', verifyJWT, async (req, res) => {
+router.delete('/:id', verifyJWT, requirePermission('businesses.delete'), async (req, res) => {
   const { db, io } = getContext();
   const bizId = req.params.id;
-
-  // Only OWNER or super admin
-  const userRole = (req.user.role || '').toLowerCase();
-  const userCategory = (req.user.category || '').toLowerCase();
-  if (userRole !== 'owner' && userRole !== 'super admin' && userCategory !== 'super admin') {
-    return res.status(403).json({ success: false, message: "Forbidden: Only Super Admin can delete outlet configurations" });
-  }
 
   try {
     await db.collection('businesses').deleteOne({ id: bizId });
@@ -162,7 +141,7 @@ router.delete('/:id', verifyJWT, async (req, res) => {
     res.json({ success: true, message: "Business profile deleted successfully" });
   } catch (err) {
     console.error("Failed to delete business configuration:", err);
-    res.status(500).json({ success: false, message: "Failed to delete business profile" });
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to delete business profile" } });
   }
 });
 

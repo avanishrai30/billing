@@ -1,5 +1,6 @@
 const express = require('express');
 const { getContext, verifyJWT } = require('./context');
+const { requirePermission, requireAnyPermission, requireStoreScope, getStoreScopeFilter, isSuperAdmin } = require('../services/authzService');
 const inventoryService = require('../services/inventoryService');
 const auditService = require('../services/auditService');
 const PDFDocument = require('pdfkit');
@@ -8,11 +9,13 @@ const router = express.Router();
 
 const VALID_PAYMENT_MODES = ['CASH', 'UPI', 'CARD', 'BANK'];
 
-// GET /api/v1/invoices - Fetch all non-archived invoices
-router.get('/', verifyJWT, async (req, res) => {
+// GET /api/v1/invoices - Fetch all non-archived invoices with store scoping
+router.get('/', verifyJWT, requirePermission('invoices.view'), async (req, res) => {
   const { db } = getContext();
   try {
-    const invoices = await db.collection('invoices').find({ isArchived: { $ne: true } }).toArray();
+    const scopeFilter = getStoreScopeFilter(req.user, ['locationId', 'storeId', 'businessId']);
+    const filter = { isArchived: { $ne: true }, ...scopeFilter };
+    const invoices = await db.collection('invoices').find(filter).toArray();
     const normalizedInvoices = invoices.map(inv => ({
       ...inv,
       id: inv.id || inv.invoiceNumber || (inv._id ? inv._id.toString() : ""),
@@ -28,17 +31,19 @@ router.get('/', verifyJWT, async (req, res) => {
   }
 });
 
-// GET /api/v1/invoices/:id - Fetch single invoice
-router.get('/:id', verifyJWT, async (req, res) => {
+// GET /api/v1/invoices/:id - Fetch single invoice with store scoping
+router.get('/:id', verifyJWT, requirePermission('invoices.view'), async (req, res) => {
   const { db } = getContext();
   try {
+    const scopeFilter = getStoreScopeFilter(req.user, ['locationId', 'storeId', 'businessId']);
     const invoice = await db.collection('invoices').findOne({
-      $or: [{ invoiceNumber: req.params.id }, { id: req.params.id }]
+      $or: [{ invoiceNumber: req.params.id }, { id: req.params.id }],
+      ...scopeFilter
     });
     if (!invoice) {
       return res.status(404).json({
         success: false,
-        error: { code: "INVOICE_NOT_FOUND", message: "Invoice not found" },
+        error: { code: "INVOICE_NOT_FOUND", message: "Invoice not found or access denied" },
         requestId: req.headers['x-request-id'] || null
       });
     }
@@ -53,7 +58,7 @@ router.get('/:id', verifyJWT, async (req, res) => {
 });
 
 // POST /api/v1/invoices - Create POS invoice with server-side price validation, idempotency & atomic inventory deduction
-router.post('/', verifyJWT, async (req, res) => {
+router.post('/', verifyJWT, requirePermission('invoices.create'), requireStoreScope(req => req.body.locationId || req.body.storeId || req.body.businessId), async (req, res) => {
   const { db, io } = getContext();
   const invoiceData = req.body;
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
@@ -224,7 +229,7 @@ router.post('/', verifyJWT, async (req, res) => {
 });
 
 // POST /api/v1/invoices/:id/void - Void invoice & revert stock batch atomically
-router.post('/:id/void', verifyJWT, async (req, res) => {
+router.post('/:id/void', verifyJWT, requirePermission('invoices.void'), async (req, res) => {
   const { db, io } = getContext();
   const invoiceId = req.params.id;
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
@@ -240,6 +245,33 @@ router.post('/:id/void', verifyJWT, async (req, res) => {
         error: { code: "INVOICE_NOT_FOUND", message: "Invoice not found" },
         requestId
       });
+    }
+
+    // Store scope check for voiding
+    if (req.user && req.user.assignedStoreId && req.user.assignedStoreId !== 'all' && !isSuperAdmin(req.user)) {
+      const invStore = invoice.locationId || invoice.storeId || invoice.businessId;
+      if (invStore && invStore !== req.user.assignedStoreId) {
+        await auditService.writeAuditLog(
+          'AUTHORIZATION_DENIED',
+          'security',
+          req.user.id || req.user.username,
+          null,
+          {
+            requiredPermission: 'invoices.void',
+            userStore: req.user.assignedStoreId,
+            invoiceStore: invStore,
+            endpoint: req.originalUrl || req.path,
+            method: 'POST',
+            reason: `Store scope mismatch: cannot void invoice belonging to store '${invStore}'`
+          },
+          req
+        );
+        return res.status(403).json({
+          success: false,
+          error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You are not authorized to void invoices for store '${invStore}'` },
+          requestId
+        });
+      }
     }
 
     // Double-void protection
@@ -275,7 +307,7 @@ router.post('/:id/void', verifyJWT, async (req, res) => {
 
     // 3. Write structured audit log
     await auditService.writeAuditLog(
-      'STOCK_VOID',
+      'invoice_voided',
       'billing',
       invoice.invoiceNumber || invoice.id,
       null,
@@ -299,13 +331,15 @@ router.post('/:id/void', verifyJWT, async (req, res) => {
 });
 
 // GET /api/v1/invoices/:invoiceNumber/pdf - Professional Tax Invoice PDF Generation
-router.get('/:invoiceNumber/pdf', verifyJWT, async (req, res) => {
+router.get('/:invoiceNumber/pdf', verifyJWT, requireAnyPermission(['invoices.print', 'invoices.view']), async (req, res) => {
   const { db } = getContext();
   try {
+    const scopeFilter = getStoreScopeFilter(req.user, ['locationId', 'storeId', 'businessId']);
     const invoice = await db.collection('invoices').findOne({
-      $or: [{ invoiceNumber: req.params.invoiceNumber }, { id: req.params.invoiceNumber }]
+      $or: [{ invoiceNumber: req.params.invoiceNumber }, { id: req.params.invoiceNumber }],
+      ...scopeFilter
     });
-    if (!invoice) return res.status(404).send("Invoice not found");
+    if (!invoice) return res.status(404).send("Invoice not found or access denied");
 
     // Resolve store branding
     const storeId = invoice.storeId || invoice.locationId || invoice.businessId;

@@ -1,15 +1,18 @@
 const express = require('express');
 const { getContext, verifyJWT } = require('./context');
+const { requirePermission, requireStoreScope, getStoreScopeFilter, isSuperAdmin } = require('../services/authzService');
 const inventoryService = require('../services/inventoryService');
 const auditService = require('../services/auditService');
 
 const router = express.Router();
 
-// GET /api/v1/purchases - Fetch all non-archived purchase records
-router.get('/', verifyJWT, async (req, res) => {
+// GET /api/v1/purchases - Fetch all non-archived purchase records with store scoping
+router.get('/', verifyJWT, requirePermission('purchases.view'), async (req, res) => {
   const { db } = getContext();
   try {
-    const purchases = await db.collection('purchases').find({ isArchived: { $ne: true } }).toArray();
+    const scopeFilter = getStoreScopeFilter(req.user, ['locationId', 'storeId']);
+    const filter = { isArchived: { $ne: true }, ...scopeFilter };
+    const purchases = await db.collection('purchases').find(filter).toArray();
     res.json(purchases);
   } catch (err) {
     res.status(500).json({
@@ -20,17 +23,19 @@ router.get('/', verifyJWT, async (req, res) => {
   }
 });
 
-// GET /api/v1/purchases/:id - Fetch single purchase
-router.get('/:id', verifyJWT, async (req, res) => {
+// GET /api/v1/purchases/:id - Fetch single purchase with store scoping
+router.get('/:id', verifyJWT, requirePermission('purchases.view'), async (req, res) => {
   const { db } = getContext();
   try {
+    const scopeFilter = getStoreScopeFilter(req.user, ['locationId', 'storeId']);
     const purchase = await db.collection('purchases').findOne({
-      $or: [{ id: req.params.id }, { purchaseId: req.params.id }, { invoiceNumber: req.params.id }]
+      $or: [{ id: req.params.id }, { purchaseId: req.params.id }, { invoiceNumber: req.params.id }],
+      ...scopeFilter
     });
     if (!purchase) {
       return res.status(404).json({
         success: false,
-        error: { code: "PURCHASE_NOT_FOUND", message: "Purchase record not found" },
+        error: { code: "PURCHASE_NOT_FOUND", message: "Purchase record not found or access denied" },
         requestId: req.headers['x-request-id'] || null
       });
     }
@@ -45,7 +50,7 @@ router.get('/:id', verifyJWT, async (req, res) => {
 });
 
 // POST /api/v1/purchases - Create purchase entry with idempotency & atomic batch stock addition
-router.post('/', verifyJWT, async (req, res) => {
+router.post('/', verifyJWT, requirePermission('purchases.create'), requireStoreScope(req => req.body.locationId || req.body.storeId), async (req, res) => {
   const { db, io } = getContext();
   const purchaseData = req.body;
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
@@ -84,87 +89,67 @@ router.post('/', verifyJWT, async (req, res) => {
     const purchaseId = purchaseData.id || purchaseData.purchaseId || `pur-${Date.now()}`;
     const username = req.user ? req.user.username : 'system';
 
-    // 2. Validate and recalculate line items and totals
-    let calculatedSubtotal = 0;
-    let calculatedTax = 0;
-    const validatedItems = [];
+    // 2. Format items for batch inventory allocation
+    const itemsForInventory = purchaseData.items.map(item => {
+      const productId = item.id || item.productId;
+      const quantity = parseFloat(item.quantity) || 1;
+      const cost = parseFloat(item.cost || item.purchasePrice || item.rate || 0);
+      return {
+        productId,
+        name: item.name,
+        quantity,
+        cost,
+        purchasePrice: cost,
+        unit: item.unit || 'unit'
+      };
+    });
 
-    for (const item of purchaseData.items) {
-      const prodId = item.productId || item.id;
-      const qty = parseFloat(item.quantity) || 0;
-      const unitCost = parseFloat(item.unitCost || item.cost || item.purchasePrice || item.rate || 0);
-      const taxRate = parseFloat(item.gst || item.tax || 0);
-
-      if (!prodId || qty <= 0) {
-        return res.status(400).json({
-          success: false,
-          error: { code: "INVALID_QUANTITY", message: `Invalid item or quantity for product ${prodId || 'unknown'}` },
-          requestId
-        });
-      }
-
-      const lineCost = qty * unitCost;
-      const lineTax = (lineCost * taxRate) / 100;
-      const lineTotal = lineCost + lineTax;
-
-      calculatedSubtotal += lineCost;
-      calculatedTax += lineTax;
-
-      validatedItems.push({
-        productId: prodId,
-        variantId: item.variantId || null,
-        name: item.name || prodId,
-        unit: item.unit || 'unit',
-        quantity: qty,
-        unitCost,
-        cost: unitCost, // legacy alias
-        tax: lineTax,
-        gst: taxRate,
-        lineTotal: Math.round(lineTotal * 100) / 100
-      });
-    }
-
-    const calculatedTotal = Math.round((calculatedSubtotal + calculatedTax) * 100) / 100;
-
-    // 3. Add stock batch atomically via inventoryService
-    await inventoryService.addStockBatch(
-      validatedItems,
+    // 3. Atomically add stock batch using inventoryService
+    const inventoryResult = await inventoryService.addStockBatch(
+      itemsForInventory,
       targetLocationId,
       purchaseId,
       username
     );
 
-    // 4. Save purchase record with canonical fields and legacy aliases
+    // 4. Calculate totals
+    let calculatedSubtotal = 0;
+    purchaseData.items.forEach(item => {
+      const cost = parseFloat(item.cost || item.purchasePrice || item.rate || 0);
+      const qty = parseFloat(item.quantity) || 1;
+      calculatedSubtotal += (cost * qty);
+    });
+
+    const taxAmount = parseFloat(purchaseData.taxAmount || purchaseData.tax || 0);
+    const shipping = parseFloat(purchaseData.shipping || 0);
+    const grandTotal = calculatedSubtotal + taxAmount + shipping;
+
+    const now = new Date().toISOString();
     const purchaseDoc = {
+      ...purchaseData,
+      id: purchaseId,
       purchaseId,
-      id: purchaseId, // legacy alias
       transactionId: transactionId || purchaseId,
-      supplierId: purchaseData.supplierId || null,
-      supplier: purchaseData.supplier || purchaseData.supplierName || 'General Supplier',
-      supplierName: purchaseData.supplierName || purchaseData.supplier || 'General Supplier',
       locationId: targetLocationId,
-      storeId: targetLocationId, // legacy alias
-      invoiceNumber: purchaseData.invoiceNumber || `BILL-${Date.now()}`,
-      purchaseDate: purchaseData.purchaseDate || purchaseData.date || new Date().toISOString(),
-      date: purchaseData.purchaseDate || purchaseData.date || new Date().toISOString(),
-      items: validatedItems,
-      subtotal: Math.round(calculatedSubtotal * 100) / 100,
-      tax: Math.round(calculatedTax * 100) / 100,
-      total: calculatedTotal,
-      grandTotal: calculatedTotal, // legacy alias
-      status: 'COMPLETED',
-      notes: purchaseData.notes || '',
-      createdBy: username,
+      storeId: targetLocationId,
+      subtotal: calculatedSubtotal,
+      taxAmount,
+      shipping,
+      grandTotal,
+      items: purchaseData.items,
+      inventoryMovements: inventoryResult.movements || [],
+      status: purchaseData.status || 'RECEIVED',
       isArchived: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: purchaseData.createdAt || now,
+      updatedAt: now,
+      createdBy: username
     };
 
     await db.collection('purchases').insertOne(purchaseDoc);
 
     // 5. Write structured audit log
     await auditService.writeAuditLog(
-      'STOCK_PURCHASE',
+      'purchase_created',
       'purchase',
       purchaseId,
       null,
@@ -172,9 +157,10 @@ router.post('/', verifyJWT, async (req, res) => {
       req
     );
 
-    // 6. Emit realtime event
+    // 6. Emit real-time synchronization event
     if (io) {
-      io.to('sync_global').emit('purchase_created', { purchaseId, locationId: targetLocationId });
+      io.to(`store_${targetLocationId}`).emit('purchase_created', { purchase: purchaseDoc });
+      io.to('sync_global').emit('purchase_created', { purchase: purchaseDoc });
     }
 
     res.json({ success: true, purchase: purchaseDoc });
@@ -189,7 +175,7 @@ router.post('/', verifyJWT, async (req, res) => {
 });
 
 // DELETE /api/v1/purchases/:id - Void purchase entry & revert stock batch atomically
-router.delete('/:id', verifyJWT, async (req, res) => {
+router.delete('/:id', verifyJWT, requirePermission('purchases.void'), async (req, res) => {
   const { db, io } = getContext();
   const purchaseId = req.params.id;
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
@@ -205,6 +191,33 @@ router.delete('/:id', verifyJWT, async (req, res) => {
         error: { code: "PURCHASE_NOT_FOUND", message: "Purchase not found" },
         requestId
       });
+    }
+
+    // Store scope check for purchase voiding
+    if (req.user && req.user.assignedStoreId && req.user.assignedStoreId !== 'all' && !isSuperAdmin(req.user)) {
+      const purStore = purchase.locationId || purchase.storeId;
+      if (purStore && purStore !== req.user.assignedStoreId) {
+        await auditService.writeAuditLog(
+          'AUTHORIZATION_DENIED',
+          'security',
+          req.user.id || req.user.username,
+          null,
+          {
+            requiredPermission: 'purchases.void',
+            userStore: req.user.assignedStoreId,
+            purchaseStore: purStore,
+            endpoint: req.originalUrl || req.path,
+            method: 'DELETE',
+            reason: `Store scope mismatch: cannot void purchase belonging to store '${purStore}'`
+          },
+          req
+        );
+        return res.status(403).json({
+          success: false,
+          error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You are not authorized to void purchases for store '${purStore}'` },
+          requestId
+        });
+      }
     }
 
     // Double-void protection
@@ -240,7 +253,7 @@ router.delete('/:id', verifyJWT, async (req, res) => {
 
     // 3. Write audit log
     await auditService.writeAuditLog(
-      'STOCK_VOID',
+      'purchase_deleted',
       'purchase',
       purchase.purchaseId || purchase.id,
       null,

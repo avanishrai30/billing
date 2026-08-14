@@ -6,6 +6,24 @@ const { getContext } = require('../modules/context');
  */
 const auditService = {
   /**
+   * Sanitizes sensitive fields from audit before/after payloads
+   */
+  sanitizePayload(payload) {
+    if (!payload || typeof payload !== 'object') return payload;
+    const sanitized = Array.isArray(payload) ? [...payload] : { ...payload };
+    const sensitiveKeys = ['password', 'passwordHash', 'token', 'secret', 'currentPassword', 'newPassword', 'jwt', 'authorization'];
+    
+    for (const key of Object.keys(sanitized)) {
+      if (sensitiveKeys.includes(key)) {
+        sanitized[key] = '[REDACTED]';
+      } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
+        sanitized[key] = this.sanitizePayload(sanitized[key]);
+      }
+    }
+    return sanitized;
+  },
+
+  /**
    * Writes a structured audit log entry
    */
   async writeAuditLog(eventType, entity, entityId, before, after, req) {
@@ -18,18 +36,23 @@ const auditService = {
       let businessId = 'all';
       let businessName = 'All Outlets';
       let viewName = 'system';
+      let clientIp = '127.0.0.1';
+      let userAgent = 'system';
+      let requestId = `req-${Date.now()}`;
       
-      if (req && req.user) {
-        const dbUser = await db.collection('users').findOne({ username: req.user.username });
-        if (dbUser) {
-          userStr = `${dbUser.name} (@${dbUser.username})`;
-          roleStr = (dbUser.role || 'employee').toUpperCase();
-          
-          const bizId = dbUser.assignedStoreId || 'all';
-          if (bizId !== 'all') {
-            const biz = await db.collection('businesses').findOne({ id: bizId });
+      if (req) {
+        clientIp = req.headers['x-forwarded-for'] || req.ip || req.socket?.remoteAddress || 'unknown';
+        userAgent = req.headers['user-agent'] || 'unknown';
+        requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
+
+        if (req.user) {
+          userStr = `${req.user.name || req.user.username} (@${req.user.username})`;
+          roleStr = (req.user.role || req.user.category || 'employee').toUpperCase();
+          businessId = req.user.assignedStoreId || 'all';
+
+          if (businessId !== 'all') {
+            const biz = await db.collection('businesses').findOne({ id: businessId });
             if (biz) {
-              businessId = biz.id;
               businessName = biz.name;
             }
           }
@@ -38,7 +61,11 @@ const auditService = {
 
       const actionMapping = {
         'auth_login': { action: 'auth', view: 'login' },
+        'LOGIN_SUCCESS': { action: 'auth', view: 'login' },
+        'LOGIN_FAILED': { action: 'auth', view: 'login' },
         'auth_logout': { action: 'auth', view: 'login' },
+        'LOGOUT': { action: 'auth', view: 'login' },
+        'AUTHORIZATION_DENIED': { action: 'security', view: 'security' },
         'product_created': { action: 'create', view: 'inventory' },
         'product_updated': { action: 'update', view: 'inventory' },
         'product_archived': { action: 'delete', view: 'inventory' },
@@ -54,6 +81,7 @@ const auditService = {
         'rbac_updated': { action: 'update', view: 'permissions' },
         'user_updated': { action: 'update', view: 'permissions' },
         'user_created': { action: 'create', view: 'permissions' },
+        'user_deactivated': { action: 'delete', view: 'permissions' },
         'customer_created': { action: 'create', view: 'customers' },
         'customer_updated': { action: 'update', view: 'customers' },
         'customer_deleted': { action: 'delete', view: 'customers' },
@@ -65,7 +93,8 @@ const auditService = {
         'store_created': { action: 'create', view: 'stores' },
         'store_updated': { action: 'update', view: 'stores' },
         'store_deleted': { action: 'delete', view: 'stores' },
-        'settings_updated': { action: 'update', view: 'settings' }
+        'settings_updated': { action: 'update', view: 'settings' },
+        'import_completed': { action: 'create', view: 'inventory' }
       };
 
       const map = actionMapping[eventType] || { action: 'update', view: 'system' };
@@ -73,9 +102,13 @@ const auditService = {
       viewName = map.view;
 
       let detailsString = eventType;
-      if (eventType === 'auth_login') {
+      if (eventType === 'auth_login' || eventType === 'LOGIN_SUCCESS') {
         detailsString = `User session authenticated successfully`;
-      } else if (eventType === 'auth_logout') {
+      } else if (eventType === 'LOGIN_FAILED') {
+        detailsString = `Authentication attempt failed for username: ${after?.username || entityId}`;
+      } else if (eventType === 'AUTHORIZATION_DENIED') {
+        detailsString = `Security alert: Access denied for ${req?.user?.username || 'user'} on ${after?.method} ${after?.endpoint} (${after?.reason || 'Forbidden'})`;
+      } else if (eventType === 'auth_logout' || eventType === 'LOGOUT') {
         detailsString = `User session terminated successfully`;
       } else if (eventType === 'product_created') {
         detailsString = `Added product '${after?.name || entityId}' (SKU: ${after?.sku || 'N/A'}, Price: ₹${after?.price || 0})`;
@@ -95,44 +128,18 @@ const auditService = {
         detailsString = `Completed POS transaction for customer '${after?.customerName || 'Walk-In'}'. Created Invoice #${entityId} (Total: ₹${after?.grandTotal || 0})`;
       } else if (eventType === 'invoice_voided') {
         detailsString = `Voided Invoice #${entityId} and reverted items back to warehouse stock`;
-      } else if (eventType === 'franchise_created') {
-        detailsString = `Saved franchise CRM profile: ${after?.name || entityId}`;
-      } else if (eventType === 'franchise_deleted') {
-        detailsString = `Removed franchise profile (ID: ${entityId})`;
-      } else if (eventType === 'franchise_order_created') {
-        detailsString = `Dispatched supply stock order to Franchise Outlet (ID: #${entityId}, Value: ₹${after?.grandTotal || 0})`;
-      } else if (eventType === 'rbac_updated') {
-        detailsString = `Updated global role-permissions matrix permissions configurations`;
-      } else if (eventType === 'user_updated') {
-        detailsString = `Modified account profile details for user: ${entityId}`;
-      } else if (eventType === 'user_created') {
-        detailsString = `Created user account for: ${after?.username || entityId} (Designation: ${after?.role || 'N/A'})`;
-      } else if (eventType === 'customer_created' || eventType === 'customer_updated') {
-        detailsString = `Saved customer CRM record: ${after?.name || entityId}`;
-      } else if (eventType === 'customer_deleted') {
-        detailsString = `Deleted customer CRM record ID: ${entityId}`;
-      } else if (eventType === 'supplier_created' || eventType === 'supplier_updated') {
-        detailsString = `Saved supplier record: ${after?.name || entityId}`;
-      } else if (eventType === 'supplier_deleted') {
-        detailsString = `Deleted supplier record ID: ${entityId}`;
-      } else if (eventType === 'business_updated') {
-        detailsString = `Saved business outlet profile: ${after?.name || entityId}`;
-      } else if (eventType === 'business_deleted') {
-        detailsString = `Deleted business outlet profile ID: ${entityId}`;
-      } else if (eventType === 'store_created' || eventType === 'store_updated') {
-        detailsString = `Saved store configuration: ${after?.name || entityId}`;
-      } else if (eventType === 'store_deleted') {
-        detailsString = `Deleted store configuration ID: ${entityId}`;
-      } else if (eventType === 'settings_updated') {
-        detailsString = `Updated landing page and branding settings`;
+      } else if (eventType === 'user_deactivated') {
+        detailsString = `Deactivated user account: ${entityId}`;
+      } else if (eventType === 'import_completed') {
+        detailsString = `Committed bulk product import session ${entityId} (${after?.imported || 0} products)`;
       }
 
       await db.collection('audit_logs').insertOne({
         eventType,
         entity,
         entityId,
-        before: before || {},
-        after: after || {},
+        before: this.sanitizePayload(before) || {},
+        after: this.sanitizePayload(after) || {},
         performedBy: (req && req.user) ? req.user.username : 'system',
         user: userStr,
         role: roleStr,
@@ -141,6 +148,9 @@ const auditService = {
         details: detailsString,
         businessId,
         businessName,
+        ip: clientIp,
+        userAgent,
+        requestId,
         timestamp: new Date().toISOString()
       });
     } catch (err) {
@@ -149,14 +159,34 @@ const auditService = {
   },
 
   /**
-   * Fetches audit log records
+   * Fetches audit log records with filtering and pagination
    */
-  async listAuditLogs(limit = 1000) {
+  async listAuditLogs(options = {}) {
     const { db } = getContext();
+    const limit = Math.min(parseInt(options.limit) || 100, 1000);
+    const skip = parseInt(options.skip) || 0;
+    const query = {};
+
+    if (options.storeId && options.storeId !== 'all') {
+      query.businessId = options.storeId;
+    }
+    if (options.eventType) {
+      query.eventType = options.eventType;
+    }
+    if (options.entity) {
+      query.entity = options.entity;
+    }
+    if (options.startDate || options.endDate) {
+      query.timestamp = {};
+      if (options.startDate) query.timestamp.$gte = options.startDate;
+      if (options.endDate) query.timestamp.$lte = options.endDate;
+    }
+
     return await db.collection('audit_logs')
-      .find({})
+      .find(query)
       .sort({ timestamp: -1 })
-      .limit(Math.min(limit, 1000))
+      .skip(skip)
+      .limit(limit)
       .toArray();
   }
 };
