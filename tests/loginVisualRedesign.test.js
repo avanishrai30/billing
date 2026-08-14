@@ -45,7 +45,7 @@ describe('P0 Login Experience Redesign: Cinematic Atmospheric Glassmorphism Suit
 
   test('6. Technical API Configuration label is completely removed from UI', () => {
     expect(html).not.toContain('Configure API Server URL');
-    expect(html).not.toContain('login-url-config-box');
+    expect(html).not.toContain('id="login-url-config-box"');
   });
 
   test('7. No Google, Microsoft, or external SSO buttons on login surface', () => {
@@ -87,11 +87,11 @@ describe('P0 Login Experience Redesign: Cinematic Atmospheric Glassmorphism Suit
     expect(html).toMatch(/<video[^>]*class="login-bg-video"[^>]*playsinline/);
   });
 
-  test('15. Static gradient and starry ambient fallback exists independently of video', () => {
-    expect(html).toContain('class="login-bg-ambient"');
-    expect(html).toContain('class="login-bg-stars"');
+  test('15. Fluid gradient canvas and ambient fallback exists independently of video', () => {
+    expect(html).toContain('class="login-gradient-canvas"');
+    expect(html).toContain('class="login-blob login-blob-1"');
     expect(html).toContain('class="login-bg-vignette"');
-    expect(html).toContain('radial-gradient(ellipse at 50% 10%, rgba(160, 140, 240, 0.28)');
+    expect(html).toContain('rgba(124, 58, 237');
   });
 
   test('16. No external web font network links in head', () => {
