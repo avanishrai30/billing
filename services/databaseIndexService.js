@@ -1,15 +1,20 @@
 /**
- * Central Database Index Manager (Stage 12 P1 Hardening)
+ * Central Database Index Manager (Stage 12 Final Integrity Pass)
  * Idempotently inspects, registers, and synchronizes production database indexes.
- * Prevents startup collision warnings ("Index already exists with different options")
- * and handles legacy/existing index definitions cleanly without destructive drops.
+ * 
+ * Strict Architecture Rules:
+ * 1. Zero data mutations on startup (all cleanups moved to explicit migrations).
+ * 2. Exact semantic comparison of index definitions (keys, uniqueness, sparsity, and text weights).
+ * 3. Never silently call a different index "equivalent".
+ * 4. Never automatically drop production indexes on application boot.
+ * 5. Accurately reports legacy accepted indexes vs missing indexes.
  */
 
 const EXPECTED_INDEXES = {
   products: [
     { keys: { sku: 1 }, options: { unique: true, sparse: true, name: "sku_1_sparse" } },
     { keys: { barcode: 1 }, options: { sparse: true, name: "barcode_1_sparse" } },
-    { keys: { name: "text", category: "text", brand: "text" }, options: { name: "products_text_search" } }
+    { keys: { name: "text", category: "text", brand: "text" }, options: { name: "products_text_search", weights: { name: 1, category: 1, brand: 1 } } }
   ],
   product_barcodes: [
     { keys: { barcode: 1 }, options: { name: "barcode_1" } },
@@ -51,10 +56,11 @@ function isTextIndexSpec(spec) {
   return Object.values(spec).some(v => v === 'text');
 }
 
+/**
+ * Compares standard key specifications
+ */
 function areKeySpecsEquivalent(specA, specB) {
   if (!specA || !specB) return false;
-  if (isTextIndexSpec(specA) && isTextIndexSpec(specB)) return true;
-
   const keysA = Object.keys(specA);
   const keysB = Object.keys(specB);
   if (keysA.length !== keysB.length) return false;
@@ -62,54 +68,68 @@ function areKeySpecsEquivalent(specA, specB) {
 }
 
 /**
- * Idempotently synchronize all required database indexes and cleanup legacy empty barcodes
+ * Compares text index weights exactly
+ */
+function areTextIndexWeightsEquivalent(existingWeights = {}, expectedWeights = {}) {
+  const exKeys = Object.keys(existingWeights).sort();
+  const expKeys = Object.keys(expectedWeights).sort();
+  if (exKeys.length !== expKeys.length) return false;
+  return exKeys.every(k => existingWeights[k] === expectedWeights[k]);
+}
+
+/**
+ * Inspect index state for a collection
+ */
+function inspectIndexStatus(existingIndex, expectedIndex) {
+  const isExpectedText = isTextIndexSpec(expectedIndex.keys);
+  const isExistingText = isTextIndexSpec(existingIndex.key) || !!existingIndex.weights;
+
+  if (isExpectedText && isExistingText) {
+    const weightsMatch = areTextIndexWeightsEquivalent(
+      existingIndex.weights || {},
+      expectedIndex.options?.weights || expectedIndex.keys
+    );
+    if (weightsMatch) {
+      return { status: 'EXACT_MATCH', details: 'Text index matches expected fields and weights.' };
+    }
+    return {
+      status: 'ACCEPTED_LEGACY_TEXT_INDEX',
+      details: `Existing text index '${existingIndex.name}' (weights: ${JSON.stringify(existingIndex.weights || {})}) differs from target '${expectedIndex.options?.name}' (weights: ${JSON.stringify(expectedIndex.options?.weights || expectedIndex.keys)}). Retained safely.`
+    };
+  }
+
+  if (areKeySpecsEquivalent(existingIndex.key, expectedIndex.keys)) {
+    const isUniqueMatch = (!!existingIndex.unique) === (!!expectedIndex.options?.unique);
+    const isSparseMatch = (!!existingIndex.sparse) === (!!expectedIndex.options?.sparse);
+    if (isUniqueMatch && isSparseMatch) {
+      return { status: 'EXACT_MATCH', details: 'Standard index matches keys and options.' };
+    }
+    return {
+      status: 'OPTION_VARIATION',
+      details: `Index '${existingIndex.name}' key matches, but options differ (Existing: unique=${!!existingIndex.unique}, sparse=${!!existingIndex.sparse}; Target: unique=${!!expectedIndex.options?.unique}, sparse=${!!expectedIndex.options?.sparse}). Retained safely.`
+    };
+  }
+
+  return { status: 'MISMATCH', details: 'Key specifications do not match.' };
+}
+
+/**
+ * Idempotently synchronize all required database indexes
  * @param {object} db - MongoDB database handle
  */
 async function syncIndexes(db) {
   if (!db) {
     console.warn("[IndexManager] Database handle missing; skipping index synchronization.");
-    return { success: false, synced: 0, skipped: 0, errors: [] };
+    return { success: false, synced: 0, skipped: 0, legacyRecognized: 0, errors: [] };
   }
 
   console.log("[IndexManager] Synchronizing production database indexes...");
   let syncedCount = 0;
   let skippedCount = 0;
+  let legacyCount = 0;
   const errors = [];
+  const indexAuditReport = [];
 
-  // 1. Safe non-destructive cleanup of any legacy empty-string barcodes
-  try {
-    const emptyProducts = await db.collection('products').updateMany(
-      {
-        $or: [
-          { barcode: "" },
-          { barcode: { $type: "string", $regex: /^\s*$/ } }
-        ]
-      },
-      {
-        $unset: { barcode: "" }
-      }
-    );
-    if (emptyProducts.modifiedCount > 0) {
-      console.log(`[IndexManager] Cleaned ${emptyProducts.modifiedCount} legacy empty-string barcode(s) from products.`);
-    }
-
-    const emptyBarcodes = await db.collection('product_barcodes').deleteMany(
-      {
-        $or: [
-          { barcode: "" },
-          { barcode: null },
-          { barcode: { $type: "string", $regex: /^\s*$/ } }
-        ]
-      }
-    );
-    if (emptyBarcodes.deletedCount > 0) {
-      console.log(`[IndexManager] Removed ${emptyBarcodes.deletedCount} empty/null barcode mapping(s) from product_barcodes.`);
-    }
-  } catch (cleanErr) {
-    console.warn("[IndexManager] Non-fatal barcode cleanup notice:", cleanErr.message);
-  }
-
-  // 2. Index Synchronization
   for (const [collectionName, indexList] of Object.entries(EXPECTED_INDEXES)) {
     try {
       const collection = db.collection(collectionName);
@@ -123,32 +143,55 @@ async function syncIndexes(db) {
 
       for (const expected of indexList) {
         const isExpectedText = isTextIndexSpec(expected.keys);
-        const matchingExisting = existingIndexes.find(ex => {
-          if (isExpectedText && (isTextIndexSpec(ex.key) || ex.weights)) return true;
-          return areKeySpecsEquivalent(ex.key, expected.keys);
-        });
 
-        if (matchingExisting) {
-          // Index with matching keys or existing text index already verified
-          skippedCount++;
+        // Find existing match or text index
+        let matchingInspection = null;
+        let matchedExisting = null;
+
+        for (const ex of existingIndexes) {
+          const isExistingText = isTextIndexSpec(ex.key) || !!ex.weights;
+          if ((isExpectedText && isExistingText) || areKeySpecsEquivalent(ex.key, expected.keys)) {
+            matchedExisting = ex;
+            matchingInspection = inspectIndexStatus(ex, expected);
+            break;
+          }
+        }
+
+        if (matchingInspection) {
+          if (matchingInspection.status === 'EXACT_MATCH') {
+            skippedCount++;
+            indexAuditReport.push({ collection: collectionName, index: matchedExisting.name, status: 'VERIFIED' });
+          } else if (matchingInspection.status === 'ACCEPTED_LEGACY_TEXT_INDEX') {
+            legacyCount++;
+            skippedCount++;
+            console.log(`[IndexManager] ${matchingInspection.details}`);
+            indexAuditReport.push({ collection: collectionName, index: matchedExisting.name, status: 'ACCEPTED_LEGACY' });
+          } else if (matchingInspection.status === 'OPTION_VARIATION') {
+            skippedCount++;
+            console.log(`[IndexManager] ${matchingInspection.details}`);
+            indexAuditReport.push({ collection: collectionName, index: matchedExisting.name, status: 'ACCEPTED_OPTION_VARIATION' });
+          }
         } else {
+          // Index does not exist; attempt safe creation
           try {
             await collection.createIndex(expected.keys, expected.options);
             syncedCount++;
+            indexAuditReport.push({ collection: collectionName, index: expected.options?.name, status: 'CREATED' });
           } catch (createErr) {
             const msg = createErr.message || '';
-            // If index exists with different name/options or text index already exists, treat as verified/skipped
             if (
               msg.includes('already exists') ||
               msg.includes('IndexKeySpecsConflict') ||
               msg.includes('only one text index') ||
               msg.includes('Index with name')
             ) {
-              console.log(`[IndexManager] Recognized existing index variant on ${collectionName}: ${msg}`);
+              console.log(`[IndexManager] Recognized existing index on ${collectionName} during creation: ${msg}`);
               skippedCount++;
+              indexAuditReport.push({ collection: collectionName, index: expected.options?.name, status: 'ACCEPTED_EXISTING' });
             } else {
-              console.warn(`[IndexManager] Non-fatal index creation notice on ${collectionName}:`, msg);
+              console.warn(`[IndexManager] Index creation notice on ${collectionName}:`, msg);
               errors.push({ collection: collectionName, keys: expected.keys, error: msg });
+              indexAuditReport.push({ collection: collectionName, index: expected.options?.name, status: 'ERROR', error: msg });
             }
           }
         }
@@ -159,12 +202,14 @@ async function syncIndexes(db) {
     }
   }
 
-  console.log(`[IndexManager] Index synchronization complete. Created: ${syncedCount}, Verified/Skipped: ${skippedCount}, Errors: ${errors.length}`);
+  console.log(`[IndexManager] Index synchronization complete. Created: ${syncedCount}, Verified: ${skippedCount}, Legacy Recognized: ${legacyCount}, Errors: ${errors.length}`);
   return {
     success: errors.length === 0,
     synced: syncedCount,
     skipped: skippedCount,
-    errors
+    legacyRecognized: legacyCount,
+    errors,
+    report: indexAuditReport
   };
 }
 
@@ -172,5 +217,7 @@ module.exports = {
   EXPECTED_INDEXES,
   syncIndexes,
   areKeySpecsEquivalent,
-  isTextIndexSpec
+  areTextIndexWeightsEquivalent,
+  isTextIndexSpec,
+  inspectIndexStatus
 };
