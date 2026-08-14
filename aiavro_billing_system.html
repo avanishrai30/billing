@@ -3011,12 +3011,17 @@
             
             <div class="pos-cart-header" style="display:flex; justify-content:space-between; align-items:center">
               <h3 class="pos-cart-title">
-                Active Shopping Cart
+                Active Checkout Basket
                 <span class="pos-cart-count-badge" id="pos-cart-count">0 Items</span>
               </h3>
-              <button class="secondary-btn" id="pos-remote-scanner-toggle-btn" onclick="togglePOSRemoteScannerModal()" style="padding: 6px 12px; font-size: 11px; display: flex; align-items: center; gap: 6px;" title="Link mobile phone scanner">
-                📱 Remote Scanner
-              </button>
+              <div style="display:flex; align-items:center; gap:6px">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="clearPOSCart()" title="Clear all items in basket">
+                  🗑️ Clear
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="pos-remote-scanner-toggle-btn" onclick="togglePOSRemoteScannerModal()" style="display: flex; align-items: center; gap: 4px;" title="Link mobile phone scanner">
+                  📱 Mobile Scan
+                </button>
+              </div>
             </div>
 
             <!-- Entity Assigners -->
@@ -3160,9 +3165,8 @@
 
               <!-- Pinned Checkout Button -->
               <div class="pos-checkout-btn-wrapper">
-                <button class="primary-btn" id="pos-generate-bill-btn" onclick="processPOSCheckout()" disabled>
-                  <svg style="width:18px;height:18px;fill:currentColor" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
-                  Instantly Generate Active Bill
+                <button class="btn btn-primary btn-lg" id="pos-generate-bill-btn" onclick="processPOSCheckout()" disabled style="width:100%">
+                  <span>⚡</span> Complete Sale & Print <span class="kbd-badge">F9</span>
                 </button>
               </div>
             </div>
@@ -10655,25 +10659,34 @@
       const countBadge = document.getElementById("pos-cart-count");
       const checkoutBtn = document.getElementById("pos-generate-bill-btn");
 
+      const formatVal = (num) => window.AppUI ? window.AppUI.formatCurrency(num) : `₹${Number(num || 0).toFixed(2)}`;
+
       if (state.cart.length === 0) {
         tbody.innerHTML = `
           <div class="cart-empty-state">
             <span class="cart-empty-emoji">🛒</span>
             <strong>POS Checkout Basket is Empty</strong>
-            <p style="font-size:11px">Click products on the grid, scan barcodes or use live camera.</p>
+            <p style="font-size:11px">Scan a product barcode or select an item from the catalog to begin.</p>
           </div>
         `;
         countBadge.innerText = "0 Items";
-        checkoutBtn.disabled = true;
+        if (checkoutBtn) {
+          checkoutBtn.disabled = true;
+          checkoutBtn.innerHTML = `<span>⚡</span> Complete Sale & Print <span class="kbd-badge">F9</span>`;
+        }
         
-        document.getElementById("pos-summary-subtotal").innerText = "₹0.00";
-        document.getElementById("pos-summary-tax").innerText = "₹0.00";
-        document.getElementById("pos-summary-roundoff").innerText = "₹0.00";
-        document.getElementById("pos-summary-grandtotal").innerText = "₹0.00";
+        document.getElementById("pos-summary-subtotal").innerText = formatVal(0);
+        document.getElementById("pos-summary-tax").innerText = formatVal(0);
+        document.getElementById("pos-summary-roundoff").innerText = formatVal(0);
+        document.getElementById("pos-summary-grandtotal").innerText = formatVal(0);
         return;
       }
 
-      checkoutBtn.disabled = false;
+      if (checkoutBtn) {
+        checkoutBtn.disabled = false;
+        checkoutBtn.innerHTML = `<span>⚡</span> Complete Sale & Print <span class="kbd-badge">F9</span>`;
+      }
+
       let subtotal = 0;
       let totalItemsCount = 0;
       state.cart.forEach(item => {
@@ -10698,7 +10711,7 @@
               <span style="font-size:11px; color:var(--text-muted); font-weight:bold">${wConfig.suffix}</span>
             </div>
           `;
-          priceUnitStr = `₹${item.price.toFixed(2)} / ${item.unit || wConfig.baseUnit}`;
+          priceUnitStr = `${formatVal(item.price)} / ${item.unit || wConfig.baseUnit}`;
         } else {
           totalItemsCount += item.quantity;
           qtyControlsHtml = `
@@ -10706,7 +10719,7 @@
             <span class="qty-num">${item.quantity}</span>
             <button class="qty-btn" onclick="updateCartItemQty(\'${item.productId}\', 1, \'${item.variantKey || ''}\')">+</button>
           `;
-          priceUnitStr = `₹${item.price.toFixed(2)} / ${item.unit}`;
+          priceUnitStr = `${formatVal(item.price)} / ${item.unit}`;
         }
 
         const cartCard = document.createElement("div");
@@ -10719,7 +10732,7 @@
           <div class="cart-item-controls">
             ${qtyControlsHtml}
           </div>
-          <span class="cart-item-total">₹${lineTotal.toFixed(2)}</span>
+          <span class="cart-item-total tabular-numeric">${formatVal(lineTotal)}</span>
           <button class="cart-remove-btn" onclick="removeCartItem(\'${item.productId}\', \'${item.variantKey || ''}\')">&times;</button>
         `;
         tbody.appendChild(cartCard);
@@ -10765,10 +10778,10 @@
         grandtotal: roundedGrand
       };
 
-      document.getElementById("pos-summary-subtotal").innerText = `₹${subtotal.toFixed(2)}`;
-      document.getElementById("pos-summary-tax").innerText = `₹${gstTax.toFixed(2)}`;
-      document.getElementById("pos-summary-roundoff").innerText = `${roundoffVal >= 0 ? '+' : ''}₹${roundoffVal.toFixed(2)}`;
-      document.getElementById("pos-summary-grandtotal").innerText = `₹${roundedGrand.toFixed(2)}`;
+      document.getElementById("pos-summary-subtotal").innerText = formatVal(subtotal);
+      document.getElementById("pos-summary-tax").innerText = formatVal(gstTax);
+      document.getElementById("pos-summary-roundoff").innerText = `${roundoffVal >= 0 ? '+' : ''}${formatVal(roundoffVal)}`;
+      document.getElementById("pos-summary-grandtotal").innerText = formatVal(roundedGrand);
     }
 
     function setPaymentMethod(method) {
@@ -10814,6 +10827,13 @@
       document.getElementById("card-graphic-cvv").innerText = cvv;
     }
 
+    function clearPOSCart() {
+      if (state.cart.length === 0) return;
+      state.cart = [];
+      recalculatePOSTotals();
+      triggerAlert("POS checkout basket cleared.", "warning");
+    }
+
     async function processPOSCheckout() {
       if (state.cart.length === 0) return;
 
@@ -10823,6 +10843,12 @@
       if (!businessId) {
         triggerAlert("You must select an active seller outlet farm!", "danger");
         return;
+      }
+
+      const checkoutBtn = document.getElementById("pos-generate-bill-btn");
+      if (checkoutBtn) {
+        checkoutBtn.disabled = true;
+        checkoutBtn.innerHTML = `<span>⏳</span> Processing Checkout...`;
       }
 
       const itemsList = state.cart.map(item => {
@@ -10848,7 +10874,7 @@
         };
       });
 
-      // Proceed directly to invoice creation without blocking on stock validation
+      // Proceed directly to invoice creation
       const newInvoice = {
         transactionId: `tx-cl-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         businessId: businessId,
@@ -10879,13 +10905,18 @@
 
           // Reset cart and credit fields
           state.cart = [];
-          document.getElementById("pos-discount-value").value = 0;
+          const discInput = document.getElementById("pos-discount-value");
+          if (discInput) discInput.value = 0;
           
           // Reset payment widgets
-          document.getElementById("card-input-number").value = "";
-          document.getElementById("card-input-holder").value = "";
-          document.getElementById("card-input-expiry").value = "";
-          document.getElementById("card-input-cvv").value = "";
+          const cardNum = document.getElementById("card-input-number");
+          if (cardNum) cardNum.value = "";
+          const cardHolder = document.getElementById("card-input-holder");
+          if (cardHolder) cardHolder.value = "";
+          const cardExp = document.getElementById("card-input-expiry");
+          if (cardExp) cardExp.value = "";
+          const cardCvv = document.getElementById("card-input-cvv");
+          if (cardCvv) cardCvv.value = "";
           updateCardDetailsGraphic();
           setPaymentMethod('cash');
 
@@ -10893,7 +10924,6 @@
           closeCameraPOSScanner();
 
           // Inject the fresh invoice into state immediately so print center can use it
-          // before syncStateWithServer re-fetches (which might lag)
           const normalizedFresh = normalizeInvoiceForPrint(freshInvoice);
           const existingIdx = state.invoices.findIndex(i => i.id === invoiceId);
           if (existingIdx >= 0) {
@@ -10910,9 +10940,17 @@
         } else {
           const errMsg = result.error?.message || result.message || "Failed to submit transaction";
           triggerAlert(errMsg, "danger");
+          if (checkoutBtn) {
+            checkoutBtn.disabled = false;
+            checkoutBtn.innerHTML = `<span>⚡</span> Complete Sale & Print <span class="kbd-badge">F9</span>`;
+          }
         }
       } catch (err) {
         triggerAlert("Error connecting to server during checkout", "danger");
+        if (checkoutBtn) {
+          checkoutBtn.disabled = false;
+          checkoutBtn.innerHTML = `<span>⚡</span> Complete Sale & Print <span class="kbd-badge">F9</span>`;
+        }
       }
     }
 
@@ -12839,6 +12877,13 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         if (e.key === 'F2') {
           e.preventDefault();
           switchView('inventory');
+          return;
+        }
+        if (e.key === 'F9') {
+          e.preventDefault();
+          if (state.activeView === 'billing' && state.cart && state.cart.length > 0) {
+            processPOSCheckout();
+          }
           return;
         }
       }
