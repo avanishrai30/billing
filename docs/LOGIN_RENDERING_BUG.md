@@ -33,10 +33,10 @@ Chrome emitted local headless/updater diagnostics during screenshot capture. Tho
 
 The fix is CSS-only:
 
-- Constrained `.login-card` to `width: min(390px, calc(100vw - 48px))`.
+- Constrained `.login-card` to viewport-bound premium card geometry. The current redesign uses `width: min(440px, calc(100vw - 32px))` on desktop and a capped mobile width.
 - Removed the old 640px minimum height by setting `min-height: 0`.
-- Added `max-height: calc(100vh - 48px)` and `box-sizing: border-box`.
-- Replaced the oversized organic pseudo-element with a contained 96px accent.
+- Added viewport-bound max-height and `box-sizing: border-box`.
+- Replaced the oversized organic pseudo-element with contained decorative accents and moved background motion to CSS-only overlay pseudo-elements.
 - Added mobile viewport bounds, title wrapping, and narrow-title sizing.
 
 ## Render Contract

@@ -27,9 +27,9 @@ describe('Login render-layer regression guard', () => {
   });
 
   test('2. login card cannot paint the previous oversized horizontal block', () => {
-    expect(loginCss).toContain('width: min(390px, calc(100vw - 48px))');
+    expect(loginCss).toContain('width: min(440px, calc(100vw - 32px))');
     expect(loginCss).toContain('min-height: 0');
-    expect(loginCss).toContain('max-height: calc(100vh - 48px)');
+    expect(loginCss).toContain('max-height: calc(100vh - 32px)');
     expect(loginCss).not.toMatch(/width:\s*min\(720px,\s*58vw\)/);
     expect(loginCss).not.toMatch(/min-height:\s*min\(640px,\s*calc\(100vh - 96px\)\)/);
   });
@@ -44,8 +44,8 @@ describe('Login render-layer regression guard', () => {
   test('4. mobile login layout is viewport-bound and text can wrap', () => {
     expect(loginCss).toContain('box-sizing: border-box');
     expect(loginCss).toContain('overflow-wrap: anywhere');
-    expect(loginCss).toContain('width: min(390px, calc(100vw - 32px))');
-    expect(loginCss).toContain('font-size: clamp(26px, 8vw, 34px)');
+    expect(loginCss).toContain('width: min(260px, calc(100vw - 112px))');
+    expect(loginCss).toContain('font-size: clamp(28px, 8vw, 34px)');
   });
 
   test('5. authentication display state remains behaviorally unchanged', () => {

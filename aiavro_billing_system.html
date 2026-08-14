@@ -2089,7 +2089,7 @@
       margin-bottom: 2px;
     }
 
-    /* ==================== LOGIN SCREEN OVERLAY: BOTANICAL PRODUCTION COMPOSITION ==================== */
+    /* ==================== LOGIN SCREEN OVERLAY: AIAVRO PREMIUM ORGANIC COMPOSITION ==================== */
     .login-screen-overlay {
       position: fixed;
       inset: 0;
@@ -2097,42 +2097,81 @@
       min-height: 100vh;
       display: grid;
       align-items: center;
-      justify-items: start;
-      padding: clamp(24px, 5vw, 72px);
+      justify-items: center;
+      padding: clamp(24px, 4vw, 48px);
       background:
-        radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.2) 32%, transparent 56%),
-        linear-gradient(105deg, rgba(248, 250, 246, 0.92) 0%, rgba(248, 250, 246, 0.74) 36%, rgba(39, 103, 73, 0.22) 67%, rgba(248, 250, 246, 0.86) 100%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 900'%3E%3Crect width='1400' height='900' fill='%23eef5ee'/%3E%3Cg opacity='.78' fill='none' stroke='%23276749' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M1020 900C940 660 964 424 1104 140'/%3E%3Cpath d='M1103 208c-90 38-145 90-166 159 94-8 163-59 166-159Z' fill='%23276749' opacity='.24'/%3E%3Cpath d='M1031 374c-111 34-181 93-213 179 116 3 203-55 213-179Z' fill='%23276749' opacity='.20'/%3E%3Cpath d='M1003 564c-104 20-181 72-232 156 115 18 204-35 232-156Z' fill='%23276749' opacity='.18'/%3E%3Cpath d='M1240 900c-46-230-28-430 55-606'/%3E%3Cpath d='M1303 344c-54 60-81 124-80 192 70-33 104-96 80-192Z' fill='%23276749' opacity='.25'/%3E%3Cpath d='M1199 572c-73 37-122 94-145 172 88-5 142-62 145-172Z' fill='%23276749' opacity='.20'/%3E%3Cpath d='M720 870c54-264 15-495-118-694'/%3E%3Cpath d='M613 263c76 37 124 89 143 156-82-7-140-56-143-156Z' fill='%23276749' opacity='.16'/%3E%3Cpath d='M694 448c93 33 154 91 183 174-102 1-178-55-183-174Z' fill='%23276749' opacity='.14'/%3E%3C/g%3E%3Cg opacity='.15' fill='%2316241d'%3E%3Ccircle cx='1110' cy='128' r='140'/%3E%3Ccircle cx='1298' cy='766' r='190'/%3E%3C/g%3E%3C/svg%3E");
+        radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.2) 30%, transparent 54%),
+        radial-gradient(circle at 84% 22%, rgba(39, 103, 73, 0.22), transparent 36%),
+        linear-gradient(135deg, #f8faf5 0%, #edf5ed 42%, #d7e7d8 100%);
       background-size: cover;
       background-position: center;
       z-index: var(--z-toast);
       opacity: 0;
       pointer-events: none;
       transition: opacity var(--transition-normal);
-      overflow: auto;
+      overflow: hidden;
     }
     .login-screen-overlay.active {
       opacity: 1;
       pointer-events: all;
     }
+    .login-screen-overlay::before,
+    .login-screen-overlay::after {
+      content: "";
+      position: absolute;
+      inset: auto;
+      pointer-events: none;
+      will-change: transform;
+      z-index: 0;
+    }
+    .login-screen-overlay::before {
+      width: min(760px, 72vw);
+      height: min(760px, 72vw);
+      left: -16vw;
+      top: -20vh;
+      border-radius: 45% 55% 52% 48%;
+      background:
+        radial-gradient(circle at 38% 32%, rgba(255, 255, 255, 0.78), transparent 28%),
+        radial-gradient(circle at 62% 64%, rgba(117, 153, 124, 0.34), transparent 44%),
+        linear-gradient(145deg, rgba(39, 103, 73, 0.18), rgba(255, 255, 255, 0.04));
+      filter: blur(2px);
+      animation: loginOrganicDrift 18s ease-in-out infinite alternate;
+    }
+    .login-screen-overlay::after {
+      width: min(900px, 82vw);
+      height: min(900px, 82vw);
+      right: -22vw;
+      bottom: -34vh;
+      border-radius: 58% 42% 50% 50%;
+      background:
+        radial-gradient(circle at 42% 38%, rgba(39, 103, 73, 0.2), transparent 34%),
+        radial-gradient(circle at 58% 62%, rgba(255, 255, 255, 0.54), transparent 42%),
+        linear-gradient(160deg, rgba(172, 196, 173, 0.32), rgba(248, 250, 245, 0.08));
+      animation: loginOrganicFloat 22s ease-in-out infinite alternate;
+    }
     .login-card {
       position: relative;
       isolation: isolate;
-      background: rgba(255, 255, 255, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.72);
-      box-shadow: 0 32px 84px rgba(22, 36, 29, 0.18);
-      border-radius: 24px;
-      padding: clamp(32px, 4vw, 48px);
-      width: min(390px, calc(100vw - 48px));
-      max-width: calc(100vw - 48px);
+      z-index: 1;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid rgba(255, 255, 255, 0.82);
+      box-shadow: 0 24px 72px rgba(22, 36, 29, 0.16);
+      border-radius: 30px;
+      padding: clamp(32px, 4vw, 40px);
+      width: min(440px, calc(100vw - 32px));
+      max-width: calc(100vw - 32px);
       min-height: 0;
-      max-height: calc(100vh - 48px);
+      max-height: calc(100vh - 32px);
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      text-align: left;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
       overflow: auto;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      animation: loginCardSettle 240ms ease-out both;
     }
     .login-card form {
       width: 100%;
@@ -2160,40 +2199,66 @@
       pointer-events: none;
       z-index: -2;
     }
+    .login-brand-lockup {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 28px;
+    }
     .login-logo {
-      width: 64px;
-      height: 64px;
-      margin: 0 0 26px;
+      width: 72px;
+      height: 72px;
+      margin: 0 0 16px;
       display: flex;
       align-items: center;
       justify-content: center;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.68);
+      box-shadow: 0 14px 32px rgba(22, 36, 29, 0.12);
     }
     .login-logo img {
-      max-height: 100%;
-      max-width: 100%;
+      width: 64px;
+      height: 64px;
       object-fit: contain;
     }
     .login-title {
       font-family: var(--font-sans);
-      font-size: clamp(28px, 4vw, 44px);
-      font-weight: 800;
+      font-size: clamp(30px, 5vw, 38px);
+      font-weight: 900;
       color: var(--text-primary);
-      margin-bottom: 10px;
-      line-height: 1.05;
+      margin: 0;
+      line-height: 1;
       width: 100%;
-      max-width: min(420px, 100%);
+      max-width: min(360px, 100%);
       overflow-wrap: anywhere;
+    }
+    .login-product-kicker {
+      margin-top: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(39, 103, 73, 0.78);
+    }
+    .login-heading {
+      margin: 0 0 8px;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-primary);
     }
     .login-subtitle {
       font-size: 14px;
       color: var(--text-muted);
-      margin-bottom: 32px;
+      margin: 0 0 30px;
       max-width: 360px;
       line-height: 1.55;
     }
     .login-form-group {
       text-align: left;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       width: min(360px, 100%);
       max-width: 360px;
     }
@@ -2225,6 +2290,11 @@
       color: var(--accent-green);
       font-weight: 900;
       cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+    }
+    .login-password-toggle:hover {
+      background: rgba(39, 103, 73, 0.14);
+      transform: translateY(-50%) scale(1.03);
     }
     .login-password-toggle:focus-visible {
       outline: 3px solid rgba(39, 103, 73, 0.22);
@@ -2242,12 +2312,28 @@
       font-size: 14px;
       font-weight: 600;
       outline: none;
-      transition: var(--transition);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
       min-height: 46px;
+    }
+    .login-input:hover {
+      border-color: rgba(39, 103, 73, 0.56);
+      background: rgba(255, 255, 255, 0.94);
     }
     .login-input:focus {
       border-color: var(--accent-green);
       box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+    .login-input:not(:placeholder-shown) {
+      border-color: rgba(39, 103, 73, 0.48);
+      background: rgba(255, 255, 255, 0.96);
+    }
+    .login-input:disabled {
+      cursor: not-allowed;
+      opacity: 0.68;
+    }
+    .login-input[aria-invalid="true"] {
+      border-color: var(--accent-danger);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
     }
     .login-btn {
       width: min(360px, 100%);
@@ -2263,11 +2349,22 @@
       font-weight: 800;
       cursor: pointer;
       margin-top: 8px;
-      transition: var(--transition);
+      transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
       box-shadow: 0 14px 30px rgba(39, 103, 73, 0.22);
     }
     .login-btn:hover {
       background: var(--accent-green-hover);
+      box-shadow: 0 18px 36px rgba(39, 103, 73, 0.26);
+      transform: translateY(-1px);
+    }
+    .login-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 10px 22px rgba(39, 103, 73, 0.2);
+    }
+    .login-btn:disabled {
+      cursor: progress;
+      opacity: 0.74;
+      transform: none;
     }
     .login-error {
       color: var(--accent-danger);
@@ -2278,6 +2375,7 @@
       font-weight: 700;
       margin-bottom: 20px;
       display: none;
+      width: min(360px, 100%);
       max-width: 360px;
     }
     .login-cred-box {
@@ -2309,6 +2407,26 @@
       text-decoration: none;
       font-weight: 700;
     }
+    .login-help-link:hover,
+    .login-help-link:focus-visible {
+      color: var(--accent-green);
+      outline: none;
+    }
+
+    @keyframes loginOrganicDrift {
+      from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+      to { transform: translate3d(7vw, 6vh, 0) rotate(10deg) scale(1.06); }
+    }
+
+    @keyframes loginOrganicFloat {
+      from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+      to { transform: translate3d(-6vw, -5vh, 0) rotate(-8deg) scale(1.04); }
+    }
+
+    @keyframes loginCardSettle {
+      from { opacity: 0.92; }
+      to { opacity: 1; }
+    }
 
     @media (max-width: 1024px) {
       .login-screen-overlay {
@@ -2316,7 +2434,7 @@
         padding: 32px;
       }
       .login-card {
-        width: min(390px, 100%);
+        width: min(430px, 100%);
         min-height: auto;
       }
       .login-card::before {
@@ -2326,14 +2444,15 @@
 
     @media (max-width: 600px) {
       .login-screen-overlay {
-        padding: 16px;
+        justify-items: center;
+        padding: 32px;
         background-position: 66% center;
       }
       .login-card {
-        width: min(390px, calc(100vw - 32px));
-        max-width: calc(100vw - 32px);
-        padding: 34px 24px;
-        border-radius: 22px;
+        width: min(260px, calc(100vw - 112px));
+        max-width: calc(100vw - 112px);
+        padding: 28px 24px;
+        border-radius: 26px;
       }
       .login-card::before {
         width: 104px;
@@ -2342,7 +2461,7 @@
       }
       .login-title {
         max-width: 100%;
-        font-size: clamp(26px, 8vw, 34px);
+        font-size: clamp(28px, 8vw, 34px);
       }
       .login-form-group,
       .login-error,
@@ -2352,6 +2471,20 @@
       }
       .login-card form {
         max-width: none;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .login-title {
+        font-size: clamp(26px, 8vw, 30px);
+      }
+      .login-logo {
+        width: 64px;
+        height: 64px;
+      }
+      .login-logo img {
+        width: 56px;
+        height: 56px;
       }
     }
     .login-cred-item strong {
@@ -2759,11 +2892,14 @@
 
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
   <div id="login-screen-overlay" class="login-screen-overlay active" data-auth-state="pending">
-    <div class="login-card">
-      <div class="login-logo">
-        <img id="login-brand-logo-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>" alt="Brand Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\'%23001845\'/><circle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/><circle cx=\'43\' cy=\'50\' r=\'23\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/></svg>'">
+    <div class="login-card" aria-labelledby="login-heading">
+      <div class="login-brand-lockup" aria-label="AIAVRO Billing OS">
+        <div class="login-logo">
+          <img id="login-brand-logo-img" width="64" height="64" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>" alt="AIAVRO logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\'%23001845\'/><circle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/><circle cx=\'43\' cy=\'50\' r=\'23\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/></svg>'">
+        </div>
+        <h1 class="login-title" id="login-brand-name">AIAVRO</h1>
+        <div class="login-product-kicker">Billing OS</div>
       </div>
-      <h2 class="login-title" id="login-brand-name">VC ORGANIC'S Billing OS</h2>
       <script>
         (function() {
           try {
@@ -2771,7 +2907,7 @@
             const cachedLogo = localStorage.getItem("aiavro_active_biz_logo");
             const backendUrl = (typeof window.resolveBackendUrl === 'function') ? window.resolveBackendUrl() : 'https://api.vcorganics.com';
             if (cachedName) {
-              document.getElementById("login-brand-name").innerText = cachedName + " Billing OS";
+              document.getElementById("login-brand-name").innerText = cachedName;
             }
             if (cachedLogo) {
               const DEFAULT_LOGO_SVG = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>`;
@@ -2789,23 +2925,24 @@
           } catch(e) {}
         })();
       </script>
+      <h2 class="login-heading" id="login-heading">Login</h2>
       <p class="login-subtitle">Sign in with your credentials to continue</p>
       
-      <div class="login-error" id="login-error-msg"></div>
+      <div class="login-error" id="login-error-msg" role="alert" aria-live="polite"></div>
       
       <form id="login-form" onsubmit="triggerLogin(event)">
         <div class="login-form-group">
-          <label class="login-label">Username / Employee ID</label>
-          <input type="text" id="login-username" class="login-input" placeholder="e.g. admin" required autocomplete="username" autofocus>
+          <label class="login-label" for="login-username">Username / Employee ID</label>
+          <input type="text" id="login-username" class="login-input" placeholder="e.g. admin" required autocomplete="username" aria-describedby="login-error-msg" autofocus>
         </div>
         <div class="login-form-group">
-          <label class="login-label">Password</label>
+          <label class="login-label" for="login-password">Password</label>
           <div class="login-password-field">
-            <input type="password" id="login-password" class="login-input" placeholder="Enter password" required autocomplete="current-password">
+            <input type="password" id="login-password" class="login-input" placeholder="Enter password" required autocomplete="current-password" aria-describedby="login-error-msg">
             <button type="button" class="login-password-toggle" onclick="toggleLoginPasswordVisibility()" aria-label="Show password" aria-pressed="false" id="login-password-toggle">◎</button>
           </div>
         </div>
-        <button type="submit" class="login-btn">Authenticate & Enter</button>
+        <button type="submit" class="login-btn">Login</button>
       </form>
 
       <!-- Backend URL Configurator link -->
@@ -7866,14 +8003,17 @@
       const passwordInput = document.getElementById("login-password").value;
       const errorDiv = document.getElementById("login-error-msg");
       const loginBtn = document.querySelector(".login-btn");
+      if (loginBtn && loginBtn.disabled) return;
 
       errorDiv.style.display = "none";
-      if (loginBtn) { loginBtn.disabled = true; loginBtn.innerText = "Authenticating..."; }
+      document.getElementById("login-username").setAttribute("aria-invalid", "false");
+      document.getElementById("login-password").setAttribute("aria-invalid", "false");
+      if (loginBtn) { loginBtn.disabled = true; loginBtn.innerText = "Signing in..."; }
 
       try {
         const result = await api.auth.login(usernameInput, passwordInput);
 
-        if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Authenticate & Enter"; }
+        if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Login"; }
 
         if (result.success) {
           localStorage.setItem("aiavro_jwt_token", result.token);
@@ -7889,12 +8029,14 @@
         } else {
           errorDiv.innerHTML = `❌ ${result.message || "Invalid credentials. Check your username & password."}`;
           errorDiv.style.display = "block";
+          document.getElementById("login-username").setAttribute("aria-invalid", "true");
+          document.getElementById("login-password").setAttribute("aria-invalid", "true");
           const card = document.querySelector(".login-card");
           if (card) { card.style.animation = "shake 0.4s ease"; setTimeout(() => card.style.animation = "", 500); }
         }
       } catch (err) {
         console.error("[Login Error]", err);
-        if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Authenticate & Enter"; }
+        if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Login"; }
         if (err.status === 401 || err.status === 403 || err.code === 'INVALID_CREDENTIALS' || err.code === 'ACCOUNT_SUSPENDED') {
           errorDiv.innerHTML = `❌ ${err.message || "Invalid username or password"}`;
         } else {
@@ -7902,6 +8044,8 @@
           errorDiv.innerHTML = `❌ Failed to connect to server gateway (${state.backendUrl})${details}. Check network/CORS.`;
         }
         errorDiv.style.display = "block";
+        document.getElementById("login-username").setAttribute("aria-invalid", "true");
+        document.getElementById("login-password").setAttribute("aria-invalid", "true");
         const card = document.querySelector(".login-card");
         if (card) { card.style.animation = "shake 0.4s ease"; setTimeout(() => card.style.animation = "", 500); }
       }

@@ -42,8 +42,8 @@ describe('Frontend production polish stability pass', () => {
     const loginMarkup = html.slice(loginStart, loginEnd);
     expect(html).toContain('class="login-screen-overlay active" data-auth-state="pending"');
     expect(html).toContain('class="login-card"');
-    expect(html).toContain('linear-gradient(105deg');
-    expect(html).toMatch(/botanical/i);
+    expect(html).toContain('loginOrganicDrift');
+    expect(html).toMatch(/organic/i);
     expect(html).toContain('id="login-username"');
     expect(html).toContain('id="login-password"');
     expect(html).toContain('function toggleLoginPasswordVisibility()');
