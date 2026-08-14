@@ -426,7 +426,8 @@ router.post('/import/preview', verifyJWT, async (req, res) => {
       columnMapping: req.body.columnMapping,
       importId: req.body.importId,
       strategy: req.body.strategy,
-      defaultLocationId: req.body.defaultLocationId || req.user?.assignedStoreId || 'default'
+      defaultLocationId: req.body.defaultLocationId || req.user?.assignedStoreId || 'default',
+      confirmedAmbiguousMappings: req.body.confirmedAmbiguousMappings || []
     });
 
     res.json(previewResult);

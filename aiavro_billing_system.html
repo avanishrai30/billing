@@ -5776,6 +5776,18 @@
             <button type="button" class="secondary-btn" id="filter-pill-blocked" onclick="filterImportPreviewTable('BLOCKED')" style="padding:3px 8px; font-size:11px; font-weight:700; color:var(--accent-danger)">Blocked (<span id="count-pill-blocked">0</span>)</button>
           </div>
 
+          <!-- Interactive Ambiguous Column Mapping Confirmation Box -->
+          <div id="import-ambiguous-confirm-box" style="display:none; margin-bottom:12px; background:rgba(249, 115, 22, 0.08); border:1px solid #f97316; border-radius:8px; padding:12px 14px">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+              <div style="display:flex; align-items:center; gap:6px">
+                <span style="font-size:15px">⚠️</span>
+                <strong style="color:#f97316; font-size:12.5px" id="import-ambiguous-confirm-title">Column Confirmation Required</strong>
+              </div>
+              <small style="color:var(--text-muted); font-size:11px">Review ambiguous columns to unblock rows</small>
+            </div>
+            <div id="import-ambiguous-items-list" style="display:flex; flex-direction:column; gap:8px"></div>
+          </div>
+
           <!-- Preview Table -->
           <div style="max-height:230px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px">
             <table style="width:100%; border-collapse:collapse; font-size:11.5px; text-align:left">
@@ -12933,6 +12945,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
     let currentImportHeaders = [];
     let currentImportColumnMapping = {};
     let currentImportFieldExplanations = {};
+    let currentImportConfirmedAmbiguous = new Set();
     let currentImportPreviewData = null;
     let currentImportTableFilter = 'ALL';
 
@@ -12976,6 +12989,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       currentImportHeaders = [];
       currentImportColumnMapping = {};
       currentImportFieldExplanations = {};
+      currentImportConfirmedAmbiguous.clear();
       currentImportPreviewData = null;
       currentImportTableFilter = 'ALL';
 
@@ -12983,6 +12997,8 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       document.getElementById("excel-file-name").innerText = "No file chosen";
       document.getElementById("import-sheet-selector-box").style.display = "none";
       document.getElementById("import-why-panel").style.display = "none";
+      const confirmBox = document.getElementById("import-ambiguous-confirm-box");
+      if (confirmBox) confirmBox.style.display = "none";
       document.getElementById("import-btn-back").style.display = "none";
       document.getElementById("import-btn-next").disabled = true;
       document.getElementById("import-btn-next").innerText = "Next →";
@@ -13039,7 +13055,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         const readyCount = currentImportPreviewData ? (currentImportPreviewData.summary.readyRows || 0) : 0;
         const warningCount = currentImportPreviewData ? (currentImportPreviewData.summary.warningRows || 0) : 0;
         const safeCount = readyCount + warningCount;
-        nextBtn.innerText = `Proceed with ${safeCount} Safe Rows ✅`;
+        nextBtn.innerText = safeCount > 0 ? `Proceed with ${safeCount} Safe Rows ✅` : `Proceed with 0 Safe Rows`;
         nextBtn.disabled = safeCount === 0;
       } else if (step === 4) {
         backBtn.style.display = "none";
@@ -13210,7 +13226,8 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
           rows: currentImportRawMatrix,
           columnMapping: currentImportColumnMapping,
           strategy: strategy,
-          defaultLocationId: defaultStore
+          defaultLocationId: defaultStore,
+          confirmedAmbiguousMappings: Array.from(currentImportConfirmedAmbiguous)
         });
 
         if (!res.success) {
@@ -13220,18 +13237,100 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
 
         currentImportPreviewData = res;
         renderImportPreviewKPIs(res.summary);
+        renderAmbiguousConfirmationBox(res.fieldExplanations, currentImportColumnMapping);
         renderImportPreviewTableRows(res.rows);
 
         const safeCount = (res.summary.readyRows || 0) + (res.summary.warningRows || 0);
         const nextBtn = document.getElementById("import-btn-next");
         if (nextBtn) {
-          nextBtn.innerText = `Proceed with ${safeCount} Safe Rows ✅`;
+          nextBtn.innerText = safeCount > 0 ? `Proceed with ${safeCount} Safe Rows ✅` : `Proceed with 0 Safe Rows`;
           nextBtn.disabled = safeCount === 0;
         }
       } catch (err) {
         console.error("Preview API error:", err);
         triggerAlert("Error communicating with server during preview validation", "danger");
       }
+    }
+
+    function renderAmbiguousConfirmationBox(fieldExplanations = {}, columnMapping = {}) {
+      const box = document.getElementById("import-ambiguous-confirm-box");
+      const list = document.getElementById("import-ambiguous-items-list");
+      if (!box || !list) return;
+
+      const ambiguousHeaders = Object.keys(fieldExplanations).filter(h => {
+        const exp = fieldExplanations[h];
+        return exp && exp.state === 'AMBIGUOUS' && (columnMapping[h] || exp.field) !== 'ignore';
+      });
+
+      if (ambiguousHeaders.length === 0) {
+        box.style.display = "none";
+        return;
+      }
+
+      const unconfirmedCount = ambiguousHeaders.filter(h => !currentImportConfirmedAmbiguous.has(h)).length;
+      const title = document.getElementById("import-ambiguous-confirm-title");
+      if (title) {
+        title.innerText = unconfirmedCount > 0 
+          ? `${unconfirmedCount} Column${unconfirmedCount > 1 ? 's' : ''} Need Your Confirmation`
+          : `All Column Mappings Confirmed`;
+      }
+
+      list.innerHTML = ambiguousHeaders.map(header => {
+        const exp = fieldExplanations[header];
+        const mappedField = columnMapping[header] || exp.field;
+        const opt = CANONICAL_FIELD_OPTIONS.find(o => o.id === mappedField) || { label: mappedField };
+        const isConfirmed = currentImportConfirmedAmbiguous.has(header);
+
+        if (isConfirmed) {
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(34, 197, 94, 0.08); border:1px solid var(--accent-green); border-radius:6px; padding:8px 12px">
+              <div>
+                <span style="color:var(--accent-green); font-weight:800; font-size:11.5px">✓ Confirmed Mapping:</span>
+                <strong>Column "${escapeHTML(header)}"</strong> → <strong>${escapeHTML(opt.label)}</strong>
+                <div style="font-size:11px; color:var(--text-muted)">User approved. Rows are now importable.</div>
+              </div>
+              <div>
+                <button type="button" class="secondary-btn" onclick="resetAmbiguousColumnMapping('${escapeHTML(header)}')" style="padding:4px 10px; font-size:11px">Reset</button>
+              </div>
+            </div>
+          `;
+        } else {
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-panel); border:1px solid #f97316; border-radius:6px; padding:8px 12px">
+              <div style="flex:1; padding-right:12px">
+                <strong>Column "${escapeHTML(header)}"</strong> → Detected Candidate: <strong style="color:var(--accent-gold)">${escapeHTML(opt.label)}</strong>
+                <span style="font-size:9.5px; font-weight:800; padding:2px 5px; border-radius:3px; background:rgba(234, 179, 8, 0.15); color:var(--accent-gold); margin-left:4px">MEDIUM</span>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:2px">${escapeHTML(exp.reason || 'Candidate mapping requires confirmation.')}</div>
+              </div>
+              <div style="display:flex; gap:6px; flex-shrink:0">
+                <button type="button" class="primary-btn" onclick="confirmAmbiguousColumnMapping('${escapeHTML(header)}')" style="padding:6px 12px; font-size:11px; background:var(--accent-green)">✓ Confirm ${escapeHTML(opt.label.split(' ')[0])}</button>
+                <button type="button" class="secondary-btn" onclick="rejectAmbiguousColumnMapping('${escapeHTML(header)}')" style="padding:6px 12px; font-size:11px">🚫 Keep Unmapped</button>
+              </div>
+            </div>
+          `;
+        }
+      }).join('');
+
+      box.style.display = "block";
+    }
+
+    function confirmAmbiguousColumnMapping(header) {
+      currentImportConfirmedAmbiguous.add(header);
+      generateImportPreview();
+      triggerAlert(`Confirmed mapping for "${header}"! Rows are now unblocked.`, "success");
+    }
+
+    function rejectAmbiguousColumnMapping(header) {
+      currentImportConfirmedAmbiguous.delete(header);
+      currentImportColumnMapping[header] = 'ignore';
+      generateImportPreview();
+      triggerAlert(`Column "${header}" set to Ignore. Preview recalculated.`, "info");
+    }
+
+    function resetAmbiguousColumnMapping(header) {
+      currentImportConfirmedAmbiguous.delete(header);
+      generateImportPreview();
+      triggerAlert(`Reset confirmation for "${header}".`, "info");
     }
 
     function refreshImportPreview() {
