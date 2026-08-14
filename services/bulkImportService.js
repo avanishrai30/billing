@@ -864,7 +864,7 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
         productDoc.mrp = row.purchasePrice;
       }
 
-      // 2. Persist Product Master
+      // 2. Persist Product Master (Strictly prevent empty string barcodes)
       if (isExisting) {
         const updateFields = { ...productDoc };
         if (row.purchasePrice === null) {
@@ -877,25 +877,47 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
           delete updateFields.price;
           delete updateFields.mrp;
         }
-        if (!cleanBarcode) {
-          delete updateFields.barcode; // Preserve existing product's barcode!
+
+        const updateOp = {
+          $set: updateFields,
+          $setOnInsert: { createdAt: now }
+        };
+
+        if (cleanBarcode) {
+          updateOp.$set.barcode = cleanBarcode;
+        } else {
+          delete updateFields.barcode;
+          // Preserve existing valid barcode if present; otherwise ensure field is completely unset
+          const existingProduct = await db.collection('products').findOne({ id: productId });
+          if (existingProduct && existingProduct.barcode && String(existingProduct.barcode).trim() !== '') {
+            updateOp.$set.barcode = String(existingProduct.barcode).trim();
+          } else {
+            updateOp.$unset = { barcode: "" };
+          }
         }
 
         await db.collection('products').updateOne(
           { id: productId },
-          {
-            $set: updateFields,
-            $setOnInsert: { createdAt: now }
-          },
+          updateOp,
           { upsert: true }
         );
       } else {
+        const insertDoc = { ...productDoc };
+        const updateOp = {
+          $set: insertDoc,
+          $setOnInsert: { createdAt: now }
+        };
+
+        if (cleanBarcode) {
+          updateOp.$set.barcode = cleanBarcode;
+        } else {
+          delete insertDoc.barcode;
+          updateOp.$unset = { barcode: "" };
+        }
+
         await db.collection('products').updateOne(
           { id: productId },
-          {
-            $set: productDoc,
-            $setOnInsert: { createdAt: now }
-          },
+          updateOp,
           { upsert: true }
         );
       }
