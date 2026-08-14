@@ -2067,10 +2067,11 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      pointer-events: none;
+      pointer-events: none !important;
       z-index: 1;
       overflow: hidden;
       background: #05070d;
+      user-select: none;
     }
 
     .login-bg-video {
@@ -2080,10 +2081,12 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
-      opacity: 0.25;
+      opacity: 0.20;
       z-index: 1;
-      pointer-events: none;
+      pointer-events: none !important;
       filter: saturate(130%) contrast(110%);
+      transform: translateZ(0);
+      will-change: opacity;
     }
 
     .login-gradient-canvas {
@@ -2093,11 +2096,11 @@
       width: 140vw;
       height: 140vh;
       z-index: 2;
-      pointer-events: none;
+      pointer-events: none !important;
       filter: blur(80px);
       -webkit-filter: blur(80px);
       opacity: 0.92;
-      transform: translate3d(0, 0, 0);
+      transform: translateZ(0);
     }
 
     .login-blob {
@@ -2105,6 +2108,8 @@
       border-radius: 50%;
       mix-blend-mode: screen;
       opacity: 0.68;
+      pointer-events: none !important;
+      will-change: transform;
     }
 
     /* Blob 1: Top-Left Deep Indigo / Midnight Violet Orbit */
@@ -2214,7 +2219,7 @@
       width: 100vw;
       height: 100vh;
       z-index: 4;
-      pointer-events: none;
+      pointer-events: none !important;
       background: radial-gradient(circle at 50% 50%, transparent 35%, rgba(4, 5, 10, 0.72) 100%);
     }
 
@@ -2229,7 +2234,7 @@
       max-height: calc(100dvh - 32px);
       overflow-y: auto;
       box-sizing: border-box;
-      background: rgba(18, 22, 36, 0.65);
+      background: rgba(18, 22, 36, 0.72);
       backdrop-filter: blur(28px) saturate(180%);
       -webkit-backdrop-filter: blur(28px) saturate(180%);
       border: 1px solid rgba(255, 255, 255, 0.14);
@@ -2244,6 +2249,9 @@
       display: flex;
       flex-direction: column;
       isolation: isolate;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
       font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -2271,6 +2279,7 @@
       overflow: hidden;
       flex-shrink: 0;
       box-sizing: border-box;
+      transform: translateZ(0);
     }
 
     @media (max-width: 600px) {
@@ -2370,6 +2379,9 @@
       position: relative;
       display: flex;
       align-items: center;
+      width: 100%;
+      height: 52px;
+      box-sizing: border-box;
     }
 
     .login-input {
@@ -2377,8 +2389,8 @@
       height: 52px;
       padding: 0 16px;
       border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: #171b2d;
       color: #ffffff;
       font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
       font-size: 15px;
@@ -2389,17 +2401,20 @@
       -webkit-appearance: none;
       appearance: none;
       -webkit-tap-highlight-color: transparent;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transition: border-color 0.16s ease, box-shadow 0.16s ease;
     }
 
     .login-input:hover {
-      border-color: rgba(255, 255, 255, 0.22);
+      border-color: rgba(255, 255, 255, 0.28);
     }
 
     .login-input:focus,
     .login-input:focus-visible {
-      border-color: rgba(170, 150, 255, 0.9);
-      box-shadow: 0 0 0 3px rgba(150, 130, 255, 0.25);
+      border-color: rgba(170, 150, 255, 0.95);
+      box-shadow: 0 0 0 3px rgba(150, 130, 255, 0.28);
       outline: none;
     }
 
@@ -2414,8 +2429,8 @@
     .login-input:-webkit-autofill:hover,
     .login-input:-webkit-autofill:focus {
       -webkit-text-fill-color: #ffffff !important;
-      -webkit-box-shadow: 0 0 0 1000px #1a1e32 inset !important;
-      box-shadow: 0 0 0 1000px #1a1e32 inset !important;
+      -webkit-box-shadow: 0 0 0 1000px #171b2d inset !important;
+      box-shadow: 0 0 0 1000px #171b2d inset !important;
       transition: background-color 5000s ease-in-out 0s;
     }
 
@@ -2438,14 +2453,14 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: color 0.15s ease, background 0.15s ease;
+      transition: color 0.15s ease, background-color 0.15s ease;
       outline: none;
       -webkit-tap-highlight-color: transparent;
     }
 
     .login-password-toggle:hover {
       color: #ffffff;
-      background: rgba(255, 255, 255, 0.1);
+      background-color: rgba(255, 255, 255, 0.1);
     }
 
     .login-password-toggle:focus-visible {
@@ -2467,13 +2482,15 @@
       cursor: pointer;
       margin-top: 6px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-      transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
       outline: none;
       -webkit-tap-highlight-color: transparent;
     }
 
     .login-btn:hover {
-      background: #f0f0fa;
+      background-color: #f0f0fa;
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
     }
 
@@ -2482,7 +2499,7 @@
     }
 
     .login-btn:active {
-      transform: translateY(1px);
+      transform: translateY(1px) translateZ(0);
     }
 
     .login-btn:disabled {

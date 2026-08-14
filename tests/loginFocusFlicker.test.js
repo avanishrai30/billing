@@ -45,7 +45,7 @@ describe('Login Focus/Hover Flicker & Deterministic Layout Suite', () => {
 
   test('4. WebKit autofill styling is explicitly overridden to prevent native background flash', () => {
     expect(html).toContain('.login-input:-webkit-autofill');
-    expect(html).toContain('-webkit-box-shadow: 0 0 0 1000px #1a1e32 inset');
+    expect(html).toContain('-webkit-box-shadow: 0 0 0 1000px #171b2d inset');
   });
 
   test('5. Login password toggle button is isolated without changing input dimensions', () => {
