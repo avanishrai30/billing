@@ -62,8 +62,10 @@ const uploadRouter = require('./modules/upload');
 const auditRouter = require('./modules/audit');
 const settingsRouter = require('./modules/settings');
 const systemRouter = require('./modules/system');
+const dashboardRouter = require('./modules/dashboard');
 
 const realtimeService = require('./services/realtimeService');
+const databaseIndexService = require('./services/databaseIndexService');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -285,17 +287,8 @@ async function initDB() {
     setupContext(db, io, JWT_SECRET, UPLOAD_ROOT, UPLOAD_SUBDIRS, activePresences);
     realtimeService.setup(io, () => db);
 
-    // Non-destructive performance indexes
-    try {
-      await db.collection('products').createIndex({ sku: 1 }, { unique: true, sparse: true });
-      await db.collection('products').createIndex({ barcode: 1 }, { sparse: true });
-      await db.collection('products').createIndex({ name: "text", category: "text", brand: "text" });
-      await db.collection('product_barcodes').createIndex({ barcode: 1 });
-      await db.collection('product_barcodes').createIndex({ productId: 1 });
-      await db.collection('inventory_ledger').createIndex({ createdAt: -1, productId: 1, locationId: 1 });
-    } catch (idxErr) {
-      console.warn("[Database] Index setup warning (non-fatal):", idxErr.message);
-    }
+    // Idempotently verify and synchronize performance database indexes
+    await databaseIndexService.syncIndexes(db);
 
     // Serve frontend API client JS files statically
     app.use('/frontend-api', express.static(path.join(__dirname, 'frontend-api')));
@@ -307,6 +300,7 @@ async function initDB() {
     app.use('/api/v1/inventory', inventoryRouter);
     app.use('/api/v1/invoices', billingRouter);
     app.use('/api/v1/purchases', purchasesRouter);
+    app.use('/api/v1/dashboard', dashboardRouter);
     app.use('/api/v1/businesses', businessesRouter);
     app.use('/api/v1/stores', storesRouter);
     app.use('/api/v1/customers', customersRouter);
