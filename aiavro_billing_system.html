@@ -15,10 +15,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AIAVRO Billing System - Premium Farmer Business Suite</title>
-  <!-- Google Fonts & CDNs -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Barcode, QR Code, SheetJS & Socket.IO CDN Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.0/qrcode.min.js"></script>
@@ -93,7 +89,7 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: var(--font-sans);
     }
 
     body {
@@ -211,7 +207,7 @@
     }
 
     .brand-name {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 18px;
       font-weight: 800;
       letter-spacing: -0.4px;
@@ -372,7 +368,7 @@
     }
 
     .header-title-area h2 {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 26px;
       font-weight: 800;
       letter-spacing: -0.5px;
@@ -490,7 +486,7 @@
     }
 
     .panel-title {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 18px;
       font-weight: 700;
       color: var(--text-primary);
@@ -551,7 +547,7 @@
     }
 
     .metric-info h2 {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 22px;
       font-weight: 800;
       margin-top: 4px;
@@ -678,7 +674,7 @@
     }
 
     .donut-center-num {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 18px; /* Slightly reduced to prevent overflow */
       font-weight: 800;
       color: var(--text-primary);
@@ -1021,7 +1017,7 @@
     }
 
     .product-grid-price {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 16px;
       font-weight: 800;
       color: var(--accent-green);
@@ -1041,7 +1037,7 @@
     }
 
     .pos-cart-title {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 15px;
       font-weight: 700;
       display: flex;
@@ -1207,7 +1203,7 @@
     }
 
     .cart-item-total {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 14px;
       font-weight: 800;
       color: var(--text-primary);
@@ -1268,7 +1264,7 @@
     .summary-calc-row.grand-total {
       border-top: 1px dashed var(--border-color);
       padding-top: 8px;
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 16px;
       font-weight: 900;
       color: var(--text-primary);
@@ -1468,7 +1464,7 @@
     }
 
     .modal-header h3 {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 18px;
       font-weight: 800;
     }
@@ -1560,7 +1556,7 @@
     }
 
     .card-number-display {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 19px;
       letter-spacing: 2px;
       word-spacing: 4px;
@@ -1733,7 +1729,7 @@
       border-radius: var(--radius-sm);
       font-size: 12px;
       line-height: 1.5;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: var(--font-sans);
       box-shadow: 0 0 0 1px rgba(0,0,0,0.05);
       border: 1px solid #e2e8f0;
       position: relative;
@@ -1768,7 +1764,7 @@
     }
 
     .invoice-brand-title {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 17px;
       font-weight: 800;
       letter-spacing: -0.3px;
@@ -1803,7 +1799,7 @@
     }
 
     .invoice-title {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 24px;
       font-weight: 900;
       color: #0f172a;
@@ -2086,7 +2082,7 @@
       object-fit: contain;
     }
     .login-title {
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
       font-size: 24px;
       font-weight: 800;
       color: var(--text-primary);
@@ -2257,7 +2253,7 @@
       font-size: 20px;
       font-weight: 800;
       color: var(--text-primary);
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
     }
     .action-card-btn {
       transition: all 0.2s ease;
@@ -2450,7 +2446,7 @@
       border-radius:8px; box-shadow:var(--shadow-sm);
     }
     .finance-hero-bar h3 {
-      font-family:'Outfit',sans-serif; font-size:22px; font-weight:800;
+      font-family: var(--font-sans); font-size:22px; font-weight:800;
       margin:2px 0 4px; color:var(--text-primary); letter-spacing:0;
     }
     .finance-hero-bar p, .drawer-subtitle {
@@ -2491,13 +2487,13 @@
     .finance-table td { font-size:12px; }
     .finance-primary-id {
       display:block; font-weight:900; color:var(--text-primary);
-      font-family:'Outfit',sans-serif;
+      font-family: var(--font-sans);
     }
     .finance-muted-line {
       display:block; margin-top:2px; color:var(--text-muted); font-size:11px;
     }
     .finance-money {
-      font-family:'Outfit',sans-serif; font-variant-numeric:tabular-nums;
+      font-family: var(--font-sans); font-variant-numeric:tabular-nums;
       font-weight:900; color:var(--text-primary);
     }
     .finance-grand-total { color:var(--accent-green); font-size:15px; }
@@ -2530,7 +2526,7 @@
     }
     .finance-total-card strong {
       display:block; margin-top:4px; color:var(--accent-green); font-size:26px;
-      font-family:'Outfit',sans-serif; font-variant-numeric:tabular-nums;
+      font-family: var(--font-sans); font-variant-numeric:tabular-nums;
     }
     .finance-detail-grid {
       display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:14px;
@@ -3254,7 +3250,7 @@
                       <div class="card-face front">
                         <div style="display:flex; justify-content:space-between; align-items:center">
                           <div class="card-chip"></div>
-                          <div style="font-family:'Outfit'; font-size:12px; font-weight:800; font-style:italic">FARM CREDIT</div>
+                          <div style="font-family:var(--font-sans); font-size:12px; font-weight:800; font-style:italic">FARM CREDIT</div>
                         </div>
                         <div class="card-number-display" id="card-graphic-number">•••• •••• •••• ••••</div>
                         <div class="card-meta-row">
@@ -3969,25 +3965,25 @@
             
             <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:14px">
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px">B2B Registered Sales</span>
-              <div style="font-size:18px; font-weight:800; color:var(--text-primary); font-family:'Outfit'" id="auditor-matrix-b2b-val">₹0.00</div>
+              <div style="font-size:18px; font-weight:800; color:var(--text-primary); font-family:var(--font-sans)" id="auditor-matrix-b2b-val">₹0.00</div>
               <span style="font-size:11px; color:var(--accent-blue); font-weight:700; display:block; margin-top:4px" id="auditor-matrix-b2b-count">0 Invoices (GSTIN)</span>
             </div>
 
             <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:14px">
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px">B2C Retail Sales</span>
-              <div style="font-size:18px; font-weight:800; color:var(--text-primary); font-family:'Outfit'" id="auditor-matrix-b2c-val">₹0.00</div>
+              <div style="font-size:18px; font-weight:800; color:var(--text-primary); font-family:var(--font-sans)" id="auditor-matrix-b2c-val">₹0.00</div>
               <span style="font-size:11px; color:var(--text-muted); font-weight:700; display:block; margin-top:4px" id="auditor-matrix-b2c-count">0 Consumer Bills</span>
             </div>
 
             <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:14px">
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px">Central GST (CGST) Share</span>
-              <div style="font-size:18px; font-weight:800; color:var(--accent-green); font-family:'Outfit'" id="auditor-matrix-cgst-val">₹0.00</div>
+              <div style="font-size:18px; font-weight:800; color:var(--accent-green); font-family:var(--font-sans)" id="auditor-matrix-cgst-val">₹0.00</div>
               <span style="font-size:11px; color:var(--text-muted); font-weight:700; display:block; margin-top:4px">50% Central Revenue</span>
             </div>
 
             <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:14px">
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px">State GST (SGST) Share</span>
-              <div style="font-size:18px; font-weight:800; color:var(--accent-green); font-family:'Outfit'" id="auditor-matrix-sgst-val">₹0.00</div>
+              <div style="font-size:18px; font-weight:800; color:var(--accent-green); font-family:var(--font-sans)" id="auditor-matrix-sgst-val">₹0.00</div>
               <span style="font-size:11px; color:var(--text-muted); font-weight:700; display:block; margin-top:4px">50% State Revenue</span>
             </div>
 
@@ -4260,13 +4256,13 @@
         <div id="permissions-super-admin-content">
           <!-- Sub-tab navigation -->
           <div style="display:flex; gap:0; border-bottom:2px solid var(--border-color); margin-bottom:24px">
-            <button id="perm-tab-btn-users" onclick="switchPermissionsSubTab('users')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--accent-green); cursor:pointer; border-bottom:3px solid var(--accent-green); margin-bottom:-2px; font-family:'Outfit',sans-serif">
+            <button id="perm-tab-btn-users" onclick="switchPermissionsSubTab('users')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--accent-green); cursor:pointer; border-bottom:3px solid var(--accent-green); margin-bottom:-2px; font-family:var(--font-sans),sans-serif">
               👥 User Directory
             </button>
-            <button id="perm-tab-btn-rbac" onclick="switchPermissionsSubTab('rbac')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:'Outfit',sans-serif">
+            <button id="perm-tab-btn-rbac" onclick="switchPermissionsSubTab('rbac')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:var(--font-sans),sans-serif">
               🔐 RBAC Permissions
             </button>
-            <button id="perm-tab-btn-audit" onclick="switchPermissionsSubTab('audit')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:'Outfit',sans-serif">
+            <button id="perm-tab-btn-audit" onclick="switchPermissionsSubTab('audit')" style="background:none; border:none; padding:12px 24px; font-weight:700; font-size:14px; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; font-family:var(--font-sans),sans-serif">
               📋 System Audit Logs
             </button>
           </div>
@@ -4396,7 +4392,7 @@
             
             <!-- Left Side: Profile Details Card -->
             <div class="panel" style="padding:24px; display:flex; flex-direction:column; align-items:center; gap:20px; text-align:center">
-              <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--text-primary); width:100%; text-align:left; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:8px">👤 Profile Information</h3>
+              <h3 style="font-family: var(--font-sans); font-size:16px; font-weight:800; color:var(--text-primary); width:100%; text-align:left; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:8px">👤 Profile Information</h3>
               
               <!-- Avatar Upload Container -->
               <div style="position:relative; width:100px; height:100px; border-radius:50%; background:var(--accent-green); display:flex; align-items:center; justify-content:center; font-size:42px; font-weight:800; color:white; overflow:hidden; border:3px solid var(--border-color); box-shadow:var(--shadow-sm)" id="my-profile-avatar-container">
@@ -4441,7 +4437,7 @@
               
               <!-- Password Card -->
               <div class="panel" style="padding:24px">
-                <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px">🔑 Change Password</h3>
+                <h3 style="font-family: var(--font-sans); font-size:16px; font-weight:800; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px">🔑 Change Password</h3>
                 <div id="my-profile-pw-error" style="display:none; color:var(--accent-danger); font-size:12px; font-weight:600; padding:8px 12px; background:rgba(239,68,68,0.08); border-radius:6px; margin-bottom:12px; border-left:3px solid var(--accent-danger)"></div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px">
                   <div class="form-group" style="margin:0">
@@ -4464,7 +4460,7 @@
 
               <!-- Own Audit Logs Panel -->
               <div class="panel" style="padding:24px; flex:1; display:flex; flex-direction:column">
-                <h3 style="font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px">📋 My Recent Activity Audits</h3>
+                <h3 style="font-family: var(--font-sans); font-size:16px; font-weight:800; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px">📋 My Recent Activity Audits</h3>
                 <div class="table-wrapper" style="flex:1; overflow-y:auto; max-height:300px">
                   <table class="inventory-table" style="width:100%">
                     <thead>
@@ -5329,7 +5325,7 @@
   <div class="modal-backdrop" id="purchase-onboarding-modal">
     <div class="modal-card" style="max-width:400px; text-align:center; padding:20px">
       <div style="font-size:40px; margin-bottom:15px">🔍</div>
-      <h3 style="font-family:'Outfit'; font-size:18px; margin-bottom:10px">Unknown Barcode Scanned</h3>
+      <h3 style="font-family:var(--font-sans); font-size:18px; margin-bottom:10px">Unknown Barcode Scanned</h3>
       <p style="color:var(--text-muted); font-size:13px; line-height:1.5; margin-bottom:20px">
         Barcode <strong id="onboarding-barcode-label" style="color:var(--accent-green)"></strong> is not registered in the system. How would you like to proceed?
       </p>
@@ -5431,7 +5427,7 @@
   <div class="modal-backdrop" id="stock-adjustment-modal">
     <div class="modal-card" style="max-width:520px">
       <div class="modal-header">
-        <h3 style="font-family:'Outfit'; margin:0">⚖️ Authoritative Stock Adjustment</h3>
+        <h3 style="font-family:var(--font-sans); margin:0">⚖️ Authoritative Stock Adjustment</h3>
         <button class="modal-close-btn" onclick="closeAdjustStockModal()">&times;</button>
       </div>
       <div class="modal-body">
@@ -5501,7 +5497,7 @@
   <div class="modal-backdrop" id="transfer-stock-modal">
     <div class="modal-card" style="max-width:540px">
       <div class="modal-header">
-        <h3 style="font-family:'Outfit'; margin:0">🔄 Inter-Store Stock Transfer</h3>
+        <h3 style="font-family:var(--font-sans); margin:0">🔄 Inter-Store Stock Transfer</h3>
         <button class="modal-close-btn" onclick="closeTransferStockModal()">&times;</button>
       </div>
       <div class="modal-body">
@@ -5781,7 +5777,7 @@
         <!-- Live Price Calculation Panel -->
         <div style="margin-top:20px; background:var(--accent-green-soft, rgba(46,125,50,0.05)); border:1px solid var(--accent-green, rgba(46,125,50,0.15)); padding:12px; border-radius:8px; text-align:center">
           <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; display:block">Calculated Amount</span>
-          <strong id="pos-weight-live-price" style="font-size:24px; color:var(--accent-green); font-family:'Outfit'; display:block; margin:4px 0">₹0.00</strong>
+          <strong id="pos-weight-live-price" style="font-size:24px; color:var(--accent-green); font-family:var(--font-sans); display:block; margin:4px 0">₹0.00</strong>
           <small id="pos-weight-live-calc" style="font-size:11px; color:var(--text-muted)"></small>
         </div>
       </div>
@@ -8418,7 +8414,7 @@
                 </svg>
               </div>
               <div style="min-width: 0;">
-                <h4 style="font-family:'Outfit'; font-size:16px; font-weight:800; margin:0; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${fran.name}">${fran.name}</h4>
+                <h4 style="font-family:var(--font-sans); font-size:16px; font-weight:800; margin:0; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${fran.name}">${fran.name}</h4>
                 <small style="color:var(--text-muted); display:block; margin-top:2px">Owner: ${fran.owner}</small>
               </div>
             </div>
@@ -8431,11 +8427,11 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:15px">
             <div>
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block">Earnings Made</span>
-              <strong style="font-size:14px; color:var(--accent-green); font-family:'Outfit'">₹${safeFixed(totalEarnings, 2)}</strong>
+              <strong style="font-size:14px; color:var(--accent-green); font-family:var(--font-sans)">₹${safeFixed(totalEarnings, 2)}</strong>
             </div>
             <div>
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block">Pending Supply</span>
-              <strong style="font-size:14px; color:var(--accent-warning); font-family:'Outfit'">₹${safeFixed(totalPending, 2)}</strong>
+              <strong style="font-size:14px; color:var(--accent-warning); font-family:var(--font-sans)">₹${safeFixed(totalPending, 2)}</strong>
             </div>
           </div>
 
@@ -9430,7 +9426,7 @@
             <span class="gst-slab-rate" style="color:var(--text-muted); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px">${label}</span>
             <span style="background:${color}1a; color:${color}; font-size:11px; font-weight:800; padding:2px 8px; border-radius:12px">${rate}% Rate</span>
           </div>
-          <div class="gst-slab-val" style="font-size:24px; font-weight:800; color:var(--text-primary); font-family:'Outfit',sans-serif">₹${slab.tax.toFixed(2)}</div>
+          <div class="gst-slab-val" style="font-size:24px; font-weight:800; color:var(--text-primary); font-family:var(--font-sans),sans-serif">₹${slab.tax.toFixed(2)}</div>
           
           <!-- Share indicator -->
           <div style="margin-top:10px">
@@ -11787,7 +11783,7 @@
                 </svg>
               </div>`}
               <div>
-                <h4 style="font-family:\'Outfit\'; font-size:16px; font-weight:800; margin:0; line-height:1.2">${biz.name}</h4>
+                <h4 style="font-family:var(--font-sans); font-size:16px; font-weight:800; margin:0; line-height:1.2">${biz.name}</h4>
                 <small style="color:var(--accent-green); font-weight:700">${biz.subtitle || 'Store Outlet'}</small>
               </div>
             </div>
@@ -11801,11 +11797,11 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:var(--bg-primary); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-bottom:15px">
             <div>
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block">Store Sales Volume</span>
-              <strong style="font-size:14px; color:var(--accent-green); font-family:'Outfit'">₹${safeFixed(storeSalesSum, 2)}</strong>
+              <strong style="font-size:14px; color:var(--accent-green); font-family:var(--font-sans)">₹${safeFixed(storeSalesSum, 2)}</strong>
             </div>
             <div>
               <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block">Store Inventory</span>
-              <strong style="font-size:14px; color:var(--text-primary); font-family:'Outfit'">${totalStockUnits} Units</strong>
+              <strong style="font-size:14px; color:var(--text-primary); font-family:var(--font-sans)">${totalStockUnits} Units</strong>
             </div>
           </div>
 
