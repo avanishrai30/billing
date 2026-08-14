@@ -138,7 +138,34 @@ The central `services/databaseIndexService.js` automatically manages and synchro
 
 ## 4. Verification & Test Suite Summary
 
-- **Automated Regression Suite (`tests/performance.test.js`)**:
-  - 10 automated unit & integration tests covering invoice pagination, maximum limit capping, date filtering, purchase filtering, server-side dashboard aggregation, store scoping, and index manager idempotency.
-- **Repository Test Suite Status**: **82/82 tests passing** across 10 test suites (`performance`, `realtime`, `barcodeImport`, `clientAuth`, `authMigration`, `rbac`, `bulkImport`, `transactions`, `inventory`, `print`).
+- **Automated Regression Suite (`tests/performance.test.js` & `tests/vpsFixes.test.js`)**:
+  - 21 automated unit & integration tests covering invoice pagination, maximum limit capping, date filtering, purchase filtering, server-side dashboard aggregation, store scoping, empty barcode normalization, index collision resolution, and socket JOIN_SYNC idempotency.
+- **Repository Test Suite Status**: **93/93 tests passing** across 11 test suites (`vpsFixes`, `performance`, `realtime`, `barcodeImport`, `clientAuth`, `authMigration`, `rbac`, `bulkImport`, `transactions`, `inventory`, `print`).
 - **HTML Inline JS Verification**: All 28 script blocks compile with 0 VM syntax errors.
+
+---
+
+## 5. Live VPS Verification & Production Fix Pack
+
+### Issue 1: Empty Barcode Normalization & Collision Prevention
+- **Root Cause:** In bulk import updates or upserts, incoming blank barcodes (`""`, `" "`, `null`, `undefined`) were omitted from `$set`, leaving legacy empty strings in the database or failing to `$unset` them.
+- **Fix:** In `services/bulkImportService.js:commitImport`, when an incoming barcode is blank/null:
+  - If existing product had a non-empty valid barcode, it is preserved (`updateOp.$set.barcode = existingBarcode`).
+  - If existing product did not have a valid barcode, the field is explicitly removed using `updateOp.$unset = { barcode: "" }`.
+  - For new products, `updateOp.$unset = { barcode: "" }` is applied and `insertDoc.barcode` is deleted.
+  - Startup routine in `services/databaseIndexService.js` automatically unsets any legacy empty string barcodes from `products` and removes empty entries from `product_barcodes`.
+- **Status:** Verified with automated test cases covering simultaneous unbarcoded products (MUSTARD OIL, BROWN SUGAR, PINK POWDER SALT, CASTROL OIL, KORALE MILLETS).
+
+### Issue 2: Database Index Manager Error & Startup Collision Elimination
+- **Root Cause:** MongoDB enforces a limit of one text index per collection. When an existing text index (such as `name_text`) was detected in `listIndexes()`, comparing its raw key specification (`{ _fts: 'text', _ftsx: 1 }`) against `{ name: "text", category: "text", brand: "text" }` caused a false mismatch, triggering a duplicate index creation attempt that threw `only one text index per collection allowed`.
+- **Fix:** `services/databaseIndexService.js` now detects text index specifications (`isTextIndexSpec`), recognizes existing text index variants or legacy options without crashing, and suppresses non-fatal index option warnings.
+- **Status:** Verified with 0 errors across repeated startups (`Errors: 0`).
+
+### Issue 3: Socket JOIN_SYNC Idempotency & Room Lifecycle Management
+- **Root Cause:** When the client switched business outlets or re-synchronized state, `joinStoreSyncRoom()` emitted `JOIN_SYNC` multiple times, causing repeated room joins and duplicate logging per socket connection.
+- **Fix:** `server.js` maintains a per-socket `joinedRooms` Set:
+  - If a socket already belongs to `sync_global` or `store_<storeId>`, duplicate join requests are ignored and logged as `[Socket Duplicate Ignored]`.
+  - Unauthorized store join requests from non-super admins are rejected with `STORE_ACCESS_DENIED`.
+  - On disconnect, `socket.joinedRooms` is cleared cleanly and `realtimeService.unregisterUserSocket` removes the socket from active presence tracking.
+- **Status:** Verified with automated test cases covering duplicate joins, unauthorized attempts, and disconnect cleanup.
+
