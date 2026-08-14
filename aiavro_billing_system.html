@@ -25,6 +25,7 @@
   <!-- Enterprise POS/ERP Design Tokens & Component Primitives -->
   <link rel="stylesheet" href="/ui/theme.css">
   <link rel="stylesheet" href="/ui/components.css">
+  <link rel="stylesheet" href="/ui/frontend-v2.css">
   
   <style>
     :root {
@@ -2913,7 +2914,7 @@
     }
   </style>
 </head>
-<body>
+<body data-frontend-version="2">
 
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
   <div id="login-screen-overlay" class="login-screen-overlay active" data-auth-state="pending" data-render-layer="auth">
@@ -2985,13 +2986,13 @@
     </div>
   </div>
 
-  <div class="app-container" data-render-layer="shell" style="display:none">
+  <div class="app-container" data-render-layer="shell" data-frontend-version="2" data-component="AppShell" data-shell-state="booting" style="display:none">
     
     <!-- Sidebar Backdrop Overlay (Mobile only) -->
-    <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(22,36,29,0.42); z-index:var(--z-sticky); backdrop-filter:blur(3px);"></div>
+    <div id="mobile-sidebar-backdrop" data-component="ModalLayer" onclick="toggleMobileSidebar()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(22,36,29,0.42); z-index:var(--z-sticky); backdrop-filter:blur(3px);"></div>
 
     <!-- Sidebar Navigation -->
-    <aside>
+    <aside data-component="Sidebar" aria-label="Primary navigation">
       <div class="brand-section">
         <div class="aiavro-logo-wrapper">
           <img id="sidebar-brand-logo-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23001845'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23ffffff' stroke-width='6'/><circle cx='43' cy='50' r='23' fill='none' stroke='%23ffffff' stroke-width='6'/></svg>" alt="Brand Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' rx=\'20\' fill=\'%23001845\'/><circle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/><circle cx=\'43\' cy=\'50\' r=\'23\' fill=\'none\' stroke=\'%23ffffff\' stroke-width=\'6\'/></svg>'">
@@ -3055,7 +3056,7 @@
       </script>
 
       <!-- Sidebar Navigation Menu (Structured Operations, Relationships, Control) -->
-      <ul class="nav-menu">
+      <ul class="nav-menu" data-component="SidebarNavigation">
         <span class="nav-section-title">Operations</span>
         
         <li data-role="admin">
@@ -3162,10 +3163,10 @@
     </aside>
 
     <!-- Main Workspace -->
-    <main data-render-layer="active-view">
+    <main data-render-layer="active-view" data-component="MainWorkspace">
       
       <!-- Top Header -->
-      <header style="display:flex; align-items:center; gap:16px;">
+      <header data-component="TopBar" style="display:flex; align-items:center; gap:16px;">
         <!-- Hamburger Menu Button (visible on mobile only) -->
         <button id="mobile-sidebar-toggle" onclick="toggleMobileSidebar()" style="display:none; background:none; border:none; color:var(--text-primary); cursor:pointer; padding:8px 0; margin-right:4px;" title="Toggle Sidebar">
           <svg style="width:24px; height:24px; fill:currentColor" viewBox="0 0 24 24">
@@ -3173,12 +3174,12 @@
           </svg>
         </button>
 
-        <div class="header-title-area" style="flex:1">
+        <div class="header-title-area" data-component="PageHeader" style="flex:1">
           <h2 id="view-title">Dashboard Overview</h2>
           <p id="view-subtitle">Real-time Farmer Business & Expiry Metrics</p>
         </div>
         
-        <div class="header-actions">
+        <div class="header-actions" data-component="ContextBar">
           <!-- Hardware & Bluetooth Barcode Scanner Status Widget -->
           <div style="display:flex; align-items:center; gap:8px; background:var(--bg-primary); padding:6px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);" id="scanner-hardware-widget">
             <div style="display:flex; align-items:center; gap:6px">
@@ -3218,7 +3219,7 @@
       </header>
 
       <!-- FLOATING ALERTS BOX -->
-      <div class="alerts-container" id="alerts-container" data-render-layer="toast"></div>
+      <div class="alerts-container" id="alerts-container" data-render-layer="toast" data-component="NotificationLayer"></div>
 
       <!-- ==================== DASHBOARD VIEW (STAGE 13 PHASE C REDESIGN) ==================== -->
       <div id="view-dashboard" class="app-view active" data-view-state="visible" aria-hidden="false" data-render-surface="dashboard">
@@ -6961,6 +6962,7 @@
   <script src="/frontend-api/dashboard.js"></script>
   <script src="/frontend-api/scanner.js"></script>
   <script src="/ui/components.js"></script>
+  <script src="/ui/frontend-v2.js"></script>
   <script>
     /* ==================== STATE MANAGEMENT ==================== */
     let state = {
@@ -8087,6 +8089,7 @@
         loginOverlay.setAttribute("data-auth-state", "authenticated");
         loginOverlay.classList.remove("active");
         appContainer.style.display = "grid";
+        window.AIAVROFrontendV2?.shell?.setState("ready");
         syncRoleBasedUI();
         
         const category = getUserCategory(state.currentUser);
@@ -8105,6 +8108,7 @@
         loginOverlay.setAttribute("data-auth-state", "login");
         loginOverlay.classList.add("active");
         appContainer.style.display = "none";
+        window.AIAVROFrontendV2?.shell?.setState("auth");
       }
     }
 
@@ -10145,28 +10149,8 @@
         if (backdropEl) backdropEl.style.display = "none";
       }
 
-      document.querySelectorAll(".app-view").forEach(v => {
-        v.classList.remove("active");
-        v.setAttribute("data-view-state", "hidden");
-        v.setAttribute("aria-hidden", "true");
-      });
-      document.querySelectorAll(".nav-menu .nav-item").forEach(item => item.classList.remove("active"));
-
-      const target = document.getElementById(`view-${viewName}`);
-      if (target) {
-        target.classList.add("active");
-        target.setAttribute("data-view-state", "entering");
-        target.setAttribute("aria-hidden", "false");
-        requestAnimationFrame(() => {
-          if (target.classList.contains("active")) {
-            target.setAttribute("data-view-state", "visible");
-          }
-        });
-      }
-
-      document.querySelectorAll(".nav-menu a").forEach(link => {
-        if (link.getAttribute("onclick").includes(viewName)) link.classList.add("active");
-      });
+      const didActivateView = window.AIAVROFrontendV2?.navigation?.setActiveView(viewName);
+      if (!didActivateView) return;
 
       state.activeView = viewName;
       const viewTitle = document.getElementById("view-title");
