@@ -511,23 +511,25 @@
     }
 
     .app-view.active {
-      display: block;
+      display: block !important;
       opacity: 1;
       transform: translateY(0);
       transition: opacity var(--transition-normal), transform var(--transition-normal);
     }
 
-    .app-view[data-view-state="hidden"] {
+    .app-view:not(.active)[data-view-state="hidden"],
+    .app-view:not(.active) {
       display: none;
     }
 
-    .app-view[data-view-state="visible"] {
-      display: block;
+    .app-view.active[data-view-state="visible"] {
+      display: block !important;
       opacity: 1;
       transform: none;
     }
 
     .app-view.active[data-view-state="entering"] {
+      display: block !important;
       opacity: 0;
       transform: translateY(6px);
     }
@@ -2474,9 +2476,9 @@
         background-position: 66% center;
       }
       .login-card {
-        width: min(260px, calc(100vw - 112px));
-        max-width: calc(100vw - 112px);
-        padding: 28px 24px;
+        width: min(440px, calc(100vw - 32px));
+        max-width: calc(100vw - 32px);
+        padding: clamp(24px, 5vw, 32px) 20px;
         border-radius: 26px;
       }
       .login-card::before {
@@ -2955,7 +2957,7 @@
       
       <div class="login-error" id="login-error-msg" role="alert" aria-live="polite"></div>
       
-      <form id="login-form" onsubmit="triggerLogin(event)">
+      <form id="login-form" novalidate onsubmit="triggerLogin(event)">
         <div class="login-form-group">
           <label class="login-label" for="login-username">Username / Employee ID</label>
           <input type="text" id="login-username" class="login-input" placeholder="e.g. admin" required autocomplete="username" aria-describedby="login-error-msg" autofocus>
@@ -8139,6 +8141,17 @@
       errorDiv.style.display = "none";
       document.getElementById("login-username").setAttribute("aria-invalid", "false");
       document.getElementById("login-password").setAttribute("aria-invalid", "false");
+
+      if (!usernameInput || !passwordInput) {
+        errorDiv.innerHTML = "❌ Please enter your username and password.";
+        errorDiv.style.display = "block";
+        if (!usernameInput) document.getElementById("login-username").setAttribute("aria-invalid", "true");
+        if (!passwordInput) document.getElementById("login-password").setAttribute("aria-invalid", "true");
+        const card = document.querySelector(".login-card");
+        if (card) { card.style.animation = "shake 0.4s ease"; setTimeout(() => card.style.animation = "", 500); }
+        return;
+      }
+
       if (loginBtn) { loginBtn.disabled = true; loginBtn.innerText = "Signing in..."; }
 
       try {
@@ -15505,6 +15518,7 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
 
     function buildSVGSalesChart() {
       const dynamicGroup = document.getElementById("chart-dynamic-group");
+      if (!dynamicGroup) return;
       dynamicGroup.innerHTML = "";
 
       const days = [];
@@ -15576,6 +15590,13 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
     }
 
     function buildCategoryPieChart() {
+      const salesCountEl = document.getElementById("donut-sales-count");
+      if (salesCountEl) salesCountEl.innerText = "₹0.00";
+
+      const segmentGroup = document.getElementById("donut-dynamic-segments");
+      const legendBox = document.getElementById("donut-legend-box");
+      if (!segmentGroup || !legendBox) return;
+
       const catSales = {};
       let totalSalesSum = 0;
 
