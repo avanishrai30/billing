@@ -944,14 +944,20 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
     }
   }
 
-  // 5. Execute Authoritative Inventory Allocation via InventoryService
+  // 5. Execute Authoritative Inventory Allocation via InventoryService (with suppressed per-item socket emissions)
   for (const [locationId, stockItems] of stockByLocation.entries()) {
     try {
       await inventoryService.addStockBatch(
         stockItems,
         locationId,
         `IMPORT:${importId}`,
-        username
+        username,
+        {
+          type: 'STOCK_OPENING',
+          referenceType: 'bulk_import',
+          notes: `Bulk Import Opening Stock #${importId}`,
+          skipRealtimeSocket: true
+        }
       );
       inventoryMovementsCount += stockItems.length;
 
@@ -998,6 +1004,24 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
   await auditService.writeAuditLog('IMPORT_COMPLETED', 'inventory', importId, null, summary, req);
 
   if (io) {
+    const realtimeService = require('./realtimeService');
+    // Emit bounded bulk inventory update to each affected store
+    for (const [locationId, stockItems] of stockByLocation.entries()) {
+      const bulkEnvelope = realtimeService.createEventEnvelope(
+        'inventory',
+        'bulk_updated',
+        importId,
+        locationId,
+        {
+          importId,
+          locationId,
+          storeId: locationId,
+          affectedCount: stockItems.length
+        }
+      );
+      io.to(`store_${locationId}`).emit('inventory.bulk_updated', bulkEnvelope);
+    }
+
     io.to('sync_global').emit('products_imported', { importId, count: importedCount + updatedCount });
     io.to('sync_global').emit('import_completed', { importId, summary });
   }
