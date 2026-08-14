@@ -507,6 +507,9 @@
       opacity: 0;
       transform: translateY(6px);
       min-height: calc(100vh - 120px);
+      width: 100%;
+      flex: 1 0 auto;
+      box-sizing: border-box;
       contain: layout;
     }
 
@@ -514,6 +517,8 @@
       display: block !important;
       opacity: 1;
       transform: translateY(0);
+      width: 100%;
+      flex: 1 0 auto;
       transition: opacity var(--transition-normal), transform var(--transition-normal);
     }
 
@@ -527,12 +532,14 @@
       display: block !important;
       opacity: 1;
       transform: none;
+      width: 100%;
     }
 
     .app-view.active[data-view-state="entering"] {
       display: block !important;
       opacity: 0;
       transform: translateY(6px);
+      width: 100%;
     }
 
     @keyframes slideUp {
