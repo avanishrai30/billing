@@ -3630,38 +3630,119 @@
 
       <!-- ==================== CUSTOMERS CRM VIEW ==================== -->
       <div id="view-customers" class="app-view">
-        
-        <div class="panel">
-          <div class="panel-header">
-            <h3 class="panel-title">Customer Relationship Directory (CRM)</h3>
-            <button class="primary-btn" onclick="openCustomerModal()">
-              + Register Buyer Customer
-            </button>
-          </div>
-          <div class="pos-filters-row" style="margin-bottom:20px">
-            <div class="search-input-box" style="max-width:400px">
-              <input type="text" id="customer-search" placeholder="Search Customer profiles..." oninput="runCustomerFilter()">
-              <svg class="search-icon-svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <section class="finance-workspace crm-workspace" aria-labelledby="crm-workspace-title">
+          <div class="finance-hero-bar">
+            <div>
+              <span class="finance-eyebrow">CRM</span>
+              <h3 id="crm-workspace-title">Customer + Supplier Relationship Workspace</h3>
+              <p>Understand who each contact is, what they have done, where, when, and the next operational action.</p>
+            </div>
+            <div class="finance-actions">
+              <div class="finance-context-chip">
+                <span>Current outlet</span>
+                <strong id="crm-current-store-label">All authorized stores</strong>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="crm-customer-tab" onclick="switchCRMTab('customers')">Customers</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="crm-supplier-tab" onclick="switchCRMTab('suppliers')">Suppliers</button>
             </div>
           </div>
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Customer Info</th>
-                  <th>Phone Number</th>
-                  <th>Email ID</th>
-                  <th>GSTIN / Tax ID</th>
-                  <th>Address Location</th>
-                  <th>Bills issued</th>
-                  <th>Purchase Value</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="customers-table-body"></tbody>
-            </table>
+
+          <div id="crm-customer-panel" class="crm-panel">
+            <div class="finance-filter-bar" id="customer-filters" aria-label="Customer filters">
+              <div class="search-input-box finance-search">
+                <input type="search" id="customer-search" placeholder="Search name, phone, email, GSTIN..." oninput="scheduleCustomerCRMRender()">
+                <svg class="search-icon-svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              </div>
+              <select class="select-dropdown" id="customer-filter-store" onchange="renderCustomersTable()">
+                <option value="">All stores</option>
+              </select>
+              <select class="select-dropdown" id="customer-filter-status" onchange="renderCustomersTable()">
+                <option value="">Any status</option>
+              </select>
+              <button type="button" class="btn btn-primary btn-sm" onclick="openCustomerModal()">Create Customer</button>
+            </div>
+
+            <div class="finance-table-shell">
+              <div class="finance-table-header">
+                <div>
+                  <strong>Customer Directory</strong>
+                  <span id="customer-pagination-summary">Loading customers...</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="refreshCRMData()">Refresh</button>
+              </div>
+              <div class="table-container">
+                <table class="finance-table" aria-label="Customer table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                      <th>Store</th>
+                      <th style="text-align:right">Transactions</th>
+                      <th>Last Activity</th>
+                      <th>Status</th>
+                      <th style="text-align:right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customers-table-body"></tbody>
+                </table>
+              </div>
+              <div class="finance-pagination">
+                <button type="button" class="btn btn-secondary btn-sm" id="customer-prev-page" onclick="changeCRMPage('customers', -1)">Previous</button>
+                <span id="customer-page-label">Page 1</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="customer-next-page" onclick="changeCRMPage('customers', 1)">Next</button>
+              </div>
+            </div>
           </div>
-        </div>
+
+          <div id="crm-supplier-panel" class="crm-panel" style="display:none">
+            <div class="finance-filter-bar" id="supplier-filters" aria-label="Supplier filters">
+              <div class="search-input-box finance-search">
+                <input type="search" id="supplier-search" placeholder="Search supplier, phone, email, GSTIN..." oninput="scheduleSupplierCRMRender()">
+                <svg class="search-icon-svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              </div>
+              <select class="select-dropdown" id="supplier-filter-store" onchange="renderSuppliersTable()">
+                <option value="">All stores</option>
+              </select>
+              <select class="select-dropdown" id="supplier-filter-status" onchange="renderSuppliersTable()">
+                <option value="">Any status</option>
+              </select>
+              <button type="button" class="btn btn-primary btn-sm" onclick="openSupplierModal()">Create Supplier</button>
+            </div>
+
+            <div class="finance-table-shell">
+              <div class="finance-table-header">
+                <div>
+                  <strong>Supplier Directory</strong>
+                  <span id="supplier-pagination-summary">Loading suppliers...</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="refreshCRMData()">Refresh</button>
+              </div>
+              <div class="table-container">
+                <table class="finance-table" aria-label="Supplier table">
+                  <thead>
+                    <tr>
+                      <th>Supplier</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                      <th>Store / Context</th>
+                      <th style="text-align:right">Purchase Activity</th>
+                      <th>Last Activity</th>
+                      <th>Status</th>
+                      <th style="text-align:right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="suppliers-table-body"></tbody>
+                </table>
+              </div>
+              <div class="finance-pagination">
+                <button type="button" class="btn btn-secondary btn-sm" id="supplier-prev-page" onclick="changeCRMPage('suppliers', -1)">Previous</button>
+                <span id="supplier-page-label">Page 1</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="supplier-next-page" onclick="changeCRMPage('suppliers', 1)">Next</button>
+              </div>
+            </div>
+          </div>
+        </section>
 
       </div>
 
@@ -4544,6 +4625,49 @@
         <button type="button" class="btn btn-secondary" onclick="openInvoicePrintFromDrawer('a4')">A4</button>
         <button type="button" class="btn btn-secondary" onclick="downloadServerInvoicePDF()">PDF</button>
         <button type="button" class="btn btn-danger" id="invoice-detail-void-btn" onclick="confirmVoidInvoiceFromDrawer()">Void Invoice</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE H CUSTOMER DETAIL DRAWER ==================== -->
+  <div class="modal-backdrop finance-drawer-backdrop" id="customer-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="customer-detail-title">
+    <div class="modal-card finance-drawer-card">
+      <div class="modal-header">
+        <div>
+          <h3 id="customer-detail-title">Customer Detail</h3>
+          <p class="drawer-subtitle" id="customer-detail-subtitle">Identity, contact, store context, and invoice activity</p>
+        </div>
+        <button class="modal-close-btn" onclick="closeCRMDetailDrawer('customer')" aria-label="Close customer detail">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="customer-detail-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeCRMDetailDrawer('customer')">Close</button>
+        <button type="button" class="btn btn-secondary" onclick="openCustomerModal(crmWorkspaceState.currentCustomerId)">Edit</button>
+        <button type="button" class="btn btn-primary" onclick="createSaleForCustomer(crmWorkspaceState.currentCustomerId)">Create Sale</button>
+        <button type="button" class="btn btn-secondary" onclick="viewInvoicesForCustomer(crmWorkspaceState.currentCustomerId)">View Invoices</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PHASE H SUPPLIER DETAIL DRAWER ==================== -->
+  <div class="modal-backdrop finance-drawer-backdrop" id="supplier-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="supplier-detail-title">
+    <div class="modal-card finance-drawer-card">
+      <div class="modal-header">
+        <div>
+          <h3 id="supplier-detail-title">Supplier Detail</h3>
+          <p class="drawer-subtitle" id="supplier-detail-subtitle">Identity, contact, store context, and purchase activity</p>
+        </div>
+        <button class="modal-close-btn" onclick="closeCRMDetailDrawer('supplier')" aria-label="Close supplier detail">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="supplier-detail-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeCRMDetailDrawer('supplier')">Close</button>
+        <button type="button" class="btn btn-secondary" onclick="openSupplierModal(crmWorkspaceState.currentSupplierId)">Edit</button>
+        <button type="button" class="btn btn-primary" onclick="viewPurchasesForSupplier(crmWorkspaceState.currentSupplierId)">View Purchases</button>
       </div>
     </div>
   </div>
@@ -5562,8 +5686,8 @@
 
 
   <!-- ==================== CUSTOMER MODAL ==================== -->
-  <div class="modal-backdrop" id="customer-modal">
-    <div class="modal-card" style="max-width:550px">
+  <div class="modal-backdrop finance-drawer-backdrop" id="customer-modal" role="dialog" aria-modal="true" aria-labelledby="customer-modal-title">
+    <div class="modal-card finance-drawer-card" style="max-width:650px">
       <div class="modal-header">
         <h3 id="customer-modal-title">Register Customer profile</h3>
         <button class="modal-close-btn" onclick="closeCustomerModal()">&times;</button>
@@ -5594,7 +5718,7 @@
 
           <div class="form-group full-width">
             <label>Billing & Delivery Address</label>
-            <input type="text" id="cust-form-address" placeholder="Address, City, State" required>
+            <input type="text" id="cust-form-address" placeholder="Address, City, State">
           </div>
 
           <div class="modal-footer full-width" style="border:none; padding:15px 0 0 0">
@@ -5690,8 +5814,8 @@
   </div>
 
   <!-- ==================== REGISTER/EDIT SUPPLIER MODAL ==================== -->
-  <div class="modal-backdrop" id="supplier-modal">
-    <div class="modal-card" style="max-width:550px">
+  <div class="modal-backdrop finance-drawer-backdrop" id="supplier-modal" role="dialog" aria-modal="true" aria-labelledby="supplier-modal-title">
+    <div class="modal-card finance-drawer-card" style="max-width:650px">
       <div class="modal-header">
         <h3 id="supplier-modal-title">Register New Supplier Profile</h3>
         <button class="modal-close-btn" onclick="closeSupplierModal()">&times;</button>
@@ -5722,7 +5846,7 @@
 
           <div class="form-group full-width">
             <label>Office & Warehouse Address</label>
-            <input type="text" id="sup-form-address" placeholder="Address, City, State" required>
+            <input type="text" id="sup-form-address" placeholder="Address, City, State">
           </div>
 
           <div class="modal-footer full-width" style="border:none; padding:15px 0 0 0">
@@ -7197,6 +7321,53 @@
       syncSocket.on('purchase.deleted', handlePurchaseDeleted);
       syncSocket.on('purchase_deleted', handlePurchaseDeleted);
 
+      const handleCustomerUpdated = (data) => {
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const customer = data.data?.customer || data.customer;
+        if (!customer) return;
+        if (typeof upsertCRMCustomer === 'function') upsertCRMCustomer(customer);
+      };
+      syncSocket.on('customer.updated', handleCustomerUpdated);
+      syncSocket.on('customer_updated', handleCustomerUpdated);
+
+      const handleCustomerDeleted = (data) => {
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const id = data.data?.id || data.id || data.customerId;
+        if (!id) return;
+        state.customers = state.customers.filter(c => c.id !== id);
+        if (crmWorkspaceState.currentCustomerId === id) closeCRMDetailDrawer('customer');
+        if (state.activeView === 'customers') renderCustomersTable();
+        refreshPOSCustomerSelect();
+      };
+      syncSocket.on('customer.deleted', handleCustomerDeleted);
+      syncSocket.on('customer_deleted', handleCustomerDeleted);
+
+      const handleSupplierUpdated = (data) => {
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const supplier = data.data?.supplier || data.supplier;
+        if (!supplier) return;
+        if (typeof upsertCRMSupplier === 'function') upsertCRMSupplier(supplier);
+        if (typeof populateFinanceSupplierDropdowns === 'function') populateFinanceSupplierDropdowns();
+      };
+      syncSocket.on('supplier.updated', handleSupplierUpdated);
+      syncSocket.on('supplier_updated', handleSupplierUpdated);
+
+      const handleSupplierDeleted = (data) => {
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const id = data.data?.id || data.id || data.supplierId;
+        if (!id) return;
+        state.suppliers = state.suppliers.filter(s => s.id !== id);
+        if (crmWorkspaceState.currentSupplierId === id) closeCRMDetailDrawer('supplier');
+        if (state.activeView === 'customers') renderSuppliersTable();
+        if (typeof populateFinanceSupplierDropdowns === 'function') populateFinanceSupplierDropdowns();
+      };
+      syncSocket.on('supplier.deleted', handleSupplierDeleted);
+      syncSocket.on('supplier_deleted', handleSupplierDeleted);
+
       const handleFranchiseUpdated = (data) => {
         if (!data) return;
         if (recordAndCheckDuplicateEvent(data.eventId)) return;
@@ -7390,6 +7561,7 @@
       // Re-render UI grids with whatever data is loaded
       renderPOSProducts();
       renderCustomersTable();
+      renderSuppliersTable();
       renderInvoicesTable();
       renderBusinessesListDropdowns();
       renderBusinessesCards();
@@ -9530,9 +9702,9 @@
         renderBusinessesCards();
         renderFranchiseCards();
       } else if (viewName === 'customers') {
-        viewTitle.innerText = "Customers CRM Directory";
-        viewSubtitle.innerText = "Manage buyers files, balances and invoices counts";
-        renderCustomersTable();
+        viewTitle.innerText = "Customer + Supplier CRM";
+        viewSubtitle.innerText = "Relationship records, contact context and transaction navigation";
+        initCRMWorkspace();
       } else if (viewName === 'invoices') {
         viewTitle.innerText = "Sales Invoice Workspace";
         viewSubtitle.innerText = "Paginated sales ledger, detail review, void controls and print handoff";
@@ -11861,59 +12033,274 @@
       }
     }
 
-    /* ==================== CUSTOMERS CRM ==================== */
-    function renderCustomersTable(filtered = null) {
-      const list = filtered || state.customers;
-      const tbody = document.getElementById("customers-table-body");
-      tbody.innerHTML = "";
+    /* ==================== PHASE H CUSTOMER + SUPPLIER CRM ==================== */
+    const crmWorkspaceState = {
+      activeTab: 'customers',
+      customerPage: 1,
+      supplierPage: 1,
+      pageSize: 25,
+      customerSearchTimer: null,
+      supplierSearchTimer: null,
+      currentCustomerId: null,
+      currentSupplierId: null
+    };
 
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">No customers registered in database.</td></tr>`;
+    function mapCRMError(err) {
+      const code = err?.code || err?.data?.error?.code || err?.data?.code || 'NETWORK_ERROR';
+      const messages = {
+        INVALID_INPUT: 'Validation failed: complete the required identity fields.',
+        FORBIDDEN: 'Permission denied for this CRM action.',
+        STORE_ACCESS_DENIED: 'Store access denied for this CRM record.',
+        SESSION_EXPIRED: 'Session expired. Please log in again.',
+        NOT_FOUND: 'CRM record not found.',
+        NETWORK_ERROR: 'Network error: server gateway did not respond.'
+      };
+      return messages[code] || err?.message || 'CRM request failed.';
+    }
+
+    function initCRMWorkspace() {
+      updateCRMContextLabel();
+      populateCRMStoreDropdown("customer-filter-store");
+      populateCRMStoreDropdown("supplier-filter-store");
+      populateCRMStatusDropdown("customer-filter-status", state.customers);
+      populateCRMStatusDropdown("supplier-filter-status", state.suppliers);
+      switchCRMTab(crmWorkspaceState.activeTab || 'customers');
+    }
+
+    function updateCRMContextLabel() {
+      const label = document.getElementById("crm-current-store-label");
+      if (label) label.innerText = state.activeBusinessId ? getStoreNameForFinance(state.activeBusinessId) : 'All authorized stores';
+    }
+
+    function populateCRMStoreDropdown(selectId) {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const user = state.currentUser;
+      if (user && user.assignedStoreId && user.assignedStoreId !== 'all' && !['super admin', 'admin', 'auditor'].includes(getUserCategory(user))) {
+        select.innerHTML = `<option value="${escapeHTML(user.assignedStoreId)}">${escapeHTML(getStoreNameForFinance(user.assignedStoreId))}</option>`;
+        select.disabled = true;
         return;
       }
+      select.innerHTML = `<option value="">All stores</option>` + getAllStoresForFinance().map(store => `<option value="${escapeHTML(store.id)}">${escapeHTML(getStoreDisplayName(store))}</option>`).join('');
+      select.disabled = false;
+    }
 
-      list.forEach(cust => {
-        const invs = state.invoices.filter(i => i.customerId === cust.id);
-        const invCount = invs.length;
-        const totalPurchases = invs.reduce((s, i) => s + (i.status === 'paid' ? i.grandtotal : 0), 0);
+    function populateCRMStatusDropdown(selectId, rows) {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const statuses = [...new Set((rows || []).map(r => r.status).filter(Boolean))];
+      select.innerHTML = `<option value="">Any status</option>` + statuses.map(status => `<option value="${escapeHTML(status)}">${escapeHTML(safeUpper(status))}</option>`).join('');
+    }
 
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td><strong>${escapeHTML(cust.name)}</strong></td>
-          <td>${escapeHTML(cust.phone)}</td>
-          <td>${cust.email ? escapeHTML(cust.email) : '-'}</td>
-          <td><code style="font-weight:700">${cust.gstin ? escapeHTML(cust.gstin) : 'Unregistered'}</code></td>
-          <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${escapeHTML(cust.address)}</td>
-          <td><strong>${invCount} Bills</strong></td>
-          <td><strong style="color:var(--accent-green)">₹${totalPurchases.toFixed(2)}</strong></td>
-          <td>
-            <div style="display:flex; gap:8px">
-              <button class="secondary-btn" style="padding:6px 10px; font-size:11px" onclick="editCustomerRow('${cust.id}')">Edit</button>
-              <button class="secondary-btn" style="padding:6px 10px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="deleteCustomerRow('${cust.id}')">Delete</button>
-            </div>
-          </td>
-        `;
-        tbody.appendChild(row);
+    function switchCRMTab(tab) {
+      crmWorkspaceState.activeTab = tab === 'suppliers' ? 'suppliers' : 'customers';
+      const customerPanel = document.getElementById("crm-customer-panel");
+      const supplierPanel = document.getElementById("crm-supplier-panel");
+      const customerTab = document.getElementById("crm-customer-tab");
+      const supplierTab = document.getElementById("crm-supplier-tab");
+      if (customerPanel) customerPanel.style.display = crmWorkspaceState.activeTab === 'customers' ? 'block' : 'none';
+      if (supplierPanel) supplierPanel.style.display = crmWorkspaceState.activeTab === 'suppliers' ? 'block' : 'none';
+      if (customerTab) customerTab.className = crmWorkspaceState.activeTab === 'customers' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+      if (supplierTab) supplierTab.className = crmWorkspaceState.activeTab === 'suppliers' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+      if (crmWorkspaceState.activeTab === 'customers') renderCustomersTable();
+      else renderSuppliersTable();
+    }
+
+    async function refreshCRMData() {
+      try {
+        const [customers, suppliers] = await Promise.all([
+          api.customers.list(),
+          api.suppliers.list()
+        ]);
+        state.customers = Array.isArray(customers) ? customers : [];
+        state.suppliers = Array.isArray(suppliers) ? suppliers : [];
+        populateCRMStatusDropdown("customer-filter-status", state.customers);
+        populateCRMStatusDropdown("supplier-filter-status", state.suppliers);
+        renderCustomersTable();
+        renderSuppliersTable();
+      } catch (err) {
+        triggerAlert(mapCRMError(err), "danger");
+      }
+    }
+
+    function scheduleCustomerCRMRender() {
+      clearTimeout(crmWorkspaceState.customerSearchTimer);
+      crmWorkspaceState.customerSearchTimer = setTimeout(() => {
+        crmWorkspaceState.customerPage = 1;
+        renderCustomersTable();
+      }, 200);
+    }
+
+    function scheduleSupplierCRMRender() {
+      clearTimeout(crmWorkspaceState.supplierSearchTimer);
+      crmWorkspaceState.supplierSearchTimer = setTimeout(() => {
+        crmWorkspaceState.supplierPage = 1;
+        renderSuppliersTable();
+      }, 200);
+    }
+
+    function getCustomerStoreId(cust) {
+      return cust.storeId || cust.locationId || cust.businessId || cust.store || '';
+    }
+
+    function getSupplierStoreId(sup) {
+      return sup.storeId || sup.locationId || sup.businessId || sup.store || '';
+    }
+
+    function getCustomerInvoices(custId) {
+      return (state.invoices || []).filter(inv => inv.customerId === custId);
+    }
+
+    function getSupplierPurchases(supplierId, supplierName = '') {
+      return (state.purchases || []).filter(pur => pur.supplierId === supplierId || pur.supplier === supplierName || pur.supplierName === supplierName);
+    }
+
+    function filterCRMRows(rows, search, storeId, status, kind) {
+      const q = (search || '').trim().toLowerCase();
+      return (rows || []).filter(row => {
+        const rowStore = kind === 'customer' ? getCustomerStoreId(row) : getSupplierStoreId(row);
+        const haystack = [
+          row.name,
+          row.phone,
+          row.contact,
+          row.email,
+          row.gstin,
+          row.address,
+          row.status
+        ].filter(Boolean).join(' ').toLowerCase();
+        const matchesSearch = !q || haystack.includes(q);
+        const matchesStore = !storeId || rowStore === storeId || !rowStore;
+        const matchesStatus = !status || row.status === status;
+        return matchesSearch && matchesStore && matchesStatus;
       });
+    }
 
+    function paginateCRMRows(rows, page) {
+      const total = rows.length;
+      const totalPages = Math.max(1, Math.ceil(total / crmWorkspaceState.pageSize));
+      const safePage = Math.min(Math.max(1, page), totalPages);
+      const start = (safePage - 1) * crmWorkspaceState.pageSize;
+      return { rows: rows.slice(start, start + crmWorkspaceState.pageSize), page: safePage, total, totalPages };
+    }
+
+    function renderCustomersTable(filtered = null) {
+      const tbody = document.getElementById("customers-table-body");
+      if (!tbody) return;
+      const search = document.getElementById("customer-search")?.value || '';
+      const storeId = document.getElementById("customer-filter-store")?.value || state.activeBusinessId || '';
+      const status = document.getElementById("customer-filter-status")?.value || '';
+      const sourceRows = filtered || filterCRMRows(state.customers, search, storeId, status, 'customer');
+      const page = paginateCRMRows(sourceRows, crmWorkspaceState.customerPage);
+      crmWorkspaceState.customerPage = page.page;
+      tbody.innerHTML = "";
+
+      if (page.rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:22px">No customers found.</td></tr>`;
+      } else {
+        page.rows.forEach(cust => {
+          const invs = getCustomerInvoices(cust.id);
+          const latest = invs.slice().sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0))[0];
+          const statusLabel = cust.status || (cust.isArchived ? 'inactive' : 'active');
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td data-label="Name"><span class="finance-primary-id">${escapeHTML(cust.name || 'Unnamed customer')}</span><span class="finance-muted-line">${cust.gstin ? 'GSTIN ' + escapeHTML(cust.gstin) : 'Retail profile'}</span></td>
+            <td data-label="Phone">${escapeHTML(cust.phone || 'Not recorded')}</td>
+            <td data-label="Email">${cust.email ? escapeHTML(cust.email) : 'Not recorded'}</td>
+            <td data-label="Store">${escapeHTML(getStoreNameForFinance(getCustomerStoreId(cust)) || 'Shared CRM')}</td>
+            <td data-label="Transactions" style="text-align:right"><strong>${invs.length}</strong></td>
+            <td data-label="Last Activity">${latest ? escapeHTML(formatDateTime(latest.createdAt || latest.date)) : 'No invoices'}</td>
+            <td data-label="Status">${renderFinanceStatusBadge(statusLabel)}</td>
+            <td data-label="Actions" style="text-align:right">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openCustomerDetailDrawer('${escapeHTML(cust.id)}')">View</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openCustomerModal('${escapeHTML(cust.id)}')">Edit</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      updateCRMPagination('customer', page);
+      refreshPOSCustomerSelect();
+    }
+
+    function renderSuppliersTable(filtered = null) {
+      const tbody = document.getElementById("suppliers-table-body");
+      if (!tbody) return;
+      const search = document.getElementById("supplier-search")?.value || '';
+      const storeId = document.getElementById("supplier-filter-store")?.value || state.activeBusinessId || '';
+      const status = document.getElementById("supplier-filter-status")?.value || '';
+      const sourceRows = filtered || filterCRMRows(state.suppliers, search, storeId, status, 'supplier');
+      const page = paginateCRMRows(sourceRows, crmWorkspaceState.supplierPage);
+      crmWorkspaceState.supplierPage = page.page;
+      tbody.innerHTML = "";
+
+      if (page.rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:22px">No suppliers found.</td></tr>`;
+      } else {
+        page.rows.forEach(sup => {
+          const purchases = getSupplierPurchases(sup.id, sup.name);
+          const latest = purchases.slice().sort((a, b) => new Date(b.createdAt || b.purchaseDate || 0) - new Date(a.createdAt || a.purchaseDate || 0))[0];
+          const statusLabel = sup.status || (sup.isArchived ? 'inactive' : 'active');
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td data-label="Supplier"><span class="finance-primary-id">${escapeHTML(sup.name || 'Unnamed supplier')}</span><span class="finance-muted-line">${sup.gst ? 'GSTIN ' + escapeHTML(sup.gst) : 'Unregistered GST'}</span></td>
+            <td data-label="Phone">${escapeHTML(sup.contact || sup.phone || 'Not recorded')}</td>
+            <td data-label="Email">${sup.email ? escapeHTML(sup.email) : 'Not recorded'}</td>
+            <td data-label="Store / Context">${escapeHTML(getStoreNameForFinance(getSupplierStoreId(sup)) || 'Shared vendor')}</td>
+            <td data-label="Purchase Activity" style="text-align:right"><strong>${purchases.length}</strong></td>
+            <td data-label="Last Activity">${latest ? escapeHTML(formatDateTime(latest.createdAt || latest.purchaseDate)) : 'No purchases'}</td>
+            <td data-label="Status">${renderFinanceStatusBadge(statusLabel)}</td>
+            <td data-label="Actions" style="text-align:right">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openSupplierDetailDrawer('${escapeHTML(sup.id)}')">View</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openSupplierModal('${escapeHTML(sup.id)}')">Edit</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      updateCRMPagination('supplier', page);
+    }
+
+    function updateCRMPagination(kind, page) {
+      const prefix = kind === 'supplier' ? 'supplier' : 'customer';
+      const summary = document.getElementById(`${prefix}-pagination-summary`);
+      const label = document.getElementById(`${prefix}-page-label`);
+      const prev = document.getElementById(`${prefix}-prev-page`);
+      const next = document.getElementById(`${prefix}-next-page`);
+      if (summary) summary.innerText = `${page.total} ${prefix}${page.total === 1 ? '' : 's'}, page ${page.page}`;
+      if (label) label.innerText = `Page ${page.page} of ${page.totalPages}`;
+      if (prev) prev.disabled = page.page <= 1;
+      if (next) next.disabled = page.page >= page.totalPages;
+    }
+
+    function changeCRMPage(kind, delta) {
+      if (kind === 'suppliers') {
+        crmWorkspaceState.supplierPage += delta;
+        renderSuppliersTable();
+      } else {
+        crmWorkspaceState.customerPage += delta;
+        renderCustomersTable();
+      }
+    }
+
+    function runCustomerFilter() {
+      crmWorkspaceState.customerPage = 1;
+      renderCustomersTable();
+    }
+
+    function refreshPOSCustomerSelect() {
       const posSelect = document.getElementById("pos-customer-select");
+      if (!posSelect) return;
       const cur = posSelect.value;
       posSelect.innerHTML = "";
       state.customers.forEach(c => {
         const option = document.createElement("option");
         option.value = c.id;
-        option.innerText = `${c.name} (${c.phone})`;
+        option.innerText = `${c.name} (${c.phone || 'No phone'})`;
         posSelect.appendChild(option);
       });
       if (cur) posSelect.value = cur;
-    }
-
-    function runCustomerFilter() {
-      const search = document.getElementById("customer-search").value.toLowerCase();
-      let filtered = state.customers.filter(c => {
-        return c.name.toLowerCase().includes(search) || c.phone.includes(search) || (c.email && c.email.toLowerCase().includes(search)) || (c.gstin && c.gstin.toLowerCase().includes(search));
-      });
-      renderCustomersTable(filtered);
     }
 
     function openCustomerModal(id = null) {
@@ -11946,11 +12333,11 @@
     async function saveCustomerForm(e) {
       e.preventDefault();
       const id = document.getElementById("cust-form-id").value;
-      const name = document.getElementById("cust-form-name").value;
-      const phone = document.getElementById("cust-form-phone").value;
-      const email = document.getElementById("cust-form-email").value;
-      const gstin = document.getElementById("cust-form-gstin").value;
-      const address = document.getElementById("cust-form-address").value;
+      const name = document.getElementById("cust-form-name").value.trim();
+      const phone = document.getElementById("cust-form-phone").value.trim();
+      const email = document.getElementById("cust-form-email").value.trim();
+      const gstin = document.getElementById("cust-form-gstin").value.trim();
+      const address = document.getElementById("cust-form-address").value.trim();
 
       const cust = { id, name, phone, email, gstin, address };
 
@@ -11959,19 +12346,35 @@
         if (result.success) {
           triggerAlert(`Customer '${name}' details saved successfully!`, "success");
           closeCustomerModal();
-          await syncStateWithServer();
+          upsertCRMCustomer(result.customer || cust);
+          renderCustomersTable();
         } else {
           triggerAlert(result.message || "Failed to save customer profiles", "danger");
         }
       } catch (err) {
-        triggerAlert("Error connecting to server gateway.", "danger");
+        triggerAlert(mapCRMError(err), "danger");
       }
     }
 
-    function openSupplierModal() {
+    function openSupplierModal(id = null) {
       document.getElementById("supplier-modal").classList.add("active");
+      const title = document.getElementById("supplier-modal-title");
       document.getElementById("supplier-form").reset();
       document.getElementById("sup-form-id").value = "";
+      if (id) {
+        title.innerText = "Edit Supplier Profile";
+        const s = state.suppliers.find(item => item.id === id);
+        if (s) {
+          document.getElementById("sup-form-id").value = s.id;
+          document.getElementById("sup-form-name").value = s.name || '';
+          document.getElementById("sup-form-contact").value = s.contact || s.phone || '';
+          document.getElementById("sup-form-email").value = s.email || '';
+          document.getElementById("sup-form-gst").value = s.gst || s.gstin || '';
+          document.getElementById("sup-form-address").value = s.address || '';
+        }
+      } else {
+        title.innerText = "Register New Supplier Profile";
+      }
     }
 
     function closeSupplierModal() {
@@ -11988,8 +12391,8 @@
       const gst = document.getElementById("sup-form-gst").value.trim();
       const address = document.getElementById("sup-form-address").value.trim();
       
-      if (!name || !contact || !address) {
-        triggerAlert("Please fill in all required fields", "warning");
+      if (!name || !contact) {
+        triggerAlert("Please fill in supplier name and contact number.", "warning");
         return;
       }
       
@@ -12000,7 +12403,9 @@
         if (result.success) {
           triggerAlert(`Supplier '${name}' successfully registered!`, "success");
           closeSupplierModal();
-          await syncStateWithServer();
+          upsertCRMSupplier(result.supplier || supplierData);
+          renderSuppliersTable();
+          populateFinanceSupplierDropdowns();
 
           const select = document.getElementById("purchase-supplier-select");
           if (select) {
@@ -12011,7 +12416,7 @@
           triggerAlert(result.message || "Failed to register supplier.", "danger");
         }
       } catch (err) {
-        triggerAlert("Error connecting to server gateway.", "danger");
+        triggerAlert(mapCRMError(err), "danger");
       }
     }
 
@@ -12043,6 +12448,128 @@
         saveStateToLocalStorage();
         triggerAlert("Customer record removed from directory", "warning");
         renderCustomersTable();
+      }
+    }
+
+    function upsertCRMCustomer(customer) {
+      if (!customer) return;
+      const idx = state.customers.findIndex(c => c.id === customer.id);
+      if (idx >= 0) state.customers[idx] = { ...state.customers[idx], ...customer };
+      else state.customers.unshift(customer);
+      if (crmWorkspaceState.currentCustomerId === customer.id) openCustomerDetailDrawer(customer.id);
+      if (state.activeView === 'customers') renderCustomersTable();
+      refreshPOSCustomerSelect();
+    }
+
+    function upsertCRMSupplier(supplier) {
+      if (!supplier) return;
+      const idx = state.suppliers.findIndex(s => s.id === supplier.id);
+      if (idx >= 0) state.suppliers[idx] = { ...state.suppliers[idx], ...supplier };
+      else state.suppliers.unshift(supplier);
+      if (crmWorkspaceState.currentSupplierId === supplier.id) openSupplierDetailDrawer(supplier.id);
+      if (state.activeView === 'customers') renderSuppliersTable();
+    }
+
+    function openCustomerDetailDrawer(id) {
+      const customer = state.customers.find(c => c.id === id);
+      if (!customer) return;
+      crmWorkspaceState.currentCustomerId = id;
+      const invoices = getCustomerInvoices(id).slice().sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0)).slice(0, 5);
+      document.getElementById("customer-detail-title").innerText = customer.name || 'Customer Detail';
+      document.getElementById("customer-detail-subtitle").innerText = customer.phone || customer.email || 'Contact information';
+      document.getElementById("customer-detail-content").innerHTML = `
+        <div class="finance-detail-grid">
+          <div class="finance-detail-tile"><span>Identity</span><strong>${escapeHTML(customer.name || 'Unnamed customer')}</strong></div>
+          <div class="finance-detail-tile"><span>Phone</span><strong>${escapeHTML(customer.phone || 'Not recorded')}</strong></div>
+          <div class="finance-detail-tile"><span>Email</span><strong>${escapeHTML(customer.email || 'Not recorded')}</strong></div>
+          <div class="finance-detail-tile"><span>GSTIN</span><strong>${escapeHTML(customer.gstin || 'Unregistered')}</strong></div>
+          <div class="finance-detail-tile"><span>Store Context</span><strong>${escapeHTML(getStoreNameForFinance(getCustomerStoreId(customer)) || 'Shared CRM')}</strong></div>
+          <div class="finance-detail-tile"><span>Status</span><strong>${renderFinanceStatusBadge(customer.status || 'active')}</strong></div>
+        </div>
+        <div class="finance-detail-tile" style="margin-bottom:14px"><span>Address</span><strong>${escapeHTML(customer.address || 'Not recorded')}</strong></div>
+        <div class="finance-table-shell compact">
+          <div class="finance-table-header"><strong>Recent invoices for customer</strong><span>${invoices.length ? 'Latest authorized records in current state' : 'No invoices for customer'}</span></div>
+          <div class="table-container">
+            <table class="finance-table">
+              <thead><tr><th>Invoice</th><th>Date</th><th>Status</th><th style="text-align:right">Total</th><th style="text-align:right">Action</th></tr></thead>
+              <tbody>${invoices.length ? invoices.map(inv => {
+                const n = normalizeInvoiceForWorkspace(inv);
+                return `<tr><td data-label="Invoice"><strong>${escapeHTML(n.invoiceNumber)}</strong></td><td data-label="Date">${escapeHTML(formatDateTime(n.date))}</td><td data-label="Status">${renderFinanceStatusBadge(n.status)}</td><td data-label="Total" style="text-align:right">${formatINR(n.grandTotal)}</td><td data-label="Action" style="text-align:right"><button type="button" class="btn btn-secondary btn-sm" onclick="openInvoiceDetailDrawer('${escapeHTML(n.invoiceNumber)}')">Open</button></td></tr>`;
+              }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">No invoices for customer.</td></tr>`}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+      document.getElementById("customer-detail-drawer").classList.add("active");
+    }
+
+    function openSupplierDetailDrawer(id) {
+      const supplier = state.suppliers.find(s => s.id === id);
+      if (!supplier) return;
+      crmWorkspaceState.currentSupplierId = id;
+      const purchases = getSupplierPurchases(id, supplier.name).slice().sort((a, b) => new Date(b.createdAt || b.purchaseDate || 0) - new Date(a.createdAt || a.purchaseDate || 0)).slice(0, 5);
+      document.getElementById("supplier-detail-title").innerText = supplier.name || 'Supplier Detail';
+      document.getElementById("supplier-detail-subtitle").innerText = supplier.contact || supplier.email || 'Contact information';
+      document.getElementById("supplier-detail-content").innerHTML = `
+        <div class="finance-detail-grid">
+          <div class="finance-detail-tile"><span>Identity</span><strong>${escapeHTML(supplier.name || 'Unnamed supplier')}</strong></div>
+          <div class="finance-detail-tile"><span>Phone</span><strong>${escapeHTML(supplier.contact || supplier.phone || 'Not recorded')}</strong></div>
+          <div class="finance-detail-tile"><span>Email</span><strong>${escapeHTML(supplier.email || 'Not recorded')}</strong></div>
+          <div class="finance-detail-tile"><span>GSTIN</span><strong>${escapeHTML(supplier.gst || supplier.gstin || 'Unregistered')}</strong></div>
+          <div class="finance-detail-tile"><span>Store Context</span><strong>${escapeHTML(getStoreNameForFinance(getSupplierStoreId(supplier)) || 'Shared vendor')}</strong></div>
+          <div class="finance-detail-tile"><span>Status</span><strong>${renderFinanceStatusBadge(supplier.status || 'active')}</strong></div>
+        </div>
+        <div class="finance-detail-tile" style="margin-bottom:14px"><span>Address</span><strong>${escapeHTML(supplier.address || 'Not recorded')}</strong></div>
+        <div class="finance-table-shell compact">
+          <div class="finance-table-header"><strong>Recent purchases for supplier</strong><span>${purchases.length ? 'Latest authorized records in current state' : 'No purchases for supplier'}</span></div>
+          <div class="table-container">
+            <table class="finance-table">
+              <thead><tr><th>Reference</th><th>Date</th><th>Status</th><th style="text-align:right">Total</th><th style="text-align:right">Action</th></tr></thead>
+              <tbody>${purchases.length ? purchases.map(pur => {
+                const n = normalizePurchaseForWorkspace(pur);
+                return `<tr><td data-label="Reference"><strong>${escapeHTML(n.reference)}</strong></td><td data-label="Date">${escapeHTML(formatDateTime(n.date))}</td><td data-label="Status">${renderFinanceStatusBadge(n.status)}</td><td data-label="Total" style="text-align:right">${formatINR(n.total)}</td><td data-label="Action" style="text-align:right"><button type="button" class="btn btn-secondary btn-sm" onclick="openPurchaseDetailDrawer('${escapeHTML(n.id)}')">Open</button></td></tr>`;
+              }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">No purchases for supplier.</td></tr>`}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+      document.getElementById("supplier-detail-drawer").classList.add("active");
+    }
+
+    function closeCRMDetailDrawer(kind) {
+      const id = kind === 'supplier' ? 'supplier-detail-drawer' : 'customer-detail-drawer';
+      const drawer = document.getElementById(id);
+      if (drawer) drawer.classList.remove("active");
+    }
+
+    function createSaleForCustomer(customerId) {
+      if (!customerId) return;
+      state.activeCustomerSelect = customerId;
+      closeCRMDetailDrawer('customer');
+      switchView('billing');
+      const select = document.getElementById("pos-customer-select");
+      if (select) select.value = customerId;
+    }
+
+    function viewInvoicesForCustomer(customerId) {
+      if (!customerId) return;
+      closeCRMDetailDrawer('customer');
+      switchView('invoices');
+      const select = document.getElementById("invoice-filter-customer");
+      if (select) {
+        select.value = customerId;
+        loadInvoiceWorkspacePage(1);
+      }
+    }
+
+    function viewPurchasesForSupplier(supplierId) {
+      if (!supplierId) return;
+      closeCRMDetailDrawer('supplier');
+      switchView('purchase');
+      const select = document.getElementById("purchase-filter-supplier");
+      if (select) {
+        select.value = supplierId;
+        loadPurchaseWorkspacePage(1);
       }
     }
 
