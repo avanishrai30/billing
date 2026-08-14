@@ -94,7 +94,7 @@ describe('AIAVRO premium login design', () => {
   });
 
   test('15. app shell initial state remains stable', () => {
-    expect(html).toContain('<div class="app-container" style="display:none">');
+    expect(html).toContain('<div class="app-container" data-render-layer="shell" style="display:none">');
     expect(html).toContain('appContainer.style.display = "grid"');
   });
 

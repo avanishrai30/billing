@@ -121,16 +121,25 @@
   --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-normal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* ==================== 9. Z-INDEX LAYERS ==================== */
-  --z-base: 0;
-  --z-sticky: 100;
-  --z-sidebar: 100;
-  --z-header: 600;
-  --z-dropdown: 500;
-  --z-drawer: 900;
-  --z-overlay: 1000;
-  --z-modal-backdrop: 1000;
-  --z-modal: 1100;
-  --z-toast: 2000;
-  --z-tooltip: 3000;
+  /* ==================== 9. RENDERING LAYERS ==================== */
+  --z-layer-foundation: 0;
+  --z-layer-shell: 10;
+  --z-layer-auth: 20;
+  --z-layer-view: 30;
+  --z-layer-overlay: 40;
+  --z-layer-modal: 50;
+  --z-layer-toast: 60;
+
+  /* Backward-compatible aliases used by existing surfaces. */
+  --z-base: var(--z-layer-foundation);
+  --z-sticky: var(--z-layer-shell);
+  --z-sidebar: var(--z-layer-shell);
+  --z-header: var(--z-layer-shell);
+  --z-dropdown: var(--z-layer-overlay);
+  --z-drawer: var(--z-layer-overlay);
+  --z-overlay: var(--z-layer-overlay);
+  --z-modal-backdrop: var(--z-layer-overlay);
+  --z-modal: var(--z-layer-modal);
+  --z-toast: var(--z-layer-toast);
+  --z-tooltip: var(--z-layer-toast);
 }

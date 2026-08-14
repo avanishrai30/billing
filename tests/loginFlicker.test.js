@@ -21,7 +21,7 @@ describe('Login render-layer regression guard', () => {
 
   test('1. login overlay is the only initial auth surface', () => {
     expect(html).toContain('class="login-screen-overlay active" data-auth-state="pending"');
-    expect(html).toContain('<div class="app-container" style="display:none">');
+    expect(html).toContain('<div class="app-container" data-render-layer="shell" style="display:none">');
     expect(loginCss).toContain('opacity: 1;');
     expect(loginCss).toContain('pointer-events: auto;');
     expect(loginCss).toContain('.login-screen-overlay:not(.active)');

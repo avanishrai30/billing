@@ -74,14 +74,24 @@
       --shadow-md: 0 8px 24px rgba(22, 36, 29, 0.08);
       --shadow-lg: 0 20px 48px rgba(22, 36, 29, 0.14);
       --shadow-dialog: 0 24px 72px rgba(22, 36, 29, 0.22);
-      --z-base: 0;
-      --z-sticky: 100;
-      --z-dropdown: 500;
-      --z-header: 600;
-      --z-drawer: 900;
-      --z-overlay: 1000;
-      --z-modal: 1100;
-      --z-toast: 2000;
+      --z-layer-foundation: 0;
+      --z-layer-shell: 10;
+      --z-layer-auth: 20;
+      --z-layer-view: 30;
+      --z-layer-overlay: 40;
+      --z-layer-modal: 50;
+      --z-layer-toast: 60;
+      --z-base: var(--z-layer-foundation);
+      --z-sticky: var(--z-layer-shell);
+      --z-sidebar: var(--z-layer-shell);
+      --z-header: var(--z-layer-shell);
+      --z-dropdown: var(--z-layer-overlay);
+      --z-drawer: var(--z-layer-overlay);
+      --z-overlay: var(--z-layer-overlay);
+      --z-modal-backdrop: var(--z-layer-overlay);
+      --z-modal: var(--z-layer-modal);
+      --z-toast: var(--z-layer-toast);
+      --z-tooltip: var(--z-layer-toast);
       --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
       --transition-normal: 180ms cubic-bezier(0.16, 1, 0.3, 1);
       --transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
@@ -161,6 +171,8 @@
       grid-template-columns: var(--sidebar-width, 300px) 1fr;
       width: 100vw;
       min-height: 100vh;
+      position: relative;
+      z-index: var(--z-layer-shell);
     }
 
     /* Sidebar Styling */
@@ -495,6 +507,7 @@
       opacity: 0;
       transform: translateY(6px);
       min-height: calc(100vh - 120px);
+      contain: layout;
     }
 
     .app-view.active {
@@ -502,6 +515,16 @@
       opacity: 1;
       transform: translateY(0);
       transition: opacity var(--transition-normal), transform var(--transition-normal);
+    }
+
+    .app-view[data-view-state="hidden"] {
+      display: none;
+    }
+
+    .app-view[data-view-state="visible"] {
+      display: block;
+      opacity: 1;
+      transform: none;
     }
 
     .app-view.active[data-view-state="entering"] {
@@ -1474,7 +1497,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: var(--z-overlay);
+      z-index: var(--z-layer-overlay);
       opacity: 0;
       pointer-events: none;
       transition: opacity var(--transition-normal);
@@ -1483,7 +1506,7 @@
     .modal-backdrop.active {
       opacity: 1;
       pointer-events: auto !important;
-      z-index: var(--z-modal) !important;
+      z-index: var(--z-layer-modal) !important;
     }
 
     .modal-card {
@@ -1751,7 +1774,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      z-index: var(--z-toast);
+      z-index: var(--z-layer-toast);
     }
 
     .floating-alert {
@@ -2105,7 +2128,7 @@
         linear-gradient(135deg, #f8faf5 0%, #edf5ed 42%, #d7e7d8 100%);
       background-size: cover;
       background-position: center;
-      z-index: var(--z-toast);
+      z-index: var(--z-layer-auth);
       /* The login screen is the deterministic first-paint surface. Authenticated
          state hides it explicitly after the session has been resolved. */
       opacity: 1;
@@ -2634,7 +2657,7 @@
         left: -290px; /* Hidden by default */
         width: 280px !important;
         height: 100vh;
-        z-index: 100;
+        z-index: var(--z-layer-shell);
         transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       }
@@ -2893,7 +2916,7 @@
 <body>
 
   <!-- ==================== LOGIN SCREEN OVERLAY ==================== -->
-  <div id="login-screen-overlay" class="login-screen-overlay active" data-auth-state="pending">
+  <div id="login-screen-overlay" class="login-screen-overlay active" data-auth-state="pending" data-render-layer="auth">
     <div class="login-card" aria-labelledby="login-heading">
       <div class="login-brand-lockup" aria-label="AIAVRO Billing OS">
         <div class="login-logo">
@@ -2962,7 +2985,7 @@
     </div>
   </div>
 
-  <div class="app-container" style="display:none">
+  <div class="app-container" data-render-layer="shell" style="display:none">
     
     <!-- Sidebar Backdrop Overlay (Mobile only) -->
     <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(22,36,29,0.42); z-index:var(--z-sticky); backdrop-filter:blur(3px);"></div>
@@ -3139,7 +3162,7 @@
     </aside>
 
     <!-- Main Workspace -->
-    <main>
+    <main data-render-layer="active-view">
       
       <!-- Top Header -->
       <header style="display:flex; align-items:center; gap:16px;">
@@ -3195,10 +3218,10 @@
       </header>
 
       <!-- FLOATING ALERTS BOX -->
-      <div class="alerts-container" id="alerts-container"></div>
+      <div class="alerts-container" id="alerts-container" data-render-layer="toast"></div>
 
       <!-- ==================== DASHBOARD VIEW (STAGE 13 PHASE C REDESIGN) ==================== -->
-      <div id="view-dashboard" class="app-view active">
+      <div id="view-dashboard" class="app-view active" data-view-state="visible" aria-hidden="false" data-render-surface="dashboard">
         
         <!-- Global Context Bar -->
         <div class="card-shell" style="margin-bottom:var(--space-4); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3)">
@@ -3414,7 +3437,7 @@
       </div>
 
       <!-- ==================== POS BILLING VIEW ==================== -->
-      <div id="view-billing" class="app-view">
+      <div id="view-billing" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="billing">
         
         <div class="pos-billing-layout">
           
@@ -3629,7 +3652,7 @@
       </div>
 
       <!-- ==================== PRODUCT INVENTORY VIEW ==================== -->
-      <div id="view-inventory" class="app-view">
+      <div id="view-inventory" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="inventory">
         
         <!-- Inventory Context Bar & Action Command Strip -->
         <div class="card-shell" style="margin-bottom:var(--space-4); padding:var(--space-4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-3)">
@@ -3917,7 +3940,7 @@
       </div>
 
       <!-- ==================== MY BUSINESSES VIEW ==================== -->
-      <div id="view-businesses" class="app-view">
+      <div id="view-businesses" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="businesses">
         
         <div class="panel">
           <div class="panel-header">
@@ -3959,7 +3982,7 @@
       </div>
 
       <!-- ==================== CUSTOMERS CRM VIEW ==================== -->
-      <div id="view-customers" class="app-view">
+      <div id="view-customers" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="customers">
         <section class="finance-workspace crm-workspace" aria-labelledby="crm-workspace-title">
           <div class="finance-hero-bar">
             <div>
@@ -4077,7 +4100,7 @@
       </div>
 
       <!-- ==================== INVOICES LOG VIEW ==================== -->
-      <div id="view-invoices" class="app-view">
+      <div id="view-invoices" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="invoices">
         <section class="finance-workspace" aria-labelledby="invoice-workspace-title">
           <div class="finance-hero-bar">
             <div>
@@ -4153,7 +4176,7 @@
       </div>
 
       <!-- ==================== SYSTEM BACKUPS VIEW ==================== -->
-      <div id="view-settings" class="app-view">
+      <div id="view-settings" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="settings">
         
         <!-- Brand Logo & Billing Profile Setup Panel -->
         <div class="panel" style="margin-bottom:24px; border-top:4px solid var(--accent-blue)">
@@ -4281,7 +4304,7 @@
       </div>
 
       <!-- ==================== AUDITOR TAX & GST VIEW ==================== -->
-      <div id="view-auditor" class="app-view">
+      <div id="view-auditor" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="auditor">
         <!-- Audit Matrix & Compliance Summary Box -->
         <div class="panel" style="margin-bottom: 25px; border-left: 4px solid var(--accent-green);">
           <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
@@ -4448,7 +4471,7 @@
       </div>
       
       <!-- ==================== PURCHASE INVOICE ENTRY VIEW ==================== -->
-      <div id="view-purchase" class="app-view">
+      <div id="view-purchase" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="purchase">
         <section class="finance-workspace" aria-labelledby="purchase-workspace-title">
           <div class="finance-hero-bar">
             <div>
@@ -4520,7 +4543,7 @@
       </div>
 
       <!-- ==================== MOBILE SCANNER MODE VIEW ==================== -->
-      <div id="view-scanner" class="app-view">
+      <div id="view-scanner" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="scanner">
         <div class="panel" style="max-width:500px; margin: 0 auto 25px auto">
           <div class="panel-header" style="text-align:center; justify-content:center">
             <h3 class="panel-title">📱 AIAVRO Mobile Scanner Mode</h3>
@@ -4584,7 +4607,7 @@
       </div>
 
       <!-- ==================== USER PERMISSIONS VIEW (ADMIN ONLY) ==================== -->
-      <div id="view-permissions" class="app-view">
+      <div id="view-permissions" class="app-view" data-view-state="hidden" aria-hidden="true" data-render-surface="permissions">
         
         <!-- Super Admin-only container -->
         <div id="permissions-super-admin-content">
@@ -7115,6 +7138,7 @@
     window.addEventListener("DOMContentLoaded", () => {
       loadDatabaseState();
       initModalStateObserver();
+      initRenderDiagnostics();
       initAuthentication();
       renderOnboardingQueue();
       initSidebarDragResizer();
@@ -7233,17 +7257,103 @@
       input.focus();
     }
 
+    // One coordinator owns modal state, body scroll locking, and focus handoff.
+    // Existing modal functions continue to toggle the shared .modal-backdrop primitive.
+    const ModalManager = window.ModalManager = {
+      stack: [],
+      sync() {
+        const active = Array.from(document.querySelectorAll(".modal-backdrop.active"));
+        this.stack = active.map(modal => modal.id).filter(Boolean);
+        document.body.classList.toggle("modal-open", active.length > 0);
+        active.forEach((modal, index) => {
+          modal.setAttribute("data-overlay-state", index === active.length - 1 ? "top" : "stacked");
+          modal.setAttribute("aria-hidden", "false");
+        });
+        document.querySelectorAll(".modal-backdrop:not(.active)").forEach(modal => {
+          modal.setAttribute("data-overlay-state", "hidden");
+          modal.setAttribute("aria-hidden", "true");
+        });
+      },
+      open(id) {
+        const modal = typeof id === "string" ? document.getElementById(id) : id;
+        if (!modal) return;
+        modal.classList.add("active");
+        this.sync();
+        const focusTarget = modal.querySelector("button, [href], input, select, textarea, [tabindex]:not([tabindex=\"-1\"])");
+        if (focusTarget) requestAnimationFrame(() => focusTarget.focus());
+      },
+      close(id) {
+        const modal = typeof id === "string" ? document.getElementById(id) : id;
+        if (!modal) return;
+        modal.classList.remove("active");
+        this.sync();
+      },
+      closeAll() {
+        document.querySelectorAll(".modal-backdrop.active").forEach(modal => modal.classList.remove("active"));
+        this.sync();
+      }
+    };
+
     function syncModalOpenState() {
-      const hasActiveModal = !!document.querySelector(".modal-backdrop.active");
-      document.body.classList.toggle("modal-open", hasActiveModal);
+      ModalManager.sync();
     }
 
     function initModalStateObserver() {
+      if (window.__modalStateObserver) return;
       const observer = new MutationObserver(syncModalOpenState);
       document.querySelectorAll(".modal-backdrop").forEach(modal => {
+        modal.setAttribute("data-render-layer", "overlay");
+        modal.setAttribute("data-overlay-state", "hidden");
+        modal.setAttribute("aria-hidden", "true");
         observer.observe(modal, { attributes: true, attributeFilter: ["class"] });
       });
+      window.__modalStateObserver = observer;
       syncModalOpenState();
+    }
+
+    function initRenderDiagnostics() {
+      const params = new URLSearchParams(window.location.search);
+      const isDevHost = !window.location.hostname || /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+      if (!isDevHost || params.get("renderDiagnostics") !== "1" || window.__renderDiagnostics) return;
+
+      const selectors = ["[data-render-layer]", ".app-view", ".modal-backdrop", ".alerts-container"];
+      const snapshot = (element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          element: element.id || element.className || element.tagName,
+          box: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) },
+          zIndex: style.zIndex,
+          display: style.display,
+          visibility: style.visibility,
+          opacity: style.opacity
+        };
+      };
+      const report = (reason, element) => console.debug("[RenderDiagnostics]", { timestamp: performance.now(), reason, ...snapshot(element) });
+      const observer = new MutationObserver(mutations => mutations.forEach(mutation => {
+        if (mutation.target instanceof Element) report(`${mutation.type}:${mutation.attributeName || "children"}`, mutation.target);
+      }));
+      observer.observe(document.body, { subtree: true, attributes: true, attributeOldValue: true, childList: true });
+
+      let largestShift = { value: 0, source: null, timestamp: 0 };
+      if (window.PerformanceObserver) {
+        try {
+          const layoutObserver = new PerformanceObserver(list => list.getEntries().forEach(entry => {
+            if (entry.hadRecentInput) return;
+            const source = entry.sources?.[0]?.node;
+            if (entry.value > largestShift.value) largestShift = { value: entry.value, source: source?.id || source?.className || null, timestamp: entry.startTime };
+            console.debug("[RenderDiagnostics][layout-shift]", { value: entry.value, source: source?.id || source?.className || null, timestamp: entry.startTime });
+          }));
+          layoutObserver.observe({ type: "layout-shift", buffered: true });
+        } catch (e) { console.debug("[RenderDiagnostics] layout-shift unavailable", e); }
+      }
+
+      window.__renderDiagnostics = {
+        snapshot: () => selectors.flatMap(selector => Array.from(document.querySelectorAll(selector)).map(snapshot)),
+        largestShift: () => largestShift,
+        disconnect: () => observer.disconnect()
+      };
+      console.info("[RenderDiagnostics] enabled", window.__renderDiagnostics.snapshot());
     }
 
     function saveLoginUrlConfig() {

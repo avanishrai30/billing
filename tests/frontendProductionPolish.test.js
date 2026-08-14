@@ -51,7 +51,7 @@ describe('Frontend production polish stability pass', () => {
   });
 
   test('4. login first paint hides app shell and renders final login layout directly', () => {
-    expect(html).toContain('<div class="app-container" style="display:none">');
+    expect(html).toContain('<div class="app-container" data-render-layer="shell" style="display:none">');
     expect(html).toContain('appContainer.style.display = "grid"');
     expect(html).toContain('appContainer.style.display = "none"');
     expect(html).toContain('loginOverlay.setAttribute("data-auth-state", "login")');
@@ -67,13 +67,13 @@ describe('Frontend production polish stability pass', () => {
   });
 
   test('6. modal and drawer system has stable overlay, scroll lock, and z-index tokens', () => {
-    expect(theme).toContain('--z-overlay: 1000');
-    expect(theme).toContain('--z-modal: 1100');
-    expect(theme).toContain('--z-toast: 2000');
+    expect(theme).toContain('--z-layer-overlay: 40');
+    expect(theme).toContain('--z-layer-modal: 50');
+    expect(theme).toContain('--z-layer-toast: 60');
     expect(html).toContain('body.modal-open');
     expect(html).toContain('function initModalStateObserver()');
     expect(html).toContain('document.body.classList.toggle("modal-open"');
-    expect(html).toContain('z-index: var(--z-modal)');
+    expect(html).toContain('z-index: var(--z-layer-modal)');
     expect(html).not.toContain('z-index: 99999');
   });
 
