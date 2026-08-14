@@ -364,7 +364,7 @@ function normalizeRowData(rawRow, columnMapping = {}) {
   const normalized = {
     productName: '',
     sku: '',
-    barcode: '',
+    barcode: null,
     category: '',
     brand: '',
     supplier: '',
@@ -395,6 +395,9 @@ function normalizeRowData(rawRow, columnMapping = {}) {
       if (!strVal) continue;
 
       switch (canonicalField) {
+        case 'barcode':
+          normalized.barcode = strVal || null;
+          break;
         case 'purchasePrice':
         case 'sellingPrice':
         case 'mrp':
@@ -484,41 +487,45 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
     let matchedProduct = null;
 
     // 1. Database Matching Priority (Exact Barcode -> Exact SKU -> Variant Barcode -> Variant SKU)
-    if (db && row.barcode) {
-      const barcodeRecord = await db.collection('product_barcodes').findOne({ barcode: row.barcode });
+    const cleanRowBarcode = (row.barcode !== undefined && row.barcode !== null && String(row.barcode).trim() !== '') ? String(row.barcode).trim() : null;
+    row.barcode = cleanRowBarcode;
+
+    if (db && cleanRowBarcode) {
+      const barcodeRecord = await db.collection('product_barcodes').findOne({ barcode: cleanRowBarcode });
       if (barcodeRecord) {
         matchedProduct = await db.collection('products').findOne({ id: barcodeRecord.productId });
       } else {
-        matchedProduct = await db.collection('products').findOne({ barcode: row.barcode });
+        matchedProduct = await db.collection('products').findOne({ barcode: cleanRowBarcode });
       }
     }
 
-    if (db && !matchedProduct && row.sku) {
-      matchedProduct = await db.collection('products').findOne({ sku: row.sku });
+    if (db && !matchedProduct && row.sku && String(row.sku).trim()) {
+      matchedProduct = await db.collection('products').findOne({ sku: String(row.sku).trim() });
     }
 
-    // 2. Intra-Batch Duplicate Check
-    if (row.barcode) {
-      if (seenBarcodesInBatch.has(row.barcode)) {
+    // 2. Intra-Batch Duplicate Check (ONLY for non-empty barcodes)
+    if (cleanRowBarcode) {
+      if (seenBarcodesInBatch.has(cleanRowBarcode)) {
         blockReasons.push({
           field: 'barcode',
           code: 'DUPLICATE_BARCODE_IN_BATCH',
-          message: `Barcode '${row.barcode}' appears multiple times in spreadsheet (first seen at row ${seenBarcodesInBatch.get(row.barcode)})`
+          message: `Barcode '${cleanRowBarcode}' appears multiple times in spreadsheet (first seen at row ${seenBarcodesInBatch.get(cleanRowBarcode)})`
         });
       } else {
-        seenBarcodesInBatch.set(row.barcode, rowNumber);
+        seenBarcodesInBatch.set(cleanRowBarcode, rowNumber);
       }
     }
 
-    if (row.sku) {
-      if (seenSkusInBatch.has(row.sku)) {
+    if (row.sku && String(row.sku).trim()) {
+      const cleanSku = String(row.sku).trim();
+      if (seenSkusInBatch.has(cleanSku)) {
         blockReasons.push({
           field: 'sku',
           code: 'DUPLICATE_SKU_IN_BATCH',
-          message: `SKU '${row.sku}' appears multiple times in spreadsheet (first seen at row ${seenSkusInBatch.get(row.sku)})`
+          message: `SKU '${cleanSku}' appears multiple times in spreadsheet (first seen at row ${seenSkusInBatch.get(cleanSku)})`
         });
       } else {
-        seenSkusInBatch.set(row.sku, rowNumber);
+        seenSkusInBatch.set(cleanSku, rowNumber);
       }
     }
 
@@ -576,13 +583,13 @@ async function validateAndPreview(db, rawRows = [], options = {}) {
           warnings.push({
             field: 'productName',
             code: 'POSSIBLE_NAME_MATCH',
-            message: `Product with similar name '${nameMatch.name}' already exists (Barcode: ${nameMatch.barcode}). Will create as distinct new product.`
+            message: `Product with similar name '${nameMatch.name}' already exists (Barcode: ${nameMatch.barcode || 'None'}). Will create as distinct new product.`
           });
         }
       }
 
       // Barcode remains optional on new product (NEVER auto-fabricate retail barcodes)
-      if (!row.barcode) {
+      if (!cleanRowBarcode) {
         row.barcode = null;
         warnings.push({
           field: 'barcode',
@@ -798,23 +805,23 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
 
     try {
       // 1. Server-side Revalidation
-      if (row.barcode) {
-        const existingBarcode = await db.collection('product_barcodes').findOne({ barcode: row.barcode });
+      const cleanBarcode = (row.barcode !== undefined && row.barcode !== null && String(row.barcode).trim() !== '') ? String(row.barcode).trim() : null;
+
+      if (cleanBarcode) {
+        const existingBarcode = await db.collection('product_barcodes').findOne({ barcode: cleanBarcode });
         if (existingBarcode && (!row.matchedProductId || existingBarcode.productId !== row.matchedProductId)) {
-          throw new Error(`Server revalidation failed: Barcode '${row.barcode}' was assigned to another product concurrently.`);
+          throw new Error(`Server revalidation failed: Barcode '${cleanBarcode}' was assigned to another product concurrently.`);
         }
       }
 
       const productId = row.matchedProductId || `prd-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
       const isExisting = !!row.matchedProductId;
       const cleanSku = String(row.sku || `SKU-${Date.now().toString().slice(-6)}-${rowNum}`).trim();
-      const primaryBarcode = row.barcode ? String(row.barcode).trim() : '';
 
       const productDoc = {
         id: productId,
         name: row.productName,
         sku: cleanSku,
-        barcode: primaryBarcode,
         category: row.category || '',
         brand: row.brand || '',
         supplier: row.supplier || '',
@@ -834,6 +841,12 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
         isArchived: false,
         updatedAt: now
       };
+
+      if (cleanBarcode) {
+        productDoc.barcode = cleanBarcode;
+      } else {
+        delete productDoc.barcode;
+      }
 
       // Set pricing without converting blank to zero
       if (row.purchasePrice !== null) {
@@ -864,8 +877,8 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
           delete updateFields.price;
           delete updateFields.mrp;
         }
-        if (!row.barcode) {
-          delete updateFields.barcode;
+        if (!cleanBarcode) {
+          delete updateFields.barcode; // Preserve existing product's barcode!
         }
 
         await db.collection('products').updateOne(
@@ -887,11 +900,11 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
         );
       }
 
-      // 3. Synchronize Barcode Registry only if primaryBarcode exists
-      if (primaryBarcode) {
+      // 3. Synchronize Barcode Registry only if cleanBarcode exists
+      if (cleanBarcode) {
         const { syncProductBarcodes } = require('../modules/products');
         if (typeof syncProductBarcodes === 'function') {
-          await syncProductBarcodes(db, productId, primaryBarcode, [], []);
+          await syncProductBarcodes(db, productId, cleanBarcode, [], []);
         }
       }
 

@@ -345,7 +345,7 @@ describe('Stage 09: Intelligent File Understanding & Flexible Product Import (UX
       // Verify products were created with empty category string and no fabricated barcodes
       const createdProd = productsTable.get('SKU-SESAME-1') || Array.from(productsTable.values())[0];
       expect(createdProd.category).toBe('');
-      expect(createdProd.barcode).toBe('');
+      expect(createdProd.barcode).toBeUndefined();
       expect(createdProd.sellingPrice).toBe(350);
       expect(createdProd.purchasePrice).toBe(459);
     });

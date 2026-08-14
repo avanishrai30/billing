@@ -264,7 +264,8 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
 
   try {
     const productId = productData.id || `prd-${Date.now()}`;
-    const primaryBarcode = (productData.barcode || productData.sku || '').trim();
+    const cleanBarcode = (productData.barcode !== undefined && productData.barcode !== null) ? String(productData.barcode).trim() : '';
+    const primaryBarcode = cleanBarcode !== '' ? cleanBarcode : null;
     const cleanSku = (productData.sku || '').trim();
 
     // 1. SKU Uniqueness check
@@ -281,7 +282,7 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       });
     }
 
-    // 2. Barcode Uniqueness check across products and product_barcodes
+    // 2. Barcode Uniqueness check across products and product_barcodes (ONLY for non-empty barcodes)
     if (primaryBarcode) {
       const conflictProduct = await db.collection('products').findOne({
         barcode: primaryBarcode,
@@ -339,7 +340,6 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       ...productData,
       id: productId,
       sku: cleanSku,
-      barcode: primaryBarcode,
       sellingPrice,
       purchasePrice,
       price: sellingPrice,      // legacy alias
@@ -352,20 +352,42 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       updatedAt: new Date().toISOString()
     };
 
+    if (primaryBarcode) {
+      productDoc.barcode = primaryBarcode;
+    } else {
+      delete productDoc.barcode;
+    }
+
+    let finalPrimaryBarcode = primaryBarcode;
+
     if (!productData.id) {
       productDoc.createdAt = new Date().toISOString();
       await db.collection('products').insertOne(productDoc);
       await auditService.writeAuditLog('product_created', 'inventory', productId, null, productDoc, req);
     } else {
-      await db.collection('products').updateOne({ id: productId }, { $set: productDoc });
+      const existingProduct = await db.collection('products').findOne({ id: productId });
+      const updatePayload = { $set: productDoc };
+
+      if (!primaryBarcode) {
+        if (existingProduct && existingProduct.barcode) {
+          // Preserve existing valid barcode when incoming barcode is blank/null
+          productDoc.barcode = existingProduct.barcode;
+          updatePayload.$set.barcode = existingProduct.barcode;
+          finalPrimaryBarcode = existingProduct.barcode;
+        } else {
+          updatePayload.$unset = { barcode: "" };
+        }
+      }
+
+      await db.collection('products').updateOne({ id: productId }, updatePayload);
       await auditService.writeAuditLog('product_updated', 'inventory', productId, null, productDoc, req);
     }
 
-    // Synchronize product_barcodes table
+    // Synchronize product_barcodes table (only if a valid barcode exists)
     await syncProductBarcodes(
       db,
       productId,
-      primaryBarcode,
+      finalPrimaryBarcode,
       productData.barcodes || [],
       productData.variants || []
     );
