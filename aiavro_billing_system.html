@@ -26,6 +26,10 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
   
+  <!-- Enterprise POS/ERP Design Tokens & Component Primitives -->
+  <link rel="stylesheet" href="/ui/theme.css">
+  <link rel="stylesheet" href="/ui/components.css">
+  
   <style>
     :root {
       --sidebar-width: 300px;
@@ -2573,9 +2577,9 @@
         })();
       </script>
 
-      <!-- Sidebar Navigation Menu -->
+      <!-- Sidebar Navigation Menu (Structured Operations, Relationships, Control) -->
       <ul class="nav-menu">
-        <span class="nav-section-title">Core Modules</span>
+        <span class="nav-section-title">Operations</span>
         
         <li data-role="admin">
           <a href="#" class="nav-item active" onclick="switchView('dashboard')">
@@ -2586,13 +2590,13 @@
         <li data-role="admin employee">
           <a href="#" class="nav-item" onclick="switchView('billing')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17.204 10.796L19 9c.545-.545.545-1.43 0-1.975l-1.025-1.025c-.544-.545-1.43-.545-1.975 0l-1.796 1.796 3 3zM3.25 19.25h3l8.975-8.975-3-3-8.975 8.975v3zm-1-16h20v2H2.25v-2zm0 18h20v-2H2.25v2z"/></svg>
-            POS Billing
+            POS Terminal <span class="kbd-badge" style="margin-left:auto">F1</span>
           </a>
         </li>
         <li data-role="admin employee">
           <a href="#" class="nav-item" onclick="switchView('inventory')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 8.5L12 3 2 8.5 12 14l10-5.5zM2 13.5l10 5.5 10-5.5-10 5.5-10-5.5zm0 5l10 5.5 10-5.5-10 5.5-10-5.5z"/></svg>
-            Product Inventory
+            Master Inventory <span class="kbd-badge" style="margin-left:auto">F2</span>
           </a>
         </li>
         <li data-role="admin employee">
@@ -2601,25 +2605,25 @@
             Purchase Entry
           </a>
         </li>
-
-        <span class="nav-section-title">Management</span>
-        
-        <li data-role="admin">
-          <a href="#" class="nav-item" onclick="switchView('businesses')">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
-            My Businesses
+        <li data-role="admin auditor">
+          <a href="#" class="nav-item" onclick="switchView('invoices')">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            Invoices Database
           </a>
         </li>
+
+        <span class="nav-section-title">Relationships</span>
+        
         <li data-role="admin">
           <a href="#" class="nav-item" onclick="switchView('customers')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
             Customers CRM
           </a>
         </li>
-        <li data-role="admin auditor">
-          <a href="#" class="nav-item" onclick="switchView('invoices')">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-            Invoices Database
+        <li data-role="admin">
+          <a href="#" class="nav-item" onclick="switchView('businesses')">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+            Stores & Outlets
           </a>
         </li>
         <li data-role="admin auditor">
@@ -2631,19 +2635,22 @@
         <li data-role="admin employee">
           <a href="#" class="nav-item" onclick="switchView('scanner')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
-            Mobile Scanner View
+            Mobile Scanner
           </a>
         </li>
+
+        <span class="nav-section-title">Control & Settings</span>
+
         <li data-role="admin employee auditor">
           <a href="#" class="nav-item" onclick="switchView('permissions')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-            <span id="sidebar-permissions-label">User Permissions</span>
+            <span id="sidebar-permissions-label">Users & RBAC</span>
           </a>
         </li>
         <li data-role="admin">
           <a href="#" class="nav-item" onclick="switchView('settings')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-            System Backups
+            System Settings
           </a>
         </li>
       </ul>
@@ -2715,6 +2722,14 @@
             <select class="select-dropdown" id="global-business-select" onchange="changeActiveBusiness(this.value)" style="padding:8px 12px; font-size:13px; font-weight:700; height:38px; min-width:180px; width:100%; border:1.5px solid var(--accent-green); border-radius:var(--radius-sm); outline:none">
               <option value="">🌐 Select Outlet...</option>
             </select>
+          </div>
+
+          <!-- Realtime Sync Status Badge -->
+          <div id="app-sync-status-badge" style="display:flex; align-items:center;">
+            <div class="sync-badge" title="Connection: Online">
+              <span class="sync-dot sync-dot-online"></span>
+              <span id="sync-status-label">Online</span>
+            </div>
           </div>
 
           <!-- Notification Bell -->
@@ -5869,6 +5884,7 @@
   <script src="/frontend-api/franchise.js"></script>
   <script src="/frontend-api/dashboard.js"></script>
   <script src="/frontend-api/scanner.js"></script>
+  <script src="/ui/components.js"></script>
   <script>
     /* ==================== STATE MANAGEMENT ==================== */
     let state = {
@@ -6348,11 +6364,26 @@
 
         syncSocket.on('connect', () => {
           console.log("[Sync] Persisted database synchronization channel established.");
+          const syncBadgeEl = document.getElementById('app-sync-status-badge');
+          if (syncBadgeEl && window.AppUI) {
+            syncBadgeEl.innerHTML = AppUI.renderSyncBadge('connected');
+          }
           joinStoreSyncRoom();
+        });
+
+        syncSocket.on('reconnect_attempt', () => {
+          const syncBadgeEl = document.getElementById('app-sync-status-badge');
+          if (syncBadgeEl && window.AppUI) {
+            syncBadgeEl.innerHTML = AppUI.renderSyncBadge('syncing');
+          }
         });
 
         syncSocket.on('connect_error', (err) => {
           console.warn("[Sync] Socket connection non-fatal warning (REST sync active):", err.message);
+          const syncBadgeEl = document.getElementById('app-sync-status-badge');
+          if (syncBadgeEl && window.AppUI) {
+            syncBadgeEl.innerHTML = AppUI.renderSyncBadge('offline');
+          }
         });
 
         syncSocket.on('SESSION_REVOKED', (data) => {
@@ -12890,6 +12921,30 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       const now = Date.now();
       const timeDiff = now - lastKeyTime;
       lastKeyTime = now;
+
+      // App Shell Global Shortcuts (when not active in input fields)
+      const targetTag = e.target ? e.target.tagName : '';
+      const isInputFocused = targetTag === 'INPUT' || targetTag === 'TEXTAREA' || targetTag === 'SELECT';
+
+      if (!isInputFocused && hardwareBarcodeBuffer.length === 0) {
+        if (e.key === 'F1') {
+          e.preventDefault();
+          switchView('billing');
+          return;
+        }
+        if (e.key === 'F2') {
+          e.preventDefault();
+          switchView('inventory');
+          return;
+        }
+      }
+
+      if (e.key === 'Escape') {
+        const activeModals = document.querySelectorAll('.modal-backdrop.active');
+        if (activeModals.length > 0) {
+          activeModals.forEach(m => m.classList.remove('active'));
+        }
+      }
 
       if (e.key === "Enter") {
         if (hardwareBarcodeBuffer.length >= 3 && timeDiff < 100) {

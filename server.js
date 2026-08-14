@@ -313,8 +313,9 @@ async function initDB() {
     // Idempotently verify and synchronize performance database indexes
     await databaseIndexService.syncIndexes(db);
 
-    // Serve frontend API client JS files statically
+    // Serve frontend API client and UI design token / component files statically
     app.use('/frontend-api', express.static(path.join(__dirname, 'frontend-api')));
+    app.use('/ui', express.static(path.join(__dirname, 'ui')));
 
     // Initialize all domain routers
     app.use('/api/v1/auth', authRouter);
