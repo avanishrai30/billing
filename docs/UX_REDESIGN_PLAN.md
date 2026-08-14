@@ -64,9 +64,14 @@ graph LR
 - Implemented multi-layout Barcode Label Sheet Generator (50x25mm, 38x25mm, A4 24-up, A4 40-up).
 - Verified with 140/140 passing automated test cases across all test suites.
 
-#### Phase F — Master Inventory & Stock Transfers
-- Implement Store-scoped inventory overview with real-time stock adjustment and inter-store transfer modal.
-- Connect historical inventory ledger with paginated log viewer.
+#### Phase F — Master Inventory & Stock Transfers [✅ COMPLETED]
+- Redesigned Inventory Command Center with multi-store context indicator, live sync state, and Health KPI summary.
+- Implemented Master Stock Balances Table joining authoritative `inventory` balances with catalog metadata.
+- Implemented 360° Stock Detail Breakdown Drawer (`#stock-detail-drawer`).
+- Implemented safe Stock Adjustment modal with live delta calculator, mandatory audit reason, duplicate submit locking, and concurrency conflict recovery.
+- Implemented Inter-Store Stock Transfer workflow with client-side same-store validation, remaining source quantity calculator, and Transfer Success confirmation card.
+- Implemented Immutable Movement Ledger viewer connected to `GET /api/v1/inventory/logs`.
+- Verified with 16 dedicated automated test cases in `tests/inventoryRedesign.test.js` (156/156 passing tests across all 17 test suites).
 
 #### Phase G — Purchases & Sales Invoices
 - Multi-item vendor purchase entry with instant tax calculation.

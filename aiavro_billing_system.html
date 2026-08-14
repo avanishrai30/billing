@@ -3177,119 +3177,241 @@
       <!-- ==================== PRODUCT INVENTORY VIEW ==================== -->
       <div id="view-inventory" class="app-view">
         
+        <!-- Inventory Context Bar & Action Command Strip -->
+        <div class="card-shell" style="margin-bottom:var(--space-4); padding:var(--space-4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-3)">
+          <div style="display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap">
+            <div>
+              <h2 style="margin:0; font-size:var(--text-xl); font-weight:var(--font-weight-bold); color:var(--text-primary); display:flex; align-items:center; gap:var(--space-2)">
+                <span>📦 Inventory & Stock Command Center</span>
+              </h2>
+              <p style="margin:2px 0 0 0; font-size:var(--text-xs); color:var(--text-secondary)">
+                Authoritative multi-store inventory balances, stock movements, adjustments, and inter-store transfers.
+              </p>
+            </div>
+
+            <!-- Active Store Context Badge / Selector -->
+            <div style="display:flex; align-items:center; gap:var(--space-2); background:var(--bg-surface-raised); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:4px 10px">
+              <span style="font-size:11px; font-weight:var(--font-weight-bold); color:var(--text-secondary); text-transform:uppercase">Outlet Context:</span>
+              <select id="inventory-store-context-select" onchange="handleInventoryStoreContextChange(this.value)" class="form-select" style="font-size:12px; font-weight:700; padding:2px 6px; border:none; background:transparent; color:var(--text-primary); cursor:pointer">
+                <!-- Dynamically populated from businesses -->
+              </select>
+              <span id="inventory-store-scoped-badge" class="badge-mono" style="display:none; font-size:11px"></span>
+            </div>
+
+            <!-- Sync State Indicator -->
+            <div id="inventory-sync-status-badge" style="display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:var(--accent-green); background:var(--accent-primary-subtle); padding:4px 8px; border-radius:var(--radius-sm)">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--accent-green); display:inline-block"></span>
+              <span id="inventory-sync-status-text">Real-time Sync Active</span>
+            </div>
+
+            <span id="inventory-last-updated" style="font-size:11px; color:var(--text-muted)">Updated: Just now</span>
+          </div>
+
+          <!-- Command Strip Action Buttons -->
+          <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:center">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="refreshInventoryCommandCenter()" title="Refresh inventory and ledger">
+              🔄 Refresh
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openTransferStockModal()" style="border-color:var(--accent-primary); color:var(--accent-primary)">
+              🔄 Transfer Stock
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openAdjustStockModal()">
+              ⚖️ Adjust Stock
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleExcelImportModal()">
+              📊 Bulk Import
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openBarcodeSheetGeneratorModal()">
+              🏷️ Barcodes
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openProductModal()">
+              + New Product
+            </button>
+          </div>
+        </div>
+
+        <!-- Inventory Health KPI Summary (Live from GET /api/v1/inventory/summary) -->
+        <div class="metrics-grid" id="inventory-health-summary" style="margin-bottom:var(--space-4)">
+          
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Healthy Stock</span>
+              <span class="metric-icon-wrap" style="background:var(--accent-primary-subtle); color:var(--accent-green)">✓</span>
+            </div>
+            <div class="metric-value tabular-numeric" id="inv-health-healthy-count">0</div>
+            <div class="metric-subtext">Adequate inventory buffer</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Low Stock Alerts</span>
+              <span class="metric-icon-wrap" style="background:rgba(217, 119, 6, 0.15); color:var(--accent-gold)">⚠️</span>
+            </div>
+            <div class="metric-value tabular-numeric" id="inv-health-low-count" style="color:var(--accent-gold)">0</div>
+            <div class="metric-subtext">At or below reorder threshold</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Out of Stock</span>
+              <span class="metric-icon-wrap" style="background:var(--accent-danger-subtle); color:var(--accent-danger)">✕</span>
+            </div>
+            <div class="metric-value tabular-numeric" id="inv-health-out-count" style="color:var(--accent-danger)">0</div>
+            <div class="metric-subtext">Immediate re-stock required</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Total Stock Units & Valuation</span>
+              <span class="metric-icon-wrap" style="background:var(--bg-surface-raised); color:var(--text-primary)">📦</span>
+            </div>
+            <div class="metric-value tabular-numeric" id="inv-health-total-units">0 Units</div>
+            <div class="metric-subtext" id="inv-health-total-value">Valuation: ₹0.00</div>
+          </div>
+
+        </div>
+
         <div class="panel">
-          <div class="panel-header">
-            <h3 class="panel-title">Master Product Inventory Directory</h3>
-            <div style="display:flex; gap:12px; flex-wrap:wrap">
-              <button class="secondary-btn" onclick="toggleExcelImportModal()" style="padding: 8px 14px">
-                📊 Excel Bulk Import
-              </button>
-              <button class="secondary-btn" onclick="openBarcodeSheetGeneratorModal()" style="padding: 8px 14px">
-                <svg style="width:16px;height:16px;fill:currentColor;vertical-align:middle;margin-right:4px" viewBox="0 0 24 24"><path d="M3 5h2v14H3zm4 0h1v14H7zm3 0h2v14h-2zm4 0h1v14h-1zm3 0h3v14h-3zm4 0h1v14h-1z"/></svg>
-                Print Barcode Stickers
-              </button>
-              <button class="secondary-btn" onclick="openTransferStockModal()" style="padding: 8px 14px; border-color:var(--accent-blue); color:var(--accent-blue)">
-                🔄 Transfer Store Stock
-              </button>
-              <button class="primary-btn" onclick="openProductModal()" style="padding: 8px 14px">
-                + Add Product (Own / External)
-              </button>
-            </div>
-          </div>
-
-          <!-- Quick Product Actions & Onboarding Queue Panel -->
-          <div class="inventory-top-grid">
-            
-            <!-- Quick Actions Panel -->
-            <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:15px; display:flex; flex-direction:column; justify-content:space-between">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                <h4 style="margin:0; font-size:13px; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.5px">🚀 Quick Product Actions (Product Center)</h4>
-                <span class="status-badge paid" style="font-size:10px; padding:3px 8px">Master Center</span>
-              </div>
-              <div class="product-center-grid">
-                
-                <div style="background:var(--bg-panel); border:1px solid var(--border-color); border-radius:6px; padding:10px 8px; text-align:center; cursor:pointer" class="action-card-btn" onclick="openScannerConfigModal()">
-                  <div style="font-size:20px; margin-bottom:4px">⚡</div>
-                  <span style="font-size:11px; font-weight:700; color:var(--text-primary); display:block; margin-bottom:6px">Hardware Barcode Scanner</span>
-                  <input type="text" id="inventory-barcode-scan-lookup" placeholder="Type or scan..." style="width:100%; padding:5px; font-size:10px; border:1px solid var(--border-color); border-radius:4px; text-align:center; background:var(--bg-primary); color:var(--text-primary); outline:none" onkeydown="handleInventoryBarcodeLookup(event)" onclick="event.stopPropagation()">
-                </div>
-
-                <div style="background:var(--bg-panel); border:1px solid var(--border-color); border-radius:6px; padding:10px; text-align:center; cursor:pointer" onclick="switchView('purchase')" class="action-card-btn">
-                  <div style="font-size:20px; margin-bottom:4px">📦</div>
-                  <span style="font-size:11px; font-weight:700; color:var(--text-primary)">New Purchase</span>
-                </div>
-
-                <div style="background:var(--bg-panel); border:1px solid var(--border-color); border-radius:6px; padding:10px; text-align:center; cursor:pointer" onclick="toggleExcelImportModal()" class="action-card-btn">
-                  <div style="font-size:20px; margin-bottom:4px">📄</div>
-                  <span style="font-size:11px; font-weight:700; color:var(--text-primary)">Bulk Import</span>
-                </div>
-
-                <div style="background:var(--bg-panel); border:1px solid var(--border-color); border-radius:6px; padding:10px; text-align:center; cursor:pointer" onclick="openProductModal()" class="action-card-btn">
-                  <div style="font-size:20px; margin-bottom:4px">➕</div>
-                  <span style="font-size:11px; font-weight:700; color:var(--text-primary)">New Product</span>
-                </div>
-
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:8px; display:flex; align-items:center; gap:6px">
-                <span style="width:6px; height:6px; border-radius:50%; background:var(--accent-green); display:inline-block"></span>
-                <span>Hover and select <strong>Scan Barcode</strong> to use physical scanner, or click and type.</span>
-              </div>
-            </div>
-
-            <!-- Onboarding Queue / Recent Scans Panel -->
-            <div style="background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:15px; display:flex; flex-direction:column; justify-content:space-between">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                <h4 style="margin:0; font-size:13px; font-weight:800; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.5px">📋 Onboarding Queue</h4>
-                <button class="secondary-btn" style="padding:2px 6px; font-size:9.5px; border-radius:4px" onclick="clearOnboardingQueue()">Clear</button>
-              </div>
-              <div style="flex:1; overflow-y:auto; max-height:85px; display:flex; flex-direction:column; gap:6px" id="inventory-onboarding-queue-list">
-                <!-- Dynamically populated scans -->
-              </div>
-            </div>
-
-          </div>
-
+          
           <!-- Segment Tabs -->
           <div style="display:flex; border-bottom:1px solid var(--border-color); margin: 0 18px 15px 18px; gap:20px">
-            <button class="tab-segment-btn active" id="inventory-tab-directory" onclick="switchInventorySubTab('directory')" style="background:none; border:none; padding:10px 5px; font-weight:700; color:var(--text-primary); cursor:pointer; border-bottom:3px solid var(--accent-green)">Product Directory</button>
-            <button class="tab-segment-btn" id="inventory-tab-audit" onclick="switchInventorySubTab('audit')" style="background:none; border:none; padding:10px 5px; font-weight:700; color:var(--text-muted); cursor:pointer">Stock Audit Ledger</button>
+            <button class="tab-segment-btn active" id="inventory-tab-balances" onclick="switchInventorySubTab('balances')" style="background:none; border:none; padding:10px 5px; font-weight:700; color:var(--text-primary); cursor:pointer; border-bottom:3px solid var(--accent-green)">
+              📦 Master Stock Balances
+            </button>
+            <button class="tab-segment-btn" id="inventory-tab-audit" onclick="switchInventorySubTab('audit')" style="background:none; border:none; padding:10px 5px; font-weight:700; color:var(--text-muted); cursor:pointer">
+              📜 Immutable Stock Ledger
+            </button>
+            <button class="tab-segment-btn" id="inventory-tab-directory" onclick="switchInventorySubTab('directory')" style="background:none; border:none; padding:10px 5px; font-weight:700; color:var(--text-muted); cursor:pointer">
+              🏷️ Product Master Catalog
+            </button>
           </div>
 
-          <!-- Product Directory Tab -->
-          <div id="inventory-directory-container">
-            <div class="pos-filters-row" style="margin-bottom:20px; flex-direction:column; align-items:stretch; gap:12px">
+          <!-- TAB 1: MASTER STOCK BALANCES -->
+          <div id="inventory-balances-container">
+            <div class="pos-filters-row" style="margin-bottom:15px; padding:0 18px; display:flex; gap:12px; flex-wrap:wrap; align-items:center">
+              <div class="search-input-box" style="flex:2; min-width:240px">
+                <input type="text" id="inventory-balances-search" placeholder="Search by Product Name, SKU, Barcode..." oninput="filterInventoryBalances()">
+                <svg class="search-icon-svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              </div>
+
+              <div style="flex:1; min-width:140px">
+                <select class="form-select" id="inventory-balances-filter-stock" onchange="filterInventoryBalances()" style="width:100%">
+                  <option value="all">All Stock States</option>
+                  <option value="in_stock">In Stock (Healthy)</option>
+                  <option value="low">Low Stock Alerts</option>
+                  <option value="out">Out of Stock (0 Units)</option>
+                </select>
+              </div>
+
+              <div style="flex:1; min-width:140px">
+                <select class="form-select" id="inventory-balances-filter-category" onchange="filterInventoryBalances()" style="width:100%">
+                  <option value="all">All Categories</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table-shell data-table-dense">
+                <thead>
+                  <tr>
+                    <th style="width:48px; text-align:center">Image</th>
+                    <th>SKU</th>
+                    <th>Barcode</th>
+                    <th>Product Details</th>
+                    <th>Location</th>
+                    <th style="text-align:right">On Hand</th>
+                    <th style="text-align:right">Reserved</th>
+                    <th style="text-align:right">Available</th>
+                    <th style="text-align:right">Reorder Threshold</th>
+                    <th style="text-align:center">Status</th>
+                    <th style="text-align:center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inventory-balances-tbody">
+                  <!-- Dynamically populated balances -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 2: IMMUTABLE STOCK LEDGER -->
+          <div id="inventory-audit-container" style="display:none; padding: 0 18px 18px 18px">
+            <div class="pos-filters-row" style="margin-bottom:15px; padding: 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+              <div class="search-input-box" style="flex:2; min-width:220px">
+                <input type="text" id="audit-search" placeholder="Search by Product, SKU, Ref ID, User..." oninput="renderInventoryAuditLogs()">
+                <svg class="search-icon-svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              </div>
+              
+              <div style="flex:1; min-width:140px">
+                <select class="form-select" id="audit-filter-type" onchange="renderInventoryAuditLogs()" style="width:100%">
+                  <option value="all">All Movement Types</option>
+                  <option value="SALE">Sales Outflow (SALE)</option>
+                  <option value="PURCHASE">Supplier Inflow (PURCHASE)</option>
+                  <option value="TRANSFER_IN">Inter-Store Inflow (TRANSFER_IN)</option>
+                  <option value="TRANSFER_OUT">Inter-Store Outflow (TRANSFER_OUT)</option>
+                  <option value="ADJUSTMENT">Physical Adjustment (ADJUSTMENT)</option>
+                  <option value="DAMAGE">Damaged / Spoilage (DAMAGE)</option>
+                  <option value="OPENING">Opening Stock (OPENING)</option>
+                  <option value="SALE_RETURN">Sales Return (SALE_RETURN)</option>
+                  <option value="VOID">Transaction Rollback (VOID)</option>
+                </select>
+              </div>
+
+              <button type="button" class="btn btn-secondary btn-sm" onclick="fetchAuthoritativeLedgerLogs()">
+                🔄 Fetch Latest Logs
+              </button>
+            </div>
+            
+            <div class="table-container" style="margin-top: 10px">
+              <table class="data-table-shell data-table-dense">
+                <thead>
+                  <tr>
+                    <th>Movement ID</th>
+                    <th>Date & Time</th>
+                    <th>Product</th>
+                    <th>Location</th>
+                    <th>Movement Type</th>
+                    <th style="text-align:right">Quantity Change</th>
+                    <th style="text-align:right">Balance (Before → After)</th>
+                    <th>Reference</th>
+                    <th>Performed By</th>
+                    <th>Operational Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="inventory-audit-table-body">
+                  <!-- Dynamic ledger logs -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 3: PRODUCT MASTER CATALOG (PHASE E) -->
+          <div id="inventory-directory-container" style="display:none">
+            <div class="pos-filters-row" style="margin-bottom:20px; flex-direction:column; align-items:stretch; gap:12px; padding:0 18px">
               <div style="display:flex; gap:12px; width:100%">
                 <div class="search-input-box" style="flex:1">
-                  <input type="text" id="inventory-search" placeholder="Search Master Product list by Name, SKU, Category..." oninput="runInventoryFilter()">
+                  <input type="text" id="inventory-search" placeholder="Search Master Product Catalog by Name, SKU, Category..." oninput="runInventoryFilter()">
                   <svg class="search-icon-svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                 </div>
-                <button type="button" class="secondary-btn" id="toggle-adv-filters-btn" onclick="toggleAdvancedFilters()" style="padding:10px 15px; font-weight:700">⚙️ Advanced Filters</button>
+                <button type="button" class="btn btn-secondary" id="toggle-adv-filters-btn" onclick="toggleAdvancedFilters()" style="padding:10px 15px; font-weight:700">⚙️ Advanced Filters</button>
               </div>
               
               <div id="inventory-advanced-filters-panel" style="display:none; flex-wrap:wrap; gap:10px; background:var(--bg-primary); padding:15px; border-radius:8px; border:1px solid var(--border-color)">
                 <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1">
                   <span style="font-size:11px; font-weight:800; color:var(--text-muted)">Category</span>
-                  <select class="select-dropdown" id="inventory-filter-category" onchange="runInventoryFilter()"></select>
+                  <select class="form-select" id="inventory-filter-category" onchange="runInventoryFilter()"></select>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1">
                   <span style="font-size:11px; font-weight:800; color:var(--text-muted)">Stock Status</span>
-                  <select class="select-dropdown" id="inventory-filter-stock" onchange="runInventoryFilter()">
+                  <select class="form-select" id="inventory-filter-stock" onchange="runInventoryFilter()">
                     <option value="all">All Stocks Levels</option>
                     <option value="low">Low Stock Alerts</option>
                     <option value="out">Out of Stock</option>
                   </select>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1">
-                  <span style="font-size:11px; font-weight:800; color:var(--text-muted)">Freshness</span>
-                  <select class="select-dropdown" id="inventory-filter-expiry" onchange="runInventoryFilter()">
-                    <option value="all">All Freshness</option>
-                    <option value="expired">Expired items</option>
-                    <option value="soon">Expiring Soon</option>
-                  </select>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1">
                   <span style="font-size:11px; font-weight:800; color:var(--text-muted)">Product Type</span>
-                  <select class="select-dropdown" id="inventory-filter-type" onchange="runInventoryFilter()">
+                  <select class="form-select" id="inventory-filter-type" onchange="runInventoryFilter()">
                     <option value="all">All Types</option>
                     <option value="own">Own Products</option>
                     <option value="external">External Brands</option>
@@ -3297,19 +3419,15 @@
                 </div>
                 <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1">
                   <span style="font-size:11px; font-weight:800; color:var(--text-muted)">Brand</span>
-                  <select class="select-dropdown" id="inventory-filter-brand" onchange="runInventoryFilter()"></select>
+                  <select class="form-select" id="inventory-filter-brand" onchange="runInventoryFilter()"></select>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1">
                   <span style="font-size:11px; font-weight:800; color:var(--text-muted)">Supplier</span>
-                  <select class="select-dropdown" id="inventory-filter-supplier" onchange="runInventoryFilter()"></select>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1">
-                  <span style="font-size:11px; font-weight:800; color:var(--text-muted)">Store Location</span>
-                  <select class="select-dropdown" id="inventory-filter-store" onchange="runInventoryFilter()"></select>
+                  <select class="form-select" id="inventory-filter-supplier" onchange="runInventoryFilter()"></select>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1">
                   <span style="font-size:11px; font-weight:800; color:var(--text-muted)">Status</span>
-                  <select class="select-dropdown" id="inventory-filter-status" onchange="runInventoryFilter()">
+                  <select class="form-select" id="inventory-filter-status" onchange="runInventoryFilter()">
                     <option value="all">All Status</option>
                     <option value="active" selected>Active Only</option>
                     <option value="inactive">Inactive Only</option>
@@ -3320,7 +3438,7 @@
             </div>
 
             <div class="table-container">
-              <table>
+              <table class="data-table-shell data-table-dense">
                 <thead>
                   <tr>
                     <th style="width:48px; text-align:center">Image</th>
@@ -3341,46 +3459,6 @@
             </div>
           </div>
 
-          <!-- Audit Logs Tab -->
-          <div id="inventory-audit-container" style="display:none; padding: 0 18px 18px 18px">
-            <div class="pos-filters-row" style="margin-bottom:15px; padding: 0">
-              <div class="search-input-box">
-                <input type="text" id="audit-search" placeholder="Search Audit Logs by Product, Type, Ref..." oninput="renderInventoryAuditLogs()">
-                <svg class="search-icon-svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-              </div>
-              <div>
-                <select class="select-dropdown" id="audit-filter-type" onchange="renderInventoryAuditLogs()">
-                  <option value="all">All Movements</option>
-                  <option value="Sale">Sales Outflow</option>
-                  <option value="Purchase">Purchase Inflow</option>
-                  <option value="Transfer">Stock Transfer</option>
-                  <option value="Return">Returns Inflow</option>
-                  <option value="Damage">Damage Loss</option>
-                  <option value="Expiry">Expiry Write-off</option>
-                </select>
-              </div>
-            </div>
-            
-            <div class="table-container" style="margin-top: 10px">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Log ID</th>
-                    <th>Date & Time</th>
-                    <th>Product Name</th>
-                    <th>Movement Type</th>
-                    <th style="text-align:right">Quantity Change</th>
-                    <th>Logged By</th>
-                    <th>Reference</th>
-                    <th>Description</th>
-                  </tr>
-                </thead>
-                <tbody id="inventory-audit-table-body">
-                  <!-- Dynamic logs go here -->
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -4870,46 +4948,265 @@
   </div>
 
 
+  <!-- ==================== PRODUCT STOCK DETAIL DRAWER ==================== -->
+  <div class="modal-backdrop" id="stock-detail-drawer">
+    <div class="modal-card" style="max-width:550px">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px">
+          <div style="width:40px; height:40px; border-radius:6px; overflow:hidden; border:1px solid var(--border-default); background:var(--bg-surface); display:flex; align-items:center; justify-content:center">
+            <img id="stock-detail-image" src="" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'16\' height=\'16\' fill=\'%23888\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\'/></svg>'">
+          </div>
+          <div>
+            <h3 id="stock-detail-title" style="margin:0; font-size:var(--text-lg); font-weight:var(--font-weight-bold); color:var(--text-primary)">Stock Balance Breakdown</h3>
+            <span id="stock-detail-sku-badge" class="badge-mono" style="font-size:11px"></span>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeStockDetailDrawer()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:var(--space-3)">
+        <!-- Location & Status Ribbon -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface-raised); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-default)">
+          <div>
+            <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700">Facility / Location</span>
+            <div id="stock-detail-location" style="font-weight:700; color:var(--text-primary); font-size:13px">Main Store</div>
+          </div>
+          <span id="stock-detail-status-badge" class="status-badge">IN STOCK</span>
+        </div>
+
+        <!-- Stock Numerical Breakdown Matrix -->
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px">
+          <div style="background:var(--bg-surface-raised); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:12px; text-align:center">
+            <span style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; display:block">On Hand</span>
+            <span id="stock-detail-onhand" class="tabular-numeric" style="font-size:18px; font-weight:800; color:var(--text-primary)">0.00</span>
+          </div>
+          <div style="background:var(--bg-surface-raised); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:12px; text-align:center">
+            <span style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; display:block">Reserved</span>
+            <span id="stock-detail-reserved" class="tabular-numeric" style="font-size:18px; font-weight:800; color:var(--text-muted)">0.00</span>
+          </div>
+          <div style="background:var(--bg-surface-raised); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:12px; text-align:center">
+            <span style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; display:block">Available</span>
+            <span id="stock-detail-available" class="tabular-numeric" style="font-size:18px; font-weight:800; color:var(--accent-green)">0.00</span>
+          </div>
+        </div>
+
+        <!-- Technical & Operational Metadata -->
+        <div style="background:var(--bg-surface-raised); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:12px; display:flex; flex-direction:column; gap:8px; font-size:12px">
+          <div style="display:flex; justify-content:space-between">
+            <span style="color:var(--text-secondary)">Reorder Threshold:</span>
+            <strong id="stock-detail-reorder" class="tabular-numeric">10 Units</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between">
+            <span style="color:var(--text-secondary)">Measurement Mode:</span>
+            <span id="stock-detail-selling-mode" class="badge-mono" style="font-size:11px">Packaged</span>
+          </div>
+          <div style="display:flex; justify-content:space-between">
+            <span style="color:var(--text-secondary)">Primary Retail Barcode:</span>
+            <code id="stock-detail-barcode" class="badge-mono">—</code>
+          </div>
+          <div style="display:flex; justify-content:space-between">
+            <span style="color:var(--text-secondary)">Ledger Version:</span>
+            <span id="stock-detail-version" class="tabular-numeric" style="color:var(--text-muted)">v1</span>
+          </div>
+          <div style="display:flex; justify-content:space-between">
+            <span style="color:var(--text-secondary)">Last Mutation:</span>
+            <span id="stock-detail-updated-at" style="color:var(--text-muted)">—</span>
+          </div>
+        </div>
+
+        <!-- Action Grid -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="triggerAdjustFromStockDetail()">
+            ⚖️ Adjust Quantity
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="triggerTransferFromStockDetail()" style="border-color:var(--accent-primary); color:var(--accent-primary)">
+            🔄 Transfer Stock
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="triggerLedgerFromStockDetail()">
+            📜 View Ledger Logs
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="triggerCatalogFromStockDetail()">
+            🏷️ Product Master View
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== STOCK ADJUSTMENT MODAL ==================== -->
+  <div class="modal-backdrop" id="stock-adjustment-modal">
+    <div class="modal-card" style="max-width:520px">
+      <div class="modal-header">
+        <h3 style="font-family:'Outfit'; margin:0">⚖️ Authoritative Stock Adjustment</h3>
+        <button class="modal-close-btn" onclick="closeAdjustStockModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="stock-adjustment-form" onsubmit="executeStockAdjustment(event)" class="form-grid">
+          <input type="hidden" id="adjust-prod-id">
+          
+          <div class="form-group full-width">
+            <label class="input-label">Product to Adjust</label>
+            <select id="adjust-product-select" onchange="handleAdjustProductSelectChange()" class="form-select" style="width:100%; padding:8px 12px; font-weight:700" required>
+              <!-- Populated from state.products -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="input-label">Store / Facility Location</label>
+            <select id="adjust-store-select" onchange="handleAdjustProductSelectChange()" class="form-select" style="width:100%; padding:8px 12px; font-weight:700" required>
+              <!-- Populated from state.businesses -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="input-label">Movement Reason / Type</label>
+            <select id="adjust-type-select" class="form-select" style="width:100%; padding:8px 12px; font-weight:700" required>
+              <option value="ADJUSTMENT">Physical Audit Adjustment</option>
+              <option value="DAMAGE">Damaged / Spoilage Loss</option>
+              <option value="OPENING">Opening Stock Count</option>
+              <option value="SALE_RETURN">Customer Sale Return</option>
+            </select>
+          </div>
+
+          <!-- Current Balance and Target Preview -->
+          <div class="form-group full-width" style="background:var(--bg-surface-raised); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:12px">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+              <span style="font-size:12px; color:var(--text-secondary)">Authoritative On-Hand Balance:</span>
+              <strong id="adjust-current-balance-label" class="tabular-numeric" style="font-size:14px; color:var(--text-primary)">0.00 Units</strong>
+            </div>
+            
+            <div style="display:flex; gap:10px; align-items:center">
+              <div style="flex:1">
+                <label class="input-label" style="font-size:11px">New Target Balance</label>
+                <input type="number" id="adjust-target-qty-input" min="0" step="0.001" placeholder="e.g. 25" oninput="calculateLiveAdjustmentDelta()" class="form-input" style="font-size:16px; font-weight:800; text-align:center" required>
+              </div>
+              <div style="flex:1; text-align:center; background:var(--bg-surface); padding:8px; border-radius:var(--radius-sm); border:1px solid var(--border-subtle)">
+                <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:700; display:block">Net Change</span>
+                <span id="adjust-delta-preview" class="tabular-numeric" style="font-size:15px; font-weight:800; color:var(--text-muted)">0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label class="input-label">Audit Reason / Operational Notes <span style="color:var(--accent-danger)">*</span></label>
+            <input type="text" id="adjust-notes-input" placeholder="e.g. Physical inventory recount match" class="form-input" style="padding:10px" required>
+          </div>
+
+          <div class="modal-footer full-width" style="border:none; padding:15px 0 0 0; display:flex; justify-content:space-between; align-items:center">
+            <button type="button" class="btn btn-secondary" onclick="closeAdjustStockModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="adjust-submit-btn">
+              Confirm & Post Adjustment
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== STOCK TRANSFER MODAL ==================== -->
   <div class="modal-backdrop" id="transfer-stock-modal">
-    <div class="modal-card" style="max-width:500px">
+    <div class="modal-card" style="max-width:540px">
       <div class="modal-header">
-        <h3 style="font-family:'Outfit'">🔄 Inter-Store Stock Transfer</h3>
+        <h3 style="font-family:'Outfit'; margin:0">🔄 Inter-Store Stock Transfer</h3>
         <button class="modal-close-btn" onclick="closeTransferStockModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <form id="transfer-stock-form" onsubmit="executeStockTransfer(event)" class="form-grid">
-          <div class="form-group full-width">
-            <label>Select Product to Transfer</label>
-            <select id="transfer-stock-product" onchange="updateTransferAvailableStockLabel()" style="width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700" required>
-              <!-- Dynamically populated -->
-            </select>
+        
+        <!-- Transfer Form View -->
+        <div id="transfer-form-view">
+          <form id="transfer-stock-form" onsubmit="executeStockTransfer(event)" class="form-grid">
+            
+            <div class="form-group full-width">
+              <label class="input-label">Select Product to Transfer</label>
+              <select id="transfer-stock-product" onchange="updateTransferAvailableStockLabel()" class="form-select" style="width:100%; padding:8px 12px; font-weight:700" required>
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="input-label">Source Store (From)</label>
+              <select id="transfer-stock-source" onchange="updateTransferAvailableStockLabel()" class="form-select" style="width:100%; padding:8px 12px; font-weight:700" required>
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="input-label">Target Store (To)</label>
+              <select id="transfer-stock-target" onchange="updateTransferAvailableStockLabel()" class="form-select" style="width:100%; padding:8px 12px; font-weight:700" required>
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+
+            <!-- Transfer Balance Matrix -->
+            <div class="form-group full-width" style="background:var(--bg-surface-raised); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:12px">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+                <span style="font-size:12px; color:var(--text-secondary)">Available at Source:</span>
+                <strong id="transfer-available-stock-label" class="tabular-numeric" style="color:var(--accent-green); font-size:13px">0.00 Units</strong>
+              </div>
+
+              <div style="display:flex; gap:10px; align-items:center">
+                <div style="flex:1">
+                  <label class="input-label" style="font-size:11px">Transfer Quantity</label>
+                  <input type="number" id="transfer-stock-qty" min="0.001" step="0.001" placeholder="e.g. 10" oninput="calculateTransferRemainingPreview()" class="form-input" style="font-size:16px; font-weight:800; text-align:center" required>
+                </div>
+                <div style="flex:1; text-align:center; background:var(--bg-surface); padding:8px; border-radius:var(--radius-sm); border:1px solid var(--border-subtle)">
+                  <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:700; display:block">Remaining at Source</span>
+                  <span id="transfer-remaining-preview" class="tabular-numeric" style="font-size:15px; font-weight:800; color:var(--text-primary)">0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label class="input-label">Transfer Reason / Dispatch Notes <span style="color:var(--accent-danger)">*</span></label>
+              <input type="text" id="transfer-stock-notes" placeholder="e.g. Replenishing dairy inventory at Indiranagar outlet" class="form-input" style="padding:10px" required>
+            </div>
+
+            <div class="modal-footer full-width" style="border:none; padding:15px 0 0 0; display:flex; justify-content:space-between; align-items:center">
+              <button type="button" class="btn btn-secondary" onclick="closeTransferStockModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="transfer-submit-btn">
+                Execute Stock Transfer
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Transfer Success Confirmation View -->
+        <div id="transfer-success-view" style="display:none; text-align:center; padding:15px 10px">
+          <div style="width:48px; height:48px; border-radius:50%; background:var(--accent-primary-subtle); color:var(--accent-green); display:inline-flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:12px">
+            ✓
           </div>
-          <div class="form-group">
-            <label>Source Store (From)</label>
-            <select id="transfer-stock-source" onchange="updateTransferAvailableStockLabel()" style="width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700" required>
-              <!-- Dynamically populated -->
-            </select>
+          <h4 style="margin:0 0 6px 0; font-size:var(--text-lg); color:var(--text-primary)">Stock Transfer Completed!</h4>
+          <p style="font-size:12px; color:var(--text-secondary); margin:0 0 16px 0">Authoritative balance successfully updated across both store locations.</p>
+
+          <div style="background:var(--bg-surface-raised); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:12px; text-align:left; font-size:12px; display:flex; flex-direction:column; gap:6px; margin-bottom:16px">
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-muted)">Transfer ID:</span>
+              <code id="transfer-success-id" class="badge-mono">TRF-xxxx</code>
+            </div>
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-muted)">Product:</span>
+              <strong id="transfer-success-product">—</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-muted)">Dispatched Qty:</span>
+              <strong id="transfer-success-qty" class="tabular-numeric" style="color:var(--accent-green)">0 Units</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-muted)">Route:</span>
+              <span id="transfer-success-route">—</span>
+            </div>
+            <div style="display:flex; justify-content:space-between">
+              <span style="color:var(--text-muted)">Timestamp:</span>
+              <span id="transfer-success-time">—</span>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Target Store (To)</label>
-            <select id="transfer-stock-target" style="width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-panel); color:var(--text-primary); font-weight:700" required>
-              <!-- Dynamically populated -->
-            </select>
+
+          <div style="display:flex; gap:10px; justify-content:center">
+            <button type="button" class="btn btn-secondary" onclick="closeTransferStockModal()">Close & View Balances</button>
+            <button type="button" class="btn btn-primary" onclick="resetAndOpenNewTransfer()">New Transfer</button>
           </div>
-          <div class="form-group full-width">
-            <label>Transfer Quantity <span id="transfer-available-stock-label" style="color:var(--accent-green); font-weight:800; font-size:11px; margin-left:8px"></span></label>
-            <input type="number" id="transfer-stock-qty" min="0.001" step="0.001" placeholder="e.g. 10" style="padding:10px" required>
-          </div>
-          <div class="form-group full-width">
-            <label>Audit Notes / Transfer Reason</label>
-            <input type="text" id="transfer-stock-notes" placeholder="e.g. Relocating dairy supply to HSR" style="padding:10px" required>
-          </div>
-          <div class="modal-footer full-width" style="border:none; padding:15px 0 0 0">
-            <button type="button" class="secondary-btn" onclick="closeTransferStockModal()">Cancel</button>
-            <button type="submit" class="primary-btn">Complete Transfer</button>
-          </div>
-        </form>
+        </div>
+
       </div>
     </div>
   </div>
@@ -6400,6 +6697,7 @@
           if (syncBadgeEl && window.AppUI) {
             syncBadgeEl.innerHTML = AppUI.renderSyncBadge('connected');
           }
+          if (typeof updateInventorySyncStatus === 'function') updateInventorySyncStatus();
           joinStoreSyncRoom();
         });
 
@@ -6408,6 +6706,7 @@
           if (syncBadgeEl && window.AppUI) {
             syncBadgeEl.innerHTML = AppUI.renderSyncBadge('syncing');
           }
+          if (typeof updateInventorySyncStatus === 'function') updateInventorySyncStatus();
         });
 
         syncSocket.on('connect_error', (err) => {
@@ -6416,6 +6715,7 @@
           if (syncBadgeEl && window.AppUI) {
             syncBadgeEl.innerHTML = AppUI.renderSyncBadge('offline');
           }
+          if (typeof updateInventorySyncStatus === 'function') updateInventorySyncStatus();
         });
 
         syncSocket.on('SESSION_REVOKED', (data) => {
@@ -6449,7 +6749,7 @@
         if (recordAndCheckDuplicateEvent(data.eventId)) return;
         const payload = data.data || data;
         const productId = payload.productId;
-        const storeId = payload.locationId || payload.storeId;
+        const storeId = payload.locationId || payload.storeId || 'default';
         const quantity = parseFloat(payload.quantity) || 0;
 
         console.log(`[Sync] Inventory updated:`, payload);
@@ -6464,7 +6764,12 @@
         if (prod) {
           prod.stock = quantity;
         }
+        if (typeof activeStockDetailProductId !== 'undefined' && activeStockDetailProductId === productId && typeof openStockDetailDrawer === 'function') {
+          openStockDetailDrawer(productId, activeStockDetailStoreId);
+        }
         renderPOSProducts();
+        if (typeof renderInventoryBalancesTable === 'function') renderInventoryBalancesTable();
+        if (typeof refreshInventorySummary === 'function') refreshInventorySummary();
         renderInventoryTable();
       };
       syncSocket.on('inventory.updated', handleInventoryUpdated);
@@ -6478,11 +6783,13 @@
         const activeStoreId = state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : '');
         if (!payload.locationId || payload.locationId === activeStoreId || activeStoreId === '') {
           if (window.api?.inventory?.list) {
-            window.api.inventory.list().then(invList => {
+            window.api.inventory.list({ locationId: activeStoreId || undefined }).then(invList => {
               if (Array.isArray(invList)) {
                 state.inventory = invList;
                 updateLocalProductStockFromInventory();
                 renderPOSProducts();
+                if (typeof renderInventoryBalancesTable === 'function') renderInventoryBalancesTable();
+                if (typeof refreshInventorySummary === 'function') refreshInventorySummary();
                 renderInventoryTable();
               }
             }).catch(e => console.warn('[Sync] Bulk inventory sync error:', e));
@@ -8914,10 +9221,9 @@
         viewSubtitle.innerText = "Live Shopping Checkout, Card Details & Camera Scanners";
         renderPOSProducts();
       } else if (viewName === 'inventory') {
-        viewTitle.innerText = "Master Inventory";
-        viewSubtitle.innerText = "Farmer Crops shelf life date tracks, margin alerts & stickers sheet";
-        renderInventoryTable();
-        renderOnboardingQueue();
+        viewTitle.innerText = "Master Inventory Command Center";
+        viewSubtitle.innerText = "Authoritative multi-store stock balances, ledger audit trails & inter-store transfers";
+        initInventoryCommandCenter();
       } else if (viewName === 'businesses') {
         viewTitle.innerText = "My Registered Stores & Franchises";
         viewSubtitle.innerText = "Manage multiple store outlets and franchise partners";
@@ -9257,6 +9563,862 @@
 
     function syncPOSBusinessHeader(bizId) {
       changeActiveBusiness(bizId);
+    }
+
+    /* ==================== STAGE 13 PHASE F: INVENTORY COMMAND CENTER CONTROLLER ==================== */
+    let activeStockDetailProductId = null;
+    let activeStockDetailStoreId = null;
+    let activeInventorySubTab = 'balances';
+
+    function initInventoryCommandCenter() {
+      populateInventoryStoreContextSelect();
+      updateInventorySyncStatus();
+      refreshInventorySummary();
+      renderInventoryBalancesTable();
+      renderInventoryTable();
+      if (activeInventorySubTab === 'audit') {
+        fetchAuthoritativeLedgerLogs();
+      }
+    }
+
+    function refreshInventoryCommandCenter() {
+      triggerAlert("Refreshing authoritative inventory balances...", "info");
+      Promise.all([
+        window.api.inventory.list({ locationId: state.activeBusinessId || undefined }).then(inv => {
+          state.inventory = Array.isArray(inv) ? inv : [];
+          updateLocalProductStockFromInventory();
+        }),
+        refreshInventorySummary(),
+        fetchAuthoritativeLedgerLogs()
+      ]).then(() => {
+        renderInventoryBalancesTable();
+        renderInventoryTable();
+        triggerAlert("Inventory Command Center up to date!", "success");
+      }).catch(err => {
+        console.error("Error refreshing inventory:", err);
+      });
+    }
+
+    function updateInventorySyncStatus() {
+      const statusBadge = document.getElementById("inventory-sync-status-badge");
+      const statusText = document.getElementById("inventory-sync-status-text");
+      if (!statusBadge || !statusText) return;
+
+      const isLive = typeof syncSocket !== 'undefined' && syncSocket && syncSocket.connected;
+      if (isLive) {
+        statusBadge.style.color = "var(--accent-green)";
+        statusBadge.style.background = "var(--accent-primary-subtle)";
+        statusBadge.innerHTML = `<span style="width:6px; height:6px; border-radius:50%; background:var(--accent-green); display:inline-block"></span> <span>Real-time Sync Active</span>`;
+      } else {
+        statusBadge.style.color = "var(--text-secondary)";
+        statusBadge.style.background = "var(--bg-surface-raised)";
+        statusBadge.innerHTML = `<span style="width:6px; height:6px; border-radius:50%; background:var(--text-muted); display:inline-block"></span> <span>Offline / REST Mode</span>`;
+      }
+    }
+
+    function populateInventoryStoreContextSelect() {
+      const select = document.getElementById("inventory-store-context-select");
+      const scopedBadge = document.getElementById("inventory-store-scoped-badge");
+      if (!select) return;
+
+      const user = state.currentUser;
+      const isScoped = user && user.assignedStoreId && user.assignedStoreId !== 'all';
+
+      if (isScoped) {
+        select.style.display = "none";
+        if (scopedBadge) {
+          scopedBadge.style.display = "inline-block";
+          const store = state.businesses.find(b => b.id === user.assignedStoreId);
+          scopedBadge.innerText = store ? (store.name || store.id) : user.assignedStoreId;
+        }
+      } else {
+        select.style.display = "inline-block";
+        if (scopedBadge) scopedBadge.style.display = "none";
+        
+        select.innerHTML = `<option value="">🌐 All Outlets (Consolidated)</option>`;
+        state.businesses.forEach(biz => {
+          const opt = document.createElement("option");
+          opt.value = biz.id;
+          opt.innerText = getStoreDisplayName(biz);
+          if (biz.id === state.activeBusinessId) opt.selected = true;
+          select.appendChild(opt);
+        });
+      }
+    }
+
+    function handleInventoryStoreContextChange(storeId) {
+      state.activeBusinessId = storeId;
+      refreshInventorySummary();
+      renderInventoryBalancesTable();
+      if (activeInventorySubTab === 'audit') {
+        fetchAuthoritativeLedgerLogs();
+      }
+    }
+
+    async function refreshInventorySummary() {
+      try {
+        const activeStoreId = state.activeBusinessId || undefined;
+        const res = await window.api.inventory.summary({ locationId: activeStoreId });
+        const summary = res && res.summary ? res.summary : (res || {});
+        
+        const healthyEl = document.getElementById("inv-health-healthy-count");
+        const lowEl = document.getElementById("inv-health-low-count");
+        const outEl = document.getElementById("inv-health-out-count");
+        const unitsEl = document.getElementById("inv-health-total-units");
+        const valEl = document.getElementById("inv-health-total-value");
+        const lastUpdEl = document.getElementById("inventory-last-updated");
+
+        const totalItems = Number(summary.totalTrackedItems || summary.totalProducts || state.products.length || 0);
+        const lowCount = Number(summary.lowStockCount || 0);
+        const outCount = Number(summary.outOfStockCount || 0);
+        const healthyCount = Math.max(0, totalItems - lowCount - outCount);
+
+        if (healthyEl) healthyEl.innerText = healthyCount;
+        if (lowEl) lowEl.innerText = lowCount;
+        if (outEl) outEl.innerText = outCount;
+        if (unitsEl) unitsEl.innerText = `${Number(summary.totalUnits || 0).toLocaleString('en-IN')} Units`;
+        if (valEl) {
+          const valStr = window.AppUI ? window.AppUI.formatCurrency(summary.inventoryValue || 0) : `₹${Number(summary.inventoryValue || 0).toFixed(2)}`;
+          valEl.innerText = `Valuation: ${valStr}`;
+        }
+        if (lastUpdEl) {
+          const now = new Date();
+          lastUpdEl.innerText = `Updated: ${now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+        }
+      } catch (err) {
+        console.warn("Could not fetch inventory summary:", err);
+      }
+    }
+
+    function switchInventorySubTab(tabName) {
+      activeInventorySubTab = tabName;
+      const tabBalances = document.getElementById("inventory-tab-balances");
+      const tabAudit = document.getElementById("inventory-tab-audit");
+      const tabDirectory = document.getElementById("inventory-tab-directory");
+
+      const contBalances = document.getElementById("inventory-balances-container");
+      const contAudit = document.getElementById("inventory-audit-container");
+      const contDirectory = document.getElementById("inventory-directory-container");
+
+      [tabBalances, tabAudit, tabDirectory].forEach(t => {
+        if (t) {
+          t.classList.remove("active");
+          t.style.borderBottom = "none";
+          t.style.color = "var(--text-muted)";
+        }
+      });
+
+      if (contBalances) contBalances.style.display = "none";
+      if (contAudit) contAudit.style.display = "none";
+      if (contDirectory) contDirectory.style.display = "none";
+
+      if (tabName === 'balances') {
+        if (tabBalances) {
+          tabBalances.classList.add("active");
+          tabBalances.style.borderBottom = "3px solid var(--accent-green)";
+          tabBalances.style.color = "var(--text-primary)";
+        }
+        if (contBalances) contBalances.style.display = "block";
+        renderInventoryBalancesTable();
+      } else if (tabName === 'audit') {
+        if (tabAudit) {
+          tabAudit.classList.add("active");
+          tabAudit.style.borderBottom = "3px solid var(--accent-green)";
+          tabAudit.style.color = "var(--text-primary)";
+        }
+        if (contAudit) contAudit.style.display = "block";
+        fetchAuthoritativeLedgerLogs();
+      } else if (tabName === 'directory') {
+        if (tabDirectory) {
+          tabDirectory.classList.add("active");
+          tabDirectory.style.borderBottom = "3px solid var(--accent-green)";
+          tabDirectory.style.color = "var(--text-primary)";
+        }
+        if (contDirectory) contDirectory.style.display = "block";
+        renderInventoryTable();
+      }
+    }
+
+    function renderInventoryBalancesTable(filteredData = null) {
+      const tbody = document.getElementById("inventory-balances-tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      // Populate category dropdown
+      const catSelect = document.getElementById("inventory-balances-filter-category");
+      if (catSelect) {
+        const cur = catSelect.value;
+        catSelect.innerHTML = `<option value="all">All Categories</option>`;
+        const categories = [...new Set(state.products.map(p => p.category))].filter(c => c);
+        categories.forEach(cat => {
+          catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+        });
+        catSelect.value = cur || "all";
+      }
+
+      const activeStoreId = state.activeBusinessId;
+      const products = filteredData || state.products;
+
+      if (!products || products.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:var(--text-muted); padding:30px">No stock balance records found for the selected filter.</td></tr>`;
+        return;
+      }
+
+      products.forEach(p => {
+        // Authoritative stock record lookup
+        const invRecord = (state.inventory || []).find(i => i.productId === p.id && (!activeStoreId || i.storeId === activeStoreId || i.locationId === activeStoreId));
+        
+        let onHand = 0;
+        let reserved = 0;
+        let reorderLevel = Number(p.reorder || 10);
+        let locationName = "All Outlets";
+
+        if (invRecord) {
+          onHand = Number(invRecord.quantity || 0);
+          reserved = Number(invRecord.reservedQuantity || 0);
+          if (invRecord.reorderLevel !== undefined) reorderLevel = Number(invRecord.reorderLevel);
+          const storeObj = state.businesses.find(b => b.id === (invRecord.storeId || invRecord.locationId));
+          locationName = storeObj ? (storeObj.name || storeObj.id) : (invRecord.storeId || 'Main Store');
+        } else if (activeStoreId) {
+          const storeObj = state.businesses.find(b => b.id === activeStoreId);
+          locationName = storeObj ? (storeObj.name || storeObj.id) : activeStoreId;
+          onHand = 0;
+        } else {
+          // Consolidated
+          onHand = Number(p.stock || 0);
+        }
+
+        const available = Math.max(0, onHand - reserved);
+
+        // Status Badge
+        let statusBadge = '';
+        if (onHand <= 0) {
+          statusBadge = `<span class="status-badge out-of-stock" style="font-size:10px; font-weight:700">OUT OF STOCK</span>`;
+        } else if (onHand <= reorderLevel) {
+          statusBadge = `<span class="status-badge low-stock" style="font-size:10px; font-weight:700">LOW STOCK</span>`;
+        } else {
+          statusBadge = `<span class="status-badge in-stock" style="font-size:10px; font-weight:700">IN STOCK</span>`;
+        }
+
+        const barcodeDisplay = p.barcode ? `<code class="badge-mono" style="font-size:11px">${escapeHTML(p.barcode)}</code>` : `<span style="color:var(--text-muted)">—</span>`;
+        const sellingModeIcon = p.sellingMode === 'loose' ? '⚖️' : '📦';
+        const unitLabel = escapeHTML(p.unit || 'Unit');
+
+        const row = document.createElement("tr");
+        row.id = `inventory-row-${p.id}`;
+        row.innerHTML = `
+          <td style="text-align:center">
+            <div style="width:36px; height:36px; border-radius:4px; overflow:hidden; border:1px solid var(--border-color); display:inline-flex; align-items:center; justify-content:center; background:var(--bg-panel)">
+              <img src="${escapeHTML(p.image || '/uploads/system/default-product.webp')}" loading="lazy" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'16\' height=\'16\' fill=\'%23888\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\'/></svg>'">
+            </div>
+          </td>
+          <td><code class="badge-mono" style="font-weight:700; color:var(--accent-green)">${escapeHTML(p.sku)}</code></td>
+          <td>${barcodeDisplay}</td>
+          <td>
+            <strong>${escapeHTML(p.name)}</strong>
+            <small style="color:var(--text-muted); display:block">${sellingModeIcon} ${escapeHTML(p.category || '—')} | ${unitLabel}</small>
+          </td>
+          <td><span class="badge-mono" style="font-size:11px">${escapeHTML(locationName)}</span></td>
+          <td style="text-align:right" class="tabular-numeric"><strong>${onHand}</strong> <small style="color:var(--text-muted)">${unitLabel}</small></td>
+          <td style="text-align:right" class="tabular-numeric" style="color:var(--text-muted)">${reserved}</td>
+          <td style="text-align:right" class="tabular-numeric" style="font-weight:800; color:var(--accent-green)">${available}</td>
+          <td style="text-align:right" class="tabular-numeric">${reorderLevel}</td>
+          <td style="text-align:center">${statusBadge}</td>
+          <td style="text-align:center">
+            <div style="display:flex; gap:4px; justify-content:center">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="openStockDetailDrawer('${p.id}', '${activeStoreId}')" title="360° Stock Breakdown">👁️</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openAdjustStockModal('${p.id}', '${activeStoreId}')" title="Adjust Stock Quantity">⚖️ Adjust</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openTransferStockModal('${p.id}', '${activeStoreId}')" style="border-color:var(--accent-primary); color:var(--accent-primary)" title="Transfer Stock to Another Store">🔄</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function filterInventoryBalances() {
+      const search = (document.getElementById("inventory-balances-search").value || "").toLowerCase().trim();
+      const stockState = document.getElementById("inventory-balances-filter-stock") ? document.getElementById("inventory-balances-filter-stock").value : "all";
+      const cat = document.getElementById("inventory-balances-filter-category") ? document.getElementById("inventory-balances-filter-category").value : "all";
+      const activeStoreId = state.activeBusinessId;
+
+      const filtered = state.products.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(search) || 
+                              p.sku.toLowerCase().includes(search) || 
+                              (p.barcode && p.barcode.toLowerCase().includes(search)) ||
+                              (p.category && p.category.toLowerCase().includes(search));
+        
+        const matchesCat = cat === 'all' || p.category === cat;
+
+        const inv = (state.inventory || []).find(i => i.productId === p.id && (!activeStoreId || i.storeId === activeStoreId || i.locationId === activeStoreId));
+        const onHand = inv ? Number(inv.quantity || 0) : (activeStoreId ? 0 : Number(p.stock || 0));
+        const reorder = inv && inv.reorderLevel !== undefined ? Number(inv.reorderLevel) : Number(p.reorder || 10);
+
+        let matchesStock = true;
+        if (stockState === 'in_stock') matchesStock = onHand > reorder;
+        else if (stockState === 'low') matchesStock = onHand <= reorder && onHand > 0;
+        else if (stockState === 'out') matchesStock = onHand <= 0;
+
+        return matchesSearch && matchesCat && matchesStock;
+      });
+
+      renderInventoryBalancesTable(filtered);
+    }
+
+    /* ==================== STOCK DETAIL DRAWER ==================== */
+    function openStockDetailDrawer(productId, storeId = '') {
+      const prod = state.products.find(p => p.id === productId);
+      if (!prod) return;
+
+      activeStockDetailProductId = productId;
+      activeStockDetailStoreId = storeId || state.activeBusinessId || '';
+
+      const inv = (state.inventory || []).find(i => i.productId === productId && (!activeStockDetailStoreId || i.storeId === activeStockDetailStoreId || i.locationId === activeStockDetailStoreId));
+      
+      const onHand = inv ? Number(inv.quantity || 0) : (activeStockDetailStoreId ? 0 : Number(prod.stock || 0));
+      const reserved = inv ? Number(inv.reservedQuantity || 0) : 0;
+      const available = Math.max(0, onHand - reserved);
+      const reorder = inv && inv.reorderLevel !== undefined ? Number(inv.reorderLevel) : Number(prod.reorder || 10);
+      const version = inv ? (inv.version || 1) : 1;
+      const updatedAt = inv && inv.updatedAt ? (window.AppUI ? window.AppUI.formatDate(inv.updatedAt) : new Date(inv.updatedAt).toLocaleString()) : '—';
+
+      const storeObj = state.businesses.find(b => b.id === activeStockDetailStoreId);
+      const locationName = storeObj ? (storeObj.name || storeObj.id) : (activeStockDetailStoreId || 'All Outlets Consolidated');
+
+      document.getElementById("stock-detail-title").innerText = prod.name;
+      document.getElementById("stock-detail-sku-badge").innerText = `SKU: ${prod.sku}`;
+      document.getElementById("stock-detail-location").innerText = locationName;
+      document.getElementById("stock-detail-onhand").innerText = `${onHand} ${prod.unit || 'Units'}`;
+      document.getElementById("stock-detail-reserved").innerText = `${reserved} ${prod.unit || 'Units'}`;
+      document.getElementById("stock-detail-available").innerText = `${available} ${prod.unit || 'Units'}`;
+      document.getElementById("stock-detail-reorder").innerText = `${reorder} ${prod.unit || 'Units'}`;
+      document.getElementById("stock-detail-selling-mode").innerText = prod.sellingMode === 'loose' ? '⚖️ Loose Weighable' : '📦 Packaged Unit';
+      document.getElementById("stock-detail-barcode").innerText = prod.barcode || '—';
+      document.getElementById("stock-detail-version").innerText = `v${version}`;
+      document.getElementById("stock-detail-updated-at").innerText = updatedAt;
+
+      const imgEl = document.getElementById("stock-detail-image");
+      if (imgEl) imgEl.src = prod.image || '/uploads/system/default-product.webp';
+
+      const statusBadge = document.getElementById("stock-detail-status-badge");
+      if (statusBadge) {
+        if (onHand <= 0) {
+          statusBadge.className = "status-badge out-of-stock";
+          statusBadge.innerText = "OUT OF STOCK";
+        } else if (onHand <= reorder) {
+          statusBadge.className = "status-badge low-stock";
+          statusBadge.innerText = "LOW STOCK";
+        } else {
+          statusBadge.className = "status-badge in-stock";
+          statusBadge.innerText = "IN STOCK";
+        }
+      }
+
+      document.getElementById("stock-detail-drawer").classList.add("active");
+    }
+
+    function closeStockDetailDrawer() {
+      document.getElementById("stock-detail-drawer").classList.remove("active");
+      activeStockDetailProductId = null;
+      activeStockDetailStoreId = null;
+    }
+
+    function triggerAdjustFromStockDetail() {
+      const pId = activeStockDetailProductId;
+      const sId = activeStockDetailStoreId;
+      closeStockDetailDrawer();
+      openAdjustStockModal(pId, sId);
+    }
+
+    function triggerTransferFromStockDetail() {
+      const pId = activeStockDetailProductId;
+      const sId = activeStockDetailStoreId;
+      closeStockDetailDrawer();
+      openTransferStockModal(pId, sId);
+    }
+
+    function triggerLedgerFromStockDetail() {
+      const pId = activeStockDetailProductId;
+      closeStockDetailDrawer();
+      switchInventorySubTab('audit');
+      const searchInput = document.getElementById("audit-search");
+      if (searchInput) {
+        searchInput.value = pId;
+        renderInventoryAuditLogs();
+      }
+    }
+
+    function triggerCatalogFromStockDetail() {
+      const pId = activeStockDetailProductId;
+      closeStockDetailDrawer();
+      openProductDetailsModal(pId);
+    }
+
+    /* ==================== STOCK ADJUSTMENT FLOW ==================== */
+    function openAdjustStockModal(productId = null, storeId = null) {
+      const prodSelect = document.getElementById("adjust-product-select");
+      const storeSelect = document.getElementById("adjust-store-select");
+      if (!prodSelect || !storeSelect) return;
+
+      prodSelect.innerHTML = "";
+      state.products.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.innerText = `${p.name} (${p.sku})`;
+        prodSelect.appendChild(opt);
+      });
+
+      storeSelect.innerHTML = "";
+      state.businesses.forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b.id;
+        opt.innerText = getStoreDisplayName(b);
+        storeSelect.appendChild(opt);
+      });
+
+      if (productId) prodSelect.value = productId;
+      if (storeId && storeId !== '') {
+        storeSelect.value = storeId;
+      } else if (state.activeBusinessId) {
+        storeSelect.value = state.activeBusinessId;
+      }
+
+      handleAdjustProductSelectChange();
+      document.getElementById("adjust-target-qty-input").value = "";
+      document.getElementById("adjust-notes-input").value = "";
+      document.getElementById("adjust-delta-preview").innerText = "0.00";
+      document.getElementById("adjust-submit-btn").disabled = false;
+      document.getElementById("adjust-submit-btn").innerText = "Confirm & Post Adjustment";
+
+      document.getElementById("stock-adjustment-modal").classList.add("active");
+      setTimeout(() => document.getElementById("adjust-target-qty-input").focus(), 150);
+    }
+
+    function closeAdjustStockModal() {
+      document.getElementById("stock-adjustment-modal").classList.remove("active");
+    }
+
+    function handleAdjustProductSelectChange() {
+      const prodId = document.getElementById("adjust-product-select").value;
+      const storeId = document.getElementById("adjust-store-select").value;
+      const prod = state.products.find(p => p.id === prodId);
+      if (!prod) return;
+
+      const inv = (state.inventory || []).find(i => i.productId === prodId && (i.storeId === storeId || i.locationId === storeId));
+      const currentStock = inv ? Number(inv.quantity || 0) : 0;
+
+      const label = document.getElementById("adjust-current-balance-label");
+      if (label) label.innerText = `${currentStock} ${prod.unit || 'Units'}`;
+      calculateLiveAdjustmentDelta();
+    }
+
+    function calculateLiveAdjustmentDelta() {
+      const prodId = document.getElementById("adjust-product-select").value;
+      const storeId = document.getElementById("adjust-store-select").value;
+      const targetVal = parseFloat(document.getElementById("adjust-target-qty-input").value);
+      const deltaEl = document.getElementById("adjust-delta-preview");
+      if (!deltaEl) return;
+
+      if (isNaN(targetVal)) {
+        deltaEl.innerText = "0.00";
+        deltaEl.style.color = "var(--text-muted)";
+        return;
+      }
+
+      const inv = (state.inventory || []).find(i => i.productId === prodId && (i.storeId === storeId || i.locationId === storeId));
+      const currentStock = inv ? Number(inv.quantity || 0) : 0;
+      const delta = targetVal - currentStock;
+
+      if (delta > 0) {
+        deltaEl.innerText = `+${delta.toFixed(3).replace(/\.?0+$/, '')}`;
+        deltaEl.style.color = "var(--accent-green)";
+      } else if (delta < 0) {
+        deltaEl.innerText = `${delta.toFixed(3).replace(/\.?0+$/, '')}`;
+        deltaEl.style.color = "var(--accent-danger)";
+      } else {
+        deltaEl.innerText = "0.00 (No change)";
+        deltaEl.style.color = "var(--text-muted)";
+      }
+    }
+
+    async function executeStockAdjustment(e) {
+      e.preventDefault();
+      const prodId = document.getElementById("adjust-product-select").value;
+      const storeId = document.getElementById("adjust-store-select").value;
+      const type = document.getElementById("adjust-type-select").value;
+      const targetQty = parseFloat(document.getElementById("adjust-target-qty-input").value);
+      const notes = (document.getElementById("adjust-notes-input").value || "").trim();
+
+      if (isNaN(targetQty) || targetQty < 0) {
+        triggerAlert("Please enter a valid non-negative target stock quantity.", "warning");
+        return;
+      }
+      if (!notes) {
+        triggerAlert("Audit Reason / Operational Notes are required for stock adjustments.", "warning");
+        return;
+      }
+
+      const submitBtn = document.getElementById("adjust-submit-btn");
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Posting Adjustment...";
+
+      try {
+        const payload = {
+          productId: prodId,
+          storeId: storeId,
+          locationId: storeId,
+          quantity: targetQty,
+          type: type,
+          notes: notes
+        };
+
+        const res = await window.api.inventory.adjust(payload);
+        if (res && res.success !== false) {
+          triggerAlert(`Stock successfully adjusted to ${targetQty} units!`, "success");
+          closeAdjustStockModal();
+
+          // Refresh inventory
+          const invList = await window.api.inventory.list({ locationId: state.activeBusinessId || undefined });
+          state.inventory = Array.isArray(invList) ? invList : [];
+          updateLocalProductStockFromInventory();
+          refreshInventorySummary();
+          renderInventoryBalancesTable();
+          renderPOSProducts();
+        } else {
+          const errMsg = (res && res.message) ? res.message : "Failed to record adjustment";
+          if (errMsg.toLowerCase().includes("conflict") || errMsg.toLowerCase().includes("version") || errMsg.toLowerCase().includes("stock changed")) {
+            triggerAlert("Stock changed before this action completed. Refreshing latest record.", "warning");
+            handleAdjustProductSelectChange();
+          } else {
+            triggerAlert(errMsg, "danger");
+          }
+        }
+      } catch (err) {
+        console.error("Adjustment execution error:", err);
+        const errMsg = err.message || "";
+        if (errMsg.toLowerCase().includes("conflict") || errMsg.toLowerCase().includes("version") || errMsg.toLowerCase().includes("stock changed")) {
+          triggerAlert("Stock changed before this action completed. Refreshing latest record.", "warning");
+          handleAdjustProductSelectChange();
+        } else {
+          triggerAlert(`Adjustment failed: ${errMsg}`, "danger");
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Confirm & Post Adjustment";
+      }
+    }
+
+    /* ==================== STOCK TRANSFER WORKFLOW ==================== */
+    function openTransferStockModal(productId = null, sourceStoreId = null) {
+      const prodSelect = document.getElementById("transfer-stock-product");
+      const srcSelect = document.getElementById("transfer-stock-source");
+      const tgtSelect = document.getElementById("transfer-stock-target");
+      if (!prodSelect || !srcSelect || !tgtSelect) return;
+
+      document.getElementById("transfer-form-view").style.display = "block";
+      document.getElementById("transfer-success-view").style.display = "none";
+
+      prodSelect.innerHTML = "";
+      state.products.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.innerText = `${p.name} (${p.sku})`;
+        prodSelect.appendChild(opt);
+      });
+
+      srcSelect.innerHTML = "";
+      tgtSelect.innerHTML = "";
+      state.businesses.forEach(b => {
+        const optSrc = document.createElement("option");
+        optSrc.value = b.id;
+        optSrc.innerText = getStoreDisplayName(b);
+        srcSelect.appendChild(optSrc);
+
+        const optTgt = document.createElement("option");
+        optTgt.value = b.id;
+        optTgt.innerText = getStoreDisplayName(b);
+        tgtSelect.appendChild(optTgt);
+      });
+
+      if (productId) prodSelect.value = productId;
+      if (sourceStoreId && sourceStoreId !== '') {
+        srcSelect.value = sourceStoreId;
+      } else if (state.activeBusinessId) {
+        srcSelect.value = state.activeBusinessId;
+      }
+
+      // Default target to next store if available
+      if (tgtSelect.options.length > 1) {
+        for (let i = 0; i < tgtSelect.options.length; i++) {
+          if (tgtSelect.options[i].value !== srcSelect.value) {
+            tgtSelect.selectedIndex = i;
+            break;
+          }
+        }
+      }
+
+      document.getElementById("transfer-stock-qty").value = "";
+      document.getElementById("transfer-stock-notes").value = "";
+      document.getElementById("transfer-remaining-preview").innerText = "0.00";
+      document.getElementById("transfer-submit-btn").disabled = false;
+      document.getElementById("transfer-submit-btn").innerText = "Execute Stock Transfer";
+
+      updateTransferAvailableStockLabel();
+
+      document.getElementById("transfer-stock-modal").classList.add("active");
+      setTimeout(() => document.getElementById("transfer-stock-qty").focus(), 150);
+    }
+
+    function closeTransferStockModal() {
+      document.getElementById("transfer-stock-modal").classList.remove("active");
+    }
+
+    function resetAndOpenNewTransfer() {
+      openTransferStockModal();
+    }
+
+    function updateTransferAvailableStockLabel() {
+      const prodId = document.getElementById("transfer-stock-product").value;
+      const srcId = document.getElementById("transfer-stock-source").value;
+      const prod = state.products.find(p => p.id === prodId);
+      if (!prod) return;
+
+      const inv = (state.inventory || []).find(i => i.productId === prodId && (i.storeId === srcId || i.locationId === srcId));
+      const onHand = inv ? Number(inv.quantity || 0) : 0;
+      const reserved = inv ? Number(inv.reservedQuantity || 0) : 0;
+      const available = Math.max(0, onHand - reserved);
+
+      const label = document.getElementById("transfer-available-stock-label");
+      if (label) label.innerText = `${available} ${prod.unit || 'Units'} Available`;
+
+      calculateTransferRemainingPreview();
+    }
+
+    function calculateTransferRemainingPreview() {
+      const prodId = document.getElementById("transfer-stock-product").value;
+      const srcId = document.getElementById("transfer-stock-source").value;
+      const transferQty = parseFloat(document.getElementById("transfer-stock-qty").value);
+      const remainingEl = document.getElementById("transfer-remaining-preview");
+      if (!remainingEl) return;
+
+      const inv = (state.inventory || []).find(i => i.productId === prodId && (i.storeId === srcId || i.locationId === srcId));
+      const onHand = inv ? Number(inv.quantity || 0) : 0;
+      const reserved = inv ? Number(inv.reservedQuantity || 0) : 0;
+      const available = Math.max(0, onHand - reserved);
+
+      if (isNaN(transferQty) || transferQty <= 0) {
+        remainingEl.innerText = `${available}`;
+        remainingEl.style.color = "var(--text-primary)";
+        return;
+      }
+
+      const remaining = available - transferQty;
+      remainingEl.innerText = `${remaining.toFixed(3).replace(/\.?0+$/, '')}`;
+      if (remaining < 0) {
+        remainingEl.style.color = "var(--accent-danger)";
+      } else {
+        remainingEl.style.color = "var(--text-primary)";
+      }
+    }
+
+    async function executeStockTransfer(e) {
+      e.preventDefault();
+      const prodId = document.getElementById("transfer-stock-product").value;
+      const srcId = document.getElementById("transfer-stock-source").value;
+      const tgtId = document.getElementById("transfer-stock-target").value;
+      const qty = parseFloat(document.getElementById("transfer-stock-qty").value);
+      const notes = (document.getElementById("transfer-stock-notes").value || "").trim();
+
+      if (srcId === tgtId) {
+        triggerAlert("Source and Target outlets must be different for inter-store transfers!", "warning");
+        return;
+      }
+      if (isNaN(qty) || qty <= 0) {
+        triggerAlert("Please enter a valid positive transfer quantity.", "warning");
+        return;
+      }
+      if (!notes) {
+        triggerAlert("Dispatch Notes / Reason are required for store transfers.", "warning");
+        return;
+      }
+
+      const inv = (state.inventory || []).find(i => i.productId === prodId && (i.storeId === srcId || i.locationId === srcId));
+      const onHand = inv ? Number(inv.quantity || 0) : 0;
+      const reserved = inv ? Number(inv.reservedQuantity || 0) : 0;
+      const available = Math.max(0, onHand - reserved);
+
+      if (qty > available) {
+        triggerAlert(`Insufficient stock at source! Only ${available} units available.`, "warning");
+        return;
+      }
+
+      const submitBtn = document.getElementById("transfer-submit-btn");
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Transferring Stock...";
+
+      try {
+        const payload = {
+          productId: prodId,
+          fromStoreId: srcId,
+          fromLocationId: srcId,
+          toStoreId: tgtId,
+          toLocationId: tgtId,
+          quantity: qty,
+          notes: notes
+        };
+
+        const res = await window.api.inventory.transfer(payload);
+        if (res && res.success !== false) {
+          const prod = state.products.find(p => p.id === prodId);
+          const srcStore = state.businesses.find(b => b.id === srcId);
+          const tgtStore = state.businesses.find(b => b.id === tgtId);
+
+          const transferId = res.transferId || `TRF-${Date.now().toString().slice(-6)}`;
+          const timeStr = window.AppUI ? window.AppUI.formatDate(res.timestamp || new Date().toISOString()) : new Date().toLocaleString();
+
+          document.getElementById("transfer-form-view").style.display = "none";
+          document.getElementById("transfer-success-view").style.display = "block";
+
+          document.getElementById("transfer-success-id").innerText = transferId;
+          document.getElementById("transfer-success-product").innerText = prod ? prod.name : prodId;
+          document.getElementById("transfer-success-qty").innerText = `${qty} ${prod ? prod.unit : 'Units'}`;
+          document.getElementById("transfer-success-route").innerText = `${srcStore ? srcStore.name : srcId} → ${tgtStore ? tgtStore.name : tgtId}`;
+          document.getElementById("transfer-success-time").innerText = timeStr;
+
+          // Refresh in-memory inventory
+          const invList = await window.api.inventory.list({ locationId: state.activeBusinessId || undefined });
+          state.inventory = Array.isArray(invList) ? invList : [];
+          updateLocalProductStockFromInventory();
+          refreshInventorySummary();
+          renderInventoryBalancesTable();
+          renderPOSProducts();
+        } else {
+          const errMsg = (res && res.message) ? res.message : "Transfer failed";
+          triggerAlert(errMsg, "danger");
+        }
+      } catch (err) {
+        console.error("Transfer execution error:", err);
+        const errMsg = err.message || "";
+        if (errMsg.toLowerCase().includes("conflict") || errMsg.toLowerCase().includes("version") || errMsg.toLowerCase().includes("stock changed")) {
+          triggerAlert("Stock changed before this action completed. Refreshing latest record.", "warning");
+          updateTransferAvailableStockLabel();
+        } else {
+          triggerAlert(`Transfer failed: ${errMsg}`, "danger");
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Execute Stock Transfer";
+      }
+    }
+
+    /* ==================== IMMUTABLE MOVEMENT LEDGER ==================== */
+    async function fetchAuthoritativeLedgerLogs() {
+      try {
+        const activeStoreId = state.activeBusinessId || undefined;
+        const res = await window.api.inventory.logs({ locationId: activeStoreId, limit: 100 });
+        state.inventoryLogs = Array.isArray(res) ? res : (res && res.data ? res.data : []);
+        renderInventoryAuditLogs();
+      } catch (err) {
+        console.warn("Could not fetch inventory ledger logs:", err);
+      }
+    }
+
+    function renderInventoryAuditLogs() {
+      const tbody = document.getElementById("inventory-audit-table-body");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      const query = (document.getElementById("audit-search") ? document.getElementById("audit-search").value : "").toLowerCase().trim();
+      const filterType = document.getElementById("audit-filter-type") ? document.getElementById("audit-filter-type").value : "all";
+      const logs = state.inventoryLogs || [];
+
+      const filteredLogs = logs.filter(log => {
+        const pName = (log.productName || (state.products.find(p => p.id === log.productId) || {}).name || log.productId || '').toLowerCase();
+        const pSku = ((state.products.find(p => p.id === log.productId) || {}).sku || '').toLowerCase();
+        const refId = (log.referenceId || log.reference || '').toLowerCase();
+        const user = (log.performedBy || log.user || '').toLowerCase();
+        const notes = (log.notes || '').toLowerCase();
+
+        const matchesQuery = !query || pName.includes(query) || pSku.includes(query) || refId.includes(query) || user.includes(query) || notes.includes(query);
+        const logTypeUpper = (log.type || '').toUpperCase();
+        const filterTypeUpper = filterType.toUpperCase();
+        const matchesType = filterType === 'all' || logTypeUpper === filterTypeUpper || (filterType === 'Sale' && logTypeUpper === 'SALE') || (filterType === 'Purchase' && logTypeUpper === 'PURCHASE') || (filterType === 'Transfer' && (logTypeUpper === 'TRANSFER_IN' || logTypeUpper === 'TRANSFER_OUT'));
+
+        return matchesQuery && matchesType;
+      });
+
+      if (filteredLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--text-muted); font-size:12px; padding:30px">No immutable ledger entries found matching active filters.</td></tr>`;
+        return;
+      }
+
+      filteredLogs.forEach(log => {
+        const logId = log.movementId || log.id || log._id || '—';
+        const dateStr = window.AppUI ? window.AppUI.formatDate(log.createdAt || log.date) : new Date(log.createdAt || log.date).toLocaleString();
+        
+        const prod = state.products.find(p => p.id === log.productId) || { name: log.productName || log.productId, sku: '—', unit: 'Units' };
+        const storeObj = state.businesses.find(b => b.id === (log.storeId || log.locationId));
+        const locationName = storeObj ? (storeObj.name || storeObj.id) : (log.storeId || log.locationId || 'Main Store');
+
+        const qtyNum = Number(log.quantity !== undefined ? log.quantity : log.qty || 0);
+        let signedQtyHtml = '';
+        if (qtyNum > 0) {
+          signedQtyHtml = `<strong class="tabular-numeric" style="color:var(--accent-green)">+${qtyNum}</strong> <small style="color:var(--text-muted)">${prod.unit || ''}</small>`;
+        } else if (qtyNum < 0) {
+          signedQtyHtml = `<strong class="tabular-numeric" style="color:var(--accent-danger)">${qtyNum}</strong> <small style="color:var(--text-muted)">${prod.unit || ''}</small>`;
+        } else {
+          signedQtyHtml = `<strong class="tabular-numeric" style="color:var(--text-muted)">0</strong>`;
+        }
+
+        const beforeQty = log.beforeQuantity !== undefined ? log.beforeQuantity : '—';
+        const afterQty = log.afterQuantity !== undefined ? log.afterQuantity : '—';
+        const balanceStr = (beforeQty !== '—' && afterQty !== '—') ? `${beforeQty} → <strong>${afterQty}</strong>` : '—';
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><code class="badge-mono" style="font-size:11px">${escapeHTML(String(logId).slice(-8))}</code></td>
+          <td style="font-size:12px">${dateStr}</td>
+          <td>
+            <strong>${escapeHTML(prod.name)}</strong>
+            <small style="color:var(--text-muted); display:block">SKU: ${escapeHTML(prod.sku || '—')}</small>
+          </td>
+          <td><span class="badge-mono" style="font-size:11px">${escapeHTML(locationName)}</span></td>
+          <td>${getMovementTypeBadgeHtml(log.type)}</td>
+          <td style="text-align:right">${signedQtyHtml}</td>
+          <td style="text-align:right" class="tabular-numeric">${balanceStr}</td>
+          <td><code class="badge-mono" style="font-size:11px">${escapeHTML(log.referenceId || log.reference || '—')}</code></td>
+          <td style="font-size:12px">${escapeHTML(log.performedBy || log.user || 'system')}</td>
+          <td style="font-size:12px; color:var(--text-secondary)">${escapeHTML(log.notes || '—')}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function getMovementTypeBadgeHtml(type) {
+      const t = (type || '').toUpperCase();
+      switch (t) {
+        case 'SALE':
+          return `<span class="status-badge paid" style="font-size:10px; font-weight:700">SALE OUT</span>`;
+        case 'PURCHASE':
+          return `<span class="status-badge in-stock" style="font-size:10px; font-weight:700">PURCHASE IN</span>`;
+        case 'TRANSFER_IN':
+          return `<span class="status-badge in-stock" style="font-size:10px; font-weight:700">TRANSFER IN</span>`;
+        case 'TRANSFER_OUT':
+          return `<span class="status-badge low-stock" style="font-size:10px; font-weight:700">TRANSFER OUT</span>`;
+        case 'ADJUSTMENT':
+        case 'MANUAL_ADJUSTMENT':
+          return `<span class="status-badge pending" style="font-size:10px; font-weight:700">ADJUSTMENT</span>`;
+        case 'DAMAGE':
+          return `<span class="status-badge out-of-stock" style="font-size:10px; font-weight:700">DAMAGE LOSS</span>`;
+        case 'OPENING':
+          return `<span class="status-badge" style="background:var(--accent-primary-subtle); color:var(--accent-primary); font-size:10px; font-weight:700">OPENING</span>`;
+        case 'SALE_RETURN':
+          return `<span class="status-badge" style="background:rgba(16, 185, 129, 0.15); color:var(--accent-green); font-size:10px; font-weight:700">SALE RETURN</span>`;
+        case 'VOID':
+          return `<span class="status-badge out-of-stock" style="font-size:10px; font-weight:700">VOID ROLLBACK</span>`;
+        default:
+          return `<span class="status-badge" style="font-size:10px">${escapeHTML(t || 'MOVEMENT')}</span>`;
+      }
     }
 
     /* ==================== INVENTORY & EXPIRY DETAILS ==================== */
@@ -11694,93 +12856,6 @@
       }
     }
 
-    function openTransferStockModal() {
-      const modal = document.getElementById("transfer-stock-modal");
-      modal.classList.add("active");
-      
-      const prodSelect = document.getElementById("transfer-stock-product");
-      const srcSelect = document.getElementById("transfer-stock-source");
-      const destSelect = document.getElementById("transfer-stock-target");
-      
-      // Populate Products
-      prodSelect.innerHTML = state.products.map(p => 
-        `<option value="${p.id}">${p.emoji || '📦'} ${p.name} (SKU: ${p.sku})</option>`
-      ).join('');
-
-      // Populate Stores (businesses)
-      const storeOptions = state.businesses.map(b => 
-        `<option value="${b.id}">${b.name}</option>`
-      ).join('');
-      
-      srcSelect.innerHTML = storeOptions;
-      destSelect.innerHTML = storeOptions;
-      
-      // Default selections
-      if (state.businesses.length >= 2) {
-        srcSelect.selectedIndex = 0;
-        destSelect.selectedIndex = 1;
-      }
-      
-      document.getElementById("transfer-stock-qty").value = "";
-      document.getElementById("transfer-stock-notes").value = "";
-      updateTransferAvailableStockLabel();
-    }
-
-    function closeTransferStockModal() {
-      document.getElementById("transfer-stock-modal").classList.remove("active");
-    }
-
-    function updateTransferAvailableStockLabel() {
-      const prodId = document.getElementById("transfer-stock-product").value;
-      const srcStoreId = document.getElementById("transfer-stock-source").value;
-      const label = document.getElementById("transfer-available-stock-label");
-      
-      if (!prodId || !srcStoreId) {
-        label.innerText = "";
-        return;
-      }
-      
-      const prod = state.products.find(p => p.id === prodId);
-      const invRecord = state.inventory.find(i => i.productId === prodId && i.storeId === srcStoreId);
-      const qty = invRecord ? invRecord.quantity : 0;
-      const unit = prod ? (prod.unit || 'units') : 'units';
-      
-      label.innerText = `(Available: ${qty.toFixed(2)} ${unit})`;
-      document.getElementById("transfer-stock-qty").max = qty;
-    }
-
-    async function executeStockTransfer(e) {
-      e.preventDefault();
-      const productId = document.getElementById("transfer-stock-product").value;
-      const sourceStoreId = document.getElementById("transfer-stock-source").value;
-      const targetStoreId = document.getElementById("transfer-stock-target").value;
-      const quantity = parseFloat(document.getElementById("transfer-stock-qty").value) || 0;
-      const notes = document.getElementById("transfer-stock-notes").value.trim();
-
-      if (sourceStoreId === targetStoreId) {
-        triggerAlert("Source and Target outlets must be different!", "danger");
-        return;
-      }
-
-      if (quantity <= 0) {
-        triggerAlert("Quantity must be greater than zero!", "danger");
-        return;
-      }
-
-      try {
-        const result = await api.inventory.transfer({ productId, fromStoreId: sourceStoreId, toStoreId: targetStoreId, quantity, notes });
-        if (result.success) {
-          triggerAlert("Inter-store stock transfer completed successfully!", "success");
-          closeTransferStockModal();
-          await syncStateWithServer();
-          if (state.activeView === 'inventory') renderInventoryTable();
-        } else {
-          triggerAlert(result.message || "Failed to complete transfer", "danger");
-        }
-      } catch (err) {
-        triggerAlert("Error connecting to server.", "danger");
-      }
-    }
 
     function shareInvoiceWhatsApp() {
       const inv = state.invoices.find(i => i.id === currentViewingInvoiceId);
