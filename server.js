@@ -117,35 +117,42 @@ io.use(async (socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(`[Socket] Client connected: ${socket.id} (user: ${socket.user?.username || 'anonymous'})`);
+  socket.joinedRooms = new Set();
+  const username = socket.user?.username || 'anonymous';
+  const userRole = socket.user?.role || 'none';
+  const assignedStore = socket.user?.assignedStoreId || 'none';
+
+  console.log(`[Socket Connected] Client ${socket.id} connected (user: ${username}, role: ${userRole}, store: ${assignedStore})`);
   if (socket.user && socket.user.id) {
     realtimeService.registerUserSocket(socket.user.id, socket);
+    console.log(`[Socket Authenticated] User '${username}' registered with active socket ${socket.id}`);
   }
 
   socket.on('JOIN_SESSION', (data) => {
     if (data && data.sessionId) {
-      socket.join(data.sessionId);
-      console.log(`[Socket] Client ${socket.id} joined scanner session: ${data.sessionId}`);
+      if (!socket.joinedRooms.has(data.sessionId)) {
+        socket.join(data.sessionId);
+        socket.joinedRooms.add(data.sessionId);
+        console.log(`[Socket Room Joined] Socket ${socket.id} joined scanner session: ${data.sessionId}`);
+      }
     }
   });
 
   socket.on('JOIN_SYNC', (data) => {
     if (data) {
       // Ensure users only join room sync lists they are authorized to access
-      const userRole = socket.user?.role || '';
       const userCategory = socket.user?.category || '';
-      const userStore = socket.user?.assignedStoreId;
       const isSuper = userRole.toLowerCase().includes('super') ||
                       userCategory === 'super admin' ||
-                      userStore === 'all';
+                      assignedStore === 'all';
 
       if (!isSuper && data.storeId && data.storeId !== 'default') {
         const allowedStores = Array.isArray(socket.user?.assignedStores)
           ? socket.user.assignedStores
-          : (userStore ? [userStore] : []);
+          : (assignedStore && assignedStore !== 'none' ? [assignedStore] : []);
 
         if (!allowedStores.includes(data.storeId)) {
-          console.warn(`[Socket] Unauthorized room join attempt by ${socket.id} for store ${data.storeId}`);
+          console.warn(`[Socket Unauthorized] Socket ${socket.id} denied access to room 'store_${data.storeId}'`);
           socket.emit('AUTHORIZATION_DENIED', {
             code: 'STORE_ACCESS_DENIED',
             message: `Access denied to store room 'store_${data.storeId}'`
@@ -153,11 +160,24 @@ io.on('connection', (socket) => {
           return;
         }
       }
-      
-      socket.join('sync_global');
-      if (data.storeId) {
-        socket.join(`store_${data.storeId}`);
-        console.log(`[Socket] Client ${socket.id} joined sync rooms: sync_global, store_${data.storeId}`);
+
+      // Idempotent join for sync_global
+      if (!socket.joinedRooms.has('sync_global')) {
+        socket.join('sync_global');
+        socket.joinedRooms.add('sync_global');
+        console.log(`[Socket Room Joined] Socket ${socket.id} (user: ${username}) joined room 'sync_global'`);
+      }
+
+      // Idempotent join for store room
+      if (data.storeId && data.storeId !== 'default') {
+        const targetRoom = `store_${data.storeId}`;
+        if (socket.joinedRooms.has(targetRoom)) {
+          console.log(`[Socket Duplicate Ignored] Socket ${socket.id} already in room '${targetRoom}'`);
+        } else {
+          socket.join(targetRoom);
+          socket.joinedRooms.add(targetRoom);
+          console.log(`[Socket Room Joined] Socket ${socket.id} (user: ${username}) joined room '${targetRoom}'`);
+        }
       }
     }
   });
@@ -175,9 +195,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`[Socket] Client disconnected: ${socket.id}`);
+    console.log(`[Socket Disconnected] Client ${socket.id} (user: ${username})`);
     if (socket.user && socket.user.id) {
       realtimeService.unregisterUserSocket(socket.user.id, socket.id);
+    }
+    if (socket.joinedRooms) {
+      socket.joinedRooms.clear();
     }
     activePresences.delete(socket.id);
   });
