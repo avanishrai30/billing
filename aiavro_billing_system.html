@@ -3323,15 +3323,15 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Image</th>
+                    <th style="width:48px; text-align:center">Image</th>
+                    <th>SKU</th>
                     <th>Barcode</th>
                     <th>Product Name</th>
-                    <th>Brand</th>
                     <th>Category</th>
-                    <th>Supplier</th>
+                    <th>Brand</th>
                     <th style="text-align:right">Purchase Price</th>
                     <th style="text-align:right">Selling Price</th>
-                    <th style="text-align:right">Current Stock</th>
+                    <th style="text-align:center">Mode</th>
                     <th style="text-align:center">Status</th>
                     <th style="text-align:center">Actions</th>
                   </tr>
@@ -4470,9 +4470,147 @@
   </div>
 
 
+  <!-- ==================== PRODUCT DETAILS DRAWER / MODAL ==================== -->
+  <div class="modal-backdrop" id="product-details-modal">
+    <div class="modal-card" style="max-width:680px">
+      <div class="modal-header" style="border-bottom:1px solid var(--border-color); padding-bottom:12px">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div id="prod-detail-img-container" style="width:48px; height:48px; border-radius:8px; overflow:hidden; border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; background:var(--bg-panel); flex-shrink:0">
+            <img id="prod-detail-image" src="/uploads/system/default-product.webp" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'24\' height=\'24\' fill=\'%23888\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\'/></svg>'">
+          </div>
+          <div>
+            <h3 id="prod-detail-name" style="margin:0; font-size:16px; font-weight:800; color:var(--text-primary)">Product Name</h3>
+            <div style="display:flex; gap:8px; align-items:center; margin-top:4px">
+              <span id="prod-detail-status-badge" class="status-badge in-stock">Active</span>
+              <span id="prod-detail-selling-mode-badge" class="badge-mono" style="font-size:11px">Packaged</span>
+              <span id="prod-detail-type-badge" class="status-badge" style="font-size:10px">OWN</span>
+            </div>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeProductDetailsModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding:16px 20px; display:flex; flex-direction:column; gap:16px; max-height:70vh; overflow-y:auto">
+        <!-- Section 1: Identity & Barcodes -->
+        <div class="card-shell" style="padding:12px 14px">
+          <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px">🪪 Catalog Identifiers & Barcode Center</div>
+          <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:12px">
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Internal SKU</small>
+              <code id="prod-detail-sku" class="badge-mono" style="font-size:13px; font-weight:800; color:var(--accent-green)">—</code>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Primary Retail Barcode</small>
+              <code id="prod-detail-barcode" class="badge-mono" style="font-size:13px; font-weight:800; color:var(--text-primary)">—</code>
+            </div>
+          </div>
+          <!-- Alternate Barcodes list -->
+          <div id="prod-detail-barcodes-list-container" style="margin-top:10px; display:none">
+            <small style="color:var(--text-muted); display:block; font-size:11px; margin-bottom:4px">Alternate / Variant Barcodes</small>
+            <div id="prod-detail-barcodes-list" style="display:flex; flex-wrap:wrap; gap:6px"></div>
+          </div>
+        </div>
+
+        <!-- Section 2: Catalog Classification -->
+        <div class="card-shell" style="padding:12px 14px">
+          <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px">📁 Classification & Packaging</div>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px">
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Category</small>
+              <strong id="prod-detail-category" style="font-size:12px; color:var(--text-primary)">—</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Brand</small>
+              <strong id="prod-detail-brand" style="font-size:12px; color:var(--text-primary)">—</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Supplier</small>
+              <strong id="prod-detail-supplier" style="font-size:12px; color:var(--text-primary)">—</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Package Unit</small>
+              <strong id="prod-detail-unit" style="font-size:12px; color:var(--text-primary)">—</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Weight Unit</small>
+              <strong id="prod-detail-weight-unit" style="font-size:12px; color:var(--text-primary)">—</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">GST Slab Rate</small>
+              <strong id="prod-detail-gst" style="font-size:12px; color:var(--text-primary)">—</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Commercial Financials -->
+        <div class="card-shell" style="padding:12px 14px">
+          <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px">💰 Commercial Pricing & Margin</div>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px">
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Purchase Cost</small>
+              <strong id="prod-detail-cost" class="tabular-numeric" style="font-size:15px; color:var(--text-primary)">₹0.00</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Selling Price</small>
+              <strong id="prod-detail-price" class="tabular-numeric" style="font-size:15px; color:var(--accent-green)">₹0.00</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Gross Margin</small>
+              <strong id="prod-detail-margin" class="tabular-numeric" style="font-size:15px; color:var(--accent-blue)">0%</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Shelf Life -->
+        <div class="card-shell" style="padding:12px 14px">
+          <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px">⏳ Freshness & Shelf-Life</div>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px">
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Mfg Date (DOM)</small>
+              <strong id="prod-detail-dom" style="font-size:12px; color:var(--text-primary)">—</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Expiry Date (DOE)</small>
+              <strong id="prod-detail-doe" style="font-size:12px; color:var(--text-primary)">—</strong>
+            </div>
+            <div>
+              <small style="color:var(--text-muted); display:block; font-size:11px">Shelf Status</small>
+              <span id="prod-detail-expiry-badge" class="status-badge in-stock" style="font-size:10px">Fresh</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Authoritative Inventory Action -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-primary); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-color)">
+          <div>
+            <div style="font-size:12px; font-weight:700; color:var(--text-primary)">📦 Stock on Hand & Warehouse Ledger</div>
+            <div style="font-size:11px; color:var(--text-muted)">Authoritative stock quantities and movements are maintained in the inventory ledger.</div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="navigateToProductInventory()">
+            View in Inventory ➔
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="border-top:1px solid var(--border-color); padding:12px 20px; display:flex; justify-content:space-between">
+        <button type="button" class="btn btn-secondary" onclick="printBarcodeFromDetails()">
+          🏷️ Print Barcode Sticker
+        </button>
+        <div style="display:flex; gap:8px">
+          <button type="button" class="btn btn-primary" onclick="editProductFromDetails()">
+            ✏️ Edit Product
+          </button>
+          <button type="button" class="btn btn-ghost" onclick="closeProductDetailsModal()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== REGISTER/EDIT PRODUCT MODAL ==================== -->
   <div class="modal-backdrop" id="product-modal">
-    <div class="modal-card" style="max-width:550px">
+    <div class="modal-card" style="max-width:580px">
       <div class="modal-header">
         <h3 id="product-modal-title">Register New Product Profile</h3>
         <button class="modal-close-btn" onclick="closeProductModal()">&times;</button>
@@ -4526,7 +4664,7 @@
               <select id="prod-form-category" style="flex:1; min-width: 0;" required>
                 <!-- Dynamically populated -->
               </select>
-              <button type="button" class="secondary-btn" onclick="promptCreateNewCategory()" style="padding:0 12px; height:42px; border-radius:var(--radius-sm)" title="Add New Category">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="promptCreateNewCategory()" style="padding:0 12px; height:42px; border-radius:var(--radius-sm)" title="Add New Category">
                 <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
               </button>
             </div>
@@ -4538,12 +4676,17 @@
           </div>
 
           <div class="form-group">
-            <label>Barcode SKU Number</label>
+            <label>SKU (Internal Catalog ID)</label>
             <div style="display:flex; gap:8px">
-              <input type="text" id="prod-form-sku" placeholder="e.g. 8901234567011" style="flex:1" oninput="onProductSKUInput(this.value)" required>
-              <button type="button" class="secondary-btn" id="prod-form-sku-gen-btn" onclick="generateRandomSKU()" style="padding:8px" title="Auto-generate SKU">⚡</button>
+              <input type="text" id="prod-form-sku" placeholder="e.g. AIA-GHEE-001" style="flex:1" oninput="onProductSKUInput(this.value)" required>
+              <button type="button" class="btn btn-secondary btn-sm" id="prod-form-sku-gen-btn" onclick="generateRandomSKU()" style="padding:8px" title="Auto-generate SKU">⚡</button>
             </div>
             <small id="prod-form-sku-warning" style="display:none; color:var(--accent-danger); font-weight:700; margin-top:4px; font-size:11px; width:100%"></small>
+          </div>
+
+          <div class="form-group">
+            <label>Primary Retail Barcode <small style="color:var(--text-muted)">(Optional - EAN/UPC)</small></label>
+            <input type="text" id="prod-form-barcode" placeholder="e.g. 8901234567011 (Leave blank if none)">
           </div>
 
           <div class="form-group">
@@ -4579,18 +4722,18 @@
 
           <div class="form-group">
             <label>Brand Name</label>
-            <input type="text" id="prod-form-brand" list="prod-form-brand-list" placeholder="e.g. AIAVRO" value="AIAVRO">
+            <input type="text" id="prod-form-brand" list="prod-form-brand-list" placeholder="e.g. AIAVRO">
             <datalist id="prod-form-brand-list"></datalist>
           </div>
 
           <div class="form-group">
             <label>Supplier Partner</label>
-            <input type="text" id="prod-form-supplier" placeholder="e.g. Golden Ghee Co." value="Golden Ghee Co.">
+            <input type="text" id="prod-form-supplier" placeholder="e.g. Golden Ghee Co.">
           </div>
 
           <div class="form-group">
             <label>Store Location</label>
-            <input type="text" id="prod-form-store" placeholder="e.g. Main Store" value="Main Store">
+            <input type="text" id="prod-form-store" placeholder="e.g. Main Store">
           </div>
           <!-- Product Variants & Alternate Barcodes -->
           <div class="form-group full-width" style="border-top:1px solid var(--border-color); padding-top:15px; margin-top:10px">
@@ -4598,7 +4741,7 @@
             <div id="product-variants-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px">
               <!-- Dynamically rendered variant rows -->
             </div>
-            <button type="button" class="secondary-btn" onclick="addNewProductVariantRow()" style="padding:6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:4px">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addNewProductVariantRow()" style="display:inline-flex; align-items:center; gap:4px">
               ➕ Add Variant / Barcode
             </button>
           </div>
@@ -4611,10 +4754,10 @@
               </div>
               <div style="flex:1; display:flex; flex-direction:column; gap:8px">
                 <div style="display:flex; gap:8px">
-                  <button type="button" class="secondary-btn" onclick="document.getElementById('prod-form-image-file').click()" style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:6px">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('prod-form-image-file').click()" style="display:flex; align-items:center; gap:6px">
                     📷 Choose Image
                   </button>
-                  <button type="button" class="secondary-btn" id="prod-form-image-remove-btn" onclick="removeProductFormImage()" style="padding:6px 12px; font-size:12px; border-color:var(--accent-danger); color:var(--accent-danger); display:none">
+                  <button type="button" class="btn btn-ghost btn-sm" id="prod-form-image-remove-btn" onclick="removeProductFormImage()" style="color:var(--accent-danger); display:none">
                     Remove
                   </button>
                 </div>
@@ -4658,9 +4801,9 @@
           <div class="form-group full-width" id="prod-form-adjustment-section" style="border-top:1px solid var(--border-color); padding-top:15px; margin-top:10px; display:none">
             <label style="font-weight:800; color:var(--text-primary)">Quick Stock Adjustment / Movements</label>
             <div style="display:flex; gap:12px; margin-top:8px">
-              <button type="button" class="secondary-btn" onclick="toggleStockAdjustmentFields('damage')" style="flex:1; padding:8px">⚠️ Log Damage/Loss</button>
-              <button type="button" class="secondary-btn" onclick="toggleStockAdjustmentFields('transfer')" style="flex:1; padding:8px">⇆ Log Stock Transfer</button>
-              <button type="button" class="secondary-btn" onclick="toggleStockAdjustmentFields('manual')" style="flex:1; padding:8px">🔧 Log Manual Adjustment</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="toggleStockAdjustmentFields('damage')" style="flex:1">⚠️ Log Damage/Loss</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="toggleStockAdjustmentFields('transfer')" style="flex:1">⇆ Log Stock Transfer</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="toggleStockAdjustmentFields('manual')" style="flex:1">🔧 Log Manual Adjustment</button>
             </div>
             
             <div id="adjustment-fields-damage" style="display:none; margin-top:12px; background:rgba(0,0,0,0.02); padding:12px; border-radius:8px">
@@ -4702,8 +4845,8 @@
           </div>
 
           <div class="modal-footer full-width" style="border:none; padding:15px 0 0 0">
-            <button type="button" class="secondary-btn" onclick="closeProductModal()">Cancel</button>
-            <button type="submit" class="primary-btn">Save Product</button>
+            <button type="button" class="btn btn-ghost" onclick="closeProductModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Product</button>
           </div>
         </form>
       </div>
@@ -6362,7 +6505,7 @@
           state.products[idx] = product;
         }
         renderPOSProducts();
-        renderProductsTable();
+        renderInventoryTable();
       };
       syncSocket.on('product.created', handleProductCreated);
       syncSocket.on('product_created', handleProductCreated);
@@ -6380,7 +6523,7 @@
           state.products.push(product);
         }
         renderPOSProducts();
-        renderProductsTable();
+        renderInventoryTable();
         if (state.activeView === 'dashboard') {
           initDashboardAnalytics();
         }
@@ -9117,6 +9260,8 @@
     }
 
     /* ==================== INVENTORY & EXPIRY DETAILS ==================== */
+    const renderProductsTable = function(data) { return renderInventoryTable(data); };
+
     function renderInventoryTable(filteredData = null) {
       const tbody = document.getElementById("inventory-table-body");
       tbody.innerHTML = "";
@@ -9179,13 +9324,9 @@
         return;
       }
 
-      list.forEach(p => {
-        const isLow = p.stock <= p.reorder;
-        const isOut = p.stock <= 0;
-        let stockBadge = `<span class="status-badge in-stock">High stock</span>`;
-        if (isOut) stockBadge = `<span class="status-badge out-of-stock">Out of stock</span>`;
-        else if (isLow) stockBadge = `<span class="status-badge low-stock">Low stock</span>`;
+      const formatVal = (num) => window.AppUI ? window.AppUI.formatCurrency(num) : `₹${Number(num || 0).toFixed(2)}`;
 
+      list.forEach(p => {
         let statusBadge = "";
         const pStatus = p.status || "active";
         if (pStatus === "active") {
@@ -9196,14 +9337,18 @@
           statusBadge = `<span class="status-badge low-stock" style="background:var(--accent-gold); color:#000; padding:2px 6px; font-size:10px">Onboarding</span>`;
         }
 
+        const sellingModeStr = p.sellingMode === 'loose' ? '⚖️ Loose' : 'Packaged';
+        const barcodeDisplay = p.barcode ? `<code class="badge-mono" style="font-size:11px">${escapeHTML(p.barcode)}</code>` : `<span style="color:var(--text-muted)">—</span>`;
+
         let actionButtons = `
           <div style="display:flex; gap:6px; justify-content:center">
-            <button class="secondary-btn" style="padding:4px 8px; font-size:11px" onclick="editProductRow('${p.id}')">Edit</button>
-            <button class="secondary-btn" style="padding:4px 8px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="deleteProductRow('${p.id}')">Delete</button>
+            <button class="btn btn-ghost btn-sm" style="padding:3px 6px; font-size:11px" onclick="openProductDetailsModal('${p.id}')" title="View Full Details">👁️</button>
+            <button class="btn btn-secondary btn-sm" style="padding:3px 8px; font-size:11px" onclick="editProductRow('${p.id}')">Edit</button>
+            <button class="btn btn-ghost btn-sm" style="padding:3px 6px; font-size:11px; color:var(--accent-danger)" onclick="deleteProductRow('${p.id}')" title="Archive Product">🗑️</button>
           </div>
         `;
         if (state.currentUser && (getUserCategory(state.currentUser) === 'employee' || getUserCategory(state.currentUser) === 'auditor')) {
-          actionButtons = `<span style="font-size:11px; color:var(--text-muted)">Read-Only</span>`;
+          actionButtons = `<button class="btn btn-ghost btn-sm" style="padding:3px 6px; font-size:11px" onclick="openProductDetailsModal('${p.id}')" title="View Details">👁️ View</button>`;
         }
 
         const row = document.createElement("tr");
@@ -9213,20 +9358,17 @@
               <img src="${escapeHTML(p.image || '/uploads/system/default-product.webp')}" loading="lazy" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'16\' height=\'16\' fill=\'%23888\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\'/></svg>'">
             </div>
           </td>
-          <td><code style="font-weight:700; color:var(--accent-green)">${escapeHTML(p.sku)}</code></td>
+          <td><code class="badge-mono" style="font-weight:700; color:var(--accent-green)">${escapeHTML(p.sku)}</code></td>
+          <td>${barcodeDisplay}</td>
           <td>
             <strong>${escapeHTML(p.name)}</strong>
-            <small style="color:var(--text-muted); display:block">Size: ${escapeHTML(p.unit)} | GST: ${p.gst !== undefined ? p.gst : 5}%</small>
+            <small style="color:var(--text-muted); display:block">Size: ${escapeHTML(p.unit || 'Unit')} | GST: ${p.gst !== undefined ? p.gst : 5}%</small>
           </td>
-          <td>${p.brand ? escapeHTML(p.brand) : 'AIAVRO'}</td>
-          <td>${escapeHTML(p.category)}</td>
-          <td>${p.supplier ? escapeHTML(p.supplier) : 'Golden Ghee Co.'}</td>
-          <td style="text-align:right">₹${safeFixed(p.cost, 2)}</td>
-          <td style="text-align:right">₹${safeFixed(p.price, 2)}</td>
-          <td style="text-align:right">
-            <strong>${Number.isInteger(Number(p.stock)) ? (p.stock !== undefined ? p.stock.toString() : '0') : safeFixed(p.stock, 2)} ${p.sellingMode === 'loose' ? escapeHTML(p.unit || 'kg') : 'Units'}</strong>
-            <small style="display:block">${stockBadge}</small>
-          </td>
+          <td>${escapeHTML(p.category || '—')}</td>
+          <td>${p.brand ? escapeHTML(p.brand) : '—'}</td>
+          <td style="text-align:right" class="tabular-numeric">${formatVal(p.cost || p.purchasePrice)}</td>
+          <td style="text-align:right" class="tabular-numeric" style="font-weight:700; color:var(--accent-green)">${formatVal(p.price || p.sellingPrice)}</td>
+          <td style="text-align:center"><span class="badge-mono" style="font-size:10px">${sellingModeStr}</span></td>
           <td style="text-align:center">${statusBadge}</td>
           <td>
             ${actionButtons}
@@ -9447,6 +9589,105 @@
       container.appendChild(row);
     }
 
+    let currentDetailProductId = null;
+
+    function openProductDetailsModal(id) {
+      const prod = state.products.find(p => p.id === id);
+      if (!prod) return;
+      currentDetailProductId = id;
+
+      const formatVal = (num) => window.AppUI ? window.AppUI.formatCurrency(num) : `₹${Number(num || 0).toFixed(2)}`;
+
+      document.getElementById("prod-detail-image").src = prod.image || '/uploads/system/default-product.webp';
+      document.getElementById("prod-detail-name").innerText = prod.name;
+      
+      // Status badges
+      const statusBadge = document.getElementById("prod-detail-status-badge");
+      const pStatus = prod.status || 'active';
+      statusBadge.innerText = pStatus.toUpperCase();
+      statusBadge.className = `status-badge ${pStatus === 'active' ? 'in-stock' : (pStatus === 'inactive' ? 'out-of-stock' : 'low-stock')}`;
+
+      document.getElementById("prod-detail-selling-mode-badge").innerText = (prod.sellingMode || 'packaged').toUpperCase();
+      document.getElementById("prod-detail-type-badge").innerText = (prod.type || 'OWN').toUpperCase();
+
+      // Identifiers
+      document.getElementById("prod-detail-sku").innerText = prod.sku || '—';
+      document.getElementById("prod-detail-barcode").innerText = prod.barcode || '— (No retail barcode)';
+
+      // Alternate barcodes
+      const altContainer = document.getElementById("prod-detail-barcodes-list-container");
+      const altList = document.getElementById("prod-detail-barcodes-list");
+      if (prod.barcodes && Array.isArray(prod.barcodes) && prod.barcodes.length > 0) {
+        altList.innerHTML = prod.barcodes.map(b => `<span class="badge-mono" style="font-size:11px; padding:3px 6px">${escapeHTML(b.variantName || 'Alt')}: ${escapeHTML(b.barcode)}</span>`).join('');
+        altContainer.style.display = 'block';
+      } else {
+        altContainer.style.display = 'none';
+      }
+
+      // Classification
+      document.getElementById("prod-detail-category").innerText = prod.category || '—';
+      document.getElementById("prod-detail-brand").innerText = prod.brand || '—';
+      document.getElementById("prod-detail-supplier").innerText = prod.supplier || '—';
+      document.getElementById("prod-detail-unit").innerText = prod.unit || '—';
+      document.getElementById("prod-detail-weight-unit").innerText = prod.weightUnit || (prod.sellingMode === 'loose' ? 'g' : '—');
+      document.getElementById("prod-detail-gst").innerText = `${prod.gst !== undefined ? prod.gst : 5}%`;
+
+      // Commercial
+      const costVal = parseFloat(prod.cost || prod.purchasePrice || 0);
+      const priceVal = parseFloat(prod.price || prod.sellingPrice || 0);
+      document.getElementById("prod-detail-cost").innerText = formatVal(costVal);
+      document.getElementById("prod-detail-price").innerText = formatVal(priceVal);
+      
+      const margin = getProductProfitMargin(prod);
+      const marginEl = document.getElementById("prod-detail-margin");
+      marginEl.innerText = `${margin.marginPct.toFixed(1)}%`;
+      marginEl.style.color = margin.isLoss ? 'var(--accent-danger)' : 'var(--accent-green)';
+
+      // Freshness & Shelf-Life
+      document.getElementById("prod-detail-dom").innerText = prod.dom || '—';
+      document.getElementById("prod-detail-doe").innerText = prod.doe || '—';
+      
+      const expiry = getExpiryMetrics(prod.doe);
+      const expBadge = document.getElementById("prod-detail-expiry-badge");
+      if (!prod.doe) {
+        expBadge.innerText = 'No Expiry Set';
+        expBadge.className = 'status-badge';
+      } else if (!expiry.ok) {
+        expBadge.innerText = 'EXPIRED';
+        expBadge.className = 'status-badge out-of-stock';
+      } else if (expiry.days <= 30 && expiry.days !== 9999) {
+        expBadge.innerText = `Expires in ${expiry.days}d`;
+        expBadge.className = 'status-badge low-stock';
+      } else {
+        expBadge.innerText = 'Fresh';
+        expBadge.className = 'status-badge in-stock';
+      }
+
+      document.getElementById("product-details-modal").classList.add("active");
+    }
+
+    function closeProductDetailsModal() {
+      document.getElementById("product-details-modal").classList.remove("active");
+      currentDetailProductId = null;
+    }
+
+    function editProductFromDetails() {
+      const id = currentDetailProductId;
+      closeProductDetailsModal();
+      if (id) openProductModal(id);
+    }
+
+    function printBarcodeFromDetails() {
+      const id = currentDetailProductId;
+      closeProductDetailsModal();
+      if (id) openBarcodeSheetGeneratorModal(id);
+    }
+
+    function navigateToProductInventory() {
+      closeProductDetailsModal();
+      switchView('inventory');
+    }
+
     function openProductModal(id = null) {
       document.getElementById("product-modal").classList.add("active");
       const title = document.getElementById("product-modal-title");
@@ -9457,36 +9698,30 @@
       document.getElementById("prod-form-gst").value = "12"; // Default GST
       document.getElementById("product-variants-container").innerHTML = "";
 
-      // Dynamically populate category select dropdown
+      // Dynamically populate category select dropdown from real catalog
       const select = document.getElementById("prod-form-category");
-      const presetCategories = ["Dairy & Ghee", "Loose & Fresh Items", "Cold Pressed Oils", "Organic Spreads", "Farm Spices", "Organic Sweeteners"];
-      const systemCategories = [...new Set(state.products.map(p => p.category))];
-      const allCategories = [...new Set([...presetCategories, ...systemCategories])].filter(c => c && c.trim());
+      const systemCategories = [...new Set(state.products.map(p => p.category))].filter(c => c && c.trim());
       
-      select.innerHTML = "";
-      allCategories.forEach(cat => {
+      select.innerHTML = '<option value="">-- Select Category --</option>';
+      systemCategories.forEach(cat => {
         const opt = document.createElement("option");
         opt.value = cat;
         opt.innerText = cat;
         select.appendChild(opt);
       });
 
-      // Dynamically populate brand datalist
+      // Dynamically populate brand datalist from real catalog
       const brandDatalist = document.getElementById("prod-form-brand-list");
       if (brandDatalist) {
-        const presetBrands = ["VC Organic", "AIAVRO", "External"];
-        const systemBrands = [...new Set(state.products.map(p => p.brand))];
-        const allBrands = [...new Set([...presetBrands, ...systemBrands])].filter(b => b && b.trim());
-        brandDatalist.innerHTML = allBrands.map(b => `<option value="${b}"></option>`).join("");
+        const systemBrands = [...new Set(state.products.map(p => p.brand))].filter(b => b && b.trim());
+        brandDatalist.innerHTML = systemBrands.map(b => `<option value="${b}"></option>`).join("");
       }
 
-      // Dynamically populate unit datalist
+      // Dynamically populate unit datalist from real catalog
       const unitDatalist = document.getElementById("prod-form-unit-list");
       if (unitDatalist) {
-        const presetUnits = ["per kg", "per Liter", "250g Cup", "500g Cup", "1 Unit", "1 Liter Jars", "500ml Bottle"];
-        const systemUnits = [...new Set(state.products.map(p => p.unit))];
-        const allUnits = [...new Set([...presetUnits, ...systemUnits])].filter(u => u && u.trim());
-        unitDatalist.innerHTML = allUnits.map(u => `<option value="${u}"></option>`).join("");
+        const systemUnits = [...new Set(state.products.map(p => p.unit))].filter(u => u && u.trim());
+        unitDatalist.innerHTML = systemUnits.map(u => `<option value="${u}"></option>`).join("");
       }
 
       // Reset warnings
@@ -9497,29 +9732,31 @@
         const prod = state.products.find(p => p.id === id);
         if (prod) {
           document.getElementById("prod-form-id").value = prod.id;
-          document.getElementById("prod-form-name").value = prod.name;
-          document.getElementById("prod-form-category").value = prod.category;
+          document.getElementById("prod-form-name").value = prod.name || '';
+          document.getElementById("prod-form-category").value = prod.category || '';
           document.getElementById("prod-form-emoji").value = prod.emoji || '';
-          document.getElementById("prod-form-sku").value = prod.sku;
-          document.getElementById("prod-form-unit").value = prod.unit;
-          document.getElementById("prod-form-cost").value = prod.cost;
-          document.getElementById("prod-form-price").value = prod.price;
+          document.getElementById("prod-form-sku").value = prod.sku || '';
+          const barcodeInput = document.getElementById("prod-form-barcode");
+          if (barcodeInput) barcodeInput.value = prod.barcode || '';
+          document.getElementById("prod-form-unit").value = prod.unit || '';
+          document.getElementById("prod-form-cost").value = prod.cost !== undefined ? prod.cost : (prod.purchasePrice || 0);
+          document.getElementById("prod-form-price").value = prod.price !== undefined ? prod.price : (prod.sellingPrice || 0);
           
           // Prevent manual stock editing in edit mode
           const stockInput = document.getElementById("prod-form-stock");
-          stockInput.value = prod.stock;
+          stockInput.value = prod.stock !== undefined ? prod.stock : 0;
           stockInput.disabled = true;
           stockInput.style.backgroundColor = "var(--bg-primary)";
 
-          document.getElementById("prod-form-reorder").value = prod.reorder;
+          document.getElementById("prod-form-reorder").value = prod.reorder !== undefined ? prod.reorder : 10;
           document.getElementById("prod-form-dom").value = prod.dom || '';
           document.getElementById("prod-form-doe").value = prod.doe || '';
           document.getElementById("prod-form-gst").value = prod.gst !== undefined ? prod.gst : 5;
           
-          document.getElementById("prod-form-brand").value = prod.brand || 'AIAVRO';
-          document.getElementById("prod-form-supplier").value = prod.supplier || 'Golden Ghee Co.';
+          document.getElementById("prod-form-brand").value = prod.brand || '';
+          document.getElementById("prod-form-supplier").value = prod.supplier || '';
           document.getElementById("prod-form-maxstock").value = prod.maxStock !== undefined ? prod.maxStock : 100;
-          document.getElementById("prod-form-store").value = prod.store || 'Main Store';
+          document.getElementById("prod-form-store").value = prod.store || '';
           const imagePath = prod.image || '/uploads/system/default-product.webp';
           document.getElementById("prod-form-image-path").value = imagePath;
           document.getElementById("prod-form-image-preview").src = imagePath;
@@ -9548,7 +9785,7 @@
           onSellingModeToggle();
 
           // Set product type radio buttons
-          const prodType = prod.type || (prod.sku.startsWith("AIA") ? "own" : "external");
+          const prodType = prod.type || (prod.sku && prod.sku.startsWith("AIA") ? "own" : "external");
           if (prodType === "own") {
             document.getElementById("prod-form-type-own").checked = true;
           } else {
@@ -9557,7 +9794,7 @@
           // Disable type change on edit
           document.getElementsByName("prod-form-type").forEach(el => el.disabled = true);
           
-          // Disable barcode edit on edit (fixed key)
+          // Disable SKU edit on edit (fixed key)
           document.getElementById("prod-form-sku").readOnly = true;
           document.getElementById("prod-form-sku").style.backgroundColor = "var(--bg-primary)";
           document.getElementById("prod-form-sku-gen-btn").style.display = "none";
@@ -9584,6 +9821,9 @@
         stockInput.disabled = false;
         stockInput.style.backgroundColor = "";
 
+        const barcodeInput = document.getElementById("prod-form-barcode");
+        if (barcodeInput) barcodeInput.value = '';
+
         // Trigger type toggle to generate AIA SKU
         onProductTypeToggle();
         
@@ -9595,10 +9835,10 @@
         document.getElementById("prod-form-dom").value = todayStr;
         document.getElementById("prod-form-doe").value = doeStr;
 
-        document.getElementById("prod-form-brand").value = 'AIAVRO';
-        document.getElementById("prod-form-supplier").value = 'Golden Ghee Co.';
+        document.getElementById("prod-form-brand").value = '';
+        document.getElementById("prod-form-supplier").value = '';
         document.getElementById("prod-form-maxstock").value = '100';
-        document.getElementById("prod-form-store").value = 'Main Store';
+        document.getElementById("prod-form-store").value = '';
         document.getElementById("prod-form-image-path").value = '/uploads/system/default-product.webp';
         document.getElementById("prod-form-image-preview").src = '/uploads/system/default-product.webp';
         const removeBtn = document.getElementById("prod-form-image-remove-btn");
@@ -9630,7 +9870,6 @@
       document.getElementById("pos-verify-image").src = product.image || '/uploads/system/default-product.webp';
       document.getElementById("pos-verify-name").innerText = product.name;
       document.getElementById("pos-verify-sku").innerText = `SKU: ${product.sku}`;
-      // Assume cost * 1.3 as MRP or pricing
       const mrpVal = product.cost ? product.cost * 1.3 : product.price * 1.2;
       document.getElementById("pos-verify-mrp").innerText = `₹${mrpVal.toFixed(2)}`;
       document.getElementById("pos-verify-price").innerText = `₹${product.price.toFixed(2)}`;
@@ -9737,6 +9976,9 @@
       const category = document.getElementById("prod-form-category").value;
       const emoji = document.getElementById("prod-form-emoji").value;
       const sku = document.getElementById("prod-form-sku").value;
+      const rawBarcode = document.getElementById("prod-form-barcode") ? document.getElementById("prod-form-barcode").value.trim() : "";
+      const barcodeVal = rawBarcode ? rawBarcode : undefined;
+
       const unit = document.getElementById("prod-form-unit").value;
       const cost = parseFloat(document.getElementById("prod-form-cost").value);
       const price = parseFloat(document.getElementById("prod-form-price").value);
@@ -9746,10 +9988,10 @@
       const doe = document.getElementById("prod-form-doe").value;
       const gst = parseInt(document.getElementById("prod-form-gst").value) || 0;
 
-      const brand = document.getElementById("prod-form-brand").value.trim() || "AIAVRO";
-      const supplier = document.getElementById("prod-form-supplier").value.trim() || "Golden Ghee Co.";
+      const brand = document.getElementById("prod-form-brand").value.trim() || "";
+      const supplier = document.getElementById("prod-form-supplier").value.trim() || "";
       const maxStock = parseFloat(document.getElementById("prod-form-maxstock").value) || 100;
-      const store = document.getElementById("prod-form-store").value.trim() || "Main Store";
+      const store = document.getElementById("prod-form-store").value.trim() || "";
       const image = document.getElementById("prod-form-image-path").value.trim() || "/uploads/system/default-product.webp";
       const images = [image];
       const status = document.getElementById("prod-form-status").value || "active";
@@ -9779,15 +10021,17 @@
       const variantRows = document.querySelectorAll("#product-variants-container > div");
       const barcodes = [];
       variantRows.forEach(row => {
-        const barcodeVal = row.querySelector(".variant-barcode-input").value.trim();
-        const nameVal = row.querySelector(".variant-name-input").value.trim();
+        const barcodeInput = row.querySelector(".variant-barcode-input");
+        const nameInput = row.querySelector(".variant-name-input");
+        const barcodeVal = barcodeInput ? barcodeInput.value.trim() : "";
+        const nameVal = nameInput ? nameInput.value.trim() : "";
         if (barcodeVal && nameVal) {
           barcodes.push({ barcode: barcodeVal, variantName: nameVal });
         }
       });
 
       const weightUnit = sellingMode === 'loose' ? (document.getElementById('prod-form-weight-unit').value || 'g') : undefined;
-      const prod = { id: id || undefined, name, category, emoji, sku, barcode: sku, unit, cost, price, stock, reorder, maxStock, brand, supplier, store, image, images, status, dom, doe, gst, type, sellingMode, weightUnit, barcodes };
+      const prod = { id: id || undefined, name, category, emoji, sku, barcode: barcodeVal, unit, cost, price, stock, reorder, maxStock, brand, supplier, store, image, images, status, dom, doe, gst, type, sellingMode, weightUnit, barcodes };
 
       try {
         const result = await api.products.save(prod);
@@ -9810,7 +10054,8 @@
             state.onboardingForPurchaseBarcode = null;
           }
         } else {
-          triggerAlert(result.message || "Failed to save product profile.", "danger");
+          const errMsg = result.error?.message || result.message || "Failed to save product profile.";
+          triggerAlert(errMsg, "danger");
         }
       } catch (err) {
         triggerAlert("Error connecting to server gateway.", "danger");
@@ -11699,12 +11944,12 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
     }
 
     /* ==================== BARCODE / QR SHEET PRINT GENERATOR ==================== */
-    function openBarcodeSheetGeneratorModal() {
+    function openBarcodeSheetGeneratorModal(targetProductId = null) {
       document.getElementById("barcode-sheet-modal").classList.add("active");
       document.getElementById("barcode-modal-search").value = "";
       
       const selectAllChk = document.getElementById("barcode-select-all-chk");
-      if (selectAllChk) selectAllChk.checked = true;
+      if (selectAllChk) selectAllChk.checked = !targetProductId;
       
       const selectBox = document.getElementById("barcode-selector-items-box");
       selectBox.innerHTML = "";
@@ -11722,19 +11967,20 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         itemRow.style.transition = "background-color 0.2s";
 
         const expStr = p.doe ? `Exp: ${p.doe}` : "No Expiry";
+        const isChecked = targetProductId ? p.id === targetProductId : true;
 
         itemRow.innerHTML = `
-          <input type="checkbox" value="${p.id}" class="barcode-sheet-chk" checked onchange="buildBarcodeStickerGrid()" style="cursor:pointer">
+          <input type="checkbox" value="${p.id}" class="barcode-sheet-chk" ${isChecked ? 'checked' : ''} onchange="buildBarcodeStickerGrid()" style="cursor:pointer">
           <div style="display:flex; flex-direction:column; min-width:0; flex:1">
             <span style="font-size:12px; font-weight:700; color:var(--text-primary); display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
               ${getProductListThumbnailHtml(p, 20)}
-              <span>${p.name}</span>
+              <span>${escapeHTML(p.name)}</span>
             </span>
-            <small style="font-size:10px; color:var(--text-muted)">SKU: ${p.sku} | <span style="color:var(--accent-gold); font-weight:600">${expStr}</span></small>
+            <small style="font-size:10px; color:var(--text-muted)">SKU: ${escapeHTML(p.sku)} | Barcode: ${p.barcode ? escapeHTML(p.barcode) : '—'} | <span style="color:var(--accent-gold); font-weight:600">${expStr}</span></small>
           </div>
           <div style="display:flex; align-items:center; gap:6px; margin-left:auto">
             <span style="font-size:10px; color:var(--text-muted)">Qty:</span>
-            <input type="number" class="barcode-sheet-qty" value="3" min="1" max="50" oninput="buildBarcodeStickerGrid()" style="width:55px; padding:4px; font-size:12px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-panel); color:var(--text-primary); text-align:center">
+            <input type="number" class="barcode-sheet-qty" value="${targetProductId && p.id === targetProductId ? '8' : '3'}" min="1" max="50" oninput="buildBarcodeStickerGrid()" style="width:55px; padding:4px; font-size:12px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-panel); color:var(--text-primary); text-align:center">
           </div>
         `;
         selectBox.appendChild(itemRow);

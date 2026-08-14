@@ -57,9 +57,12 @@ graph LR
 - Implemented keyboard-first checkout (`F9`, `Enter`, `Escape`), duplicate click locking protection, inline cart quantity editing, and direct 58mm/A4 thermal print integration.
 - Verified with 128/128 passing automated test cases.
 
-#### Phase E — Product Master & Barcode Center
-- Implement clean Product Master table with search, category filtering, and status toggles.
-- Add `ProductFormDrawer` and multi-layout `BarcodeLabelSheet` generator.
+#### Phase E — Product Master & Barcode Center [✅ COMPLETED]
+- Redesigned Product Master directory table with tabular pricing, distinct SKU and Barcode columns, and clean action buttons.
+- Implemented comprehensive `ProductDetailsModal` (identifiers, commercial pricing, margin %, freshness tracker, authoritative inventory link).
+- Redesigned 8-section `ProductModal` with separate internal SKU and primary retail barcode, dynamic catalog datalists, loose-weight unit selectors, and image upload.
+- Implemented multi-layout Barcode Label Sheet Generator (50x25mm, 38x25mm, A4 24-up, A4 40-up).
+- Verified with 140/140 passing automated test cases across all test suites.
 
 #### Phase F — Master Inventory & Stock Transfers
 - Implement Store-scoped inventory overview with real-time stock adjustment and inter-store transfer modal.
