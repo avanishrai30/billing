@@ -56,6 +56,12 @@ async function request(url, options = {}) {
       ? url
       : `${baseUrl}${url}`;
 
+    const isLoginRequest = targetUrl.endsWith('/api/v1/auth/login') || targetUrl.endsWith('/auth/login');
+
+    if (isLoginRequest) {
+      console.log(`[Auth] Login endpoint: /api/v1/auth/login`);
+    }
+
     const res = await fetch(targetUrl, {
       ...options,
       headers,
@@ -63,35 +69,59 @@ async function request(url, options = {}) {
     });
     clearTimeout(timeoutId);
 
-    if (res.status === 401) {
-      console.warn("[API] Unauthorized (401), logging out...");
+    if (isLoginRequest) {
+      console.log(`[Auth] Login response status: ${res.status}`);
+    }
+
+    // Only treat 401 as session expiration when the request is made with an existing authenticated session (NOT login)
+    if (res.status === 401 && !isLoginRequest) {
+      console.warn("[API] Session expired or unauthorized (401), logging out...");
       localStorage.removeItem("aiavro_jwt_token");
       localStorage.removeItem("aiavro_logged_in_user");
       if (typeof initAuthentication === 'function') {
         initAuthentication();
       }
-      throw new Error("Session expired. Please log in again.");
+      const err = new Error("Session expired. Please log in again.");
+      err.code = "SESSION_EXPIRED";
+      err.status = 401;
+      throw err;
     }
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.message || `HTTP error! Status: ${res.status}`);
+      const errMsg = errData.error?.message || errData.message || (isLoginRequest && res.status === 401 ? "Invalid username or password" : `HTTP error! Status: ${res.status}`);
+      const err = new Error(errMsg);
+      err.code = errData.error?.code || (res.status === 401 ? 'UNAUTHORIZED' : (res.status === 403 ? 'FORBIDDEN' : 'API_ERROR'));
+      err.status = res.status;
+      err.data = errData;
+      throw err;
     }
 
     return await res.json();
   } catch (err) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
-      throw new Error("Request timeout. Please check your connection.");
+      const timeoutErr = new Error("Request timeout. Please check your connection.");
+      timeoutErr.code = "TIMEOUT";
+      throw timeoutErr;
     }
     throw err;
   }
 }
 
 // Global api namespace
-window.api = {
-  request,
-  getBaseUrl: getApiBaseUrl,
-  resolveBackendUrl
-};
-window.resolveBackendUrl = resolveBackendUrl;
+if (typeof window !== 'undefined') {
+  window.api = window.api || {};
+  window.api.request = request;
+  window.api.getBaseUrl = getApiBaseUrl;
+  window.api.resolveBackendUrl = resolveBackendUrl;
+  window.resolveBackendUrl = resolveBackendUrl;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    request,
+    getApiBaseUrl,
+    resolveBackendUrl
+  };
+}

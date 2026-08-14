@@ -6722,9 +6722,15 @@
       } catch (err) {
         console.error("[Login Error]", err);
         if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Authenticate & Enter"; }
-        const details = err.message ? `: ${err.message}` : '';
-        errorDiv.innerHTML = `❌ Failed to connect to server gateway (${state.backendUrl})${details}. Check network/CORS.`;
+        if (err.status === 401 || err.status === 403 || err.code === 'INVALID_CREDENTIALS' || err.code === 'ACCOUNT_SUSPENDED') {
+          errorDiv.innerHTML = `❌ ${err.message || "Invalid username or password"}`;
+        } else {
+          const details = err.message ? `: ${err.message}` : '';
+          errorDiv.innerHTML = `❌ Failed to connect to server gateway (${state.backendUrl})${details}. Check network/CORS.`;
+        }
         errorDiv.style.display = "block";
+        const card = document.querySelector(".login-card");
+        if (card) { card.style.animation = "shake 0.4s ease"; setTimeout(() => card.style.animation = "", 500); }
       }
     }
 
