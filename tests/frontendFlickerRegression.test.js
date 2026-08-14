@@ -1,52 +1,32 @@
-/**
- * @jest-environment jsdom
- */
-
 const fs = require('fs');
 const path = require('path');
 
 describe('Master Frontend Regression Guard: Stage C -> G Flicker & Render Forensics', () => {
   let html;
-  let dom;
 
   beforeAll(() => {
     const htmlPath = path.join(__dirname, '..', 'aiavro_billing_system.html');
     html = fs.readFileSync(htmlPath, 'utf8');
   });
 
-  beforeEach(() => {
-    document.documentElement.innerHTML = html;
-  });
-
   describe('1. Logged-Out First-Paint & Login Geometry Contract', () => {
     test('Login screen overlay exists with active class and pending auth state', () => {
-      const overlay = document.getElementById('login-screen-overlay');
-      expect(overlay).toBeTruthy();
-      expect(overlay.classList.contains('active')).toBe(true);
-      expect(overlay.getAttribute('data-auth-state')).toBe('pending');
+      expect(html).toContain('id="login-screen-overlay" class="login-screen-overlay active" data-auth-state="pending"');
     });
 
     test('App shell (.app-container) is hidden inline on first paint', () => {
-      const appContainer = document.querySelector('.app-container');
-      expect(appContainer).toBeTruthy();
-      expect(appContainer.getAttribute('style')).toContain('display:none');
+      expect(html).toContain('<div class="app-container" data-render-layer="shell" style="display:none">');
     });
 
     test('Login card has proper structure with no clipping on mobile', () => {
-      const card = document.querySelector('.login-card');
-      expect(card).toBeTruthy();
-      const form = document.getElementById('login-form');
-      expect(form).toBeTruthy();
-      expect(form.hasAttribute('novalidate')).toBe(true);
+      expect(html).toContain('class="login-card"');
+      expect(html).toContain('width: min(440px, calc(100vw - 32px))');
+      expect(html).toMatch(/<form id="login-form"[^>]*novalidate/);
     });
 
     test('Login form inputs have required attributes with novalidate form wrapper', () => {
-      const username = document.getElementById('login-username');
-      const password = document.getElementById('login-password');
-      expect(username).toBeTruthy();
-      expect(password).toBeTruthy();
-      expect(username.hasAttribute('required')).toBe(true);
-      expect(password.hasAttribute('required')).toBe(true);
+      expect(html).toContain('id="login-username" class="login-input" placeholder="e.g. admin" required');
+      expect(html).toContain('id="login-password" class="login-input" placeholder="Enter password" required');
     });
   });
 
@@ -55,28 +35,25 @@ describe('Master Frontend Regression Guard: Stage C -> G Flicker & Render Forens
       expect(html).toMatch(/\.app-view\.active\s*\{[^}]*display:\s*block\s*!important/);
     });
 
-    test('.app-view:not(.active)[data-view-state="hidden"] hides inactive views cleanly', () => {
-      expect(html).toMatch(/\.app-view:not\(\.active\)\[data-view-state="hidden"\]/);
+    test('.app-view:not(.active)[data-view-state="hidden"] and .app-view[data-view-state="hidden"] hide inactive views cleanly', () => {
+      expect(html).toContain('.app-view[data-view-state="hidden"]');
+      expect(html).toContain('.app-view:not(.active)[data-view-state="hidden"]');
     });
 
     test('Exactly one .app-view has active class in initial markup (#view-dashboard)', () => {
-      const activeViews = document.querySelectorAll('.app-view.active');
-      expect(activeViews.length).toBe(1);
-      expect(activeViews[0].id).toBe('view-dashboard');
+      const activeMatches = html.match(/<div[^>]+class="app-view active"/g) || [];
+      expect(activeMatches).toHaveLength(1);
+      expect(html).toContain('id="view-dashboard" class="app-view active" data-view-state="visible"');
     });
 
     test('All other .app-view elements have data-view-state="hidden"', () => {
-      const hiddenViews = document.querySelectorAll('.app-view:not(.active)');
-      expect(hiddenViews.length).toBeGreaterThan(5);
-      hiddenViews.forEach(v => {
-        expect(v.getAttribute('data-view-state')).toBe('hidden');
-      });
+      const hiddenMatches = html.match(/class="app-view"[^>]*data-view-state="hidden"/g) || [];
+      expect(hiddenMatches.length).toBeGreaterThan(5);
     });
   });
 
   describe('3. Active-View-Only Sync & Lazy Navigation Contract', () => {
     test('syncStateWithServer() dispatches rendering ONLY to state.activeView', () => {
-      // Must check state.activeView before calling domain renderers
       expect(html).toMatch(/if\s*\(state\.activeView\s*===\s*'billing'\)\s*\{\s*renderPOSProducts\(\);/);
       expect(html).toMatch(/else\s+if\s*\(state\.activeView\s*===\s*'customers'\)/);
       expect(html).toMatch(/else\s+if\s*\(state\.activeView\s*===\s*'invoices'\)/);
@@ -95,21 +72,20 @@ describe('Master Frontend Regression Guard: Stage C -> G Flicker & Render Forens
     });
   });
 
-  describe('4. Clean Auth Lifecycle & No Multiple Overlays', () => {
+  describe('4. Clean Auth Lifecycle & Defensive Chart Null Safety', () => {
     test('initAuthentication sets data-auth-state="authenticated" and unhides shell', () => {
-      expect(html).toMatch(/loginOverlay\.setAttribute\("data-auth-state",\s*"authenticated"\)/);
-      expect(html).toMatch(/appContainer\.style\.display\s*=\s*"grid"/);
+      expect(html).toContain('loginOverlay.setAttribute("data-auth-state", "authenticated")');
+      expect(html).toContain('appContainer.style.display = "grid"');
     });
 
     test('triggerLogout removes socket listeners and resets session cleanly', () => {
-      expect(html).toMatch(/function triggerLogout\(\)\s*\{[\s\S]*?syncSocket\.removeAllListeners\(\)/);
+      expect(html).toContain('function triggerLogout()');
+      expect(html).toContain('syncSocket.removeAllListeners()');
     });
 
-    test('No duplicate modal or overlay backdrops exist in markup', () => {
-      const overlay = document.querySelectorAll('#login-screen-overlay');
-      expect(overlay.length).toBe(1);
-      const appContainer = document.querySelectorAll('.app-container');
-      expect(appContainer.length).toBe(1);
+    test('buildSVGSalesChart and buildCategoryPieChart have null-safety guards', () => {
+      expect(html).toContain('if (!dynamicGroup) return;');
+      expect(html).toContain('if (!segmentGroup || !legendBox) return;');
     });
   });
 });

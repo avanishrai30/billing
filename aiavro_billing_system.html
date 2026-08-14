@@ -517,6 +517,7 @@
       transition: opacity var(--transition-normal), transform var(--transition-normal);
     }
 
+    .app-view[data-view-state="hidden"],
     .app-view:not(.active)[data-view-state="hidden"],
     .app-view:not(.active) {
       display: none;
@@ -15597,6 +15598,9 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       const legendBox = document.getElementById("donut-legend-box");
       if (!segmentGroup || !legendBox) return;
 
+      segmentGroup.innerHTML = "";
+      legendBox.innerHTML = "";
+
       const catSales = {};
       let totalSalesSum = 0;
 
@@ -15616,13 +15620,6 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
           });
         }
       });
-
-      document.getElementById("donut-sales-count").innerText = "₹0.00";
-
-      const segmentGroup = document.getElementById("donut-dynamic-segments");
-      const legendBox = document.getElementById("donut-legend-box");
-      segmentGroup.innerHTML = "";
-      legendBox.innerHTML = "";
 
       // Force zero categories for dashboard privacy
       const categories = [];
