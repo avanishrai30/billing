@@ -6292,6 +6292,23 @@
     }
 
     let syncSocket = null;
+    let currentSocketToken = null;
+    const processedEventIds = new Set(); // Bounded deduplication cache
+
+    function recordAndCheckDuplicateEvent(eventId) {
+      if (!eventId) return false;
+      if (processedEventIds.has(eventId)) {
+        console.log(`[Sync] Duplicate event ${eventId} ignored.`);
+        return true;
+      }
+      processedEventIds.add(eventId);
+      if (processedEventIds.size > 300) {
+        const first = processedEventIds.values().next().value;
+        processedEventIds.delete(first);
+      }
+      return false;
+    }
+
     function joinStoreSyncRoom() {
       if (syncSocket && syncSocket.connected) {
         const storeId = state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : 'default');
@@ -6301,9 +6318,26 @@
     }
 
     function initSyncSocket() {
-      if (syncSocket) return;
-      console.log("[Sync] Establishing background real-time synchronization socket...");
       const token = localStorage.getItem("aiavro_jwt_token") || '';
+      
+      // If active socket already exists with the same token and is connected, don't recreate
+      if (syncSocket && currentSocketToken === token && syncSocket.connected) {
+        return;
+      }
+
+      // If token changed or previous socket exists, clean it up first
+      if (syncSocket) {
+        try {
+          syncSocket.removeAllListeners();
+          syncSocket.disconnect();
+        } catch (e) {}
+        syncSocket = null;
+      }
+
+      if (!token) return;
+
+      console.log("[Sync] Establishing background real-time synchronization socket...");
+      currentSocketToken = token;
       try {
         syncSocket = io(state.backendUrl, {
           auth: { token },
@@ -6319,6 +6353,16 @@
 
         syncSocket.on('connect_error', (err) => {
           console.warn("[Sync] Socket connection non-fatal warning (REST sync active):", err.message);
+        });
+
+        syncSocket.on('SESSION_REVOKED', (data) => {
+          console.warn("[Sync] Active session revoked by server:", data?.message);
+          triggerAlert(data?.message || "Session invalidated. Please log in again.", "danger");
+          triggerLogout();
+        });
+
+        syncSocket.on('AUTHORIZATION_DENIED', (data) => {
+          console.warn("[Sync] Socket room authorization denied:", data?.message);
         });
       } catch (sockErr) {
         console.warn("[Sync] Failed to initialize socket connection:", sockErr);
@@ -6336,20 +6380,26 @@
         }
       }, 10000);
 
-      // Listeners for targeted, granular events
-      // Listeners for targeted, granular events
+      // Listeners for targeted, granular canonical events
       const handleInventoryUpdated = (data) => {
-        console.log(`[Sync] Inventory updated:`, data);
-        const inv = state.inventory.find(i => i.productId === data.productId && i.storeId === data.storeId);
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const payload = data.data || data;
+        const productId = payload.productId;
+        const storeId = payload.locationId || payload.storeId;
+        const quantity = parseFloat(payload.quantity) || 0;
+
+        console.log(`[Sync] Inventory updated:`, payload);
+        const inv = state.inventory.find(i => i.productId === productId && (i.storeId === storeId || i.locationId === storeId));
         if (inv) {
-          inv.quantity = data.quantity;
+          inv.quantity = quantity;
         } else {
-          state.inventory.push({ productId: data.productId, storeId: data.storeId, quantity: data.quantity });
+          state.inventory.push({ productId, storeId, locationId: storeId, quantity });
         }
         // Update representation on product
-        const prod = state.products.find(p => p.id === data.productId);
+        const prod = state.products.find(p => p.id === productId);
         if (prod) {
-          prod.stock = data.quantity;
+          prod.stock = quantity;
         }
         renderPOSProducts();
         renderInventoryTable();
@@ -6357,14 +6407,39 @@
       syncSocket.on('inventory.updated', handleInventoryUpdated);
       syncSocket.on('inventory_updated', handleInventoryUpdated);
 
+      const handleInventoryBulkUpdated = (data) => {
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const payload = data.data || data;
+        console.log(`[Sync] Bulk inventory updated for store ${payload.locationId}:`, payload);
+        const activeStoreId = state.activeBusinessId || (state.businesses[0] ? state.businesses[0].id : '');
+        if (!payload.locationId || payload.locationId === activeStoreId || activeStoreId === '') {
+          if (window.api?.inventory?.list) {
+            window.api.inventory.list().then(invList => {
+              if (Array.isArray(invList)) {
+                state.inventory = invList;
+                updateLocalProductStockFromInventory();
+                renderPOSProducts();
+                renderInventoryTable();
+              }
+            }).catch(e => console.warn('[Sync] Bulk inventory sync error:', e));
+          }
+        }
+      };
+      syncSocket.on('inventory.bulk_updated', handleInventoryBulkUpdated);
+      syncSocket.on('inventory_bulk_updated', handleInventoryBulkUpdated);
+
       const handleProductCreated = (data) => {
-        if (!data || !data.product) return;
-        console.log(`[Sync] Product created:`, data.product);
-        const idx = state.products.findIndex(p => p.id === data.product.id);
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const product = data.data?.product || data.product;
+        if (!product) return;
+        console.log(`[Sync] Product created:`, product);
+        const idx = state.products.findIndex(p => p.id === product.id);
         if (idx === -1) {
-          state.products.push(data.product);
+          state.products.push(product);
         } else {
-          state.products[idx] = data.product;
+          state.products[idx] = product;
         }
         renderPOSProducts();
         renderProductsTable();
@@ -6373,11 +6448,16 @@
       syncSocket.on('product_created', handleProductCreated);
 
       const handleProductUpdated = (data) => {
-        if (!data || !data.product) return;
-        console.log(`[Sync] Product updated:`, data.product);
-        const idx = state.products.findIndex(p => p.id === data.product.id);
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const product = data.data?.product || data.product;
+        if (!product) return;
+        console.log(`[Sync] Product updated:`, product);
+        const idx = state.products.findIndex(p => p.id === product.id);
         if (idx !== -1) {
-          state.products[idx] = data.product;
+          state.products[idx] = product;
+        } else {
+          state.products.push(product);
         }
         renderPOSProducts();
         renderProductsTable();
@@ -6386,11 +6466,14 @@
       syncSocket.on('product_updated', handleProductUpdated);
 
       const handleInvoiceCreated = (data) => {
-        if (!data || !data.invoice) return;
-        console.log(`[Sync] Invoice created:`, data.invoice);
-        const idx = state.invoices.findIndex(i => i.invoiceNumber === data.invoice.invoiceNumber);
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const invoice = data.data?.invoice || data.invoice;
+        if (!invoice) return;
+        console.log(`[Sync] Invoice created:`, invoice);
+        const idx = state.invoices.findIndex(i => i.invoiceNumber === invoice.invoiceNumber);
         if (idx === -1) {
-          state.invoices.push(data.invoice);
+          state.invoices.push(invoice);
         }
         renderInvoicesTable();
       };
@@ -6398,6 +6481,8 @@
       syncSocket.on('invoice_created', handleInvoiceCreated);
 
       const handleSettingsUpdated = (data) => {
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
         console.log(`[Sync] Settings updated:`, data);
         loadPublicSettings();
       };
@@ -6405,8 +6490,10 @@
       syncSocket.on('settings_updated', handleSettingsUpdated);
 
       const handleBusinessUpdated = (data) => {
-        if (!data || !data.business) return;
-        const b = data.business;
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const b = data.data?.business || data.business;
+        if (!b) return;
         const idx = state.businesses.findIndex(x => x.id === b.id);
         if (idx !== -1) state.businesses[idx] = b;
         renderBusinessesTable();
@@ -6416,15 +6503,20 @@
 
       const handleBusinessDeleted = (data) => {
         if (!data) return;
-        state.businesses = state.businesses.filter(b => b.id !== data.id);
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const id = data.data?.id || data.id;
+        if (!id) return;
+        state.businesses = state.businesses.filter(b => b.id !== id);
         renderBusinessesTable();
       };
       syncSocket.on('business.deleted', handleBusinessDeleted);
       syncSocket.on('business_deleted', handleBusinessDeleted);
 
       const handleUserUpdated = (data) => {
-        if (!data || !data.user) return;
-        const u = data.user;
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const u = data.data?.user || data.user;
+        if (!u) return;
         const idx = state.users.findIndex(x => x.id === u.id);
         if (idx !== -1) state.users[idx] = u;
         renderUsersTable();
@@ -6433,16 +6525,21 @@
       syncSocket.on('user_updated', handleUserUpdated);
 
       const handlePurchaseCreated = (data) => {
-        if (!data || !data.purchase) return;
-        state.purchases.push(data.purchase);
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const purchase = data.data?.purchase || data.purchase;
+        if (!purchase) return;
+        state.purchases.push(purchase);
         renderPurchaseTable();
       };
       syncSocket.on('purchase.created', handlePurchaseCreated);
       syncSocket.on('purchase_created', handlePurchaseCreated);
 
       const handleFranchiseUpdated = (data) => {
-        if (!data || !data.franchise) return;
-        const f = data.franchise;
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const f = data.data?.franchise || data.franchise;
+        if (!f) return;
         const idx = state.franchises.findIndex(x => x.id === f.id);
         if (idx !== -1) state.franchises[idx] = f;
         renderFranchisesTable();
@@ -6452,23 +6549,31 @@
 
       const handleFranchiseDeleted = (data) => {
         if (!data) return;
-        state.franchises = state.franchises.filter(f => f.id !== data.id);
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const id = data.data?.id || data.id;
+        if (!id) return;
+        state.franchises = state.franchises.filter(f => f.id !== id);
         renderFranchisesTable();
       };
       syncSocket.on('franchise.deleted', handleFranchiseDeleted);
       syncSocket.on('franchise_deleted', handleFranchiseDeleted);
 
       const handleFranchiseOrderCreated = (data) => {
-        if (!data || !data.order) return;
-        state.franchiseSupplyOrders.push(data.order);
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const order = data.data?.order || data.order;
+        if (!order) return;
+        state.franchiseSupplyOrders.push(order);
         renderFranchisesTable();
       };
       syncSocket.on('franchise_order.created', handleFranchiseOrderCreated);
       syncSocket.on('franchise_order_created', handleFranchiseOrderCreated);
 
       const handleInvoiceUpdated = (data) => {
-        if (!data || !data.invoice) return;
-        const inv = data.invoice;
+        if (!data) return;
+        if (recordAndCheckDuplicateEvent(data.eventId)) return;
+        const inv = data.data?.invoice || data.invoice;
+        if (!inv) return;
         const idx = state.invoices.findIndex(i => i.invoiceNumber === inv.invoiceNumber);
         if (idx !== -1) state.invoices[idx] = inv;
         renderInvoicesTable();
@@ -6477,6 +6582,7 @@
       syncSocket.on('invoice_updated', handleInvoiceUpdated);
 
       const handleRbacUpdated = (permissions) => {
+        if (!permissions) return;
         console.log(`[Sync] RBAC permissions updated in database:`, permissions);
         state.rolePermissions = permissions;
         localStorage.setItem("aiavro_role_permissions", JSON.stringify(permissions));
@@ -6735,6 +6841,28 @@
     }
 
     function triggerLogout() {
+      if (syncSocket) {
+        try {
+          syncSocket.removeAllListeners();
+          syncSocket.disconnect();
+        } catch (e) {}
+        syncSocket = null;
+        currentSocketToken = null;
+      }
+      if (desktopSocket) {
+        try {
+          desktopSocket.removeAllListeners();
+          desktopSocket.disconnect();
+        } catch (e) {}
+        desktopSocket = null;
+      }
+      if (phoneSocket) {
+        try {
+          phoneSocket.removeAllListeners();
+          phoneSocket.disconnect();
+        } catch (e) {}
+        phoneSocket = null;
+      }
       state.currentUser = null;
       localStorage.removeItem("aiavro_jwt_token");
       localStorage.removeItem("aiavro_logged_in_user");
