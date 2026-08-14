@@ -168,3 +168,109 @@
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
 }
+
+/* ==================== BUTTON SYSTEM ==================== */
+.primary-btn {
+  background-color: var(--accent-green);
+  color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-base);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-fast);
+}
+
+.primary-btn:hover:not(:disabled) {
+  background-color: var(--accent-green-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.primary-btn:active {
+  transform: translateY(1px);
+}
+
+.secondary-btn {
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-base);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-fast);
+}
+
+.secondary-btn:hover:not(:disabled) {
+  border-color: var(--text-muted);
+  background-color: var(--bg-primary);
+}
+
+.secondary-btn:active {
+  transform: translateY(1px);
+}
+
+.danger-btn {
+  background-color: var(--accent-danger);
+  color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-base);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: var(--transition-fast);
+}
+
+.danger-btn:hover:not(:disabled) {
+  background-color: var(--accent-danger-hover);
+}
+
+.danger-btn:active {
+  transform: translateY(1px);
+}
+
+.ghost-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-base);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: var(--transition-fast);
+}
+
+.ghost-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background-color: var(--bg-subtle);
+}
+
+.ghost-btn:active {
+  transform: translateY(1px);
+}
