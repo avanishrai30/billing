@@ -2217,7 +2217,6 @@
       display: flex;
       flex-direction: column;
       isolation: isolate;
-      contain: paint;
       font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -2245,7 +2244,6 @@
       overflow: hidden;
       flex-shrink: 0;
       box-sizing: border-box;
-      contain: paint;
     }
 
     @media (max-width: 600px) {
@@ -2345,8 +2343,6 @@
       position: relative;
       display: flex;
       align-items: center;
-      isolation: isolate;
-      contain: paint;
     }
 
     .login-input {
@@ -6380,7 +6376,6 @@
       loadDatabaseState();
       initAuthentication();
       loadPublicSettings();
-      initLoginPointerParallax();
       renderOnboardingQueue();
       initSidebarDragResizer();
 
@@ -6391,43 +6386,6 @@
         }
       }, 90000);
     });
-
-    function initLoginPointerParallax() {
-      const container = document.getElementById("login-atmosphere-container");
-      if (!container || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return; // disable on mobile/touch
-
-      let rafId = null;
-      let targetX = 0;
-      let targetY = 0;
-      let currentX = 0;
-      let currentY = 0;
-
-      window.addEventListener("mousemove", (e) => {
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2;
-        targetX = ((e.clientX - cx) / cx) * 12; // clamped subtle 12px drift
-        targetY = ((e.clientY - cy) / cy) * 12;
-
-        if (!rafId) {
-          rafId = requestAnimationFrame(updateParallax);
-        }
-      }, { passive: true });
-
-      function updateParallax() {
-        currentX += (targetX - currentX) * 0.05;
-        currentY += (targetY - currentY) * 0.05;
-        const canvas = container.querySelector(".login-gradient-canvas");
-        if (canvas) {
-          canvas.style.transform = `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0)`;
-        }
-        if (Math.abs(targetX - currentX) > 0.01 || Math.abs(targetY - currentY) > 0.01) {
-          rafId = requestAnimationFrame(updateParallax);
-        } else {
-          rafId = null;
-        }
-      }
-    }
 
     function initSidebarDragResizer() {
       const sidebar = document.querySelector('aside');
