@@ -76,6 +76,6 @@ Previously, JWT tokens had a fixed 24-hour expiration window. When a user change
 ---
 
 ## 3. Removal of Master Reset Credentials
-- Hardcoded frontend master passwords (such as `MASTER_RESET_PASSWORD = "Raja123$;"`) have been **completely eliminated** from `aiavro_billing_system.html`.
+- Hardcoded frontend master password constants (`MASTER_RESET_PASSWORD = "[REDACTED]"`) have been **completely eliminated** from `aiavro_billing_system.html`.
 - No client-side bypasses or synthetic Super Admin bypasses exist.
 - All authentication flows strictly resolve through the database and cryptographic Bcrypt hashing.

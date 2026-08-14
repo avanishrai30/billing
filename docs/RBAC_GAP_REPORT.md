@@ -60,8 +60,8 @@
 
 ### 1.5 Identified Authentication Vulnerabilities & Weaknesses
 1. **Hardcoded Master Password Hatch in Frontend:**
-   - In [`aiavro_billing_system.html:5922`](file:///Users/avanish/Documents/billing%20system/aiavro_billing_system.html#L5922): `const MASTER_RESET_PASSWORD = "Raja123$;"`
-   - In [`aiavro_billing_system.html:6024`](file:///Users/avanish/Documents/billing%20system/aiavro_billing_system.html#L6024): `if (username.toLowerCase() === 'raja1992' && password === MASTER_RESET_PASSWORD)` returns synthetic Super Admin access.
+   - In [`aiavro_billing_system.html`](file:///Users/avanish/Documents/billing%20system/aiavro_billing_system.html): `const MASTER_RESET_PASSWORD = "[REDACTED]"`
+   - In [`aiavro_billing_system.html`](file:///Users/avanish/Documents/billing%20system/aiavro_billing_system.html): `if (username.toLowerCase() === '[REDACTED_USER]' && password === MASTER_RESET_PASSWORD)` returned synthetic Super Admin access.
 2. **Missing Token Revocation / Invalidation:** Logged-out users or compromised tokens cannot be revoked before 24h expiration.
 3. **No Failed Login Audit / Account Lockout:** Failed login attempts are rate-limited by IP (150/15min) but are not recorded in `audit_logs` and do not lock individual user accounts after consecutive failed attempts.
 4. **Plaintext Password Fallback:** `bcrypt.compareSync(password, user.passwordHash || user.password)` allows legacy unhashed passwords.
