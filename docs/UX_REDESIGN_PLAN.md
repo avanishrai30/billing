@@ -47,9 +47,10 @@ graph LR
 - Implemented reusable UI primitives in `ui/components.css` and `ui/components.js` (`Button`, `StatusBadge`, `DataTable`, `PaginationBar`, `MetricCard`, `SyncBadge`, `Toast`, `SkeletonLoader`, `KbdBadge`).
 - Verified with 112/112 passing automated test cases.
 
-#### Phase C — Dashboard View
-- Connect metrics cards to `api.dashboard.getMetrics()`.
-- Add low-stock watchlist drawer and recent activity feed.
+#### Phase C — Dashboard View [✅ COMPLETED]
+- Redesigned executive dashboard with KPI metrics connected to authoritative server API `GET /api/v1/dashboard/metrics`.
+- Implemented real-time operational watchlist table, catalog health matrix, and recent sales & purchase transaction ledgers.
+- Verified with 119/119 passing automated test cases.
 
 #### Phase D — High-Speed POS Terminal (P0 Priority)
 - Streamline barcode scanner listener with rapid audio-visual confirmation.
