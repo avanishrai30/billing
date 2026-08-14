@@ -2106,14 +2106,16 @@
       background-size: cover;
       background-position: center;
       z-index: var(--z-toast);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--transition-normal);
+      /* The login screen is the deterministic first-paint surface. Authenticated
+         state hides it explicitly after the session has been resolved. */
+      opacity: 1;
+      pointer-events: auto;
+      transition: none;
       overflow: hidden;
     }
-    .login-screen-overlay.active {
-      opacity: 1;
-      pointer-events: all;
+    .login-screen-overlay:not(.active) {
+      opacity: 0;
+      pointer-events: none;
     }
     .login-screen-overlay::before,
     .login-screen-overlay::after {
@@ -2135,7 +2137,7 @@
         radial-gradient(circle at 62% 64%, rgba(117, 153, 124, 0.34), transparent 44%),
         linear-gradient(145deg, rgba(39, 103, 73, 0.18), rgba(255, 255, 255, 0.04));
       filter: blur(2px);
-      animation: loginOrganicDrift 18s ease-in-out infinite alternate;
+      animation: none;
     }
     .login-screen-overlay::after {
       width: min(900px, 82vw);
@@ -2147,7 +2149,7 @@
         radial-gradient(circle at 42% 38%, rgba(39, 103, 73, 0.2), transparent 34%),
         radial-gradient(circle at 58% 62%, rgba(255, 255, 255, 0.54), transparent 42%),
         linear-gradient(160deg, rgba(172, 196, 173, 0.32), rgba(248, 250, 245, 0.08));
-      animation: loginOrganicFloat 22s ease-in-out infinite alternate;
+      animation: none;
     }
     .login-card {
       position: relative;
@@ -2171,7 +2173,7 @@
       overflow: auto;
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
-      animation: loginCardSettle 240ms ease-out both;
+      animation: none;
     }
     .login-card form {
       width: 100%;

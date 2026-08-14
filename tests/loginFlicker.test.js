@@ -22,6 +22,10 @@ describe('Login render-layer regression guard', () => {
   test('1. login overlay is the only initial auth surface', () => {
     expect(html).toContain('class="login-screen-overlay active" data-auth-state="pending"');
     expect(html).toContain('<div class="app-container" style="display:none">');
+    expect(loginCss).toContain('opacity: 1;');
+    expect(loginCss).toContain('pointer-events: auto;');
+    expect(loginCss).toContain('.login-screen-overlay:not(.active)');
+    expect(loginCss).toContain('transition: none;');
     expect(loginMarkup).toContain('class="login-card"');
     expect(loginMarkup).not.toMatch(/modal-backdrop|skeleton-box|boot|preloader|splash/i);
   });
@@ -62,7 +66,14 @@ describe('Login render-layer regression guard', () => {
     expect(html).not.toMatch(/class="[^"]*app-view[^"]*active[^"]*app-view[^"]*active/);
   });
 
-  test('7. native password manager and backend contracts are untouched', () => {
+  test('7. initial login paint has no opacity or motion animation', () => {
+    expect(loginCss).toContain('animation: none;');
+    expect(loginCss).not.toContain('animation: loginCardSettle');
+    expect(loginCss).not.toContain('animation: loginOrganicDrift');
+    expect(loginCss).not.toContain('animation: loginOrganicFloat');
+  });
+
+  test('8. native password manager and backend contracts are untouched', () => {
     expect(loginMarkup).toContain('autocomplete="username"');
     expect(loginMarkup).toContain('autocomplete="current-password"');
     expect(html).not.toMatch(/password-manager|credentialsContainer|:-webkit-autofill/);

@@ -20,7 +20,7 @@ The existing `#login-brand-logo-img` and `#login-brand-name` IDs remain in place
 
 ## Background Architecture
 
-The animated background is CSS-only. It uses static gradients as the fallback layer and two slow organic pseudo-elements for motion.
+The background is CSS-only. It uses static gradients and organic pseudo-elements, with all login background motion disabled during first paint so the final surface appears immediately.
 
 No WebGL, shader, canvas, or pointer listener is used. This avoids renderer recreation, animation-loop leaks, and mouse-event listener accumulation.
 
@@ -53,17 +53,17 @@ Browser password-manager/autofill UI is untouched.
 
 ## Motion
 
-Motion is limited to slow background drift, subtle input/button state transitions, and opacity-only card settling. The card does not animate position, preventing first-paint movement.
+The login first paint is animation-free: the background, card, and overlay do not animate or fade while the browser and auth state initialize. Input and button transitions remain available after the surface is visible.
 
 The existing global `prefers-reduced-motion` rule disables animations and transitions for users who request reduced motion.
 
 ## Fallback
 
-If CSS animation or backdrop filtering is unavailable, the base gradient background and solid readable card remain intact.
+If backdrop filtering is unavailable, the base gradient background and solid readable card remain intact.
 
 ## Performance
 
-The implementation uses no JavaScript animation loop, no ResizeObserver, no pointer listeners, and no WebGL resources. There is no path for duplicated render loops or shader reinitialization.
+The implementation uses no JavaScript animation loop, no ResizeObserver, no pointer listeners, and no WebGL resources. There is no path for duplicated render loops, shader reinitialization, or a login fade-in flicker.
 
 ## Flicker Prevention
 
