@@ -82,8 +82,13 @@ graph LR
 - Integrated existing `purchase_created`, `purchase_deleted`, `invoice_created`, and `invoice_voided` realtime events through incremental row/detail updates.
 - Documented in `docs/PURCHASE_INVOICE_IMPLEMENTATION.md` and covered by `tests/purchaseInvoiceRedesign.test.js`.
 
-#### Phase H — Customer & Supplier CRM
-- Customer and Supplier directory tables with profile drawers and balance tracking.
+#### Phase H — Customer & Supplier CRM [✅ COMPLETED]
+- Redesigned the customer screen into a unified Customer + Supplier Relationship Workspace with tabs, current outlet context, filters, pagination, and dense operational tables.
+- Added customer detail drawer with identity/contact/store/status context and invoice navigation handoff to the existing invoice workspace and detail drawer.
+- Added supplier detail drawer with identity/contact/store/status context and purchase navigation handoff to the existing purchase workspace and detail drawer.
+- Preserved frozen customer/supplier APIs, RBAC checks, store authorization, invoice/purchase contracts, and realtime socket event names.
+- Integrated existing `customer_updated`, `customer_deleted`, `supplier_updated`, and `supplier_deleted` realtime events through incremental row/detail updates.
+- Documented in `docs/CRM_IMPLEMENTATION.md` and covered by `tests/crmRedesign.test.js`.
 
 #### Phase I — Intelligent Bulk Importer
 - 4-step wizard: Upload $\rightarrow$ Detect Headers $\rightarrow$ Review Validation Matrix $\rightarrow$ Commit Batch.
