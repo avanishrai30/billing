@@ -4,48 +4,67 @@
  */
 
 :root {
-  /* ==================== 1. NEUTRAL SURFACES & CANVAS ==================== */
-  --bg-app: #090c10;                /* Deep background canvas */
-  --bg-surface: #0f141c;            /* App shell, sidebar, panels */
-  --bg-surface-raised: #161c24;     /* Elevated cards, table rows, dropdowns */
-  --bg-surface-hover: #1d242f;      /* Interactive hover states */
-  --bg-surface-active: #252e3b;     /* Selected items, active tabs */
-  --bg-input: #0b0f14;              /* Inputs, textareas, searchbars */
-  --bg-overlay: rgba(0, 0, 0, 0.75);/* Backdrop dimming */
+  /* ==================== 1. CANONICAL LIGHT SURFACES & CANVAS ==================== */
+  --color-app-bg: #f4f7f3;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fbfdf9;
+  --color-surface-muted: #edf4ed;
+  --color-surface-hover: #e7f2e9;
+  --color-surface-active: #dff0e5;
+  --color-input: #ffffff;
+  --color-overlay: rgba(22, 36, 28, 0.42);
+
+  --bg-app: var(--color-app-bg);
+  --bg-surface: var(--color-surface);
+  --bg-surface-raised: var(--color-surface-raised);
+  --bg-surface-hover: var(--color-surface-hover);
+  --bg-surface-active: var(--color-surface-active);
+  --bg-input: var(--color-input);
+  --bg-overlay: var(--color-overlay);
 
   /* ==================== 2. BORDERS & SEPARATORS ==================== */
-  --border-subtle: #1e2631;         /* Table dividers, section borders */
-  --border-default: #2a3442;        /* Card boundaries, input outlines */
-  --border-strong: #3b4859;         /* High-contrast containers */
-  --border-focus: #3b82f6;          /* Keyboard focus highlight */
+  --color-border: #d9e5d9;
+  --color-border-strong: #b7cab9;
+  --border-subtle: var(--color-border);
+  --border-default: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --border-focus: #276749;
 
   /* ==================== 3. TYPOGRAPHY & TEXT COLORS ==================== */
-  --text-primary: #f8fafc;          /* Titles, primary metrics, high contrast */
-  --text-secondary: #94a3b8;        /* Metadata, table headers, subtitles */
-  --text-muted: #64748b;            /* Hints, placeholders, disabled text */
-  --text-inverse: #090c10;          /* High contrast text on bright badges */
+  --color-text-primary: #16241d;
+  --color-text-secondary: #53685b;
+  --color-text-muted: #718375;
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --text-inverse: #ffffff;
 
   /* ==================== 4. SEMANTIC ACCENTS ==================== */
   /* Interactive / Brand Primary (Blue) */
-  --accent-primary: #3b82f6;
-  --accent-primary-hover: #2563eb;
-  --accent-primary-subtle: rgba(59, 130, 246, 0.12);
-  --accent-primary-border: rgba(59, 130, 246, 0.35);
+  --color-primary: #276749;
+  --color-primary-hover: #1f5139;
+  --accent-primary: var(--color-primary);
+  --accent-primary-hover: var(--color-primary-hover);
+  --accent-primary-subtle: rgba(39, 103, 73, 0.12);
+  --accent-primary-border: rgba(39, 103, 73, 0.28);
 
   /* Success / Paid / In-Stock (Emerald) */
-  --accent-success: #10b981;
+  --color-success: #10b981;
+  --accent-success: var(--color-success);
   --accent-success-hover: #059669;
   --accent-success-subtle: rgba(16, 185, 129, 0.12);
   --accent-success-border: rgba(16, 185, 129, 0.35);
 
   /* Warning / Low-Stock / Expiry (Amber) */
-  --accent-warning: #f59e0b;
+  --color-warning: #d97706;
+  --accent-warning: var(--color-warning);
   --accent-warning-hover: #d97706;
   --accent-warning-subtle: rgba(245, 158, 11, 0.12);
   --accent-warning-border: rgba(245, 158, 11, 0.35);
 
   /* Danger / Void / Out-of-Stock (Rose) */
-  --accent-danger: #ef4444;
+  --color-danger: #dc2626;
+  --accent-danger: var(--color-danger);
   --accent-danger-hover: #dc2626;
   --accent-danger-subtle: rgba(239, 68, 68, 0.12);
   --accent-danger-border: rgba(239, 68, 68, 0.35);
@@ -57,8 +76,8 @@
   --accent-info-border: rgba(6, 182, 212, 0.35);
 
   /* ==================== 5. TYPOGRAPHIC HIERARCHY ==================== */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, Monaco, 'Courier New', monospace;
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --text-xs: 11px;
   --text-sm: 12px;
@@ -87,27 +106,31 @@
   --space-12: 48px;
 
   /* ==================== 7. RADII & ELEVATION ==================== */
-  --radius-xs: 3px;
-  --radius-sm: 5px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-pill: 9999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+  --shadow-sm: 0 1px 2px rgba(22, 36, 29, 0.06);
+  --shadow-md: 0 8px 24px rgba(22, 36, 29, 0.08);
+  --shadow-lg: 0 20px 48px rgba(22, 36, 29, 0.14);
+  --shadow-dialog: 0 24px 72px rgba(22, 36, 29, 0.22);
 
   /* ==================== 8. TRANSITIONS & MOTION ==================== */
   --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-normal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
 
   /* ==================== 9. Z-INDEX LAYERS ==================== */
+  --z-base: 0;
+  --z-sticky: 100;
   --z-sidebar: 100;
-  --z-header: 200;
+  --z-header: 600;
   --z-dropdown: 500;
+  --z-drawer: 900;
+  --z-overlay: 1000;
   --z-modal-backdrop: 1000;
-  --z-modal: 1010;
-  --z-drawer: 1020;
+  --z-modal: 1100;
   --z-toast: 2000;
   --z-tooltip: 3000;
 }
