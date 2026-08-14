@@ -7,18 +7,64 @@ const auditService = require('../services/auditService');
 const router = express.Router();
 
 // GET /api/v1/purchases - Fetch all non-archived purchase records with store scoping
+// GET /api/v1/purchases - Fetch paginated non-archived purchases with store scoping and filtering (Stage 12 P0)
 router.get('/', verifyJWT, requirePermission('purchases.view'), async (req, res) => {
   const { db } = getContext();
+  const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
+
   try {
     const scopeFilter = getStoreScopeFilter(req.user, ['locationId', 'storeId']);
     const filter = { isArchived: { $ne: true }, ...scopeFilter };
-    const purchases = await db.collection('purchases').find(filter).toArray();
-    res.json(purchases);
+
+    // Query Filters
+    if (req.query.supplierId) {
+      filter.supplierId = req.query.supplierId;
+    }
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+    if (req.query.locationId || req.query.storeId) {
+      const loc = req.query.locationId || req.query.storeId;
+      filter.$or = [{ locationId: loc }, { storeId: loc }];
+    }
+    if (req.query.startDate || req.query.endDate) {
+      filter.createdAt = {};
+      if (req.query.startDate) filter.createdAt.$gte = req.query.startDate;
+      if (req.query.endDate) filter.createdAt.$lte = req.query.endDate;
+    }
+
+    // Pagination configuration (default 50, max 100)
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const skip = req.query.skip !== undefined ? Math.max(0, parseInt(req.query.skip) || 0) : (page - 1) * limit;
+
+    const total = await db.collection('purchases').countDocuments(filter);
+    const purchases = await db.collection('purchases')
+      .find(filter)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.json({
+      success: true,
+      purchases,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: (skip + limit) < total,
+        hasPrev: page > 1
+      },
+      requestId
+    });
   } catch (err) {
+    console.error("[Purchases] Error fetching paginated purchases:", err);
     res.status(500).json({
       success: false,
       error: { code: "FETCH_ERROR", message: "Failed to fetch purchases" },
-      requestId: req.headers['x-request-id'] || null
+      requestId
     });
   }
 });
