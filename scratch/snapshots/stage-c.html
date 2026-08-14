@@ -26,6 +26,10 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
   
+  <!-- Enterprise POS/ERP Design Tokens & Component Primitives -->
+  <link rel="stylesheet" href="/ui/theme.css">
+  <link rel="stylesheet" href="/ui/components.css">
+  
   <style>
     :root {
       --sidebar-width: 300px;
@@ -2573,9 +2577,9 @@
         })();
       </script>
 
-      <!-- Sidebar Navigation Menu -->
+      <!-- Sidebar Navigation Menu (Structured Operations, Relationships, Control) -->
       <ul class="nav-menu">
-        <span class="nav-section-title">Core Modules</span>
+        <span class="nav-section-title">Operations</span>
         
         <li data-role="admin">
           <a href="#" class="nav-item active" onclick="switchView('dashboard')">
@@ -2586,13 +2590,13 @@
         <li data-role="admin employee">
           <a href="#" class="nav-item" onclick="switchView('billing')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17.204 10.796L19 9c.545-.545.545-1.43 0-1.975l-1.025-1.025c-.544-.545-1.43-.545-1.975 0l-1.796 1.796 3 3zM3.25 19.25h3l8.975-8.975-3-3-8.975 8.975v3zm-1-16h20v2H2.25v-2zm0 18h20v-2H2.25v2z"/></svg>
-            POS Billing
+            POS Terminal <span class="kbd-badge" style="margin-left:auto">F1</span>
           </a>
         </li>
         <li data-role="admin employee">
           <a href="#" class="nav-item" onclick="switchView('inventory')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 8.5L12 3 2 8.5 12 14l10-5.5zM2 13.5l10 5.5 10-5.5-10 5.5-10-5.5zm0 5l10 5.5 10-5.5-10 5.5-10-5.5z"/></svg>
-            Product Inventory
+            Master Inventory <span class="kbd-badge" style="margin-left:auto">F2</span>
           </a>
         </li>
         <li data-role="admin employee">
@@ -2601,25 +2605,25 @@
             Purchase Entry
           </a>
         </li>
-
-        <span class="nav-section-title">Management</span>
-        
-        <li data-role="admin">
-          <a href="#" class="nav-item" onclick="switchView('businesses')">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
-            My Businesses
+        <li data-role="admin auditor">
+          <a href="#" class="nav-item" onclick="switchView('invoices')">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            Invoices Database
           </a>
         </li>
+
+        <span class="nav-section-title">Relationships</span>
+        
         <li data-role="admin">
           <a href="#" class="nav-item" onclick="switchView('customers')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
             Customers CRM
           </a>
         </li>
-        <li data-role="admin auditor">
-          <a href="#" class="nav-item" onclick="switchView('invoices')">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-            Invoices Database
+        <li data-role="admin">
+          <a href="#" class="nav-item" onclick="switchView('businesses')">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+            Stores & Outlets
           </a>
         </li>
         <li data-role="admin auditor">
@@ -2631,19 +2635,22 @@
         <li data-role="admin employee">
           <a href="#" class="nav-item" onclick="switchView('scanner')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
-            Mobile Scanner View
+            Mobile Scanner
           </a>
         </li>
+
+        <span class="nav-section-title">Control & Settings</span>
+
         <li data-role="admin employee auditor">
           <a href="#" class="nav-item" onclick="switchView('permissions')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-            <span id="sidebar-permissions-label">User Permissions</span>
+            <span id="sidebar-permissions-label">Users & RBAC</span>
           </a>
         </li>
         <li data-role="admin">
           <a href="#" class="nav-item" onclick="switchView('settings')">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-            System Backups
+            System Settings
           </a>
         </li>
       </ul>
@@ -2717,6 +2724,14 @@
             </select>
           </div>
 
+          <!-- Realtime Sync Status Badge -->
+          <div id="app-sync-status-badge" style="display:flex; align-items:center;">
+            <div class="sync-badge" title="Connection: Online">
+              <span class="sync-dot sync-dot-online"></span>
+              <span id="sync-status-label">Online</span>
+            </div>
+          </div>
+
           <!-- Notification Bell -->
           <button class="notification-btn" onclick="triggerAlert('Low stock or expiring products detected! Check indicators.', 'warning')" title="System Alerts">
             <svg style="width:20px;height:20px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
@@ -2728,300 +2743,181 @@
       <!-- FLOATING ALERTS BOX -->
       <div class="alerts-container" id="alerts-container"></div>
 
-      <!-- ==================== DASHBOARD VIEW ==================== -->
+      <!-- ==================== DASHBOARD VIEW (STAGE 13 PHASE C REDESIGN) ==================== -->
       <div id="view-dashboard" class="app-view active">
         
-        <!-- Active Store Outlet Banner -->
-        <div id="dashboard-active-outlet-banner" style="background:var(--bg-panel); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:var(--shadow-sm)">
-          <div>
-            <span style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px">Selected Business Outlet</span>
-            <h4 id="dashboard-active-outlet-name" style="font-family:'Outfit'; font-size:16px; font-weight:800; margin:0; color:var(--accent-blue)">All Outlets Consolidated</h4>
-          </div>
-          <span class="status-badge paid" id="dashboard-active-outlet-status" style="font-size:10.5px">Consolidated enterprise mode</span>
-        </div>
-        <script>
-          (function() {
-            try {
-              const cachedBizId = localStorage.getItem("aiavro_active_biz_id");
-              const cachedBizName = localStorage.getItem("aiavro_active_biz_name");
-              if (cachedBizId && cachedBizName) {
-                const bannerName = document.getElementById("dashboard-active-outlet-name");
-                const bannerStatus = document.getElementById("dashboard-active-outlet-status");
-                if (bannerName) {
-                  bannerName.innerText = cachedBizName;
-                  bannerName.style.color = "var(--accent-blue)";
-                }
-                if (bannerStatus) {
-                  bannerStatus.innerText = "Single Store Filtering Active";
-                  bannerStatus.className = "status-badge low-stock";
-                }
-              }
-            } catch(e) {}
-          })();
-        </script>
-
-        <!-- Metric Cards Dashboard -->
-        <!-- Section: Financial Performance & Valuations -->
-        <h3 style="margin: 0 0 15px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-          <span>💰</span> Financial Performance & Valuations
-        </h3>
-        <div class="dashboard-metrics-grid">
-          
-          <div class="metric-card">
-            <div class="metric-icon-box green">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M5 8h2v8H5zm7 0H9v8h3zm5 0h-2v8h2zm4-6H3c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H3V4h18v16z"/></svg>
+        <!-- Global Context Bar -->
+        <div class="card-shell" style="margin-bottom:var(--space-4); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3)">
+          <div style="display:flex; align-items:center; gap:var(--space-3)">
+            <div style="width:36px; height:36px; border-radius:var(--radius-sm); background:var(--accent-primary-subtle); border:1px solid var(--accent-primary-border); display:flex; align-items:center; justify-content:center; font-size:18px">
+              🌾
             </div>
-            <div class="metric-info">
-              <h4>Gross Revenue</h4>
-              <h2 id="metric-total-sales" style="color:var(--accent-green)">₹0.00</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box green" style="background:rgba(16, 185, 129, 0.1)">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Net Farm Profit</h4>
-              <h2 id="metric-net-profit" style="color:var(--accent-green)">₹0.00</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box blue">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Asset Valuation (Cost)</h4>
-              <h2 id="metric-asset-valuation-cost">₹0.00</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box gold">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Asset Valuation (Retail)</h4>
-              <h2 id="metric-asset-valuation-retail">₹0.00</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box blue" style="background:rgba(59, 130, 246, 0.1); color:#3b82f6">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M4 10h3v7H4zm6.5 0h3v7h-3zM2 19h20v2H2zm15-9h3v7h-3zm-5-9L2 6v2h20V6L12 1z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Franchise Earnings</h4>
-              <h2 id="metric-franchise-earnings" style="color:#3b82f6">₹0.00</h2>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Section: Product Catalog & Stock Intelligence -->
-        <h3 style="margin: 24px 0 15px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-          <span>📦</span> Product Catalog & Stock Intelligence
-        </h3>
-        <div class="dashboard-metrics-grid">
-          <div class="metric-card">
-            <div class="metric-icon-box green">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Total Products</h4>
-              <h2 id="metric-total-products">0</h2>
-            </div>
-          </div>
-          
-          <div class="metric-card">
-            <div class="metric-icon-box blue">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 2c0-3.31-2.69-6-6-6s-6 2.69-6 6c0 2.22 1.21 4.15 3 5.19l1-1.74c-1.19-.69-2-1.99-2-3.45 0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.46-.81 2.76-2 3.45l1 1.74c1.79-1.04 3-2.97 3-5.19z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Own Products</h4>
-              <h2 id="metric-own-products" style="color:var(--accent-green)">0</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box gold">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H4v-4h11v4zm0-5H4V9h11v4zm5 5h-4V9h4v9z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>External Products</h4>
-              <h2 id="metric-external-products">0</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box danger">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Low Stock Items</h4>
-              <h2 id="metric-low-stock-count" class="trend-down">0</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box danger" style="background:rgba(224, 30, 90, 0.1); color:var(--accent-danger)">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Out of Stock</h4>
-              <h2 id="metric-out-of-stock-count" class="trend-down">0</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box blue" style="background:rgba(0, 180, 216, 0.1); color:#00b4d8">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Categories</h4>
-              <h2 id="metric-categories-count">0</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box gold" style="background:rgba(255, 183, 3, 0.1); color:#ffb703">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Active Brands</h4>
-              <h2 id="metric-brands-count">0</h2>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-icon-box green" style="background:rgba(76, 201, 240, 0.1); color:#4cc9f0">
-              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-            </div>
-            <div class="metric-info">
-              <h4>Suppliers</h4>
-              <h2 id="metric-suppliers-count">0</h2>
-            </div>
-          </div>
-        </div>
-
-        <!-- Dashboard Visual Charts -->
-        <div class="dashboard-charts-grid">
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Sales Revenue Timeline (Last 7 Days)</h3>
-              <span style="font-size:11px; font-weight:700; color:var(--accent-green)">₹ Dynamic Revenue Curve</span>
-            </div>
-            
-            <div class="chart-container">
-              <svg class="chart-svg" id="dashboard-sales-chart" viewBox="0 0 500 220">
-                <defs>
-                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="var(--accent-green)" />
-                    <stop offset="100%" stop-color="var(--bg-panel)" stop-opacity="0" />
-                  </linearGradient>
-                </defs>
-                <!-- Grid Lines -->
-                <line x1="40" y1="20" x2="480" y2="20" class="chart-grid-line" />
-                <line x1="40" y1="70" x2="480" y2="70" class="chart-grid-line" />
-                <line x1="40" y1="120" x2="480" y2="120" class="chart-grid-line" />
-                <line x1="40" y1="170" x2="480" y2="170" class="chart-grid-line" />
-                
-                <!-- Main Axis -->
-                <line x1="40" y1="170" x2="480" y2="170" class="chart-axis-line" />
-                <line x1="40" y1="20" x2="40" y2="170" class="chart-axis-line" />
-                <g id="chart-dynamic-group"></g>
-              </svg>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Sales breakdown by Category</h3>
-            </div>
-            <div class="donut-container">
-              <div class="donut-svg-wrapper">
-                <svg class="donut-chart-svg" viewBox="0 0 36 36">
-                  <circle class="donut-segment" cx="18" cy="18" r="15.915" fill="none" stroke="var(--border-color)"></circle>
-                  <g id="donut-dynamic-segments"></g>
-                </svg>
-                <div class="donut-center-text">
-                  <div class="donut-center-num" id="donut-sales-count">₹0</div>
-                  <div class="donut-center-label">Sales Value</div>
-                </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:var(--space-2)">
+                <h3 id="dashboard-active-outlet-name" style="margin:0; font-size:var(--text-lg); font-weight:var(--font-weight-heavy); color:var(--text-primary)">All Outlets Consolidated</h3>
+                <span class="status-badge status-success" id="dashboard-active-outlet-status">Consolidated Mode</span>
               </div>
-              <div class="donut-legend" id="donut-legend-box"></div>
+              <p style="margin:2px 0 0 0; font-size:var(--text-xs); color:var(--text-secondary)">Real-time Agro-Business Intelligence & Operational Ledger</p>
             </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:var(--space-2)">
+            <span id="dashboard-last-updated" style="font-size:var(--text-xs); color:var(--text-muted); font-variant-numeric:tabular-nums">Updated just now</span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="initDashboardAnalytics()" title="Refresh Dashboard Metrics">
+              <span>🔄</span> Refresh
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="switchView('billing')">
+              <span>⚡</span> POS Checkout <span class="kbd-badge">F1</span>
+            </button>
           </div>
         </div>
 
-        <!-- Dashboard Warning logs & demand stats -->
-        <div class="dashboard-charts-grid">
-          
-          <!-- Low Stock watchlist panel -->
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Low Stock Watchlist</h3>
-              <span class="status-badge low-stock" style="font-size:10px">Reorder Required</span>
+        <!-- Executive Financial KPI Grid -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:var(--space-3); margin-bottom:var(--space-4)">
+          <div class="metric-card-shell">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <span class="metric-label">Gross Revenue</span>
+              <span style="font-size:18px">💰</span>
             </div>
-            <div class="table-container">
-              <table>
+            <div class="metric-value-tabular" id="metric-total-sales" style="color:var(--accent-success)">₹0.00</div>
+            <span style="font-size:var(--text-xs); color:var(--text-muted)">Completed Invoices</span>
+          </div>
+
+          <div class="metric-card-shell">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <span class="metric-label">Net Farm Profit</span>
+              <span style="font-size:18px">📈</span>
+            </div>
+            <div class="metric-value-tabular" id="metric-net-profit" style="color:var(--accent-success)">₹0.00</div>
+            <span style="font-size:var(--text-xs); color:var(--text-muted)">Gross Sales vs Procurement COGS</span>
+          </div>
+
+          <div class="metric-card-shell">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <span class="metric-label">Stock Valuation (Retail)</span>
+              <span style="font-size:18px">🏪</span>
+            </div>
+            <div class="metric-value-tabular" id="metric-asset-valuation-retail">₹0.00</div>
+            <span style="font-size:var(--text-xs); color:var(--text-muted)">Current Inventory Retail Value</span>
+          </div>
+
+          <div class="metric-card-shell">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <span class="metric-label">Stock Valuation (Cost)</span>
+              <span style="font-size:18px">📦</span>
+            </div>
+            <div class="metric-value-tabular" id="metric-asset-valuation-cost">₹0.00</div>
+            <span style="font-size:var(--text-xs); color:var(--text-muted)">Current Inventory Asset Cost</span>
+          </div>
+
+          <div class="metric-card-shell">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <span class="metric-label">Franchise Settlements</span>
+              <span style="font-size:18px">🤝</span>
+            </div>
+            <div class="metric-value-tabular" id="metric-franchise-earnings" style="color:var(--accent-primary)">₹0.00</div>
+            <span style="font-size:var(--text-xs); color:var(--text-muted)">Paid Franchise Supply Orders</span>
+          </div>
+        </div>
+
+        <!-- Operational Attention & Catalog Health Grid -->
+        <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:var(--space-4); margin-bottom:var(--space-4)">
+          
+          <!-- Low Stock Attention Watchlist -->
+          <div class="card-shell" style="display:flex; flex-direction:column; gap:var(--space-3)">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <div style="display:flex; align-items:center; gap:var(--space-2)">
+                <h4 style="margin:0; font-size:var(--text-md); font-weight:var(--font-weight-bold); color:var(--text-primary)">⚠️ Operational Watchlist</h4>
+                <span class="status-badge status-warning" style="font-size:11px">Stock Attention</span>
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="switchView('inventory')">View Master Inventory →</button>
+            </div>
+
+            <div class="data-table-wrapper">
+              <table class="data-table-shell data-table-dense">
                 <thead>
                   <tr>
                     <th>Product</th>
-                    <th>SKU / Barcode</th>
+                    <th>SKU</th>
                     <th style="text-align:right">Min Limit</th>
-                    <th style="text-align:right">Current Stock</th>
+                    <th style="text-align:right">On Hand</th>
                     <th style="text-align:center">Action</th>
                   </tr>
                 </thead>
                 <tbody id="dashboard-low-stock-watchlist">
-                  <!-- Low stock items populated here -->
+                  <!-- Dynamic rows -->
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- Top Selling Watch list -->
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Top Selling Products (Demand Index)</h3>
+          <!-- Catalog & Inventory Health Matrix -->
+          <div class="card-shell" style="display:flex; flex-direction:column; gap:var(--space-3)">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <h4 style="margin:0; font-size:var(--text-md); font-weight:var(--font-weight-bold); color:var(--text-primary)">📊 Catalog Health</h4>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="switchView('inventory')">Manage</button>
             </div>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Product details</th>
-                    <th style="text-align:right">Units Sold</th>
-                    <th style="text-align:right">Sales Price</th>
-                    <th style="text-align:right">Total Revenue</th>
-                  </tr>
-                </thead>
-                <tbody id="dashboard-top-selling-watchlist">
-                  <!-- Dynamic metrics populated here -->
-                </tbody>
-              </table>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:var(--space-2)">
+              <div style="background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px">
+                <span class="input-label">Total SKUs</span>
+                <div class="tabular-numeric" style="font-size:var(--text-xl); color:var(--text-primary)" id="metric-total-products">0</div>
+              </div>
+
+              <div style="background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px">
+                <span class="input-label">Farm / Own Items</span>
+                <div class="tabular-numeric" style="font-size:var(--text-xl); color:var(--accent-success)" id="metric-own-products">0</div>
+              </div>
+
+              <div style="background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px">
+                <span class="input-label">External Brands</span>
+                <div class="tabular-numeric" style="font-size:var(--text-xl); color:var(--text-primary)" id="metric-external-products">0</div>
+              </div>
+
+              <div style="background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px">
+                <span class="input-label">Low Stock</span>
+                <div class="tabular-numeric" style="font-size:var(--text-xl); color:var(--accent-warning)" id="metric-low-stock-count">0</div>
+              </div>
+
+              <div style="background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px">
+                <span class="input-label">Out of Stock</span>
+                <div class="tabular-numeric" style="font-size:var(--text-xl); color:var(--accent-danger)" id="metric-out-of-stock-count">0</div>
+              </div>
+
+              <div style="background:var(--bg-surface-raised); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px">
+                <span class="input-label">Tax Categories</span>
+                <div class="tabular-numeric" style="font-size:var(--text-xl); color:var(--accent-info)" id="metric-categories-count">0</div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size:var(--text-xs); color:var(--text-muted); border-top:1px solid var(--border-subtle); padding-top:var(--space-2)">
+              <span>Active Brands: <strong id="metric-brands-count" style="color:var(--text-primary)">0</strong></span>
+              <span>Suppliers: <strong id="metric-suppliers-count" style="color:var(--text-primary)">0</strong></span>
             </div>
           </div>
-
         </div>
 
-        <!-- Dashboard Recent Transactions list grid -->
-        <div class="dashboard-charts-grid">
-          <!-- Dashboard Recent Sales list -->
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Recent Customer Transactions</h3>
-              <button class="secondary-btn" onclick="switchView('invoices')" style="padding: 6px 12px; font-size:11px">View Invoices</button>
+        <!-- Recent Transactions & Purchases Ledger Grid -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:var(--space-4)">
+          
+          <!-- Recent Customer Sales -->
+          <div class="card-shell" style="display:flex; flex-direction:column; gap:var(--space-3)">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <div style="display:flex; align-items:center; gap:var(--space-2)">
+                <h4 style="margin:0; font-size:var(--text-md); font-weight:var(--font-weight-bold); color:var(--text-primary)">🧾 Recent Invoices</h4>
+                <span class="status-badge status-info" style="font-size:11px">Sales Ledger</span>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="switchView('invoices')">All Invoices →</button>
             </div>
-            <div class="table-container">
-              <table>
+
+            <div class="data-table-wrapper">
+              <table class="data-table-shell data-table-dense">
                 <thead>
                   <tr>
                     <th>Invoice ID</th>
-                    <th>Customer Name</th>
-                    <th>Payment Mode</th>
-                    <th style="text-align:right">Grand Total</th>
+                    <th>Customer</th>
+                    <th>Mode</th>
+                    <th style="text-align:right">Total</th>
                     <th style="text-align:center">Action</th>
                   </tr>
                 </thead>
@@ -3032,21 +2928,24 @@
             </div>
           </div>
 
-          <!-- Dashboard Recent Supplier Purchases list -->
-          <div class="panel">
-            <div class="panel-header">
-              <h3 class="panel-title">Recent Purchases Ledger</h3>
-              <button class="secondary-btn" onclick="switchView('purchase')" style="padding: 6px 12px; font-size:11px">New Purchase</button>
+          <!-- Recent Supplier Purchases -->
+          <div class="card-shell" style="display:flex; flex-direction:column; gap:var(--space-3)">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <div style="display:flex; align-items:center; gap:var(--space-2)">
+                <h4 style="margin:0; font-size:var(--text-md); font-weight:var(--font-weight-bold); color:var(--text-primary)">📥 Recent Purchases</h4>
+                <span class="status-badge status-neutral" style="font-size:11px">Vendor Inflow</span>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="switchView('purchase')">New Purchase →</button>
             </div>
-            <div class="table-container">
-              <table>
+
+            <div class="data-table-wrapper">
+              <table class="data-table-shell data-table-dense">
                 <thead>
                   <tr>
                     <th>Invoice Ref</th>
                     <th>Supplier Partner</th>
-                    <th>Store Location</th>
-                    <th style="text-align:right">Total Cost</th>
-                    <th style="text-align:right">Qty Recd</th>
+                    <th>Location</th>
+                    <th style="text-align:right">Cost</th>
                   </tr>
                 </thead>
                 <tbody id="dashboard-recent-purchases">
@@ -3055,6 +2954,7 @@
               </table>
             </div>
           </div>
+
         </div>
 
       </div>
@@ -5869,6 +5769,7 @@
   <script src="/frontend-api/franchise.js"></script>
   <script src="/frontend-api/dashboard.js"></script>
   <script src="/frontend-api/scanner.js"></script>
+  <script src="/ui/components.js"></script>
   <script>
     /* ==================== STATE MANAGEMENT ==================== */
     let state = {
@@ -6348,11 +6249,26 @@
 
         syncSocket.on('connect', () => {
           console.log("[Sync] Persisted database synchronization channel established.");
+          const syncBadgeEl = document.getElementById('app-sync-status-badge');
+          if (syncBadgeEl && window.AppUI) {
+            syncBadgeEl.innerHTML = AppUI.renderSyncBadge('connected');
+          }
           joinStoreSyncRoom();
+        });
+
+        syncSocket.on('reconnect_attempt', () => {
+          const syncBadgeEl = document.getElementById('app-sync-status-badge');
+          if (syncBadgeEl && window.AppUI) {
+            syncBadgeEl.innerHTML = AppUI.renderSyncBadge('syncing');
+          }
         });
 
         syncSocket.on('connect_error', (err) => {
           console.warn("[Sync] Socket connection non-fatal warning (REST sync active):", err.message);
+          const syncBadgeEl = document.getElementById('app-sync-status-badge');
+          if (syncBadgeEl && window.AppUI) {
+            syncBadgeEl.innerHTML = AppUI.renderSyncBadge('offline');
+          }
         });
 
         syncSocket.on('SESSION_REVOKED', (data) => {
@@ -6461,6 +6377,9 @@
         }
         renderPOSProducts();
         renderProductsTable();
+        if (state.activeView === 'dashboard') {
+          initDashboardAnalytics();
+        }
       };
       syncSocket.on('product.updated', handleProductUpdated);
       syncSocket.on('product_updated', handleProductUpdated);
@@ -6476,6 +6395,9 @@
           state.invoices.push(invoice);
         }
         renderInvoicesTable();
+        if (state.activeView === 'dashboard') {
+          initDashboardAnalytics();
+        }
       };
       syncSocket.on('invoice.created', handleInvoiceCreated);
       syncSocket.on('invoice_created', handleInvoiceCreated);
@@ -12035,33 +11957,50 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
         }
       }
 
-      // Server-side Aggregation Pipeline Integration (Stage 12 P0)
+      // Server-side Aggregation Pipeline Integration (Stage 13 Phase C)
       try {
         if (window.api?.dashboard?.getMetrics) {
           const serverData = await window.api.dashboard.getMetrics({ storeId: activeBizId || '' });
           if (serverData && serverData.success && serverData.metrics) {
             const m = serverData.metrics;
 
-            document.getElementById("metric-total-sales").innerText = `₹${m.totalSales.toFixed(2)}`;
+            const formatVal = (num) => window.AppUI ? window.AppUI.formatCurrency(num) : `₹${Number(num || 0).toFixed(2)}`;
+
+            const salesEl = document.getElementById("metric-total-sales");
+            if (salesEl) salesEl.innerText = formatVal(m.totalSales);
+
             const netProfitEl = document.getElementById("metric-net-profit");
-            netProfitEl.innerText = `₹${m.netProfit.toFixed(2)}`;
-            netProfitEl.style.color = "var(--accent-green)";
-            document.getElementById("metric-asset-valuation-cost").innerText = `₹${m.stockAssetValuationCost.toFixed(2)}`;
-            document.getElementById("metric-asset-valuation-retail").innerText = `₹${m.stockAssetValuationRetail.toFixed(2)}`;
+            if (netProfitEl) {
+              netProfitEl.innerText = formatVal(m.netProfit);
+              netProfitEl.style.color = "var(--accent-success)";
+            }
+
+            const costValEl = document.getElementById("metric-asset-valuation-cost");
+            if (costValEl) costValEl.innerText = formatVal(m.stockAssetValuationCost);
+
+            const retailValEl = document.getElementById("metric-asset-valuation-retail");
+            if (retailValEl) retailValEl.innerText = formatVal(m.stockAssetValuationRetail);
             
             const franEarningsEl = document.getElementById("metric-franchise-earnings");
             if (franEarningsEl) {
-              franEarningsEl.innerText = `₹${m.franchiseEarnings.toFixed(2)}`;
+              franEarningsEl.innerText = formatVal(m.franchiseEarnings);
             }
 
-            document.getElementById("metric-total-products").innerText = m.totalProducts;
-            document.getElementById("metric-own-products").innerText = m.ownProducts;
-            document.getElementById("metric-external-products").innerText = m.externalProducts;
-            document.getElementById("metric-low-stock-count").innerText = m.lowStockCount;
-            document.getElementById("metric-out-of-stock-count").innerText = m.outOfStockCount;
-            document.getElementById("metric-categories-count").innerText = m.categoriesCount;
-            document.getElementById("metric-brands-count").innerText = m.brandsCount;
-            document.getElementById("metric-suppliers-count").innerText = m.suppliersCount;
+            const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+            setTxt("metric-total-products", m.totalProducts);
+            setTxt("metric-own-products", m.ownProducts);
+            setTxt("metric-external-products", m.externalProducts);
+            setTxt("metric-low-stock-count", m.lowStockCount);
+            setTxt("metric-out-of-stock-count", m.outOfStockCount);
+            setTxt("metric-categories-count", m.categoriesCount);
+            setTxt("metric-brands-count", m.brandsCount);
+            setTxt("metric-suppliers-count", m.suppliersCount);
+
+            const updatedEl = document.getElementById("dashboard-last-updated");
+            if (updatedEl) {
+              const now = new Date();
+              updatedEl.innerText = `Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+            }
 
             const alertDot = document.getElementById("alert-bell-dot");
             if (alertDot) {
@@ -12082,15 +12021,15 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
                   row.innerHTML = `
                     <td>
                       <div style="display:flex; align-items:center; gap:8px">
-                        ${getProductListThumbnailHtml(p, 24)}
+                        ${typeof getProductListThumbnailHtml === 'function' ? getProductListThumbnailHtml(p, 24) : ''}
                         <strong>${p.name}</strong>
                       </div>
                     </td>
-                    <td><code>${p.sku}</code></td>
+                    <td><span class="badge-mono">${p.sku}</span></td>
                     <td style="text-align:right">${p.reorder} ${p.sellingMode === 'loose' ? (p.unit || 'kg') : 'units'}</td>
-                    <td style="text-align:right"><strong>${Number.isInteger(p.stock) ? p.stock.toString() : p.stock.toFixed(2)} ${p.sellingMode === 'loose' ? (p.unit || 'kg') : 'units'}</strong></td>
+                    <td style="text-align:right"><strong style="color:${isOut ? 'var(--accent-danger)' : 'var(--accent-warning)'}">${Number.isInteger(p.stock) ? p.stock.toString() : p.stock.toFixed(2)} ${p.sellingMode === 'loose' ? (p.unit || 'kg') : 'units'}</strong></td>
                     <td style="text-align:center">
-                      <button class="primary-btn" style="padding:4px 8px; font-size:10px" onclick="openProductModal('${p.id}')">Restock</button>
+                      <button class="btn btn-secondary btn-sm" onclick="openProductModal('${p.id}')">Restock</button>
                     </td>
                   `;
                   lowStockTbody.appendChild(row);
@@ -12104,19 +12043,19 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
               recentTbody.innerHTML = "";
               const recents = serverData.recentInvoices || [];
               if (recents.length === 0) {
-                recentTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px">No sales logs logged yet.</td></tr>`;
+                recentTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px">No sales recorded yet.</td></tr>`;
               } else {
                 recents.forEach(inv => {
                   const custName = inv.customerName || inv.customer?.name || 'Walk-in Buyer';
                   const row = document.createElement("tr");
                   const invTotal = inv.grandTotal || inv.grandtotal || 0;
                   row.innerHTML = `
-                    <td><strong style="color:var(--accent-green)">${inv.invoiceNumber || inv.id}</strong></td>
+                    <td><strong style="color:var(--accent-primary)">${inv.invoiceNumber || inv.id}</strong></td>
                     <td><strong>${custName}</strong></td>
-                    <td style="text-transform:uppercase; font-size:10px"><strong>${inv.paymentMode || inv.paymentMethod || 'CASH'}</strong></td>
-                    <td style="text-align:right"><strong>₹${invTotal.toFixed(2)}</strong></td>
+                    <td><span class="status-badge status-neutral" style="font-size:10px">${inv.paymentMode || inv.paymentMethod || 'CASH'}</span></td>
+                    <td style="text-align:right" class="tabular-numeric"><strong>${formatVal(invTotal)}</strong></td>
                     <td style="text-align:center">
-                      <button class="secondary-btn" style="padding:4px 8px; font-size:10px" onclick="openInvoicePreviewModal('${inv.invoiceNumber || inv.id}')">Invoice</button>
+                      <button class="btn btn-ghost btn-sm" onclick="openInvoicePreviewModal('${inv.invoiceNumber || inv.id}')">View</button>
                     </td>
                   `;
                   recentTbody.appendChild(row);
@@ -12130,26 +12069,22 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
               purchaseTbody.innerHTML = "";
               const recPurchases = serverData.recentPurchases || [];
               if (recPurchases.length === 0) {
-                purchaseTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px">No supplier purchase invoices recorded.</td></tr>`;
+                purchaseTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px">No supplier purchase invoices recorded.</td></tr>`;
               } else {
                 recPurchases.forEach(pur => {
                   const purTotal = pur.grandTotal || pur.total || pur.totalCost || 0;
-                  const itemsCount = pur.items ? pur.items.length : (pur.itemsCount || 0);
                   const row = document.createElement("tr");
                   row.innerHTML = `
-                    <td><strong style="color:var(--accent-green)">${pur.purchaseNo || pur.id}</strong></td>
+                    <td><strong style="color:var(--text-primary)">${pur.purchaseNo || pur.id}</strong></td>
                     <td><strong>${pur.supplierName || pur.supplier || 'Vendor'}</strong></td>
-                    <td>${pur.storeName || pur.store || pur.locationId || 'Store'}</td>
-                    <td style="text-align:right; font-weight:700">₹${purTotal.toFixed(2)}</td>
-                    <td style="text-align:right"><strong>${itemsCount} items</strong></td>
+                    <td><span class="status-badge status-neutral" style="font-size:10px">${pur.storeName || pur.store || pur.locationId || 'Main Store'}</span></td>
+                    <td style="text-align:right; font-weight:700" class="tabular-numeric">${formatVal(purTotal)}</td>
                   `;
                   purchaseTbody.appendChild(row);
                 });
               }
             }
 
-            buildSVGSalesChart();
-            buildCategoryPieChart();
             return;
           }
         }
@@ -12890,6 +12825,30 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       const now = Date.now();
       const timeDiff = now - lastKeyTime;
       lastKeyTime = now;
+
+      // App Shell Global Shortcuts (when not active in input fields)
+      const targetTag = e.target ? e.target.tagName : '';
+      const isInputFocused = targetTag === 'INPUT' || targetTag === 'TEXTAREA' || targetTag === 'SELECT';
+
+      if (!isInputFocused && hardwareBarcodeBuffer.length === 0) {
+        if (e.key === 'F1') {
+          e.preventDefault();
+          switchView('billing');
+          return;
+        }
+        if (e.key === 'F2') {
+          e.preventDefault();
+          switchView('inventory');
+          return;
+        }
+      }
+
+      if (e.key === 'Escape') {
+        const activeModals = document.querySelectorAll('.modal-backdrop.active');
+        if (activeModals.length > 0) {
+          activeModals.forEach(m => m.classList.remove('active'));
+        }
+      }
 
       if (e.key === "Enter") {
         if (hardwareBarcodeBuffer.length >= 3 && timeDiff < 100) {
