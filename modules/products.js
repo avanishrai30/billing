@@ -392,7 +392,11 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       productData.variants || []
     );
 
-    if (io) io.to('sync_global').emit('product_updated', { productId });
+    if (io) {
+      const realtimeService = require('../services/realtimeService');
+      const envelope = realtimeService.createEventEnvelope('product', 'updated', productId, null, { product: productDoc });
+      io.to('sync_global').emit('product_updated', envelope);
+    }
     res.json({ success: true, product: productDoc });
   } catch (err) {
     console.error("Failed to save product:", err);
@@ -422,7 +426,11 @@ router.delete('/:id', verifyJWT, requirePermission('products.archive'), async (r
     );
 
     await auditService.writeAuditLog('product_archived', 'inventory', productId, null, null, req);
-    if (io) io.to('sync_global').emit('product_deleted', { productId });
+    if (io) {
+      const realtimeService = require('../services/realtimeService');
+      const envelope = realtimeService.createEventEnvelope('product', 'archived', productId, null, { productId });
+      io.to('sync_global').emit('product_deleted', envelope);
+    }
     res.json({ success: true, message: "Product archived successfully" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error archiving product" });

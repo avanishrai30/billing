@@ -22,7 +22,8 @@ const inventoryService = {
     referenceId = 'N/A',
     performedBy = 'system',
     notes = '',
-    allowNegative = false
+    allowNegative = false,
+    skipRealtimeSocket = false
   }) {
     const { db, io } = getContext();
     const cleanLocationId = locationId || 'all';
@@ -101,17 +102,24 @@ const inventoryService = {
         createdAt: now
       });
 
-      // 3. Emit realtime event after successful DB write
-      if (io) {
-        io.to(`store_${cleanLocationId}`).emit('inventory.updated', {
-          eventId: `evt-${Date.now()}`,
+      // 3. Emit realtime event after successful DB write (unless suppressed during batch import)
+      if (io && !skipRealtimeSocket) {
+        const realtimeService = require('./realtimeService');
+        const envelope = realtimeService.createEventEnvelope(
+          'inventory',
+          'updated',
           productId,
-          locationId: cleanLocationId,
-          storeId: cleanLocationId,
-          quantity: afterQuantity,
-          version: doc.version || 1,
-          timestamp: now
-        });
+          cleanLocationId,
+          {
+            productId,
+            locationId: cleanLocationId,
+            storeId: cleanLocationId,
+            quantity: afterQuantity,
+            delta
+          },
+          doc.version || 1
+        );
+        io.to(`store_${cleanLocationId}`).emit('inventory.updated', envelope);
       }
 
       return { success: true, movementId, beforeQuantity, afterQuantity };
@@ -166,16 +174,23 @@ const inventoryService = {
       createdAt: now
     });
 
-    if (io) {
-      io.to(`store_${cleanLocationId}`).emit('inventory.updated', {
-        eventId: `evt-${Date.now()}`,
+    if (io && !skipRealtimeSocket) {
+      const realtimeService = require('./realtimeService');
+      const envelope = realtimeService.createEventEnvelope(
+        'inventory',
+        'updated',
         productId,
-        locationId: cleanLocationId,
-        storeId: cleanLocationId,
-        quantity: afterQuantity,
-        version: doc ? (doc.version || 1) : 1,
-        timestamp: now
-      });
+        cleanLocationId,
+        {
+          productId,
+          locationId: cleanLocationId,
+          storeId: cleanLocationId,
+          quantity: afterQuantity,
+          delta
+        },
+        doc ? (doc.version || 1) : 1
+      );
+      io.to(`store_${cleanLocationId}`).emit('inventory.updated', envelope);
     }
 
     return { success: true, movementId, beforeQuantity, afterQuantity };
@@ -329,9 +344,9 @@ const inventoryService = {
   },
 
   /**
-   * Batch stock increment for supplier purchases
+   * Batch stock increment for supplier purchases and bulk import
    */
-  async addStockBatch(items, locationId, referenceId, performedBy) {
+  async addStockBatch(items, locationId, referenceId, performedBy, options = {}) {
     if (!Array.isArray(items) || items.length === 0 || !locationId) {
       return { success: true, movements: [] };
     }
@@ -348,14 +363,15 @@ const inventoryService = {
           productId: prodId,
           locationId,
           locationType: 'STORE',
-          type: 'PURCHASE',
+          type: options.type || 'PURCHASE',
           quantityDelta: qty,
           unitCost: item.cost || item.purchasePrice || item.rate || 0,
           totalValue: (parseFloat(item.cost || item.purchasePrice || 0) * qty),
-          referenceType: 'purchase',
+          referenceType: options.referenceType || 'purchase',
           referenceId,
           performedBy,
-          notes: `Supplier Purchase Receipt #${referenceId}`
+          notes: options.notes || `Stock Batch Entry #${referenceId}`,
+          skipRealtimeSocket: options.skipRealtimeSocket || false
         });
 
         completedAdditions.push({ productId: prodId, quantity: qty, res });

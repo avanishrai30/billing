@@ -203,7 +203,19 @@ router.post('/', verifyJWT, requirePermission('invoices.create'), requireStoreSc
 
     // 7. Emit realtime event
     if (io) {
-      io.to(`store_${targetLocationId}`).emit('invoice_created', { invoiceNumber, locationId: targetLocationId });
+      const realtimeService = require('../services/realtimeService');
+      const envelope = realtimeService.createEventEnvelope(
+        'invoice',
+        'created',
+        invoiceNumber,
+        targetLocationId,
+        {
+          invoiceNumber,
+          id: invoiceDoc.id,
+          invoice: invoiceDoc
+        }
+      );
+      io.to(`store_${targetLocationId}`).emit('invoice_created', envelope);
     }
 
     res.json({ success: true, invoice: invoiceDoc });
@@ -316,7 +328,15 @@ router.post('/:id/void', verifyJWT, requirePermission('invoices.void'), async (r
     );
 
     if (io) {
-      io.to(`store_${locId}`).emit('invoice_voided', { invoiceId: invoice.invoiceNumber || invoice.id });
+      const realtimeService = require('../services/realtimeService');
+      const envelope = realtimeService.createEventEnvelope(
+        'invoice',
+        'voided',
+        invoice.invoiceNumber || invoice.id,
+        locId,
+        { invoiceId: invoice.invoiceNumber || invoice.id }
+      );
+      io.to(`store_${locId}`).emit('invoice_voided', envelope);
     }
 
     res.json({ success: true, message: "Invoice voided and inventory stock reverted successfully" });
