@@ -157,10 +157,17 @@ router.post('/', verifyJWT, requirePermission('purchases.create'), requireStoreS
       req
     );
 
-    // 6. Emit real-time synchronization event
+    // 6. Emit real-time synchronization event strictly to store room
     if (io) {
-      io.to(`store_${targetLocationId}`).emit('purchase_created', { purchase: purchaseDoc });
-      io.to('sync_global').emit('purchase_created', { purchase: purchaseDoc });
+      const realtimeService = require('../services/realtimeService');
+      const envelope = realtimeService.createEventEnvelope(
+        'purchase',
+        'created',
+        purchaseId,
+        targetLocationId,
+        { purchase: purchaseDoc }
+      );
+      io.to(`store_${targetLocationId}`).emit('purchase_created', envelope);
     }
 
     res.json({ success: true, purchase: purchaseDoc });
@@ -262,7 +269,15 @@ router.delete('/:id', verifyJWT, requirePermission('purchases.void'), async (req
     );
 
     if (io) {
-      io.to('sync_global').emit('purchase_deleted', { purchaseId: purchase.purchaseId || purchase.id });
+      const realtimeService = require('../services/realtimeService');
+      const envelope = realtimeService.createEventEnvelope(
+        'purchase',
+        'deleted',
+        purchase.purchaseId || purchase.id,
+        locId,
+        { purchaseId: purchase.purchaseId || purchase.id }
+      );
+      io.to(`store_${locId}`).emit('purchase_deleted', envelope);
     }
 
     res.json({ success: true, message: "Purchase voided and inventory stock reverted successfully" });
