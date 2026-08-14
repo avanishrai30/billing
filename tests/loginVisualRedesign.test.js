@@ -91,7 +91,7 @@ describe('P0 Login Experience Redesign: Cinematic Atmospheric Glassmorphism Suit
     expect(html).toContain('class="login-gradient-canvas"');
     expect(html).toContain('class="login-blob login-blob-1"');
     expect(html).toContain('class="login-bg-vignette"');
-    expect(html).toContain('rgba(124, 58, 237');
+    expect(html).toContain('rgba(91, 75, 232');
   });
 
   test('16. No external web font network links in head', () => {
