@@ -9,24 +9,70 @@ const router = express.Router();
 
 const VALID_PAYMENT_MODES = ['CASH', 'UPI', 'CARD', 'BANK'];
 
-// GET /api/v1/invoices - Fetch all non-archived invoices with store scoping
+// GET /api/v1/invoices - Fetch paginated non-archived invoices with store scoping and date filtering (Stage 12 P0)
 router.get('/', verifyJWT, requirePermission('invoices.view'), async (req, res) => {
   const { db } = getContext();
+  const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
+
   try {
     const scopeFilter = getStoreScopeFilter(req.user, ['locationId', 'storeId', 'businessId']);
     const filter = { isArchived: { $ne: true }, ...scopeFilter };
-    const invoices = await db.collection('invoices').find(filter).toArray();
+
+    // Query Filters
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+    if (req.query.customerId) {
+      filter.customerId = req.query.customerId;
+    }
+    if (req.query.locationId || req.query.storeId) {
+      const loc = req.query.locationId || req.query.storeId;
+      filter.$or = [{ locationId: loc }, { storeId: loc }, { businessId: loc }];
+    }
+    if (req.query.startDate || req.query.endDate) {
+      filter.createdAt = {};
+      if (req.query.startDate) filter.createdAt.$gte = req.query.startDate;
+      if (req.query.endDate) filter.createdAt.$lte = req.query.endDate;
+    }
+
+    // Pagination configuration (default 50, max 100)
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const skip = req.query.skip !== undefined ? Math.max(0, parseInt(req.query.skip) || 0) : (page - 1) * limit;
+
+    const total = await db.collection('invoices').countDocuments(filter);
+    const invoices = await db.collection('invoices')
+      .find(filter)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
     const normalizedInvoices = invoices.map(inv => ({
       ...inv,
       id: inv.id || inv.invoiceNumber || (inv._id ? inv._id.toString() : ""),
       date: inv.date || inv.createdAt || new Date().toISOString()
     }));
-    res.json(normalizedInvoices);
+
+    res.json({
+      success: true,
+      invoices: normalizedInvoices,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: (skip + limit) < total,
+        hasPrev: page > 1
+      },
+      requestId
+    });
   } catch (err) {
+    console.error("[Billing] Error fetching paginated invoices:", err);
     res.status(500).json({
       success: false,
       error: { code: "FETCH_ERROR", message: "Failed to fetch invoices" },
-      requestId: req.headers['x-request-id'] || null
+      requestId
     });
   }
 });

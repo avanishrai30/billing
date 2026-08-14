@@ -1,9 +1,18 @@
 window.api = window.api || {};
 
 window.api.invoices = {
-  async list() {
-    const res = await window.api.request('/api/v1/invoices');
-    return Array.isArray(res) ? res : res?.invoices || [];
+  async list(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const url = query ? `/api/v1/invoices?${query}` : '/api/v1/invoices';
+    const res = await window.api.request(url);
+    if (Array.isArray(res)) return res;
+    return res?.invoices || [];
+  },
+
+  async listWithPagination(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const url = query ? `/api/v1/invoices?${query}` : '/api/v1/invoices';
+    return await window.api.request(url);
   },
 
   async getById(id) {
