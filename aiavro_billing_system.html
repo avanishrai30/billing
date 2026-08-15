@@ -161,14 +161,14 @@
     aside {
       background-color: var(--bg-panel);
       border-right: 1px solid var(--border-color);
-      padding: 24px 20px;
+      padding: 30px 24px;
       display: flex;
       flex-direction: column;
       height: 100vh;
       position: sticky;
       top: 0;
       z-index: 10;
-      transition: background-color 0.2s ease, border-color 0.2s ease;
+      transition: background-color 0.3s, border-color 0.3s;
       width: var(--sidebar-width, 300px);
       box-sizing: border-box;
       min-width: 0;
@@ -185,7 +185,7 @@
       cursor: col-resize;
       z-index: 99999 !important;
       background: transparent;
-      transition: background-color 0.15s ease;
+      transition: background-color 0.15s;
       position: sticky;
       top: 0;
       margin-right: -5px;
@@ -197,15 +197,15 @@
     .brand-section {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 24px;
-      padding: 2px 4px;
+      gap: 14px;
+      margin-bottom: 28px;
+      padding: 4px 6px;
     }
 
     .aiavro-logo-wrapper {
-      width: 52px;
-      height: 52px;
-      min-width: 52px;
+      width: 57px;
+      height: 57px;
+      min-width: 57px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -214,13 +214,18 @@
       border: none !important;
       padding: 0 !important;
       box-shadow: none !important;
+      transition: var(--transition);
+    }
+
+    .aiavro-logo-wrapper:hover {
+      transform: scale(1.05);
     }
 
     .aiavro-logo-wrapper img {
       width: 100%;
       height: 100%;
-      max-width: 52px;
-      max-height: 52px;
+      max-width: 57px;
+      max-height: 57px;
       object-fit: contain;
     }
 
@@ -234,10 +239,10 @@
     }
 
     .brand-name {
-      font-family: var(--font-sans);
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
       line-height: 1.2;
       color: var(--text-primary);
       margin: 0;
@@ -247,11 +252,11 @@
     }
 
     .brand-subtitle {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--accent-green);
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 1px;
       line-height: 1.25;
       margin-top: 2px;
       white-space: nowrap;
@@ -263,76 +268,77 @@
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
       flex: 1;
       overflow-y: auto;
       margin-bottom: 12px;
-      padding-right: 2px;
+      padding-right: 4px;
     }
 
     .nav-section-title {
       font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 1.5px;
       color: var(--text-muted);
-      font-weight: 700;
-      margin: 16px 0 6px 10px;
+      font-weight: 800;
+      margin: 18px 0 8px 12px;
     }
 
     .nav-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: var(--radius-sm);
       color: var(--text-muted);
-      font-weight: 500;
-      font-size: 13px;
+      font-weight: 600;
+      font-size: 14px;
       cursor: pointer;
       text-decoration: none;
-      transition: var(--transition-fast);
+      transition: var(--transition);
       position: relative;
     }
 
     .nav-item:hover, .nav-item.active {
       color: var(--accent-green);
       background-color: var(--accent-green-soft);
+      transform: translateX(4px);
     }
 
     .nav-item.active {
-      font-weight: 600;
+      font-weight: 700;
       box-shadow: inset 3px 0 0 var(--accent-green);
     }
 
     .nav-icon {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       fill: currentColor;
     }
 
     /* Sidebar Active Business Widget */
     .active-business-widget {
-      background: var(--bg-subtle);
+      background: var(--bg-primary);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      padding: 12px 14px;
-      margin-bottom: 16px;
+      border-radius: var(--radius-sm);
+      padding: 15px;
+      margin-bottom: 20px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      transition: var(--transition-fast);
+      gap: 8px;
+      transition: var(--transition);
     }
 
     .active-business-widget:hover {
-      box-shadow: var(--shadow-xs);
+      box-shadow: var(--shadow-sm);
     }
 
     .widget-label {
       font-size: 10px;
       text-transform: uppercase;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--text-muted);
-      letter-spacing: 0.06em;
+      letter-spacing: 0.5px;
     }
 
     .widget-value {
@@ -351,7 +357,7 @@
       gap: 10px;
       align-items: stretch;
       border-top: 1px solid var(--border-color);
-      padding-top: 14px;
+      padding-top: 16px;
       margin-top: auto;
       flex-shrink: 0;
       width: 100%;
@@ -361,19 +367,20 @@
       background: none;
       border: 1px solid var(--border-color);
       color: var(--text-muted);
-      width: 34px;
-      height: 34px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       cursor: pointer;
       display: grid;
       place-items: center;
-      transition: var(--transition-fast);
+      transition: var(--transition);
     }
 
     .theme-toggle-btn:hover {
       color: var(--accent-green);
       background-color: var(--accent-green-soft);
       border-color: var(--accent-green);
+      transform: scale(1.1) rotate(20deg);
     }
 
     /* Main Area Container */
@@ -383,7 +390,6 @@
       flex-direction: column;
       overflow-y: auto;
       height: 100vh;
-      background-color: var(--bg-primary);
     }
 
     header {
@@ -394,26 +400,22 @@
     }
 
     .header-title-area h2 {
-      font-family: var(--font-sans);
-      font-size: 22px;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-      margin: 0;
-      line-height: 1.2;
+      font-family: 'Outfit', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
     }
 
     .header-title-area p {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--text-muted);
-      margin-top: 2px;
-      font-weight: 400;
+      margin-top: 4px;
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 15px;
     }
 
     /* Input Controls */
@@ -421,31 +423,29 @@
       background-color: var(--bg-panel);
       border: 1px solid var(--border-color);
       color: var(--text-primary);
-      padding: 0 14px;
-      height: 40px;
+      padding: 10px 16px;
       border-radius: var(--radius-sm);
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       outline: none;
       cursor: pointer;
-      box-shadow: var(--shadow-xs);
-      transition: var(--transition-fast);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
       width: 100%;
       max-width: 100%;
       box-sizing: border-box;
-      font-family: var(--font-sans);
     }
 
     .select-dropdown:focus {
       border-color: var(--accent-green);
-      box-shadow: var(--shadow-focus);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
     }
 
     /* Notification Badge */
     .notification-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: var(--radius-sm);
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       background-color: var(--bg-panel);
       border: 1px solid var(--border-color);
       color: var(--text-muted);
@@ -453,20 +453,21 @@
       display: grid;
       place-items: center;
       position: relative;
-      transition: var(--transition-fast);
+      transition: var(--transition);
     }
 
     .notification-btn:hover {
       color: var(--accent-green);
       border-color: var(--accent-green);
+      transform: scale(1.05);
     }
 
     .notification-badge {
       position: absolute;
       top: 6px;
       right: 6px;
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       background-color: var(--accent-danger);
       border-radius: 50%;
       border: 2px solid var(--bg-panel);
@@ -794,25 +795,22 @@
     }
 
     th {
-      background-color: var(--bg-subtle);
+      background-color: var(--bg-primary);
       color: var(--text-muted);
-      font-family: var(--font-sans);
       font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 700;
-      padding: 12px 16px;
+      letter-spacing: 0.7px;
+      font-weight: 800;
+      padding: 14px 18px;
       border-bottom: 1px solid var(--border-color);
     }
 
     td {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border-subtle);
-      font-family: var(--font-sans);
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--border-color);
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--text-primary);
-      line-height: 1.4;
     }
 
     tr:last-child td {
@@ -820,11 +818,11 @@
     }
 
     tr {
-      transition: var(--transition-fast);
+      transition: background-color 0.2s;
     }
 
     tr:hover td {
-      background-color: rgba(16, 185, 129, 0.04);
+      background-color: var(--accent-green-soft);
     }
 
     /* Badges */
@@ -832,12 +830,9 @@
       display: inline-flex;
       align-items: center;
       padding: 3px 8px;
-      border-radius: var(--radius-pill);
-      font-family: var(--font-sans);
+      border-radius: 99px;
       font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
       white-space: nowrap;
       line-height: 1.2;
     }
@@ -1399,29 +1394,25 @@
     /* Main Action Buttons */
     .primary-btn {
       background-color: var(--accent-green);
-      color: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      padding: 10px 18px;
+      color: white;
+      border: none;
+      padding: 14px 24px;
       border-radius: var(--radius-sm);
-      font-family: var(--font-sans);
-      font-weight: 600;
-      font-size: 13px;
+      font-weight: 700;
+      font-size: 14px;
       cursor: pointer;
-      display: inline-flex;
+      display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: var(--shadow-xs);
-      transition: var(--transition-fast);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      transition: var(--transition);
     }
 
     .primary-btn:hover:not(:disabled) {
       background-color: var(--accent-green-hover);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .primary-btn:active {
-      transform: translateY(1px);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
     }
 
     .primary-btn:disabled {
@@ -1434,79 +1425,22 @@
       background-color: var(--bg-panel);
       color: var(--text-primary);
       border: 1px solid var(--border-color);
-      padding: 10px 16px;
+      padding: 12px 20px;
       border-radius: var(--radius-sm);
-      font-family: var(--font-sans);
-      font-weight: 600;
+      font-weight: 700;
       font-size: 13px;
       cursor: pointer;
-      display: inline-flex;
+      display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: var(--shadow-xs);
-      transition: var(--transition-fast);
+      transition: var(--transition);
     }
 
-    .secondary-btn:hover:not(:disabled) {
+    .secondary-btn:hover {
       border-color: var(--text-muted);
       background-color: var(--bg-primary);
-    }
-
-    .secondary-btn:active {
-      transform: translateY(1px);
-    }
-
-    .danger-btn {
-      background-color: var(--accent-danger);
-      color: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      padding: 10px 16px;
-      border-radius: var(--radius-sm);
-      font-family: var(--font-sans);
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      box-shadow: var(--shadow-xs);
-      transition: var(--transition-fast);
-    }
-
-    .danger-btn:hover:not(:disabled) {
-      background-color: var(--accent-danger-hover);
-    }
-
-    .danger-btn:active {
-      transform: translateY(1px);
-    }
-
-    .ghost-btn {
-      background: transparent;
-      color: var(--text-muted);
-      border: none;
-      padding: 8px 12px;
-      border-radius: var(--radius-sm);
-      font-family: var(--font-sans);
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: var(--transition-fast);
-    }
-
-    .ghost-btn:hover:not(:disabled) {
-      color: var(--text-primary);
-      background-color: var(--bg-subtle);
-    }
-
-    .ghost-btn:active {
-      transform: translateY(1px);
+      transform: none;
     }
 
     /* Modal Styles */
@@ -1516,16 +1450,15 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background-color: rgba(0, 0, 0, 0.55);
+      background-color: rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 100;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.25s ease;
+      transition: opacity 0.3s ease;
     }
 
     .modal-backdrop.active {
@@ -1545,11 +1478,17 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
+      transform: scale(0.95);
+      transition: transform 0.3s ease;
       margin: 16px;
     }
 
+    .modal-backdrop.active .modal-card {
+      transform: scale(1);
+    }
+
     .modal-header {
-      padding: 18px 24px;
+      padding: 20px 28px;
       border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
@@ -1557,12 +1496,9 @@
     }
 
     .modal-header h3 {
-      font-family: var(--font-sans);
-      font-size: 17px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      color: var(--text-primary);
-      margin: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
     }
 
     .modal-close-btn {
