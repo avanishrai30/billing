@@ -160,37 +160,15 @@ router.post('/', verifyJWT, requirePermission('purchases.create'), requireStoreS
 
     // 4. Calculate totals
     let calculatedSubtotal = 0;
-    let calculatedDiscount = 0;
-    let calculatedGoodsTax = 0;
-
     purchaseData.items.forEach(item => {
-      const rate = parseFloat(item.purchaseRate || item.cost || item.purchasePrice || item.rate || 0);
+      const cost = parseFloat(item.cost || item.purchasePrice || item.rate || 0);
       const qty = parseFloat(item.quantity) || 1;
-      const lineRaw = rate * qty;
-      const discPct = parseFloat(item.discountPercent || item.discount || 0);
-      const lineDisc = (lineRaw * discPct) / 100;
-      const taxable = lineRaw - lineDisc;
-      const taxRate = parseFloat(item.taxRate || item.gst || 0);
-      const lineTax = (taxable * taxRate) / 100;
-
-      calculatedSubtotal += lineRaw;
-      calculatedDiscount += lineDisc;
-      calculatedGoodsTax += lineTax;
+      calculatedSubtotal += (cost * qty);
     });
 
-    const transportObj = (purchaseData.transport && typeof purchaseData.transport === 'object') ? purchaseData.transport : null;
-    const transportCharge = transportObj && transportObj.enabled ? (parseFloat(transportObj.charge) || 0) : 0;
-    const transportTax = transportObj && transportObj.enabled ? (parseFloat(transportObj.taxAmount) || 0) : 0;
-    const otherCharges = parseFloat(purchaseData.otherCharges || 0);
-
-    const shipping = transportCharge > 0 ? transportCharge : parseFloat(purchaseData.shipping || 0);
-    const taxAmount = purchaseData.taxAmount !== undefined
-      ? parseFloat(purchaseData.taxAmount)
-      : (calculatedGoodsTax + transportTax);
-
-    const grandTotal = purchaseData.grandTotal !== undefined
-      ? parseFloat(purchaseData.grandTotal)
-      : Math.round((calculatedSubtotal - calculatedDiscount) + taxAmount + shipping + otherCharges);
+    const taxAmount = parseFloat(purchaseData.taxAmount || purchaseData.tax || 0);
+    const shipping = parseFloat(purchaseData.shipping || 0);
+    const grandTotal = calculatedSubtotal + taxAmount + shipping;
 
     const now = new Date().toISOString();
     const purchaseDoc = {
@@ -201,13 +179,8 @@ router.post('/', verifyJWT, requirePermission('purchases.create'), requireStoreS
       locationId: targetLocationId,
       storeId: targetLocationId,
       subtotal: calculatedSubtotal,
-      discount: calculatedDiscount,
-      goodsTaxableValue: calculatedSubtotal - calculatedDiscount,
-      goodsTaxAmount: calculatedGoodsTax,
       taxAmount,
       shipping,
-      transport: transportObj,
-      otherCharges,
       grandTotal,
       items: purchaseData.items,
       inventoryMovements: inventoryResult.movements || [],
