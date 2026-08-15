@@ -15,6 +15,10 @@ window.api.purchases = {
     return await window.api.request(url);
   },
 
+  async get(id) {
+    return await window.api.request(`/api/v1/purchases/${encodeURIComponent(id)}`);
+  },
+
   async save(purchaseData) {
     return await window.api.request('/api/v1/purchases', {
       method: 'POST',
