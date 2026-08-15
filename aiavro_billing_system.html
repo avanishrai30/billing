@@ -482,10 +482,16 @@
     /* Views */
     .app-view {
       display: none;
+      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .app-view.active {
       display: block;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* Panels & Cards */
@@ -1168,8 +1174,14 @@
       padding: 10px 12px;
       border: 1px solid var(--border-color);
       border-radius: var(--radius-sm);
-      transition: var(--transition-fast);
+      transition: var(--transition);
+      animation: itemEntry 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
       flex-shrink: 0;
+    }
+
+    @keyframes itemEntry {
+      from { opacity: 0; transform: scale(0.9) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
     .cart-item-card:hover {
@@ -1369,6 +1381,7 @@
       padding: 15px;
       margin-bottom: 20px;
       text-align: center;
+      animation: slideUp 0.3s forwards;
     }
 
     .pos-camera-drawer.active {
@@ -1582,6 +1595,7 @@
       flex-direction: column;
       align-items: center;
       gap: 20px;
+      animation: fadeIn 0.3s forwards;
     }
 
     .card-payment-view.active {
@@ -7482,35 +7496,33 @@
 
     function renderPermissionsMatrix() {
       const tbody = document.getElementById("permissions-matrix-tbody");
-      if (!tbody) return;
+      tbody.innerHTML = "";
 
-      const admPerms = (state.rolePermissions && state.rolePermissions.admin) || [];
-      const empPerms = (state.rolePermissions && state.rolePermissions.employee) || [];
-      const audPerms = (state.rolePermissions && state.rolePermissions.auditor) || [];
+      const admPerms = state.rolePermissions.admin || [];
+      const empPerms = state.rolePermissions.employee || [];
+      const audPerms = state.rolePermissions.auditor || [];
 
-      const rowsHtml = MODULE_LIST.map(mod => {
+      MODULE_LIST.forEach(mod => {
         const isAdmChecked = admPerms.includes(mod.id) ? "checked" : "";
         const isEmpChecked = empPerms.includes(mod.id) ? "checked" : "";
         const isAudChecked = audPerms.includes(mod.id) ? "checked" : "";
 
-        return `
-          <tr>
-            <td><strong>${escapeHTML(mod.name)}</strong></td>
-            <td style="text-align: center"><code style="background:var(--bg-primary); padding:3px 6px; border-radius:4px">${escapeHTML(mod.id)}</code></td>
-            <td class="perm-checkbox-cell">
-              <input type="checkbox" value="${escapeHTML(mod.id)}" class="perm-checkbox adm-perm-chk" ${isAdmChecked}>
-            </td>
-            <td class="perm-checkbox-cell">
-              <input type="checkbox" value="${escapeHTML(mod.id)}" class="perm-checkbox emp-perm-chk" ${isEmpChecked}>
-            </td>
-            <td class="perm-checkbox-cell">
-              <input type="checkbox" value="${escapeHTML(mod.id)}" class="perm-checkbox aud-perm-chk" ${isAudChecked}>
-            </td>
-          </tr>
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><strong>${mod.name}</strong></td>
+          <td style="text-align: center"><code style="background:var(--bg-primary); padding:3px 6px; border-radius:4px">${mod.id}</code></td>
+          <td class="perm-checkbox-cell">
+            <input type="checkbox" value="${mod.id}" class="perm-checkbox adm-perm-chk" ${isAdmChecked}>
+          </td>
+          <td class="perm-checkbox-cell">
+            <input type="checkbox" value="${mod.id}" class="perm-checkbox emp-perm-chk" ${isEmpChecked}>
+          </td>
+          <td class="perm-checkbox-cell">
+            <input type="checkbox" value="${mod.id}" class="perm-checkbox aud-perm-chk" ${isAudChecked}>
+          </td>
         `;
-      }).join('');
-
-      tbody.innerHTML = rowsHtml;
+        tbody.appendChild(row);
+      });
     }
 
     async function saveRolePermissions() {
@@ -8592,6 +8604,7 @@
     function renderMyProfileAuditLogs() {
       const tbody = document.getElementById("my-profile-audit-tbody");
       if (!tbody) return;
+      tbody.innerHTML = "";
 
       const user = state.currentUser;
       if (!user) return;
@@ -8610,7 +8623,8 @@
         return;
       }
 
-      const rowsHtml = myLogs.map(log => {
+      myLogs.forEach(log => {
+        const row = document.createElement("tr");
         const dateStr = new Date(log.timestamp).toLocaleString();
         
         let actionBadge = "";
@@ -8625,17 +8639,14 @@
           actionBadge = `<span class="status-badge" style="background-color:rgba(107,114,128,0.1); color:var(--text-muted); font-size:10px">${safeUpper(log.action || log.eventType)}</span>`;
         }
 
-        return `
-          <tr>
-            <td class="tabular-nums" style="font-size:11.5px; color:var(--text-muted); white-space:nowrap">${dateStr}</td>
-            <td>${actionBadge}</td>
-            <td><code style="font-size:11px; font-weight:700; color:var(--text-muted)">${escapeHTML(log.view || log.entity || 'system')}</code></td>
-            <td style="font-size:12px; color:var(--text-primary); max-width: 250px; word-wrap: break-word">${escapeHTML(log.details || log.eventType || '')}</td>
-          </tr>
+        row.innerHTML = `
+          <td style="font-size:11.5px; color:var(--text-muted); white-space:nowrap">${dateStr}</td>
+          <td>${actionBadge}</td>
+          <td><code style="font-size:11px; font-weight:700; color:var(--text-muted)">${escapeHTML(log.view || log.entity || 'system')}</code></td>
+          <td style="font-size:12px; color:var(--text-primary); max-width: 250px; word-wrap: break-word">${escapeHTML(log.details || log.eventType || '')}</td>
         `;
-      }).join('');
-
-      tbody.innerHTML = rowsHtml;
+        tbody.appendChild(row);
+      });
     }
 
     async function uploadMyProfileAvatar(e) {
@@ -9699,49 +9710,59 @@
     /* ==================== INVENTORY & EXPIRY DETAILS ==================== */
     function renderInventoryTable(filteredData = null) {
       const tbody = document.getElementById("inventory-table-body");
-      if (!tbody) return;
+      tbody.innerHTML = "";
 
       // Populate filter dropdowns dynamically
       const catSelect = document.getElementById("inventory-filter-category");
       if (catSelect) {
         const cur = catSelect.value;
-        const categories = [...new Set((state.products || []).map(p => p.category))].filter(c => c);
-        catSelect.innerHTML = `<option value="all">All Categories</option>` + categories.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join('');
+        catSelect.innerHTML = `<option value="all">All Categories</option>`;
+        const categories = [...new Set(state.products.map(p => p.category))].filter(c => c);
+        categories.forEach(cat => {
+          catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+        });
         catSelect.value = cur || "all";
       }
 
       const brandSelect = document.getElementById("inventory-filter-brand");
       if (brandSelect) {
         const curBrand = brandSelect.value;
-        const brands = [...new Set((state.products || []).map(p => p.brand).filter(b => b))];
-        brandSelect.innerHTML = `<option value="all">All Brands</option>` + brands.map(br => `<option value="${escapeHTML(br)}">${escapeHTML(br)}</option>`).join('');
+        brandSelect.innerHTML = `<option value="all">All Brands</option>`;
+        const brands = [...new Set(state.products.map(p => p.brand).filter(b => b))];
+        brands.forEach(br => {
+          brandSelect.innerHTML += `<option value="${br}">${br}</option>`;
+        });
         brandSelect.value = curBrand || "all";
       }
 
       const supSelect = document.getElementById("inventory-filter-supplier");
       if (supSelect) {
         const curSup = supSelect.value;
-        const sups = [...new Set((state.products || []).map(p => p.supplier).filter(s => s))];
-        supSelect.innerHTML = `<option value="all">All Suppliers</option>` + sups.map(sp => `<option value="${escapeHTML(sp)}">${escapeHTML(sp)}</option>`).join('');
+        supSelect.innerHTML = `<option value="all">All Suppliers</option>`;
+        const sups = [...new Set(state.products.map(p => p.supplier).filter(s => s))];
+        sups.forEach(sp => {
+          supSelect.innerHTML += `<option value="${sp}">${sp}</option>`;
+        });
         supSelect.value = curSup || "all";
       }
 
       const storeSelect = document.getElementById("inventory-filter-store");
       if (storeSelect) {
         const curStore = storeSelect.value;
-        const stores = [...new Set((state.products || []).map(p => p.store).filter(s => s))];
-        storeSelect.innerHTML = `<option value="all">All Store Locations</option>` + stores.map(st => `<option value="${escapeHTML(st)}">${escapeHTML(st)}</option>`).join('');
+        storeSelect.innerHTML = `<option value="all">All Store Locations</option>`;
+        const stores = [...new Set(state.products.map(p => p.store).filter(s => s))];
+        stores.forEach(st => {
+          storeSelect.innerHTML += `<option value="${st}">${st}</option>`;
+        });
         storeSelect.value = curStore || "all";
       }
 
-      // If no filteredData provided, compute default filtered list
+      // If no filteredData provided, run filter once with defaults (e.g. status = active by default)
       let list = filteredData;
       if (!list) {
-        const statusFilter = document.getElementById("inventory-filter-status") ? document.getElementById("inventory-filter-status").value : "active";
-        list = (state.products || []).filter(p => {
-          const pStatus = p.status || "active";
-          return statusFilter === "all" || pStatus === statusFilter;
-        });
+        // Run initial filter to respect default active status selection
+        runInventoryFilter(false); // false means do not call render again recursively
+        return;
       }
 
       if (list.length === 0) {
@@ -9749,7 +9770,7 @@
         return;
       }
 
-      const rowsHtml = list.map(p => {
+      list.forEach(p => {
         const isLow = p.stock <= p.reorder;
         const isOut = p.stock <= 0;
         let stockBadge = `<span class="status-badge in-stock">High stock</span>`;
@@ -9768,44 +9789,42 @@
 
         let actionButtons = `
           <div style="display:flex; gap:6px; justify-content:center">
-            <button class="secondary-btn" style="padding:4px 8px; font-size:11px" onclick="editProductRow('${escapeHTML(p.id)}')">Edit</button>
-            <button class="secondary-btn" style="padding:4px 8px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="deleteProductRow('${escapeHTML(p.id)}')">Delete</button>
+            <button class="secondary-btn" style="padding:4px 8px; font-size:11px" onclick="editProductRow('${p.id}')">Edit</button>
+            <button class="secondary-btn" style="padding:4px 8px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="deleteProductRow('${p.id}')">Delete</button>
           </div>
         `;
         if (state.currentUser && (getUserCategory(state.currentUser) === 'employee' || getUserCategory(state.currentUser) === 'auditor')) {
           actionButtons = `<span style="font-size:11px; color:var(--text-muted)">Read-Only</span>`;
         }
 
-        return `
-          <tr>
-            <td style="text-align:center">
-              <div style="width:36px; height:36px; border-radius:4px; overflow:hidden; border:1px solid var(--border-color); display:inline-flex; align-items:center; justify-content:center; background:var(--bg-panel)">
-                <img src="${escapeHTML(p.image || '/uploads/system/default-product.webp')}" loading="lazy" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' width=\\'16\\' height=\\'16\\' fill=\\'%23888\\'><path d=\\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\\'/></svg>'">
-              </div>
-            </td>
-            <td><code style="font-weight:700; color:var(--accent-green)">${escapeHTML(p.sku)}</code></td>
-            <td>
-              <strong>${escapeHTML(p.name)}</strong>
-              <small style="color:var(--text-muted); display:block">Size: ${escapeHTML(p.unit)} | GST: ${p.gst !== undefined ? p.gst : 5}%</small>
-            </td>
-            <td>${p.brand ? escapeHTML(p.brand) : 'AIAVRO'}</td>
-            <td>${escapeHTML(p.category)}</td>
-            <td>${p.supplier ? escapeHTML(p.supplier) : 'Golden Ghee Co.'}</td>
-            <td class="tabular-nums" style="text-align:right">₹${safeFixed(p.cost, 2)}</td>
-            <td class="tabular-nums" style="text-align:right">₹${safeFixed(p.price, 2)}</td>
-            <td class="tabular-nums" style="text-align:right">
-              <strong>${Number.isInteger(Number(p.stock)) ? (p.stock !== undefined ? p.stock.toString() : '0') : safeFixed(p.stock, 2)} ${p.sellingMode === 'loose' ? escapeHTML(p.unit || 'kg') : 'Units'}</strong>
-              <small style="display:block">${stockBadge}</small>
-            </td>
-            <td style="text-align:center">${statusBadge}</td>
-            <td>
-              ${actionButtons}
-            </td>
-          </tr>
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td style="text-align:center">
+            <div style="width:36px; height:36px; border-radius:4px; overflow:hidden; border:1px solid var(--border-color); display:inline-flex; align-items:center; justify-content:center; background:var(--bg-panel)">
+              <img src="${escapeHTML(p.image || '/uploads/system/default-product.webp')}" loading="lazy" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'16\' height=\'16\' fill=\'%23888\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\'/></svg>'">
+            </div>
+          </td>
+          <td><code style="font-weight:700; color:var(--accent-green)">${escapeHTML(p.sku)}</code></td>
+          <td>
+            <strong>${escapeHTML(p.name)}</strong>
+            <small style="color:var(--text-muted); display:block">Size: ${escapeHTML(p.unit)} | GST: ${p.gst !== undefined ? p.gst : 5}%</small>
+          </td>
+          <td>${p.brand ? escapeHTML(p.brand) : 'AIAVRO'}</td>
+          <td>${escapeHTML(p.category)}</td>
+          <td>${p.supplier ? escapeHTML(p.supplier) : 'Golden Ghee Co.'}</td>
+          <td style="text-align:right">₹${safeFixed(p.cost, 2)}</td>
+          <td style="text-align:right">₹${safeFixed(p.price, 2)}</td>
+          <td style="text-align:right">
+            <strong>${Number.isInteger(Number(p.stock)) ? (p.stock !== undefined ? p.stock.toString() : '0') : safeFixed(p.stock, 2)} ${p.sellingMode === 'loose' ? escapeHTML(p.unit || 'kg') : 'Units'}</strong>
+            <small style="display:block">${stockBadge}</small>
+          </td>
+          <td style="text-align:center">${statusBadge}</td>
+          <td>
+            ${actionButtons}
+          </td>
         `;
-      }).join('');
-
-      tbody.innerHTML = rowsHtml;
+        tbody.appendChild(row);
+      });
     }
 
     function toggleAdvancedFilters() {
@@ -10729,49 +10748,49 @@
 
     /* ==================== CUSTOMERS CRM ==================== */
     function renderCustomersTable(filtered = null) {
-      const list = filtered || state.customers || [];
+      const list = filtered || state.customers;
       const tbody = document.getElementById("customers-table-body");
-      if (!tbody) return;
+      tbody.innerHTML = "";
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:24px">No customers registered in database.</td></tr>`;
-      } else {
-        const rowsHtml = list.map(cust => {
-          const invs = (state.invoices || []).filter(i => i.customerId === cust.id);
-          const invCount = invs.length;
-          const totalPurchases = invs.reduce((s, i) => s + (i.status === 'paid' ? (Number(i.grandtotal) || 0) : 0), 0);
-
-          return `
-            <tr>
-              <td><strong>${escapeHTML(cust.name || '')}</strong></td>
-              <td>${escapeHTML(cust.phone || '')}</td>
-              <td>${cust.email ? escapeHTML(cust.email) : '-'}</td>
-              <td><code style="font-weight:700">${cust.gstin ? escapeHTML(cust.gstin) : 'Unregistered'}</code></td>
-              <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${escapeHTML(cust.address || '')}</td>
-              <td class="tabular-nums"><strong>${invCount} Bills</strong></td>
-              <td><strong class="tabular-nums" style="color:var(--accent-green)">₹${totalPurchases.toFixed(2)}</strong></td>
-              <td>
-                <div style="display:flex; gap:8px">
-                  <button class="secondary-btn" style="padding:6px 10px; font-size:11px" onclick="editCustomerRow('${escapeHTML(cust.id || '')}')">Edit</button>
-                  <button class="secondary-btn" style="padding:6px 10px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="deleteCustomerRow('${escapeHTML(cust.id || '')}')">Delete</button>
-                </div>
-              </td>
-            </tr>
-          `;
-        }).join('');
-
-        tbody.innerHTML = rowsHtml;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">No customers registered in database.</td></tr>`;
+        return;
       }
 
-      // Only synchronize POS customer select when the full customer dataset is refreshed
-      if (!filtered) {
-        const posSelect = document.getElementById("pos-customer-select");
-        if (posSelect) {
-          const cur = posSelect.value;
-          posSelect.innerHTML = (state.customers || []).map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)} (${escapeHTML(c.phone)})</option>`).join('');
-          if (cur) posSelect.value = cur;
-        }
-      }
+      list.forEach(cust => {
+        const invs = state.invoices.filter(i => i.customerId === cust.id);
+        const invCount = invs.length;
+        const totalPurchases = invs.reduce((s, i) => s + (i.status === 'paid' ? i.grandtotal : 0), 0);
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><strong>${escapeHTML(cust.name)}</strong></td>
+          <td>${escapeHTML(cust.phone)}</td>
+          <td>${cust.email ? escapeHTML(cust.email) : '-'}</td>
+          <td><code style="font-weight:700">${cust.gstin ? escapeHTML(cust.gstin) : 'Unregistered'}</code></td>
+          <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${escapeHTML(cust.address)}</td>
+          <td><strong>${invCount} Bills</strong></td>
+          <td><strong style="color:var(--accent-green)">₹${totalPurchases.toFixed(2)}</strong></td>
+          <td>
+            <div style="display:flex; gap:8px">
+              <button class="secondary-btn" style="padding:6px 10px; font-size:11px" onclick="editCustomerRow('${cust.id}')">Edit</button>
+              <button class="secondary-btn" style="padding:6px 10px; font-size:11px; border-color:var(--accent-danger); color:var(--accent-danger)" onclick="deleteCustomerRow('${cust.id}')">Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      const posSelect = document.getElementById("pos-customer-select");
+      const cur = posSelect.value;
+      posSelect.innerHTML = "";
+      state.customers.forEach(c => {
+        const option = document.createElement("option");
+        option.value = c.id;
+        option.innerText = `${c.name} (${c.phone})`;
+        posSelect.appendChild(option);
+      });
+      if (cur) posSelect.value = cur;
     }
 
     function runCustomerFilter() {
@@ -10986,14 +11005,11 @@
 
     function renderPOSProducts() {
       const pillsBox = document.getElementById("pos-category-pills");
-      const grid = document.getElementById("pos-products-grid");
-      if (!pillsBox || !grid) return;
+      pillsBox.innerHTML = "";
       
-      const activeProds = (state.products || []).filter(p => p.status !== 'inactive' && p.status !== 'pending_review');
+      const activeProds = state.products.filter(p => p.status !== 'inactive' && p.status !== 'pending_review');
 
       const categories = ['all', 'loose_items', ...new Set(activeProds.map(p => p.category).filter(c => c !== 'Loose & Fresh Items'))];
-      
-      const pillsFrag = document.createDocumentFragment();
       categories.forEach(cat => {
         const pill = document.createElement("button");
         pill.className = `category-pill ${posFilters.category === cat ? 'active' : ''}`;
@@ -11010,15 +11026,17 @@
             }
           }
         };
-        pillsFrag.appendChild(pill);
+        pillsBox.appendChild(pill);
       });
-      pillsBox.replaceChildren(pillsFrag);
+
+      const grid = document.getElementById("pos-products-grid");
+      grid.innerHTML = "";
 
       let filtered = activeProds.filter(p => {
         const matchCat = posFilters.category === 'all' 
           ? true 
           : (posFilters.category === 'loose_items' ? p.sellingMode === 'loose' : p.category === posFilters.category);
-        const matchSearch = !posFilters.search || (p.name && p.name.toLowerCase().includes(posFilters.search)) || (p.sku && p.sku.includes(posFilters.search));
+        const matchSearch = p.name.toLowerCase().includes(posFilters.search) || p.sku.includes(posFilters.search);
         return matchCat && matchSearch;
       });
 
@@ -11028,7 +11046,6 @@
       }
 
       const topDemandId = getHighDemandProductId();
-      const gridFrag = document.createDocumentFragment();
 
       filtered.forEach(p => {
         const card = document.createElement("div");
@@ -11092,24 +11109,22 @@
           ${demandBadge}
           ${expBadge}
           <div class="product-grid-thumbnail" style="width:100%; height:110px; border-radius:6px; overflow:hidden; background:var(--bg-primary); display:flex; align-items:center; justify-content:center; margin-top:8px; margin-bottom:8px; position:relative">
-            <img src="${escapeHTML(p.image || '/uploads/system/default-product.webp')}" loading="lazy" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 24 24\\' width=\\'32\\' height=\\'32\\' fill=\\'%23888\\'><path d=\\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\\'/></svg>'">
+            <img src="${p.image || '/uploads/system/default-product.webp'}" loading="lazy" style="width:100%; height:100%; object-fit:cover" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'32\' height=\'32\' fill=\'%23888\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z\'/></svg>'">
             ${looseBadge}
           </div>
           <div class="product-grid-info">
-            <span class="product-grid-category">${escapeHTML(p.category || '')}</span>
-            <strong class="product-grid-name">${escapeHTML(p.name || '')}</strong>
-            <small style="color:var(--text-muted); font-size:10px; display:block; margin:2px 0">SKU: ${escapeHTML(p.sku || '')} | Unit: ${escapeHTML(p.unit || '')}</small>
+            <span class="product-grid-category">${p.category}</span>
+            <strong class="product-grid-name">${p.name}</strong>
+            <small style="color:var(--text-muted); font-size:10px; display:block; margin:2px 0">SKU: ${p.sku} | Unit: ${p.unit}</small>
             ${marginFlag}
           </div>
           <div class="product-grid-price-stock" style="margin-top:6px">
-            <span class="product-grid-price tabular-nums">₹${safeFixed(p.price, 2)}${p.sellingMode === 'loose' ? ' / ' + (escapeHTML(p.unit || 'kg')) : ''}</span>
+            <span class="product-grid-price">₹${safeFixed(p.price, 2)}${p.sellingMode === 'loose' ? ' / ' + (p.unit || 'kg') : ''}</span>
             <span class="product-grid-stock">${stockLabel}</span>
           </div>
         `;
-        gridFrag.appendChild(card);
+        grid.appendChild(card);
       });
-
-      grid.replaceChildren(gridFrag);
     }
 
     function runPOSSearchFilter() {
@@ -11256,8 +11271,7 @@
       checkoutBtn.disabled = false;
       let subtotal = 0;
       let totalItemsCount = 0;
-
-      const cardsHtml = state.cart.map(item => {
+      state.cart.forEach(item => {
         const prod = state.products.find(p => p.id === item.productId);
         const isLoose = prod && prod.sellingMode === 'loose';
         
@@ -11274,7 +11288,7 @@
           qtyControlsHtml = `
             <div style="display:flex; align-items:center; gap:4px">
               <input type="number" class="cart-loose-qty-input" value="${displayVal}" min="${wConfig.divisor === 1 ? '0.01' : '1'}" step="${stepVal}" 
-                oninput="updateCartItemWeight('${escapeHTML(item.productId)}', this.value)" 
+                oninput="updateCartItemWeight(\'${item.productId}\', this.value)" 
                 style="width: 80px; padding:8px 6px; font-size:14px; text-align:center; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-panel); color:var(--text-primary); font-weight:700; min-height:36px">
               <span style="font-size:11px; color:var(--text-muted); font-weight:bold">${wConfig.suffix}</span>
             </div>
@@ -11283,29 +11297,28 @@
         } else {
           totalItemsCount += item.quantity;
           qtyControlsHtml = `
-            <button class="qty-btn" onclick="updateCartItemQty('${escapeHTML(item.productId)}', -1, '${escapeHTML(item.variantKey || '')}')">-</button>
+            <button class="qty-btn" onclick="updateCartItemQty(\'${item.productId}\', -1, \'${item.variantKey || ''}\')">-</button>
             <span class="qty-num">${item.quantity}</span>
-            <button class="qty-btn" onclick="updateCartItemQty('${escapeHTML(item.productId)}', 1, '${escapeHTML(item.variantKey || '')}')">+</button>
+            <button class="qty-btn" onclick="updateCartItemQty(\'${item.productId}\', 1, \'${item.variantKey || ''}\')">+</button>
           `;
           priceUnitStr = `₹${item.price.toFixed(2)} / ${item.unit}`;
         }
 
-        return `
-          <div class="cart-item-card">
-            <div class="cart-item-info">
-              <strong class="cart-item-name">${escapeHTML(item.name || '')}</strong>
-              <span class="cart-item-price-unit">${priceUnitStr}</span>
-            </div>
-            <div class="cart-item-controls">
-              ${qtyControlsHtml}
-            </div>
-            <span class="cart-item-total tabular-nums">₹${lineTotal.toFixed(2)}</span>
-            <button class="cart-remove-btn" onclick="removeCartItem('${escapeHTML(item.productId)}', '${escapeHTML(item.variantKey || '')}')">&times;</button>
+        const cartCard = document.createElement("div");
+        cartCard.className = "cart-item-card";
+        cartCard.innerHTML = `
+          <div class="cart-item-info">
+            <strong class="cart-item-name">${item.name}</strong>
+            <span class="cart-item-price-unit">${priceUnitStr}</span>
           </div>
+          <div class="cart-item-controls">
+            ${qtyControlsHtml}
+          </div>
+          <span class="cart-item-total">₹${lineTotal.toFixed(2)}</span>
+          <button class="cart-remove-btn" onclick="removeCartItem(\'${item.productId}\', \'${item.variantKey || ''}\')">&times;</button>
         `;
-      }).join('');
-
-      tbody.innerHTML = cardsHtml;
+        tbody.appendChild(cartCard);
+      });
 
       countBadge.innerText = `${totalItemsCount} ${totalItemsCount === 1 ? 'Item' : 'Items'}`;
 
@@ -11780,35 +11793,35 @@
       `;
 
       const tbody = document.getElementById("invoice-items-table-body");
-      if (tbody) {
-        tbody.innerHTML = (inv.items || []).map((item, index) => {
-          const total = item.lineTotal || (item.price * item.quantity);
-          const discountAmount = inv.discount || 0;
-          const subtotal = inv.subtotal || total;
-          const itemDiscount = subtotal > 0 ? (discountAmount * (total / subtotal)) : 0;
-          const itemTaxable = total - itemDiscount;
+      tbody.innerHTML = "";
 
-          const gstRate = parseFloat(item.gstRate !== undefined ? item.gstRate : 5) || 0;
-          const itemTax = itemTaxable - (itemTaxable / (1 + gstRate / 100));
+      inv.items.forEach((item, index) => {
+        const total = item.lineTotal || (item.price * item.quantity);
+        const discountAmount = inv.discount || 0;
+        const subtotal = inv.subtotal || total;
+        const itemDiscount = subtotal > 0 ? (discountAmount * (total / subtotal)) : 0;
+        const itemTaxable = total - itemDiscount;
 
-          const qtyDisplay = Number.isInteger(item.quantity) ? item.quantity.toString() : item.quantity.toFixed(3);
+        const gstRate = parseFloat(item.gstRate !== undefined ? item.gstRate : 5) || 0;
+        const itemTax = itemTaxable - (itemTaxable / (1 + gstRate / 100));
 
-          return `
-            <tr>
-              <td class="tabular-nums">${index + 1}</td>
-              <td>
-                <strong>${escapeHTML(item.name || '')}</strong><br>
-                <small style="color:#64748b">Size: ${escapeHTML(item.unit || 'unit')}${gstRate > 0 ? ` | GST: ${gstRate}%` : ''}</small>
-              </td>
-              <td class="tabular-nums" style="text-align: right">₹${(item.price || 0).toFixed(2)}</td>
-              <td class="tabular-nums" style="text-align: center">${qtyDisplay}</td>
-              <td class="tabular-nums" style="text-align: right">₹${itemDiscount.toFixed(2)}</td>
-              <td class="tabular-nums" style="text-align: right">₹${itemTax.toFixed(2)}</td>
-              <td class="tabular-nums" style="text-align: right">₹${total.toFixed(2)}</td>
-            </tr>
-          `;
-        }).join('');
-      }
+        const qtyDisplay = Number.isInteger(item.quantity) ? item.quantity.toString() : item.quantity.toFixed(3);
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>
+            <strong>${escapeHTML(item.name)}</strong><br>
+            <small style="color:#64748b">Size: ${escapeHTML(item.unit || 'unit')}${gstRate > 0 ? ` | GST: ${gstRate}%` : ''}</small>
+          </td>
+          <td style="text-align: right">₹${(item.price || 0).toFixed(2)}</td>
+          <td style="text-align: center">${qtyDisplay}</td>
+          <td style="text-align: right">₹${itemDiscount.toFixed(2)}</td>
+          <td style="text-align: right">₹${itemTax.toFixed(2)}</td>
+          <td style="text-align: right">₹${total.toFixed(2)}</td>
+        `;
+        tbody.appendChild(row);
+      });
 
       document.getElementById("inv-calc-subtotal").innerText = `₹${(inv.subtotal || 0).toFixed(2)}`;
       document.getElementById("inv-calc-discount").innerText = `-₹${(inv.discount || 0).toFixed(2)}`;
@@ -11855,20 +11868,20 @@
 
       const recItemsBody = document.getElementById("rec-58mm-items-body");
       if (recItemsBody) {
-        recItemsBody.innerHTML = (inv.items || []).map(item => {
+        recItemsBody.innerHTML = "";
+        inv.items.forEach(item => {
           const itemTotal = item.lineTotal || (item.price * item.quantity);
           const qtyDisplay = Number.isInteger(item.quantity) ? item.quantity.toString() : item.quantity.toFixed(3);
-          const formattedTotal = (parseFloat(itemTotal) || 0).toFixed(2);
-          return `
-            <tr>
-              <td style="padding:4px 0; line-height:1.3">
-                <strong style="font-family:sans-serif; font-size:11px">${escapeHTML(item.name || '')}</strong><br>
-                <span style="font-size:9.5px; color:#333">${qtyDisplay} ${escapeHTML(item.unit || 'unit')} @ ₹${(item.price || 0).toFixed(2)}</span>
-              </td>
-              <td class="tabular-nums" style="padding:4px 0; text-align:right; vertical-align:bottom; font-weight:700">₹${formattedTotal}</td>
-            </tr>
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td style="padding:4px 0; line-height:1.3">
+              <strong style="font-family:sans-serif; font-size:11px">${escapeHTML(item.name)}</strong><br>
+              <span style="font-size:9.5px; color:#333">${qtyDisplay} ${escapeHTML(item.unit || 'unit')} @ ₹${(item.price || 0).toFixed(2)}</span>
+            </td>
+            <td style="padding:4px 0; text-align:right; vertical-align:bottom; font-weight:700">₹${totalToFixed(itemTotal)}</td>
           `;
-        }).join('');
+          recItemsBody.appendChild(tr);
+        });
       }
 
       function totalToFixed(val) {
@@ -12174,59 +12187,56 @@ Thank you for supporting smallholder agro-ecology! 🌾🥛🐄`;
       }
 
       const tbody = document.getElementById("invoices-table-body");
-      if (!tbody) return;
+      tbody.innerHTML = "";
 
-      if (!list || list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:24px">No matching transactions recorded.</td></tr>`;
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">No matching transactions recorded.</td></tr>`;
         return;
       }
 
       const sortedList = [...list].sort((a,b) => new Date(b.date) - new Date(a.date));
 
-      const rowsHtml = sortedList.map(inv => {
+      sortedList.forEach(inv => {
         const biz = state.businesses.find(b => b.id === inv.businessId) || { name: 'Unknown Farm' };
         const cust = state.customers.find(c => c.id === inv.customerId) || { name: 'Walk-in Buyer' };
         const dateStr = new Date(inv.date).toLocaleDateString() + " " + new Date(inv.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
         const badge = inv.status === 'paid' ? `<span class="status-badge paid">PAID</span>` : `<span class="status-badge refunded">CANCELLED</span>`;
-        const grandTotal = Number(inv.grandtotal || 0).toFixed(2);
 
-        return `
-          <tr>
-            <td><strong style="color:var(--accent-green)">${escapeHTML(inv.id || '')}</strong></td>
-            <td>${escapeHTML(biz.name || '')}</td>
-            <td><strong>${escapeHTML(cust.name || '')}</strong></td>
-            <td class="tabular-nums">${dateStr}</td>
-            <td style="text-transform:uppercase; font-size:11px"><strong>${escapeHTML(inv.paymentMode || '')}</strong></td>
-            <td><strong class="tabular-nums">₹${grandTotal}</strong></td>
-            <td>${badge}</td>
-            <td>
-              <div style="display:flex; gap:8px">
-                <button class="secondary-btn" style="padding:6px 10px; font-size:11px" onclick="openInvoicePreviewModal('${escapeHTML(inv.id || '')}')">Perfect Invoice</button>
-              </div>
-            </td>
-          </tr>
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><strong style="color:var(--accent-green)">${inv.id}</strong></td>
+          <td>${biz.name}</td>
+          <td><strong>${cust.name}</strong></td>
+          <td>${dateStr}</td>
+          <td style="text-transform:uppercase; font-size:11px"><strong>${inv.paymentMode}</strong></td>
+          <td><strong style="font-family:\'Outfit\'">₹${inv.grandtotal.toFixed(2)}</strong></td>
+          <td>${badge}</td>
+          <td>
+            <div style="display:flex; gap:8px">
+              <button class="secondary-btn" style="padding:6px 10px; font-size:11px" onclick="openInvoicePreviewModal(\'${inv.id}\')">Perfect Invoice</button>
+            </div>
+          </td>
         `;
-      }).join('');
-
-      tbody.innerHTML = rowsHtml;
+        tbody.appendChild(row);
+      });
     }
 
     function runInvoiceFilter() {
-      const user = state.currentUser;
-      const search = document.getElementById("invoice-search") ? document.getElementById("invoice-search").value.toLowerCase() : "";
-      const fromD = document.getElementById("invoice-filter-from-date") ? document.getElementById("invoice-filter-from-date").value : "";
-      const toD = document.getElementById("invoice-filter-to-date") ? document.getElementById("invoice-filter-to-date").value : "";
-      const payMode = document.getElementById("invoice-filter-payment") ? document.getElementById("invoice-filter-payment").value : "all";
+      const search = document.getElementById("invoice-search").value.toLowerCase();
+      const fromD = document.getElementById("invoice-filter-from-date").value;
+      const toD = document.getElementById("invoice-filter-to-date").value;
+      const payMode = document.getElementById("invoice-filter-payment").value;
       const storeFilter = document.getElementById("invoice-filter-store") ? document.getElementById("invoice-filter-store").value : "all";
 
-      let filtered = (state.invoices || []).filter(inv => {
+      let filtered = state.invoices.filter(inv => {
         const biz = state.businesses.find(b => b.id === inv.businessId) || { name: '' };
         const cust = state.customers.find(c => c.id === inv.customerId) || { name: '' };
         
-        const matchSearch = !search || (inv.id && inv.id.toLowerCase().includes(search)) || (biz.name && biz.name.toLowerCase().includes(search)) || (cust.name && cust.name.toLowerCase().includes(search));
+        const matchSearch = inv.id.toLowerCase().includes(search) || biz.name.toLowerCase().includes(search) || cust.name.toLowerCase().includes(search);
         
         let matchDate = true;
-        const invDateOnly = inv.date ? inv.date.split("T")[0] : "";
+        const invDateOnly = inv.date.split("T")[0];
         if (fromD) matchDate = matchDate && (invDateOnly >= fromD);
         if (toD) matchDate = matchDate && (invDateOnly <= toD);
 
