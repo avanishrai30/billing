@@ -3,6 +3,10 @@
 <head>
   <script>
     (function() {
+      const savedTheme = localStorage.getItem("aiavro_theme");
+      if (savedTheme) {
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      }
       const savedWidth = localStorage.getItem("aiavro_sidebar_width");
       if (savedWidth && savedWidth.endsWith('px')) {
         const val = parseInt(savedWidth);
@@ -15,13 +19,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AIAVRO Billing System - Premium Farmer Business Suite</title>
-  <!-- Barcode, QR Code, SheetJS & Socket.IO CDN Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.0/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
-  
   <style>
     :root {
       --font-sans: "Avenir Next", "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -133,6 +130,29 @@
       transition: background-color 0.3s, color 0.3s;
     }
 
+    body:not(.authenticated-shell-ready) {
+      background-color: #05070d;
+      overflow: hidden;
+    }
+
+    body.app-booting {
+      transition: none !important;
+    }
+
+    body.app-booting .app-container,
+    .app-container[aria-hidden="true"] {
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.app-booting .app-container *,
+    body.view-routing .app-container * {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+
     /* Scrollbars */
     ::-webkit-scrollbar {
       width: 6px;
@@ -155,6 +175,7 @@
       grid-template-columns: var(--sidebar-width, 300px) 1fr;
       width: 100vw;
       min-height: 100vh;
+      opacity: 1;
     }
 
     /* Sidebar Styling */
@@ -183,7 +204,7 @@
       width: 10px;
       height: 100vh;
       cursor: col-resize;
-      z-index: 99999 !important;
+      z-index: 80 !important;
       background: transparent;
       transition: background-color 0.15s ease;
       position: sticky;
@@ -1513,12 +1534,14 @@
       justify-content: center;
       z-index: 100;
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
       transition: opacity 0.25s ease;
     }
 
     .modal-backdrop.active {
       opacity: 1;
+      visibility: visible;
       pointer-events: auto !important;
       z-index: 900 !important;
     }
@@ -2120,19 +2143,17 @@
     /* ==================== APPLE-STYLE FLUID GRADIENT & ATMOSPHERE ==================== */
     .login-screen-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
+      inset: 0;
+      width: auto;
+      height: auto;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 99999;
+      z-index: 100000;
       opacity: 0;
       pointer-events: none;
       background: #06070d;
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow: hidden;
       padding: 20px 16px;
       box-sizing: border-box;
       transition: opacity 0.3s ease;
@@ -2140,11 +2161,24 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeLegibility;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .login-screen-overlay::-webkit-scrollbar {
+      display: none;
     }
 
     .login-screen-overlay.active {
       opacity: 1;
       pointer-events: all;
+    }
+
+    body.authenticated-shell-ready .login-screen-overlay {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transition: none !important;
     }
 
     /* Atmospheric Background Layers */
@@ -2745,15 +2779,16 @@
       aside {
         position: fixed !important;
         top: 0;
-        left: -290px; /* Hidden by default */
+        left: 0;
+        transform: translateX(-290px);
         width: 280px !important;
         height: 100vh;
         z-index: 100;
-        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       }
       aside.active {
-        left: 0 !important;
+        transform: translateX(0) !important;
       }
       #mobile-sidebar-toggle {
         display: block !important;
@@ -2880,7 +2915,7 @@
     }
   </style>
 </head>
-<body>
+<body class="app-booting">
 
   <!-- ==================== CINEMATIC GLASSMORPHISM LOGIN OVERLAY ==================== -->
   <div id="login-screen-overlay" class="login-screen-overlay active">
@@ -2965,7 +3000,7 @@
     </div>
   </div>
 
-  <div class="app-container">
+  <div class="app-container" aria-hidden="true">
     
     <!-- Sidebar Backdrop Overlay (Mobile only) -->
     <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar()" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:90; backdrop-filter:blur(3px);"></div>
@@ -5913,7 +5948,7 @@
         <!-- Camera Container -->
         <div id="inventory-camera-box" style="width: 100%; height: 260px; background: #000; border-radius: 8px; overflow: hidden; position: relative; border: 2px solid var(--border-color)">
           <!-- Pulsing Red Laser Line Overlay -->
-          <div style="position: absolute; top: 50%; left: 5%; right: 5%; height: 2px; background: rgba(239, 68, 68, 0.8); box-shadow: 0 0 8px #ef4444; z-index: 10; animation: laser-pulse 1.5s infinite alternate"></div>
+          <div class="inventory-scanner-laser" style="position: absolute; top: 50%; left: 5%; right: 5%; height: 2px; background: rgba(239, 68, 68, 0.8); box-shadow: 0 0 8px #ef4444; z-index: 10"></div>
         </div>
 
         <div style="margin-top: 15px; display: flex; justify-content: center; gap: 10px">
@@ -5924,9 +5959,15 @@
   </div>
 
   <style>
+    .inventory-scanner-laser {
+      transform: translateY(-20%);
+    }
+    .modal-backdrop.active .inventory-scanner-laser {
+      animation: laser-pulse 1.5s infinite alternate;
+    }
     @keyframes laser-pulse {
-      0% { top: 30%; }
-      100% { top: 70%; }
+      0% { transform: translateY(-20%); }
+      100% { transform: translateY(20%); }
     }
   </style>
 
@@ -6312,6 +6353,12 @@
 
 
   <!-- ==================== JS STATE & CONTROLLERS ==================== -->
+  <!-- Barcode, QR Code, SheetJS & Socket.IO CDN Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
   <script src="/frontend-api/client.js"></script>
   <script src="/frontend-api/auth.js"></script>
   <script src="/frontend-api/users.js"></script>
@@ -6504,10 +6551,12 @@
     const DEFAULT_INVOICES = [];
 
     /* ==================== CORE INITIALIZATION ==================== */
-    window.addEventListener("DOMContentLoaded", () => {
-      loadDatabaseState();
+    window.addEventListener("DOMContentLoaded", async () => {
+      const initialSync = loadDatabaseState();
+      if (initialSync && typeof initialSync.then === 'function') {
+        await initialSync.catch(err => console.warn("[Boot] Initial server sync completed with warning:", err));
+      }
       initAuthentication();
-      loadPublicSettings();
       renderOnboardingQueue();
       initSidebarDragResizer();
 
@@ -6518,6 +6567,27 @@
         }
       }, 90000);
     });
+
+    function beginStableViewRouting() {
+      document.body.classList.add("view-routing");
+    }
+
+    function endStableViewRouting() {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.body.classList.remove("view-routing");
+        });
+      });
+    }
+
+    function revealAuthenticatedShell(loginOverlay, appContainer) {
+      if (appContainer) appContainer.style.removeProperty("display");
+      appContainer.setAttribute("aria-hidden", "false");
+      document.body.classList.add("authenticated-shell-ready");
+      document.body.classList.remove("app-booting");
+      if (loginOverlay) loginOverlay.classList.remove("active");
+      endStableViewRouting();
+    }
 
     function initSidebarDragResizer() {
       const sidebar = document.querySelector('aside');
@@ -6686,6 +6756,7 @@
     }
 
     function loadDatabaseState() {
+      let initialSyncPromise = Promise.resolve();
       state.theme = localStorage.getItem("aiavro_theme") || 'light';
       state.showProductImagesInTables = localStorage.getItem("aiavro_show_product_images") !== 'false';
       state.backendUrl = (typeof window.resolveBackendUrl === 'function') ? window.resolveBackendUrl() : 'https://api.vcorganics.com';
@@ -6723,7 +6794,7 @@
       if (token && loggedUser) {
         try {
           state.currentUser = JSON.parse(loggedUser);
-          syncStateWithServer();
+          initialSyncPromise = syncStateWithServer({ render: false });
         } catch (e) {
           localStorage.removeItem("aiavro_jwt_token");
           localStorage.removeItem("aiavro_logged_in_user");
@@ -6753,11 +6824,40 @@
         state.activeView = 'scanner';
         document.body.classList.add("mode-scanner-only");
       }
+      return initialSyncPromise;
     }
 
     let syncSocket = null;
     let currentSocketToken = null;
+    let syncHeartbeatTimer = null;
+    let realtimeRenderFrame = null;
+    const realtimeDirtyViews = new Set();
     const processedEventIds = new Set(); // Bounded deduplication cache
+
+    function queueRealtimeRender(...views) {
+      views.filter(Boolean).forEach(view => realtimeDirtyViews.add(view));
+      if (realtimeRenderFrame) return;
+      realtimeRenderFrame = requestAnimationFrame(() => {
+        realtimeRenderFrame = null;
+        const dirtyViews = new Set(realtimeDirtyViews);
+        realtimeDirtyViews.clear();
+        const activeView = state.activeView;
+
+        if (dirtyViews.has('dashboard') && activeView === 'dashboard') initDashboardAnalytics();
+        if (dirtyViews.has('billing') && activeView === 'billing') renderPOSProducts();
+        if (dirtyViews.has('inventory') && activeView === 'inventory') {
+          renderInventoryTable();
+          renderOnboardingQueue();
+        }
+        if (dirtyViews.has('customers') && activeView === 'customers') renderCustomersTable();
+        if (dirtyViews.has('invoices') && activeView === 'invoices') renderInvoicesTable();
+        if (dirtyViews.has('auditor') && activeView === 'auditor') initAuditorDashboard();
+        if (dirtyViews.has('businesses') && activeView === 'businesses') renderBusinessesCards();
+        if (dirtyViews.has('franchises') && activeView === 'businesses') renderFranchiseCards();
+        if (dirtyViews.has('purchase') && activeView === 'purchase') renderPurchaseSheet();
+        if (dirtyViews.has('permissions') && activeView === 'permissions' && typeof renderUsersTable === 'function') renderUsersTable();
+      });
+    }
 
     function recordAndCheckDuplicateEvent(eventId) {
       if (!eventId) return false;
@@ -6797,6 +6897,10 @@
         } catch (e) {}
         syncSocket = null;
       }
+      if (syncHeartbeatTimer) {
+        clearInterval(syncHeartbeatTimer);
+        syncHeartbeatTimer = null;
+      }
 
       if (!token) return;
 
@@ -6833,7 +6937,7 @@
       }
 
       // Presence heartbeats (every 10 seconds)
-      setInterval(() => {
+      syncHeartbeatTimer = setInterval(() => {
         if (state.currentUser && syncSocket && syncSocket.connected) {
           syncSocket.emit('USER_HEARTBEAT', {
             userId: state.currentUser.id,
@@ -6865,8 +6969,7 @@
         if (prod) {
           prod.stock = quantity;
         }
-        renderPOSProducts();
-        renderInventoryTable();
+        queueRealtimeRender('billing', 'inventory', 'dashboard');
       };
       syncSocket.on('inventory.updated', handleInventoryUpdated);
       syncSocket.on('inventory_updated', handleInventoryUpdated);
@@ -6883,8 +6986,7 @@
               if (Array.isArray(invList)) {
                 state.inventory = invList;
                 updateLocalProductStockFromInventory();
-                renderPOSProducts();
-                renderInventoryTable();
+                queueRealtimeRender('billing', 'inventory', 'dashboard');
               }
             }).catch(e => console.warn('[Sync] Bulk inventory sync error:', e));
           }
@@ -6905,8 +7007,7 @@
         } else {
           state.products[idx] = product;
         }
-        renderPOSProducts();
-        renderProductsTable();
+        queueRealtimeRender('billing', 'inventory', 'dashboard', 'purchase');
       };
       syncSocket.on('product.created', handleProductCreated);
       syncSocket.on('product_created', handleProductCreated);
@@ -6923,8 +7024,7 @@
         } else {
           state.products.push(product);
         }
-        renderPOSProducts();
-        renderProductsTable();
+        queueRealtimeRender('billing', 'inventory', 'dashboard', 'purchase');
       };
       syncSocket.on('product.updated', handleProductUpdated);
       syncSocket.on('product_updated', handleProductUpdated);
@@ -6939,7 +7039,7 @@
         if (idx === -1) {
           state.invoices.push(invoice);
         }
-        renderInvoicesTable();
+        queueRealtimeRender('invoices', 'dashboard', 'auditor');
       };
       syncSocket.on('invoice.created', handleInvoiceCreated);
       syncSocket.on('invoice_created', handleInvoiceCreated);
@@ -6970,7 +7070,9 @@
         if (!b) return;
         const idx = state.businesses.findIndex(x => x.id === b.id);
         if (idx !== -1) state.businesses[idx] = b;
-        renderBusinessesTable();
+        renderBusinessesListDropdowns();
+        updateActiveBrandUI();
+        queueRealtimeRender('businesses', 'dashboard', 'billing', 'invoices');
       };
       syncSocket.on('business.updated', handleBusinessUpdated);
       syncSocket.on('business_updated', handleBusinessUpdated);
@@ -6981,7 +7083,9 @@
         const id = data.data?.id || data.id;
         if (!id) return;
         state.businesses = state.businesses.filter(b => b.id !== id);
-        renderBusinessesTable();
+        renderBusinessesListDropdowns();
+        updateActiveBrandUI();
+        queueRealtimeRender('businesses', 'dashboard', 'billing', 'invoices');
       };
       syncSocket.on('business.deleted', handleBusinessDeleted);
       syncSocket.on('business_deleted', handleBusinessDeleted);
@@ -6993,7 +7097,7 @@
         if (!u) return;
         const idx = state.users.findIndex(x => x.id === u.id);
         if (idx !== -1) state.users[idx] = u;
-        renderUsersTable();
+        queueRealtimeRender('permissions');
       };
       syncSocket.on('user.updated', handleUserUpdated);
       syncSocket.on('user_updated', handleUserUpdated);
@@ -7004,7 +7108,7 @@
         const purchase = data.data?.purchase || data.purchase;
         if (!purchase) return;
         state.purchases.push(purchase);
-        renderPurchaseTable();
+        queueRealtimeRender('purchase', 'dashboard', 'inventory');
       };
       syncSocket.on('purchase.created', handlePurchaseCreated);
       syncSocket.on('purchase_created', handlePurchaseCreated);
@@ -7016,7 +7120,7 @@
         if (!f) return;
         const idx = state.franchises.findIndex(x => x.id === f.id);
         if (idx !== -1) state.franchises[idx] = f;
-        renderFranchisesTable();
+        queueRealtimeRender('franchises', 'dashboard');
       };
       syncSocket.on('franchise.updated', handleFranchiseUpdated);
       syncSocket.on('franchise_updated', handleFranchiseUpdated);
@@ -7027,7 +7131,7 @@
         const id = data.data?.id || data.id;
         if (!id) return;
         state.franchises = state.franchises.filter(f => f.id !== id);
-        renderFranchisesTable();
+        queueRealtimeRender('franchises', 'dashboard');
       };
       syncSocket.on('franchise.deleted', handleFranchiseDeleted);
       syncSocket.on('franchise_deleted', handleFranchiseDeleted);
@@ -7038,7 +7142,7 @@
         const order = data.data?.order || data.order;
         if (!order) return;
         state.franchiseSupplyOrders.push(order);
-        renderFranchisesTable();
+        queueRealtimeRender('franchises', 'dashboard');
       };
       syncSocket.on('franchise_order.created', handleFranchiseOrderCreated);
       syncSocket.on('franchise_order_created', handleFranchiseOrderCreated);
@@ -7050,7 +7154,7 @@
         if (!inv) return;
         const idx = state.invoices.findIndex(i => i.invoiceNumber === inv.invoiceNumber);
         if (idx !== -1) state.invoices[idx] = inv;
-        renderInvoicesTable();
+        queueRealtimeRender('invoices', 'dashboard', 'auditor');
       };
       syncSocket.on('invoice.updated', handleInvoiceUpdated);
       syncSocket.on('invoice_updated', handleInvoiceUpdated);
@@ -7087,7 +7191,47 @@
       syncSocket.on('rbac_updated', handleRbacUpdated);
     }
 
-    async function syncStateWithServer() {
+    function renderActiveViewAfterStateSync() {
+      renderBusinessesListDropdowns();
+      updateActiveBrandUI();
+      populateUserFormStoreDropdown();
+      populateInvoiceStoreDropdown();
+      populateAuditStoreDropdown();
+
+      const activeView = state.activeView;
+      if (activeView === 'dashboard') {
+        initDashboardAnalytics();
+      } else if (activeView === 'billing') {
+        renderPOSProducts();
+        recalculatePOSTotals();
+      } else if (activeView === 'inventory') {
+        renderInventoryTable();
+        renderOnboardingQueue();
+      } else if (activeView === 'businesses') {
+        renderBusinessesCards();
+        renderFranchiseCards();
+      } else if (activeView === 'customers') {
+        renderCustomersTable();
+      } else if (activeView === 'invoices') {
+        populateInvoiceStoreDropdown();
+        renderInvoicesTable();
+      } else if (activeView === 'auditor') {
+        initAuditorDashboard();
+      } else if (activeView === 'permissions') {
+        const category = getUserCategory(state.currentUser);
+        if (category === 'super admin') {
+          if (typeof renderUsersTable === 'function') renderUsersTable();
+          if (typeof renderAuditLogsTable === 'function') renderAuditLogsTable();
+        } else {
+          initMyProfileView();
+        }
+      } else if (activeView === 'purchase') {
+        renderPurchaseSheet();
+      }
+    }
+
+    async function syncStateWithServer(options = {}) {
+      const shouldRender = options.render !== false;
       if (!state.currentUser) return;
       const token = localStorage.getItem("aiavro_jwt_token");
       if (!token) return;
@@ -7185,23 +7329,9 @@
       const invLogs = await api.inventory.logs();
       state.inventoryLogs = Array.isArray(invLogs) ? invLogs : [];
 
-      // Re-render UI grids with whatever data is loaded
-      renderPOSProducts();
-      renderCustomersTable();
-      renderInvoicesTable();
-      renderBusinessesListDropdowns();
-      renderBusinessesCards();
-      renderFranchiseCards();
-      updateActiveBrandUI();
-      populateUserFormStoreDropdown();
-      populateInvoiceStoreDropdown();
-      populateAuditStoreDropdown();
-      
-      const usersTableBody = document.getElementById("users-table-tbody");
-      if (usersTableBody && typeof renderUsersTable === 'function') renderUsersTable();
-      
-      const auditLogsTbody = document.getElementById("audit-logs-tbody");
-      if (auditLogsTbody && typeof renderAuditLogsTable === 'function') renderAuditLogsTable();
+      if (shouldRender) {
+        renderActiveViewAfterStateSync();
+      }
     }
 
     function updateLocalProductStockFromInventory() {
@@ -7244,8 +7374,10 @@
       const appContainer = document.querySelector(".app-container");
 
       if (state.currentUser) {
-        loginOverlay.classList.remove("active");
-        appContainer.style.display = "flex";
+        beginStableViewRouting();
+        loginOverlay.classList.add("active");
+        if (appContainer) appContainer.style.removeProperty("display");
+        appContainer.setAttribute("aria-hidden", "true");
         syncRoleBasedUI();
         
         const category = getUserCategory(state.currentUser);
@@ -7260,9 +7392,14 @@
           state.activeView = allowed[0] || 'billing';
         }
         switchView(state.activeView);
+        revealAuthenticatedShell(loginOverlay, appContainer);
       } else {
+        document.body.classList.remove("authenticated-shell-ready");
         loginOverlay.classList.add("active");
-        appContainer.style.display = "none";
+        if (appContainer) appContainer.style.removeProperty("display");
+        appContainer.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("view-routing");
+        document.body.classList.remove("app-booting");
       }
     }
 
@@ -7319,7 +7456,7 @@
           document.getElementById("login-username").value = "";
           document.getElementById("login-password").value = "";
 
-          await syncStateWithServer();
+          await syncStateWithServer({ render: false });
           initAuthentication();
           triggerAlert(`Welcome back, ${result.user.name}! 👋`, "success");
         } else {
@@ -7351,6 +7488,10 @@
         } catch (e) {}
         syncSocket = null;
         currentSocketToken = null;
+      }
+      if (syncHeartbeatTimer) {
+        clearInterval(syncHeartbeatTimer);
+        syncHeartbeatTimer = null;
       }
       if (desktopSocket) {
         try {
@@ -9293,9 +9434,11 @@
 
     /* ==================== ROUTING ==================== */
     function switchView(viewName) {
+      beginStableViewRouting();
       // 1. Check if user is logged in
       const user = state.currentUser;
       if (!user) {
+        document.body.classList.remove("view-routing");
         initAuthentication();
         return;
       }
@@ -9415,6 +9558,7 @@
 
       // Close scanner if switching away
       if (viewName !== 'billing') closeCameraPOSScanner();
+      endStableViewRouting();
     }
 
     function toggleMobileSidebar() {

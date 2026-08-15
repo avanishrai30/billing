@@ -12,7 +12,10 @@ describe('Login Dynamic Branding & Live Sync Suite', () => {
   test('1. api.settings.getPublicSettings() is called during initial page load', () => {
     expect(html).toContain('api.settings.getPublicSettings()');
     expect(html).toContain('loadPublicSettings()');
-    expect(html).toMatch(/window\.addEventListener\("DOMContentLoaded",\s*\(\)\s*=>\s*\{[\s\S]*?loadPublicSettings\(\)/);
+    const loadDbState = html.match(/function loadDatabaseState\(\)\s*\{([\s\S]*?)\n    \}/);
+    expect(loadDbState).not.toBeNull();
+    expect(loadDbState[1]).toContain('loadPublicSettings();');
+    expect(html).toMatch(/window\.addEventListener\("DOMContentLoaded",\s*async \(\)\s*=>\s*\{[\s\S]*?loadDatabaseState\(\)/);
   });
 
   test('2. Dedicated #login-brand-logo element exists inside a fixed aspect-ratio container', () => {
