@@ -13,10 +13,12 @@ import {
   DashboardSkeleton
 } from '../../../features/dashboard/components';
 import { ErrorState } from '../../../components/ui';
+import { useStoreScope } from '../../../providers/StoreScopeProvider';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const storeId = user?.assignedStoreId || 'all';
+  const { activeStoreId } = useStoreScope();
+  const storeId = activeStoreId || user?.assignedStoreId || 'all';
 
   const {
     data,

@@ -97,7 +97,7 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
     await expect(
       page.getByRole('heading', { name: /business intelligence & operational kpis/i })
     ).toBeVisible();
-    await expect(page.getByText('All Stores (Enterprise)')).toBeVisible();
+    await expect(page.getByRole('combobox', { name: /select active store outlet/i })).toBeVisible();
     await expect(page.getByText('POS Terminal')).toBeVisible();
     await expect(page.getByText('Product Master')).toBeVisible();
 
@@ -106,7 +106,7 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
     await expect(
       page.getByRole('heading', { name: /business intelligence & operational kpis/i })
     ).toBeVisible();
-    await expect(page.getByText('All Stores (Enterprise)')).toBeVisible();
+    await expect(page.getByRole('combobox', { name: /select active store outlet/i })).toBeVisible();
   });
 
   test('4. Sign Out button terminates session and returns to login', async ({ page }) => {

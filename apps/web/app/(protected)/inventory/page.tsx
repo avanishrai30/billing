@@ -17,17 +17,26 @@ import {
   InventoryLedgerDrawer
 } from '../../../features/inventory/components';
 import { deriveStockStatus } from '../../../features/inventory/calculations';
+import { useStoreScope } from '../../../providers/StoreScopeProvider';
 import type { InventoryBalance, StockStatus } from '../../../features/inventory/types';
 
 export default function InventoryPage() {
   const { user, hasPermission } = useAuth();
+  const { activeStoreId } = useStoreScope();
 
   const isSuperAdmin = user?.role === 'SUPER ADMIN' || user?.category === 'super admin';
   const assignedStoreId = user?.assignedStoreId && user.assignedStoreId !== 'all'
     ? user.assignedStoreId
-    : 'all';
+    : (activeStoreId || 'all');
 
   const [selectedLocation, setSelectedLocation] = useState<string>(assignedStoreId);
+
+  // Sync with global store switch
+  React.useEffect(() => {
+    if (activeStoreId) {
+      setSelectedLocation(activeStoreId);
+    }
+  }, [activeStoreId]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | StockStatus>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');

@@ -13,17 +13,26 @@ import {
   InvoiceVoidDialog
 } from '../../../features/invoices/components';
 import { calculateInvoiceSummary } from '../../../features/invoices/calculations';
+import { useStoreScope } from '../../../providers/StoreScopeProvider';
 import type { Invoice } from '../../../features/invoices/types';
 
 export default function InvoicesPage() {
   const { user, hasPermission } = useAuth();
+  const { activeStoreId } = useStoreScope();
 
   const assignedStoreId =
     user?.assignedStoreId && user.assignedStoreId !== 'all'
       ? user.assignedStoreId
-      : 'all';
+      : (activeStoreId || 'all');
 
   const [selectedLocation, setSelectedLocation] = useState<string>(assignedStoreId);
+
+  // Sync with global store switch
+  React.useEffect(() => {
+    if (activeStoreId) {
+      setSelectedLocation(activeStoreId);
+    }
+  }, [activeStoreId]);
   const [page, setPage] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
