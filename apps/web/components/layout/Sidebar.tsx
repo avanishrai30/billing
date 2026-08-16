@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { usePublicSettings } from '../../hooks/usePublicSettings';
+import { normalizePublicAssetUrl } from '../../lib/utils/media';
 
 interface NavItem {
   label: string;
@@ -57,8 +58,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { hasPermission } = useAuth();
   const { data: branding } = usePublicSettings();
+  const [logoFailed, setLogoFailed] = useState(false);
 
   const brandTitle = branding?.title || 'AIAVRO Billing OS';
+  const brandLogoUrl = normalizePublicAssetUrl(branding?.logo);
+  const showLogoImage = !!brandLogoUrl && !logoFailed;
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (!item.permission) return true;
@@ -86,15 +90,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Brand Header */}
         <div className="h-16 px-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400 flex-shrink-0">
-              <ShieldCheck className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400 flex-shrink-0 overflow-hidden">
+              {showLogoImage ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={brandLogoUrl!}
+                  alt={brandTitle}
+                  className="w-6 h-6 object-contain"
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                <ShieldCheck className="w-5 h-5" />
+              )}
             </div>
             <span className="font-bold text-sm text-white truncate">{brandTitle}</span>
           </div>
           <button
             onClick={onClose}
             aria-label="Close sidebar"
-            className="lg:hidden text-slate-400 hover:text-white p-1 rounded-md"
+            className="lg:hidden text-slate-400 hover:text-white p-1 rounded-md cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>

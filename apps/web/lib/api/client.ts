@@ -7,8 +7,9 @@ import type { RequestOptions } from '../../types/api';
  * Resolves the backend API base URL with strict environment support.
  */
 export function getApiBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
+  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '');
   }
 
   if (typeof window !== 'undefined') {

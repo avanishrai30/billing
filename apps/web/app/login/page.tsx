@@ -6,6 +6,7 @@ import { Eye, EyeOff, Lock, User, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth';
 import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { ApiError } from '../../lib/errors/types';
+import { normalizePublicAssetUrl } from '../../lib/utils/media';
 
 export default function LoginPage() {
   const { login, isAuthenticated, lifecycle } = useAuth();
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Redirect to dashboard if session is already active
   useEffect(() => {
@@ -62,32 +64,32 @@ export default function LoginPage() {
   };
 
   const brandTitle = branding?.title || 'AIAVRO Billing OS';
-  const brandLogo = branding?.logo || '';
+  const rawLogo = branding?.logo || '';
+  const brandLogoUrl = normalizePublicAssetUrl(rawLogo);
+  const showImageLogo = !!brandLogoUrl && !imageError;
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#001845]">
       <div className="w-full max-w-md bg-[#032154] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
         {/* Header Branding */}
         <div className="p-8 pb-6 border-b border-white/10 text-center flex flex-col items-center">
-          {brandLogo ? (
-            <div className="w-14 h-14 mb-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+          <div className="w-14 h-14 mb-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {showImageLogo ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
-                src={brandLogo.startsWith('/') ? brandLogo : `/${brandLogo}`}
+                src={brandLogoUrl!}
                 alt={brandTitle}
                 className="w-10 h-10 object-contain"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
+                onError={() => setImageError(true)}
               />
-            </div>
-          ) : (
-            <div className="w-12 h-12 mb-3 rounded-xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-          )}
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-sky-400 bg-sky-500/10">
+                <ShieldCheck className="w-7 h-7" />
+              </div>
+            )}
+          </div>
           <h1 className="text-xl font-bold tracking-tight text-white">{brandTitle}</h1>
-          <p className="text-xs text-slate-400 mt-1">Enterprise Point of Sale & Operations</p>
+          <p className="text-xs text-slate-400 mt-1">Point of Sale & Retail Operations</p>
         </div>
 
         {/* Form Body */}
@@ -188,7 +190,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="px-8 py-4 bg-[#021b47]/60 border-t border-white/5 text-center">
           <p className="text-[11px] text-slate-400">
-            AIAVRO Retail POS • Multi-Outlet Cloud Gateway
+            AIAVRO Billing OS • Multi-Outlet Gateway
           </p>
         </div>
       </div>
