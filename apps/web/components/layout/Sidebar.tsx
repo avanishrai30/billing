@@ -43,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Suppliers', href: '/suppliers', icon: Building2, permission: 'suppliers.view' },
   { label: 'Outlets', href: '/stores', icon: Store, permission: 'stores.view' },
   { label: 'Franchise', href: '/franchises', icon: Network, permission: 'franchise.view' },
+  { label: 'Users', href: '/users', icon: ShieldCheck, permission: 'users.view' },
   { label: 'Roles & Access', href: '/permissions', icon: ShieldAlert, permission: 'roles.view' },
   { label: 'Audit Trail', href: '/audit', icon: History, permission: 'audit.view' },
   { label: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view' },
