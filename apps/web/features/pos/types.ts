@@ -27,6 +27,7 @@ export interface POSProduct {
   sellingMode?: string;
   stock?: number;
   inventory?: number;
+  reorderLevel?: number;
   isArchived?: boolean;
 }
 
