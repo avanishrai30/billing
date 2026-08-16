@@ -1,5 +1,32 @@
 import { test, expect } from '@playwright/test';
 
+const mockDashboardResponse = {
+  success: true,
+  metrics: {
+    totalSales: 10000,
+    netProfit: 2500,
+    totalPurchases: 5000,
+    franchiseEarnings: 0,
+    stockAssetValuationCost: 20000,
+    stockAssetValuationRetail: 35000,
+    totalProducts: 20,
+    ownProducts: 15,
+    externalProducts: 5,
+    lowStockCount: 1,
+    outOfStockCount: 0,
+    categoriesCount: 3,
+    brandsCount: 2,
+    suppliersCount: 2,
+    expiryWarningsCount: 0,
+    invoiceCount: 30,
+    purchaseCount: 5
+  },
+  lowStockWatchlist: [],
+  recentInvoices: [],
+  recentPurchases: [],
+  activeStoreId: 'all'
+};
+
 test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
   test('1. Cold load to / redirects unauthenticated user to /login or shows diagnostics', async ({ page }) => {
     await page.goto('/login');
@@ -55,17 +82,30 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
       });
     });
 
+    // Mock dashboard metrics
+    await page.route('**/api/v1/dashboard/metrics*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockDashboardResponse)
+      });
+    });
+
     await page.goto('/dashboard');
 
     // Verify AppShell elements
-    await expect(page.getByRole('heading', { name: 'Dashboard & Business Intelligence' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /business intelligence & operational kpis/i })
+    ).toBeVisible();
     await expect(page.getByText('All Stores (Enterprise)')).toBeVisible();
     await expect(page.getByText('POS Terminal')).toBeVisible();
     await expect(page.getByText('Product Master')).toBeVisible();
 
     // Reload page and ensure shell remains stable without flicker
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Dashboard & Business Intelligence' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /business intelligence & operational kpis/i })
+    ).toBeVisible();
     await expect(page.getByText('All Stores (Enterprise)')).toBeVisible();
   });
 
@@ -94,6 +134,14 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
       });
     });
 
+    await page.route('**/api/v1/dashboard/metrics*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockDashboardResponse)
+      });
+    });
+
     await page.route('**/api/v1/auth/logout', async (route) => {
       await route.fulfill({
         status: 200,
@@ -103,7 +151,9 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
     });
 
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Dashboard & Business Intelligence' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /business intelligence & operational kpis/i })
+    ).toBeVisible();
 
     await page.click('button[aria-label="Log out of session"]');
 
@@ -132,6 +182,14 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
 
     await page.route('**/api/v1/auth/verify', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+    });
+
+    await page.route('**/api/v1/dashboard/metrics*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockDashboardResponse)
+      });
     });
 
     await page.goto('/dashboard');
