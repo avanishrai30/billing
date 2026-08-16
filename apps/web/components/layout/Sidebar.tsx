@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   History,
   Settings,
+  Palette,
   X,
   ShieldCheck
 } from 'lucide-react';
@@ -43,7 +44,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Franchise', href: '/franchises', icon: Network, permission: 'franchise.view' },
   { label: 'Roles & Access', href: '/permissions', icon: ShieldAlert, permission: 'roles.view' },
   { label: 'Audit Trail', href: '/audit', icon: History, permission: 'audit.view' },
-  { label: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view' }
+  { label: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view' },
+  { label: 'Design System', href: '/design-system', icon: Palette, permission: 'dashboard.view' }
 ];
 
 interface SidebarProps {

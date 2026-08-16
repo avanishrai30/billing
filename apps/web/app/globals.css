@@ -2,51 +2,104 @@
 
 @layer base {
   :root {
-    --bg-primary: #001845;
-    --bg-secondary: #022b68;
-    --bg-card: #032154;
-    --bg-surface: #042d70;
-    --bg-input: rgba(3, 33, 84, 0.7);
-    --border-color: rgba(255, 255, 255, 0.12);
-    --border-focus: #38bdf8;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --accent-blue: #38bdf8;
-    --accent-green: #10b981;
-    --accent-gold: #f59e0b;
-    --accent-danger: #ef4444;
-    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  }
+    /* Core Semantic Backgrounds */
+    --color-bg-canvas: #001845;
+    --color-bg-surface: #021b47;
+    --color-bg-surface-subtle: #032154;
+    --color-bg-surface-elevated: #042968;
+    --color-bg-overlay: rgba(0, 10, 30, 0.75);
 
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    /* Borders */
+    --color-border-subtle: rgba(255, 255, 255, 0.08);
+    --color-border: rgba(255, 255, 255, 0.14);
+    --color-border-strong: rgba(255, 255, 255, 0.24);
+
+    /* Typography & Text */
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    --color-text-disabled: #64748b;
+    --color-text-inverse: #021b47;
+
+    /* Semantic Accents */
+    --color-brand: #0ea5e9;
+    --color-brand-hover: #38bdf8;
+    --color-brand-soft: rgba(14, 165, 233, 0.12);
+
+    --color-success: #10b981;
+    --color-success-hover: #34d399;
+    --color-success-soft: rgba(16, 185, 129, 0.12);
+
+    --color-warning: #f59e0b;
+    --color-warning-hover: #fbbf24;
+    --color-warning-soft: rgba(245, 158, 11, 0.12);
+
+    --color-danger: #ef4444;
+    --color-danger-hover: #f87171;
+    --color-danger-soft: rgba(239, 68, 68, 0.12);
+
+    --color-info: #6366f1;
+    --color-info-hover: #818cf8;
+    --color-info-soft: rgba(99, 102, 241, 0.12);
+
+    /* Financial Indicators */
+    --color-financial-positive: #10b981;
+    --color-financial-negative: #ef4444;
+    --color-financial-neutral: #94a3b8;
+
+    /* System Font Stack (Local Only - Zero External Web Fonts) */
+    --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
 
   html,
   body {
+    background-color: var(--color-bg-canvas);
+    color: var(--color-text-primary);
+    font-family: var(--font-system);
     min-height: 100vh;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 
-  /* Anti-flicker and deterministic rendering rules */
-  a,
-  button,
-  input,
-  select,
-  textarea {
-    font-family: inherit;
-    /* Paint-only transition properties. Forbidden: transition: all */
-    transition-property: color, background-color, border-color, box-shadow, opacity;
-    transition-duration: 150ms;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Strict Anti-Flicker Reset: No global animation hacks or layout-shifting transitions */
+  * {
+    box-sizing: border-box;
   }
+
+  /* Financial and numeric alignment */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Focus ring utility with paint-only outline */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+/* Custom Scrollbar for Dense ERP Views */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
