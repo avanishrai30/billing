@@ -1,7 +1,8 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, act, waitFor } from '@testing-library/react';
-import { AuthProvider, useAuth } from '../../providers/AuthProvider';
+import { useAuth } from '../../providers/AuthProvider';
+import { AppProviders } from '../../providers/AppProviders';
 import { sessionManager } from '../../lib/auth/session';
 import { apiClient } from '../../lib/api/client';
 import type { AuthUser } from '../../types/auth';
@@ -48,9 +49,9 @@ describe('Auth Foundation & Session Management', () => {
 
   it('1. Initializes in anonymous state when no session is in storage', async () => {
     render(
-      <AuthProvider>
+      <AppProviders>
         <TestAuthConsumer />
-      </AuthProvider>
+      </AppProviders>
     );
 
     await waitFor(() => {
@@ -63,10 +64,15 @@ describe('Auth Foundation & Session Management', () => {
     sessionManager.setToken('jwt-test-token');
     sessionManager.setUser(mockUser);
 
+    jest.spyOn(apiClient, 'get').mockResolvedValue({
+      success: true,
+      user: { id: 'usr-1', username: 'admin' }
+    });
+
     render(
-      <AuthProvider>
+      <AppProviders>
         <TestAuthConsumer />
-      </AuthProvider>
+      </AppProviders>
     );
 
     await waitFor(() => {
@@ -92,9 +98,9 @@ describe('Auth Foundation & Session Management', () => {
     }
 
     render(
-      <AuthProvider>
+      <AppProviders>
         <TestLoginTrigger />
-      </AuthProvider>
+      </AppProviders>
     );
 
     await act(async () => {

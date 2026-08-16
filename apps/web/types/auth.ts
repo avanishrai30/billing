@@ -5,6 +5,14 @@
 
 export type UserRoleCategory = 'super admin' | 'owner' | 'admin' | 'employee' | 'auditor';
 
+export type AuthLifecycle =
+  | 'initializing'
+  | 'unauthenticated'
+  | 'authenticating'
+  | 'authenticated'
+  | 'logging-out'
+  | 'session-expired';
+
 export interface AuthUser {
   id: string;
   name: string;

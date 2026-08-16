@@ -5,11 +5,12 @@ import { useRouter, usePathname } from 'next/navigation';
 import { sessionManager } from '../lib/auth/session';
 import { apiClient, registerSessionExpiredCallback } from '../lib/api/client';
 import { realtimeManager } from '../lib/realtime/socket';
-import type { AuthUser, LoginCredentials, LoginResponse } from '../types/auth';
+import type { AuthUser, AuthLifecycle, LoginCredentials, LoginResponse } from '../types/auth';
 
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
+  lifecycle: AuthLifecycle;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<AuthUser>;
@@ -23,33 +24,72 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [lifecycle, setLifecycle] = useState<AuthLifecycle>('initializing');
   const router = useRouter();
   const pathname = usePathname();
 
-  // Restore session from localStorage on cold boot
+  // Cold session restoration and verification
   useEffect(() => {
-    try {
-      const storedToken = sessionManager.getToken();
-      const storedUser = sessionManager.getUser();
+    let isMounted = true;
 
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(storedUser);
-        realtimeManager.connect();
-        if (storedUser.assignedStoreId && storedUser.assignedStoreId !== 'all') {
-          realtimeManager.joinStore(storedUser.assignedStoreId);
+    async function restoreSession() {
+      try {
+        const storedToken = sessionManager.getToken();
+        const storedUser = sessionManager.getUser();
+
+        if (storedToken && storedUser) {
+          if (!isMounted) return;
+          setToken(storedToken);
+          setUser(storedUser);
+
+          // Verify token against backend verification endpoint
+          try {
+            const verifyRes = await apiClient.get('/api/v1/auth/verify');
+            if (verifyRes && verifyRes.success) {
+              if (isMounted) {
+                setLifecycle('authenticated');
+                realtimeManager.connect();
+                if (storedUser.assignedStoreId && storedUser.assignedStoreId !== 'all') {
+                  realtimeManager.joinStore(storedUser.assignedStoreId);
+                }
+              }
+              return;
+            }
+          } catch (err: any) {
+            console.warn('[Auth] Token verification failed:', err.message);
+            sessionManager.clearSession();
+            if (isMounted) {
+              setToken(null);
+              setUser(null);
+              setLifecycle(err.status === 401 ? 'session-expired' : 'unauthenticated');
+            }
+            return;
+          }
+        }
+
+        if (isMounted) {
+          setLifecycle('unauthenticated');
+        }
+      } catch (err) {
+        console.error('[Auth] Error restoring session:', err);
+        sessionManager.clearSession();
+        if (isMounted) {
+          setToken(null);
+          setUser(null);
+          setLifecycle('unauthenticated');
         }
       }
-    } catch (err) {
-      console.error('[Auth] Failed to restore session:', err);
-      sessionManager.clearSession();
-    } finally {
-      setIsLoading(false);
     }
+
+    restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const logout = useCallback(async () => {
+    setLifecycle('logging-out');
     try {
       if (token) {
         await apiClient.post('/api/v1/auth/logout', {}).catch(() => {});
@@ -59,37 +99,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       realtimeManager.disconnect();
       setUser(null);
       setToken(null);
+      setLifecycle('unauthenticated');
       router.push('/login');
     }
   }, [token, router]);
 
-  // Register 401 automatic session expiration hook
+  // Handle automatic 401 session expiration from API client
   useEffect(() => {
     registerSessionExpiredCallback(() => {
-      logout();
+      sessionManager.clearSession();
+      realtimeManager.disconnect();
+      setUser(null);
+      setToken(null);
+      setLifecycle('session-expired');
+      router.push('/login');
     });
-  }, [logout]);
+  }, [router]);
 
   const login = useCallback(async (credentials: LoginCredentials): Promise<AuthUser> => {
-    const res = await apiClient.post<LoginResponse>('/api/v1/auth/login', credentials, {
-      skipAuth: true
-    });
+    setLifecycle('authenticating');
 
-    if (res.success && res.token && res.user) {
-      sessionManager.setToken(res.token);
-      sessionManager.setUser(res.user);
-      setToken(res.token);
-      setUser(res.user);
+    try {
+      const res = await apiClient.post<LoginResponse>('/api/v1/auth/login', credentials, {
+        skipAuth: true
+      });
 
-      realtimeManager.connect();
-      if (res.user.assignedStoreId && res.user.assignedStoreId !== 'all') {
-        realtimeManager.joinStore(res.user.assignedStoreId);
+      if (res.success && res.token && res.user) {
+        sessionManager.setToken(res.token);
+        sessionManager.setUser(res.user);
+        setToken(res.token);
+        setUser(res.user);
+        setLifecycle('authenticated');
+
+        realtimeManager.connect();
+        if (res.user.assignedStoreId && res.user.assignedStoreId !== 'all') {
+          realtimeManager.joinStore(res.user.assignedStoreId);
+        }
+
+        return res.user;
       }
 
-      return res.user;
+      setLifecycle('unauthenticated');
+      throw new Error('Authentication failed: Invalid response from server');
+    } catch (err) {
+      setLifecycle('unauthenticated');
+      throw err;
     }
-
-    throw new Error('Authentication failed: Invalid response from server');
   }, []);
 
   const hasPermission = useCallback((permission: string): boolean => {
@@ -111,8 +166,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     user,
     token,
-    isAuthenticated: Boolean(user && token),
-    isLoading,
+    lifecycle,
+    isAuthenticated: lifecycle === 'authenticated' && Boolean(user && token),
+    isLoading: lifecycle === 'initializing' || lifecycle === 'authenticating' || lifecycle === 'logging-out',
     login,
     logout,
     hasPermission,

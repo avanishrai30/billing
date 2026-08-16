@@ -1,0 +1,29 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Sidebar } from './Sidebar';
+import { Topbar } from './Topbar';
+import { Workspace } from './Workspace';
+
+export interface AppShellProps {
+  children: React.ReactNode;
+}
+
+export function AppShell({ children }: AppShellProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-[#001845] flex">
+      {/* Sidebar Navigation */}
+      <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+
+      {/* Main Workspace Frame */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
+        <Topbar onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+        <Workspace>
+          {children}
+        </Workspace>
+      </div>
+    </div>
+  );
+}

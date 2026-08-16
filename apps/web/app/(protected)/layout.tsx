@@ -3,27 +3,28 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
+import { AppShell } from '../../components/layout/AppShell';
 
 export default function ProtectedLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, lifecycle } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+    if (!isLoading && (!isAuthenticated || lifecycle === 'unauthenticated' || lifecycle === 'session-expired')) {
+      router.replace('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, lifecycle, router]);
 
-  if (isLoading) {
+  if (isLoading || lifecycle === 'initializing' || lifecycle === 'authenticating') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#001845] text-slate-300 text-sm">
+      <div className="min-h-screen flex items-center justify-center bg-[#001845] text-slate-300 text-xs">
         <div className="flex flex-col items-center gap-3">
           <div className="w-6 h-6 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
-          <span>Verifying authentication session...</span>
+          <span className="font-mono">Verifying authentication session...</span>
         </div>
       </div>
     );
@@ -34,8 +35,8 @@ export default function ProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#001845] text-white">
+    <AppShell>
       {children}
-    </div>
+    </AppShell>
   );
 }

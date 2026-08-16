@@ -1,0 +1,37 @@
+'use client';
+
+import React from 'react';
+
+interface PlaceholderViewProps {
+  title: string;
+  description: string;
+  phase: string;
+  endpoint?: string;
+}
+
+export function PlaceholderView({ title, description, phase, endpoint }: PlaceholderViewProps) {
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="border-b border-white/10 pb-4">
+        <h1 className="text-xl font-bold text-white">{title}</h1>
+        <p className="text-xs text-slate-400 mt-1">{description}</p>
+      </header>
+
+      <div className="bg-[#032154] border border-white/10 p-6 rounded-2xl flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
+          <span className="text-xs font-semibold text-white uppercase tracking-wider">{phase} Migration Target</span>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          The {title} module will be migrated during {phase} following the strict contract freeze rules.
+          Backend endpoints and data will be connected authoritatively via TanStack Query.
+        </p>
+        {endpoint && (
+          <div className="mt-2 text-xs font-mono bg-[#021b47] px-3 py-2 rounded-lg border border-white/10 text-slate-300">
+            Authoritative Endpoint: <span className="text-sky-400">{endpoint}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
