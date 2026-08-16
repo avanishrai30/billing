@@ -116,4 +116,27 @@ describe('StoreScopeProvider & useStoreScope Unit Suite', () => {
 
     expect(screen.getByTestId('active-store')).toHaveTextContent('store-1');
   });
+
+  it('3. Invalid or non-existent store ID in localStorage automatically falls back to "all"', () => {
+    localStorage.setItem('aiavro_selected_store_id', 'non-existent-store-999');
+
+    (useAuth as jest.Mock).mockReturnValue({
+      user: {
+        id: 'u1',
+        role: 'SUPER ADMIN',
+        category: 'super admin',
+        assignedStoreId: 'all'
+      }
+    });
+
+    render(
+      <StoreScopeProvider>
+        <ScopeConsumer />
+      </StoreScopeProvider>
+    );
+
+    // After render and stores validation effect, should fall back to 'all'
+    expect(screen.getByTestId('active-store')).toHaveTextContent('all');
+    expect(screen.getByTestId('is-all')).toHaveTextContent('yes');
+  });
 });

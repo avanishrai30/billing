@@ -77,14 +77,28 @@ class RealtimeSocketManager {
   }
 
   /**
-   * Joins a store room idempotently (e.g. "store_st-1").
+   * Joins a store room idempotently (e.g. "store_st-1") and cleans up previous store rooms.
    */
   public joinStore(storeId: string): void {
-    if (!storeId || storeId === 'all') return;
-    const room = `store_${storeId}`;
-    if (this.joinedRooms.has(room)) return;
+    if (!storeId || storeId === 'all') {
+      this.joinedRooms.forEach((room) => {
+        if (room.startsWith('store_')) {
+          this.joinedRooms.delete(room);
+        }
+      });
+      return;
+    }
 
-    this.joinedRooms.add(room);
+    const targetRoom = `store_${storeId}`;
+    this.joinedRooms.forEach((room) => {
+      if (room.startsWith('store_') && room !== targetRoom) {
+        this.joinedRooms.delete(room);
+      }
+    });
+
+    if (this.joinedRooms.has(targetRoom)) return;
+
+    this.joinedRooms.add(targetRoom);
     if (this.socket && this.socket.connected) {
       this.socket.emit('JOIN_SYNC', { storeId });
     }

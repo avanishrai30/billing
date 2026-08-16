@@ -81,7 +81,7 @@ export default function InventoryPage() {
       const prod = productMap.get(b.productId);
       return {
         ...b,
-        productName: prod?.name || b.productId,
+        productName: prod?.name || (b as any).productName || (b as any).name || b.productId,
         sku: prod?.sku || '',
         barcode: prod?.barcode || '',
         unit: prod?.unit || 'units',

@@ -40,6 +40,19 @@ const mockDashboardResponseStore1 = {
   activeStoreId: 'store-1'
 };
 
+const mockDashboardResponseStore2 = {
+  ...mockDashboardResponseAll,
+  metrics: {
+    ...mockDashboardResponseAll.metrics,
+    totalSales: 10000,
+    netProfit: 3000,
+    totalPurchases: 4000,
+    invoiceCount: 20,
+    purchaseCount: 6
+  },
+  activeStoreId: 'store-2'
+};
+
 let mockStores = [
   {
     id: 'store-1',
@@ -80,9 +93,8 @@ let mockBusinesses = [
   }
 ];
 
-test.describe('Phase 11B Stores & Unified Store Scope E2E Suite', () => {
+test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite', () => {
   test.beforeEach(async ({ page }) => {
-    // Reset mock lists
     mockStores = [
       {
         id: 'store-1',
@@ -154,7 +166,10 @@ test.describe('Phase 11B Stores & Unified Store Scope E2E Suite', () => {
     await page.route('**/api/v1/dashboard/metrics*', async (route) => {
       const url = new URL(route.request().url());
       const storeId = url.searchParams.get('storeId');
-      const response = storeId === 'store-1' ? mockDashboardResponseStore1 : mockDashboardResponseAll;
+      let response = mockDashboardResponseAll;
+      if (storeId === 'store-1') response = mockDashboardResponseStore1;
+      if (storeId === 'store-2') response = mockDashboardResponseStore2;
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -297,19 +312,52 @@ test.describe('Phase 11B Stores & Unified Store Scope E2E Suite', () => {
     });
 
     await page.route('**/api/v1/inventory*', async (route) => {
+      const url = new URL(route.request().url());
+      const locationId = url.searchParams.get('locationId');
+
+      let balances: any[] = [];
+      if (locationId === 'store-1') {
+        balances = [
+          {
+            _id: 'inv-1',
+            productId: 'p1',
+            name: 'A2 Pure Ghee 1L (Mumbai Stock)',
+            sku: 'GHEE-1L',
+            category: 'Dairy',
+            locationId: 'store-1',
+            quantity: 50,
+            stockStatus: 'HEALTHY'
+          }
+        ];
+      } else if (locationId === 'store-2') {
+        balances = [
+          {
+            _id: 'inv-2',
+            productId: 'p2',
+            name: 'Organic Honey 500g (Pune Stock)',
+            sku: 'HONEY-500',
+            category: 'Staples',
+            locationId: 'store-2',
+            quantity: 30,
+            stockStatus: 'HEALTHY'
+          }
+        ];
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          balances: [],
+          inventory: balances,
+          balances,
           summary: {
-            totalSKUs: 10,
-            healthyStockCount: 9,
-            lowStockCount: 1,
+            totalSKUs: balances.length,
+            healthyStockCount: balances.length,
+            lowStockCount: 0,
             outOfStockCount: 0,
-            assetValuationCost: 35000,
-            assetValuationRetail: 55000
+            assetValuationCost: balances.length * 500,
+            assetValuationRetail: balances.length * 750
           }
         })
       });
@@ -343,12 +391,35 @@ test.describe('Phase 11B Stores & Unified Store Scope E2E Suite', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([])
+        body: JSON.stringify([
+          { id: 'p1', name: 'A2 Pure Ghee 1L (Mumbai Stock)', sku: 'GHEE-1L', category: 'Dairy', price: 750, cost: 500 },
+          { id: 'p2', name: 'Organic Honey 500g (Pune Stock)', sku: 'HONEY-500', category: 'Staples', price: 400, cost: 250 }
+        ])
+      });
+    });
+
+    await page.route('**/api/v1/customers*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'c1', name: 'Global Customer John', phone: '9876543210' }
+        ])
+      });
+    });
+
+    await page.route('**/api/v1/suppliers*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 's1', name: 'Global Supplier Amul', phone: '9123456780' }
+        ])
       });
     });
   });
 
-  test('1. Unified Store Scope Switching: Topbar Selector propagates scope across Dashboard, Inventory, Invoices & Stores Directory', async ({
+  test('1. Cross-Module Store Scope Switching: Topbar Selector propagates scope across Dashboard, Inventory, Invoices & Outlets Directory', async ({
     page
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -418,7 +489,36 @@ test.describe('Phase 11B Stores & Unified Store Scope E2E Suite', () => {
     ).toBeVisible();
   });
 
-  test('2. Restricted User Isolation: Cashier assigned to store-1 has disabled/locked store selector', async ({
+  test('2. Store A vs Store B Cache Isolation: Inventory records do not leak across stores', async ({
+    page
+  }) => {
+    await page.goto('/inventory');
+    await page.waitForLoadState('networkidle');
+
+    const storeSelect = page.getByRole('combobox', { name: /select active store outlet/i });
+
+    // Switch to Store 1 -> should see Mumbai Stock item
+    await storeSelect.selectOption('store-1');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('A2 Pure Ghee 1L (Mumbai Stock)')).toBeVisible();
+    await expect(page.getByText('Organic Honey 500g (Pune Stock)')).not.toBeVisible();
+
+    // Switch to Store 2 -> should see Pune Stock item, and Mumbai stock must disappear
+    await storeSelect.selectOption('store-2');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('Organic Honey 500g (Pune Stock)')).toBeVisible();
+    await expect(page.getByText('A2 Pure Ghee 1L (Mumbai Stock)')).not.toBeVisible();
+
+    // Repeated fast switching A -> B -> A -> B
+    for (let i = 0; i < 3; i++) {
+      await storeSelect.selectOption('store-1');
+      await storeSelect.selectOption('store-2');
+    }
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('Organic Honey 500g (Pune Stock)')).toBeVisible();
+  });
+
+  test('3. Restricted User Isolation: Cashier assigned to store-1 has disabled/locked store selector', async ({
     page
   }) => {
     // Override user with Cashier assigned to store-1
@@ -446,21 +546,57 @@ test.describe('Phase 11B Stores & Unified Store Scope E2E Suite', () => {
     await expect(page.getByRole('combobox', { name: /select active store outlet/i })).not.toBeVisible();
   });
 
-  test('3. Mobile Responsive Viewport (430x932) has zero horizontal overflow and responsive table layout', async ({
+  test('4. LocalStorage Tampering Fallback: Invalid store ID automatically falls back to "all"', async ({
     page
   }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('aiavro_selected_store_id', 'hacked-fake-store-999');
+    });
+
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // Topbar selector should safely fall back to 'all'
+    const storeSelect = page.getByRole('combobox', { name: /select active store outlet/i });
+    await expect(storeSelect).toHaveValue('all');
+  });
+
+  test('5. Tenant-Wide Modules: Customers and Suppliers directories remain global regardless of active store', async ({
+    page
+  }) => {
+    await page.goto('/customers');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('Global Customer John')).toBeVisible();
+
+    await page.goto('/suppliers');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('Global Supplier Amul')).toBeVisible();
+  });
+
+  test('6. Mobile Responsive Viewport (430x932 & 390x844) has zero horizontal overflow', async ({
+    page
+  }) => {
+    // Test 430x932
     await page.setViewportSize({ width: 430, height: 932 });
     await page.goto('/stores');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByRole('heading', { name: 'Store & Branch Outlets' })).toBeVisible();
 
-    // Verify Zero Horizontal Overflow
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    let scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    let clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 
     // Capture Mobile Visual Baseline Screenshot (430x932)
     await page.screenshot({ path: 'test-results/mobile-stores.png', fullPage: true });
+
+    // Test 390x844
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
   });
 });

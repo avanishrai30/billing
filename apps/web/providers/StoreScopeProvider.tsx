@@ -58,6 +58,22 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
     }
   }, [isRestricted, assignedStoreId]);
 
+  // Fallback to 'all' if selected store is invalid or does not exist in stores list
+  useEffect(() => {
+    if (!isLoadingStores && !isRestricted && selectedStoreId !== 'all' && stores.length > 0) {
+      const storeExists = stores.some((s) => s.id === selectedStoreId);
+      if (!storeExists) {
+        console.warn(
+          `[StoreScope] Persisted store '${selectedStoreId}' not found in active stores list. Falling back to 'all'.`
+        );
+        setSelectedStoreId('all');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORE_SCOPE_STORAGE_KEY, 'all');
+        }
+      }
+    }
+  }, [isLoadingStores, isRestricted, selectedStoreId, stores]);
+
   // Compute effective active store ID
   const activeStoreId = useMemo(() => {
     if (isRestricted && assignedStoreId) {

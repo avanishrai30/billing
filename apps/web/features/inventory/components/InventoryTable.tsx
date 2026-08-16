@@ -120,21 +120,21 @@ export function InventoryTable({
                 {/* Current Stock */}
                 <TableCell isNumeric>
                   <span className="font-bold text-white text-xs">
-                    {item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 2 })} {item.unit || 'units'}
+                    {Number(item.quantity ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })} {item.unit || 'units'}
                   </span>
                 </TableCell>
 
                 {/* Reserved */}
                 <TableCell isNumeric>
                   <span className="text-slate-400 text-xs">
-                    {item.reservedQuantity.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    {Number(item.reservedQuantity ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 
                 {/* Available */}
                 <TableCell isNumeric>
                   <span className="font-bold text-emerald-400 text-xs">
-                    {avail.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    {Number(avail ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 

@@ -56,6 +56,7 @@ export const inventoryApi = {
 
     if (Array.isArray(res)) return res;
     if ('inventory' in res && Array.isArray(res.inventory)) return res.inventory;
+    if ('balances' in res && Array.isArray((res as any).balances)) return (res as any).balances;
     return [];
   },
 
