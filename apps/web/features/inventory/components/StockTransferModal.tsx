@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeftRight, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -35,7 +35,10 @@ export function StockTransferModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const transferMutation = useTransferStockMutation();
 
-  const activeStoreOptions = storeOptions.filter((s) => s.value !== 'all');
+  const activeStoreOptions = useMemo(
+    () => storeOptions.filter((s) => s.value !== 'all'),
+    [storeOptions]
+  );
 
   const {
     register,

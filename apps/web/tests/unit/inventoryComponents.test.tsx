@@ -5,8 +5,10 @@ import {
   InventoryHeader,
   InventorySummaryCards,
   InventoryFilters,
-  InventoryTable
+  InventoryTable,
+  StockTransferModal
 } from '../../features/inventory/components';
+import { AppProviders } from '../../providers/AppProviders';
 import type { InventoryBalance, InventorySummary } from '../../features/inventory/types';
 
 describe('Inventory Component Layer Unit Suite', () => {
@@ -143,5 +145,48 @@ describe('Inventory Component Layer Unit Suite', () => {
     });
     fireEvent.click(historyBtn);
     expect(handleViewLedger).toHaveBeenCalledTimes(1);
+  });
+
+  it('5. StockTransferModal opens and renders form controls without infinite update loops', () => {
+    const handleClose = jest.fn();
+
+    const { rerender } = render(
+      <AppProviders>
+        <StockTransferModal
+          isOpen={true}
+          onClose={handleClose}
+          selectedItem={sampleBalances[0]}
+          products={[{ id: 'prod-101', name: 'A2 Cow Ghee 1L' }]}
+          storeOptions={[
+            { value: 'all', label: 'All Stores' },
+            { value: 'store-1', label: 'Store 1' },
+            { value: 'store-2', label: 'Store 2' }
+          ]}
+          defaultLocationId="store-1"
+        />
+      </AppProviders>
+    );
+
+    expect(screen.getByText(/inter-store stock transfer/i)).toBeInTheDocument();
+
+    // Re-render to verify stability without Maximum update depth errors
+    rerender(
+      <AppProviders>
+        <StockTransferModal
+          isOpen={true}
+          onClose={handleClose}
+          selectedItem={sampleBalances[0]}
+          products={[{ id: 'prod-101', name: 'A2 Cow Ghee 1L' }]}
+          storeOptions={[
+            { value: 'all', label: 'All Stores' },
+            { value: 'store-1', label: 'Store 1' },
+            { value: 'store-2', label: 'Store 2' }
+          ]}
+          defaultLocationId="store-1"
+        />
+      </AppProviders>
+    );
+
+    expect(screen.getByText(/inter-store stock transfer/i)).toBeInTheDocument();
   });
 });

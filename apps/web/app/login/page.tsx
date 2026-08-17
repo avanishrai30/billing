@@ -29,11 +29,17 @@ const LoginBrandHeader = React.memo(function LoginBrandHeader({
   branding?: { title?: string; logo?: string } | null;
   isLoading: boolean;
 }) {
+  const [mounted, setMounted] = useState(false);
   const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const rawLogo = branding?.logo || '';
   const brandLogoUrl = normalizePublicAssetUrl(rawLogo);
-  const showImageLogo = !!brandLogoUrl && !imageError;
-  const brandTitle = branding?.title;
+  const showImageLogo = mounted && !!brandLogoUrl && !imageError;
+  const brandTitle = mounted ? branding?.title : null;
 
   return (
     <div className="p-8 pb-6 border-b border-white/10 text-center flex flex-col items-center">
@@ -60,7 +66,7 @@ const LoginBrandHeader = React.memo(function LoginBrandHeader({
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
             {brandTitle}
           </h1>
-        ) : isLoading ? (
+        ) : isLoading || !mounted ? (
           <div className="h-7 w-48 bg-white/10 rounded-md animate-pulse" />
         ) : (
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">

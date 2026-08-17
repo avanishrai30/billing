@@ -12,6 +12,11 @@ import { useRealtime } from '../../hooks/useRealtime';
 export default function DiagnosticsPage() {
   const { user, isAuthenticated, logout } = useAuth();
   const { isConnected } = useRealtime();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Query /health endpoint
   const healthQuery = useQuery({
@@ -27,7 +32,7 @@ export default function DiagnosticsPage() {
     retry: 1
   });
 
-  const baseUrl = getApiBaseUrl();
+  const baseUrl = mounted ? getApiBaseUrl() : 'Resolving gateway...';
 
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col gap-6 bg-[#001845] text-white">

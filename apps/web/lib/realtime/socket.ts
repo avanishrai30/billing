@@ -54,6 +54,15 @@ class RealtimeSocketManager {
 
     this.socket.on('connect_error', (err) => {
       console.warn('[Realtime] Connection error:', err.message);
+      if (
+        err.message &&
+        (err.message.includes('INVALID_TOKEN') ||
+          err.message.includes('jwt') ||
+          err.message.includes('unauthorized') ||
+          err.message.includes('Authentication error'))
+      ) {
+        this.socket?.disconnect();
+      }
     });
 
     this.socket.on('disconnect', (reason) => {

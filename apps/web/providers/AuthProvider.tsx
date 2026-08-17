@@ -155,9 +155,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return user.permissions.includes(permission);
     }
     // Default role fallback when permissions array is omitted on user object (e.g. mock test user)
-    if (user.category === 'admin' || user.role === 'SUPER ADMIN') return true;
-    if (user.category === 'employee' || user.role === 'CASHIER') {
+    const userRole = (user.role || '').toUpperCase();
+    const userCat = (user.category || '').toLowerCase();
+
+    if (
+      userCat === 'admin' ||
+      userCat === 'super admin' ||
+      userCat === 'owner' ||
+      userRole === 'SUPER ADMIN' ||
+      userRole === 'ADMIN' ||
+      userRole === 'OWNER'
+    ) {
+      return true;
+    }
+
+    if (userCat === 'employee' || userRole === 'CASHIER' || userRole === 'STAFF') {
       const defaultCashierPerms = [
+        'dashboard.view',
         'pos.create',
         'invoices.create',
         'invoices.view',
@@ -168,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ];
       return defaultCashierPerms.includes(permission);
     }
-    if (user.category === 'auditor' || user.role === 'AUDITOR') {
+    if (userCat === 'auditor' || userRole === 'AUDITOR') {
       const defaultAuditorPerms = [
         'dashboard.view',
         'products.view',
@@ -184,7 +198,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isStoreAuthorized = useCallback((storeId: string): boolean => {
     if (!user) return false;
-    if (user.category === 'super admin' || user.category === 'owner' || user.assignedStoreId === 'all') {
+    const userCat = (user.category || '').toLowerCase();
+    const userRole = (user.role || '').toUpperCase();
+    if (
+      userCat === 'super admin' ||
+      userCat === 'owner' ||
+      userRole === 'SUPER ADMIN' ||
+      userRole === 'OWNER' ||
+      user.assignedStoreId === 'all'
+    ) {
       return true;
     }
     if (user.assignedStoreId === storeId) return true;
