@@ -6,12 +6,6 @@ import { Skeleton, Card } from '../../../components/ui';
 export function DashboardSkeleton() {
   return (
     <div className="space-y-8 animate-pulse" aria-label="Loading dashboard metrics">
-      {/* Header Skeleton */}
-      <div className="border-b border-white/10 pb-5 mb-6 space-y-2">
-        <Skeleton height={28} width={320} />
-        <Skeleton height={16} width={450} />
-      </div>
-
       {/* Primary KPI Grid (4 Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (

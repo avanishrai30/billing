@@ -496,6 +496,8 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
     await page.waitForLoadState('networkidle');
 
     const storeSelect = page.getByRole('combobox', { name: /select active store outlet/i });
+    await expect(storeSelect).toBeVisible();
+    await expect(storeSelect).toBeEnabled();
 
     // Switch to Store 1 -> should see Mumbai Stock item
     await storeSelect.selectOption('store-1');

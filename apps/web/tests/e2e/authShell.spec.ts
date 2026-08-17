@@ -130,7 +130,18 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true })
+        body: JSON.stringify({
+          success: true,
+          user: {
+            id: 'usr-1',
+            name: 'Super Admin',
+            username: 'admin',
+            role: 'SUPER ADMIN',
+            category: 'super admin',
+            assignedStoreId: 'all',
+            status: 'active'
+          }
+        })
       });
     });
 
@@ -151,6 +162,7 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
     });
 
     await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
     await expect(
       page.getByRole('heading', { name: /business intelligence & operational kpis/i })
     ).toBeVisible();
@@ -181,7 +193,22 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
     });
 
     await page.route('**/api/v1/auth/verify', async (route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          user: {
+            id: 'usr-1',
+            name: 'Super Admin',
+            username: 'admin',
+            role: 'SUPER ADMIN',
+            category: 'super admin',
+            assignedStoreId: 'all',
+            status: 'active'
+          }
+        })
+      });
     });
 
     await page.route('**/api/v1/dashboard/metrics*', async (route) => {
@@ -193,6 +220,10 @@ test.describe('Phase 2 Auth, Login & Application Shell E2E Suite', () => {
     });
 
     await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    await expect(
+      page.getByRole('heading', { name: /business intelligence & operational kpis/i })
+    ).toBeVisible();
 
     // Open mobile sidebar drawer
     const menuBtn = page.getByLabel('Open navigation menu');

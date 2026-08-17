@@ -40,34 +40,6 @@ export default function DashboardPage() {
     );
   }
 
-  if (isLoading) {
-    return <DashboardSkeleton />;
-  }
-
-  if (isError || !data) {
-    const errorMsg =
-      error instanceof Error
-        ? error.message
-        : 'Failed to aggregate enterprise dashboard KPIs from the store sync gateway.';
-
-    return (
-      <div className="space-y-6">
-        <DashboardHeader
-          storeId={storeId}
-          isRefetching={isFetching}
-          onRefresh={() => refetch()}
-        />
-        <ErrorState
-          title="Dashboard Aggregation Error"
-          message={errorMsg}
-          onRetry={() => refetch()}
-        />
-      </div>
-    );
-  }
-
-  const { metrics, lowStockWatchlist, recentInvoices, recentPurchases } = data;
-
   return (
     <div className="space-y-8 pb-12">
       {/* 1. Page Header with Scope & Live Sync */}
@@ -77,20 +49,36 @@ export default function DashboardPage() {
         onRefresh={() => refetch()}
       />
 
-      {/* 2. Top Metric Cards (Financial + Operational) */}
-      <KPIGrid metrics={metrics} />
+      {isLoading ? (
+        <DashboardSkeleton />
+      ) : isError || !data ? (
+        <ErrorState
+          title="Dashboard Aggregation Error"
+          message={
+            error instanceof Error
+              ? error.message
+              : 'Failed to aggregate enterprise dashboard KPIs from the store sync gateway.'
+          }
+          onRetry={() => refetch()}
+        />
+      ) : (
+        <>
+          {/* 2. Top Metric Cards (Financial + Operational) */}
+          <KPIGrid metrics={data.metrics} />
 
-      {/* 3. Analytics & Portfolio Distribution */}
-      <SalesSummaryChart metrics={metrics} />
+          {/* 3. Analytics & Portfolio Distribution */}
+          <SalesSummaryChart metrics={data.metrics} />
 
-      {/* 4. Critical Stock Breaches Watchlist */}
-      <LowStockWatchlist items={lowStockWatchlist} />
+          {/* 4. Critical Stock Breaches Watchlist */}
+          <LowStockWatchlist items={data.lowStockWatchlist || []} />
 
-      {/* 5. Dual Activity Tables (Recent Sales & Purchases) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RecentSalesTable invoices={recentInvoices} />
-        <RecentPurchasesTable purchases={recentPurchases} />
-      </div>
+          {/* 5. Dual Activity Tables (Recent Sales & Purchases) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RecentSalesTable invoices={data.recentInvoices || []} />
+            <RecentPurchasesTable purchases={data.recentPurchases || []} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

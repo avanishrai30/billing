@@ -23,7 +23,18 @@ test.describe('Phase 3 Design System & Shared Primitives Visual & Interaction Su
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true })
+        body: JSON.stringify({
+          success: true,
+          user: {
+            id: 'usr-1',
+            name: 'Super Admin',
+            username: 'admin',
+            role: 'SUPER ADMIN',
+            category: 'super admin',
+            assignedStoreId: 'all',
+            status: 'active'
+          }
+        })
       });
     });
   });
@@ -61,9 +72,13 @@ test.describe('Phase 3 Design System & Shared Primitives Visual & Interaction Su
 
   test('3. Interactive Dialog and Drawer open and close with accessible keyboard/click events', async ({ page }) => {
     await page.goto('/design-system');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Design System & UI Primitives Gallery' })).toBeVisible();
 
     // Open Dialog
-    await page.getByRole('button', { name: 'Open Dialog' }).click();
+    const openDialogBtn = page.getByRole('button', { name: 'Open Dialog' });
+    await expect(openDialogBtn).toBeVisible();
+    await openDialogBtn.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Enterprise Confirmation Dialog' })).toBeVisible();
@@ -73,7 +88,9 @@ test.describe('Phase 3 Design System & Shared Primitives Visual & Interaction Su
     await expect(dialog).not.toBeVisible();
 
     // Open Side Drawer
-    await page.getByRole('button', { name: 'Open Side Drawer' }).click();
+    const openDrawerBtn = page.getByRole('button', { name: 'Open Side Drawer' });
+    await expect(openDrawerBtn).toBeVisible();
+    await openDrawerBtn.click();
     await expect(page.getByRole('heading', { name: 'Product Inspection Drawer' })).toBeVisible();
 
     // Close Drawer via header close button
@@ -83,11 +100,15 @@ test.describe('Phase 3 Design System & Shared Primitives Visual & Interaction Su
 
   test('4. Tabs trigger switches active panel without structural reflow', async ({ page }) => {
     await page.goto('/design-system');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Design System & UI Primitives Gallery' })).toBeVisible();
 
     await expect(page.getByText('Overview Panel')).toBeVisible();
     await expect(page.getByText('History Panel')).not.toBeVisible();
 
-    await page.getByRole('tab', { name: 'History' }).click();
+    const historyTab = page.getByRole('tab', { name: 'History' });
+    await expect(historyTab).toBeVisible();
+    await historyTab.click();
     await expect(page.getByText('History Panel')).toBeVisible();
     await expect(page.getByText('Overview Panel')).not.toBeVisible();
   });
