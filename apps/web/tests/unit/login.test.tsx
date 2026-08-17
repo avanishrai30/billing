@@ -6,6 +6,7 @@ import { AppProviders } from '../../providers/AppProviders';
 import { apiClient } from '../../lib/api/client';
 import { sessionManager } from '../../lib/auth/session';
 import { ApiError } from '../../lib/errors/types';
+import { publicApi } from '../../lib/api/publicSettings';
 
 // Mock Next.js router
 const mockPush = jest.fn();
@@ -18,10 +19,11 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/login'
 }));
 
-describe('Phase 2 Login Component & Error Handling', () => {
+describe('Login Component, Branding & Error Handling Suite', () => {
   beforeEach(() => {
     sessionManager.clearSession();
     jest.clearAllMocks();
+    localStorage.clear();
   });
 
   it('1. Renders complete login form with username, password, and sign in button', () => {
@@ -36,7 +38,38 @@ describe('Phase 2 Login Component & Error Handling', () => {
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it('2. Toggles password visibility without modifying input layout geometry', () => {
+  it('2. Initial render does NOT expose hardcoded AIAVRO fallback branding when uninitialized', () => {
+    render(
+      <AppProviders>
+        <LoginPage />
+      </AppProviders>
+    );
+
+    // Ensure "AIAVRO" is not rendered as the primary tenant brand title
+    const brandHeadings = screen.queryAllByRole('heading', { level: 1 });
+    brandHeadings.forEach((heading) => {
+      expect(heading.textContent).not.toContain('AIAVRO Billing OS');
+    });
+  });
+
+  it('3. Renders authoritative tenant branding (e.g. VC ORGANIC\'S) once resolved from public settings', async () => {
+    jest.spyOn(publicApi, 'getPublicSettings').mockResolvedValue({
+      title: "VC ORGANIC'S",
+      logo: '/uploads/logos/brand-logo.webp'
+    });
+
+    render(
+      <AppProviders>
+        <LoginPage />
+      </AppProviders>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: "VC ORGANIC'S" })).toBeInTheDocument();
+    });
+  });
+
+  it('4. Toggles password visibility without modifying input layout geometry', () => {
     render(
       <AppProviders>
         <LoginPage />
@@ -52,7 +85,7 @@ describe('Phase 2 Login Component & Error Handling', () => {
     expect(screen.getByLabelText(/hide password/i)).toBeInTheDocument();
   });
 
-  it('3. Displays validation error when submitted with empty fields', async () => {
+  it('5. Displays validation error when submitted with empty fields', async () => {
     render(
       <AppProviders>
         <LoginPage />
@@ -67,7 +100,7 @@ describe('Phase 2 Login Component & Error Handling', () => {
     });
   });
 
-  it('4. Handles INVALID_CREDENTIALS ApiError and displays human-readable error', async () => {
+  it('6. Handles INVALID_CREDENTIALS ApiError and displays human-readable error', async () => {
     jest.spyOn(apiClient, 'post').mockRejectedValue(
       new ApiError({
         message: 'Invalid username or password',
@@ -92,7 +125,7 @@ describe('Phase 2 Login Component & Error Handling', () => {
     });
   });
 
-  it('5. Handles ACCOUNT_SUSPENDED ApiError and displays administrative notice', async () => {
+  it('7. Handles ACCOUNT_SUSPENDED ApiError and displays administrative notice', async () => {
     jest.spyOn(apiClient, 'post').mockRejectedValue(
       new ApiError({
         message: 'Account is suspended',

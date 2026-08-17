@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Lock, User, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, AlertCircle, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { ApiError } from '../../lib/errors/types';
@@ -11,7 +11,7 @@ import { SmokeyBackground } from '../../components/ui/smokey-background';
 
 export default function LoginPage() {
   const { login, isAuthenticated, lifecycle } = useAuth();
-  const { data: branding } = usePublicSettings();
+  const { data: branding, isLoading: isBrandingLoading } = usePublicSettings();
   const router = useRouter();
 
   const [username, setUsername] = useState('');
@@ -64,37 +64,52 @@ export default function LoginPage() {
     }
   };
 
-  const brandTitle = branding?.title || 'AIAVRO Billing OS';
   const rawLogo = branding?.logo || '';
   const brandLogoUrl = normalizePublicAssetUrl(rawLogo);
   const showImageLogo = !!brandLogoUrl && !imageError;
+  const brandTitle = branding?.title;
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#001845] overflow-hidden">
-      {/* Decorative Interactive WebGL Smokey Background */}
+      {/* Decorative Interactive WebGL Smokey Shader Background */}
       <SmokeyBackground color="#003882" backdropBlurAmount="md" className="z-0" />
 
-      {/* Login Card Surface */}
-      <div className="relative z-10 w-full max-w-md bg-[#032154]/90 backdrop-blur-xl border border-white/15 rounded-2xl shadow-2xl overflow-hidden">
-        {/* Header Branding */}
+      {/* Modern Centered Glassmorphism Login Card */}
+      <div className="relative z-10 w-full max-w-md bg-[#032154]/90 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+        {/* Header Branding with Fixed Geometry */}
         <div className="p-8 pb-6 border-b border-white/10 text-center flex flex-col items-center">
-          <div className="w-14 h-14 mb-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {/* Logo Frame */}
+          <div className="w-16 h-16 mb-3.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-center p-2.5 overflow-hidden flex-shrink-0">
             {showImageLogo ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={brandLogoUrl!}
-                alt={brandTitle}
-                className="w-10 h-10 object-contain"
+                alt={brandTitle || 'Brand Logo'}
+                className="w-full h-full object-contain"
                 onError={() => setImageError(true)}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-sky-400 bg-sky-500/10">
-                <ShieldCheck className="w-7 h-7" />
+              <div className="w-full h-full flex items-center justify-center text-sky-400">
+                <ShieldCheck className="w-8 h-8" />
               </div>
             )}
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">{brandTitle}</h1>
-          <p className="text-xs text-slate-400 mt-1">Point of Sale & Retail Operations</p>
+
+          {/* Dynamic Brand Title (Deterministic First Paint — No Default Fake Tenant Flash) */}
+          <div className="min-h-[32px] flex items-center justify-center">
+            {brandTitle ? (
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                {brandTitle}
+              </h1>
+            ) : isBrandingLoading ? (
+              <div className="h-7 w-48 bg-white/10 rounded-md animate-pulse" />
+            ) : (
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                Billing Terminal
+              </h1>
+            )}
+          </div>
+          <p className="text-xs text-slate-300 mt-1">Enterprise Point of Sale & Operations</p>
         </div>
 
         {/* Form Body */}
@@ -102,7 +117,7 @@ export default function LoginPage() {
           {lifecycle === 'session-expired' && (
             <div
               data-testid="session-expired-banner"
-              className="mb-5 p-3 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-start gap-2.5 text-amber-200 text-xs"
+              className="mb-5 p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-start gap-2.5 text-amber-200 text-xs"
             >
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>Your session has expired. Please sign in again to continue.</span>
@@ -113,7 +128,7 @@ export default function LoginPage() {
             <div
               role="alert"
               data-testid="login-error-alert"
-              className="mb-5 p-3 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-start gap-2.5 text-rose-200 text-xs"
+              className="mb-5 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-start gap-2.5 text-rose-200 text-xs"
             >
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span className="leading-relaxed">{errorMessage}</span>
@@ -122,11 +137,14 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+              <label
+                htmlFor="username"
+                className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider"
+              >
                 Username
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <User className="w-4 h-4" />
                 </div>
                 <input
@@ -139,17 +157,20 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
-                  className="w-full pl-9 pr-3 py-2.5 bg-[#021b47] border border-white/15 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition-colors disabled:opacity-50"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-black/30 border border-white/15 rounded-xl text-white text-sm placeholder-slate-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors disabled:opacity-50"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+              <label
+                htmlFor="password"
+                className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider"
+              >
                 Password
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -162,13 +183,13 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full pl-9 pr-10 py-2.5 bg-[#021b47] border border-white/15 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition-colors disabled:opacity-50"
+                  className="w-full pl-10 pr-10 py-2.5 bg-black/30 border border-white/15 rounded-xl text-white text-sm placeholder-slate-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors disabled:opacity-50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -178,7 +199,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 py-3 px-4 bg-sky-500 hover:bg-sky-400 active:bg-sky-600 text-white font-medium rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-3 px-4 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
@@ -186,14 +207,17 @@ export default function LoginPage() {
                   <span>Verifying credentials...</span>
                 </>
               ) : (
-                <span>Sign In to Terminal</span>
+                <>
+                  <span>Sign In to Terminal</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
               )}
             </button>
           </form>
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-4 bg-[#021b47]/60 border-t border-white/5 text-center">
+        <div className="px-8 py-4 bg-[#021b47]/80 border-t border-white/10 text-center">
           <p className="text-[11px] text-slate-400">
             AIAVRO Billing OS • Multi-Outlet Gateway
           </p>
