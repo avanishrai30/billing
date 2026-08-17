@@ -84,14 +84,18 @@ export function TabsTrigger({
       aria-selected={isActive}
       disabled={disabled}
       onClick={() => context.setActiveTab(value)}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors focus-ring cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-        isActive
-          ? 'bg-blue-600 text-white font-semibold shadow-xs'
-          : 'text-slate-400 hover:text-white hover:bg-white/5'
+      className={`relative inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${
+        isActive ? 'text-white font-semibold' : 'text-slate-400 hover:text-white hover:bg-white/5'
       } ${className}`}
     >
-      {icon && <span className="w-3.5 h-3.5 flex-shrink-0">{icon}</span>}
-      <span>{children}</span>
+      {isActive && (
+        <span
+          data-testid="active-tab-indicator"
+          className="absolute inset-0 bg-blue-600 rounded-md shadow-xs -z-10"
+        />
+      )}
+      {icon && <span className="w-3.5 h-3.5 flex-shrink-0 relative z-10">{icon}</span>}
+      <span className="relative z-10">{children}</span>
     </button>
   );
 }
