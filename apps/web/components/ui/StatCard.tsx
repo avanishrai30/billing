@@ -42,12 +42,12 @@ export function StatCard({
 
   return (
     <div
-      className={`p-5 bg-[#032154] border border-white/10 rounded-2xl flex flex-col justify-between shadow-sm ${className}`}
+      className={`p-5 bg-[#111827] border border-white/10 rounded-xl flex flex-col justify-between shadow-xs ${className}`}
     >
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
         {icon && (
-          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-sky-400 flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 flex-shrink-0">
             {icon}
           </div>
         )}
@@ -61,18 +61,18 @@ export function StatCard({
         </div>
 
         {(trend || subtext) && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 text-xs">
             {trend && TrendIcon && (
               <span
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium border font-mono ${
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border font-mono ${
                   trendColors[trend.direction]
                 }`}
               >
-                <TrendIcon className="w-3 h-3" />
+                <TrendIcon className="w-2.5 h-2.5" />
                 <span>{trend.value}</span>
               </span>
             )}
-            {subtext && <span className="text-xs text-slate-400 truncate">{subtext}</span>}
+            {subtext && <span className="text-[11px] text-slate-400 truncate">{subtext}</span>}
           </div>
         )}
       </div>
@@ -102,19 +102,19 @@ export function MetricCard({
     success: 'border-emerald-500/30'
   };
 
-  const statusColor = {
-    normal: 'text-white',
-    warning: 'text-amber-400',
-    critical: 'text-rose-400',
-    success: 'text-emerald-400'
+  const statusBg = {
+    normal: 'bg-[#111827]',
+    warning: 'bg-amber-500/5',
+    critical: 'bg-rose-500/5',
+    success: 'bg-emerald-500/5'
   };
 
   return (
     <div
-      className={`p-4 bg-[#032154] border ${statusBorder[status]} rounded-xl flex flex-col justify-between ${className}`}
+      className={`p-4 border rounded-xl flex flex-col justify-between ${statusBg[status]} ${statusBorder[status]} ${className}`}
     >
-      <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">{title}</span>
-      <div className={`text-xl font-bold mt-1 tabular-nums ${statusColor[status]}`}>{metric}</div>
+      <span className="text-xs text-slate-400 font-medium">{title}</span>
+      <div className="text-xl font-bold text-white mt-1 tabular-nums">{metric}</div>
       {description && <span className="text-[11px] text-slate-400 mt-1">{description}</span>}
     </div>
   );

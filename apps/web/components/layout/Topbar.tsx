@@ -21,7 +21,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
   } = useStoreScope();
 
   return (
-    <header className="h-16 bg-[#021b47] border-b border-white/10 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-16 bg-[#0f172a] border-b border-white/10 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
       {/* Left side: Mobile menu & Store Switcher */}
       <div className="flex items-center gap-3">
         <button
@@ -32,9 +32,9 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Store Selector / Indicator */}
-        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300">
-          <Store className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
+        {/* Unified Store Selector / Indicator */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-200">
+          <Store className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
 
           {isRestricted ? (
             <div className="flex items-center gap-1.5 font-mono text-slate-300">
@@ -55,13 +55,13 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
               value={activeStoreId}
               disabled={isLoadingStores}
               onChange={(e) => switchStore(e.target.value)}
-              className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer pr-1 truncate max-w-[150px] sm:max-w-[220px]"
+              className="bg-transparent text-slate-200 font-mono text-xs focus:outline-none cursor-pointer pr-1 truncate max-w-[150px] sm:max-w-[220px]"
             >
-              <option value="all" className="bg-[#001845] text-white">
+              <option value="all" className="bg-[#0f172a] text-white">
                 All Stores (Enterprise)
               </option>
               {stores.map((s) => (
-                <option key={s.id} value={s.id} className="bg-[#001845] text-white">
+                <option key={s.id} value={s.id} className="bg-[#0f172a] text-white">
                   {s.name} ({s.code})
                 </option>
               ))}
@@ -73,7 +73,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
       {/* Right side: User info & Logout */}
       <div className="flex items-center gap-4">
         <div className="hidden sm:flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-300 text-xs font-semibold">
+          <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 text-xs font-semibold">
             {user?.name ? user.name.charAt(0).toUpperCase() : <UserCircle className="w-4 h-4" />}
           </div>
           <div className="flex flex-col text-left">
@@ -89,7 +89,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
         <button
           onClick={() => logout()}
           aria-label="Log out of session"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs border border-rose-500/20 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs border border-rose-500/20 transition-colors cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Sign Out</span>

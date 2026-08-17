@@ -48,7 +48,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
                   ₹ {metrics.totalSales.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-emerald-500 rounded-full"
                   style={{ width: `${Math.min(salesPct, 100)}%` }}
@@ -60,13 +60,13 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">Total Supplier Purchases</span>
-                <span className="font-mono text-sky-400 font-semibold tabular-nums">
+                <span className="font-mono text-blue-400 font-semibold tabular-nums">
                   ₹ {metrics.totalPurchases.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-sky-500 rounded-full"
+                  className="h-full bg-blue-500 rounded-full"
                   style={{ width: `${Math.min(purchasePct, 100)}%` }}
                 />
               </div>
@@ -80,7 +80,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
                   ₹ {metrics.stockAssetValuationCost.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-amber-500 rounded-full"
                   style={{ width: `${Math.min(stockCostPct, 100)}%` }}
@@ -96,7 +96,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
                   ₹ {metrics.stockAssetValuationRetail.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-indigo-500 rounded-full"
                   style={{ width: `${Math.min(stockRetailPct, 100)}%` }}
@@ -112,7 +112,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
             Catalog & Brand Portfolio
           </span>
 
-          <div className="p-4 rounded-xl bg-[#021b47] border border-white/10 space-y-4">
+          <div className="p-4 rounded-xl bg-[#0f172a] border border-white/10 space-y-4">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">Own Production vs Vendor SKUs</span>
               <span className="font-mono text-white font-semibold">
@@ -121,9 +121,9 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
             </div>
 
             {/* Segmented Bar */}
-            <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden flex">
+            <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden flex">
               <div
-                className="h-full bg-sky-500"
+                className="h-full bg-blue-500"
                 style={{ width: `${ownPct}%` }}
                 title={`Own Brands: ${metrics.ownProducts}`}
               />
@@ -136,7 +136,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="flex items-center gap-2 text-xs">
-                <span className="w-2.5 h-2.5 rounded-sm bg-sky-500 flex-shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 flex-shrink-0" />
                 <span className="text-slate-300">Own SKUs: {metrics.ownProducts} ({ownPct}%)</span>
               </div>
               <div className="flex items-center gap-2 text-xs">

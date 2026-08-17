@@ -23,9 +23,9 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-[#032154] border border-white/10 rounded-2xl ${className}`}
+      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-[#111827] border border-white/10 rounded-xl ${className}`}
     >
-      <div className="w-12 h-12 mb-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
+      <div className="w-12 h-12 mb-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
         {icon || <PackageOpen className="w-6 h-6" />}
       </div>
       <h3 className="text-sm font-semibold text-white">{title}</h3>
@@ -58,20 +58,21 @@ export function Skeleton({
   ...props
 }: SkeletonProps) {
   const variantClasses = {
-    text: 'h-4 rounded-md',
+    text: 'h-4 rounded',
     rectangular: 'rounded-xl',
     circular: 'rounded-full'
   };
 
+  const inlineStyles: React.CSSProperties = {
+    width: width !== undefined ? (typeof width === 'number' ? `${width}px` : width) : undefined,
+    height: height !== undefined ? (typeof height === 'number' ? `${height}px` : height) : undefined,
+    ...style
+  };
+
   return (
     <div
-      aria-hidden="true"
       className={`bg-white/10 animate-pulse ${variantClasses[variant]} ${className}`}
-      style={{
-        width,
-        height,
-        ...style
-      }}
+      style={inlineStyles}
       {...props}
     />
   );

@@ -17,9 +17,9 @@ export function PlaceholderView({ title, description, phase, endpoint }: Placeho
         <p className="text-xs text-slate-400 mt-1">{description}</p>
       </header>
 
-      <div className="bg-[#032154] border border-white/10 p-6 rounded-2xl flex flex-col gap-3">
+      <div className="bg-[#111827] border border-white/10 p-6 rounded-xl flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
           <span className="text-xs font-semibold text-white uppercase tracking-wider">{phase} Migration Target</span>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
@@ -27,8 +27,8 @@ export function PlaceholderView({ title, description, phase, endpoint }: Placeho
           Backend endpoints and data will be connected authoritatively via TanStack Query.
         </p>
         {endpoint && (
-          <div className="mt-2 text-xs font-mono bg-[#021b47] px-3 py-2 rounded-lg border border-white/10 text-slate-300">
-            Authoritative Endpoint: <span className="text-sky-400">{endpoint}</span>
+          <div className="mt-2 text-xs font-mono bg-[#0f172a] px-3 py-2 rounded-lg border border-white/10 text-slate-300">
+            Authoritative Endpoint: <span className="text-blue-400">{endpoint}</span>
           </div>
         )}
       </div>

@@ -2,29 +2,29 @@
 
 @layer base {
   :root {
-    /* Core Semantic Backgrounds */
-    --color-bg-canvas: #001845;
-    --color-bg-surface: #021b47;
-    --color-bg-surface-subtle: #032154;
-    --color-bg-surface-elevated: #042968;
-    --color-bg-overlay: rgba(0, 10, 30, 0.75);
+    /* Core Semantic Backgrounds (Refined Enterprise Dark Console) */
+    --color-bg-canvas: #0b0f19;
+    --color-bg-surface: #0f172a;
+    --color-bg-surface-subtle: #131d33;
+    --color-bg-surface-elevated: #1a2542;
+    --color-bg-overlay: rgba(5, 8, 15, 0.8);
 
     /* Borders */
-    --color-border-subtle: rgba(255, 255, 255, 0.08);
-    --color-border: rgba(255, 255, 255, 0.14);
-    --color-border-strong: rgba(255, 255, 255, 0.24);
+    --color-border-subtle: rgba(255, 255, 255, 0.06);
+    --color-border: rgba(255, 255, 255, 0.10);
+    --color-border-strong: rgba(255, 255, 255, 0.20);
 
     /* Typography & Text */
     --color-text-primary: #f8fafc;
     --color-text-secondary: #cbd5e1;
     --color-text-muted: #94a3b8;
     --color-text-disabled: #64748b;
-    --color-text-inverse: #021b47;
+    --color-text-inverse: #0f172a;
 
     /* Semantic Accents */
-    --color-brand: #0ea5e9;
-    --color-brand-hover: #38bdf8;
-    --color-brand-soft: rgba(14, 165, 233, 0.12);
+    --color-brand: #2563eb;
+    --color-brand-hover: #3b82f6;
+    --color-brand-soft: rgba(37, 99, 235, 0.12);
 
     --color-success: #10b981;
     --color-success-hover: #34d399;
@@ -96,10 +96,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.22);
 }

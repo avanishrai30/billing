@@ -67,12 +67,12 @@ export function Dialog({
       <div
         data-testid="dialog-backdrop"
         onClick={onClose}
-        className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity"
       />
 
       {/* Dialog Surface */}
       <div
-        className={`relative z-10 w-full ${maxWidthStyles[maxWidth]} bg-[#032154] border border-white/15 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${className}`}
+        className={`relative z-10 w-full ${maxWidthStyles[maxWidth]} bg-[#111827] border border-white/15 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${className}`}
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between gap-4">
@@ -95,7 +95,7 @@ export function Dialog({
 
         {/* Optional Footer */}
         {footer && (
-          <div className="px-6 py-3.5 bg-[#021b47] border-t border-white/10 flex items-center justify-end gap-3">
+          <div className="px-6 py-3.5 bg-[#0f172a] border-t border-white/10 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}

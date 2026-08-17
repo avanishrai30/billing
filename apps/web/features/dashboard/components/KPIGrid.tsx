@@ -35,8 +35,7 @@ export function KPIGrid({ metrics }: KPIGridProps) {
           label="Calculated Net Profit"
           value={metrics.netProfit}
           isCurrency
-          subtext="Revenue minus item costs"
-          trend={{ value: 'Authoritative', direction: 'up' }}
+          subtext="Gross revenue minus COGS"
           icon={<TrendingUp className="w-4 h-4" />}
         />
 
@@ -69,11 +68,11 @@ export function KPIGrid({ metrics }: KPIGridProps) {
         <StatCard
           label="Low Stock Watch"
           value={metrics.lowStockCount}
-          subtext={`${metrics.outOfStockCount} zero stock items`}
+          subtext={`${metrics.outOfStockCount} items currently out of stock`}
           trend={
             metrics.lowStockCount > 0
-              ? { value: 'Attention', direction: 'down' }
-              : { value: 'Healthy', direction: 'up' }
+              ? { value: `${metrics.lowStockCount} Low`, direction: 'down' }
+              : { value: 'Optimal', direction: 'up' }
           }
           icon={<AlertTriangle className="w-4 h-4" />}
         />
@@ -81,10 +80,10 @@ export function KPIGrid({ metrics }: KPIGridProps) {
         <StatCard
           label="Expiry Warnings (30d)"
           value={metrics.expiryWarningsCount}
-          subtext="Imminent expiry items"
+          subtext="Batches nearing expiration"
           trend={
             metrics.expiryWarningsCount > 0
-              ? { value: 'Expiring', direction: 'down' }
+              ? { value: `${metrics.expiryWarningsCount} Items`, direction: 'down' }
               : { value: 'Zero Risks', direction: 'up' }
           }
           icon={<ShieldCheck className="w-4 h-4" />}

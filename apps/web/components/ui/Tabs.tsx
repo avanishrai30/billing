@@ -50,7 +50,7 @@ export function TabsList({ children, className = '' }: TabsListProps) {
   return (
     <div
       role="tablist"
-      className={`inline-flex items-center gap-1 p-1 bg-[#021b47] border border-white/10 rounded-xl ${className}`}
+      className={`inline-flex items-center gap-1 p-1 bg-[#0f172a] border border-white/10 rounded-lg ${className}`}
     >
       {children}
     </div>
@@ -84,9 +84,9 @@ export function TabsTrigger({
       aria-selected={isActive}
       disabled={disabled}
       onClick={() => context.setActiveTab(value)}
-      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors focus-ring cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors focus-ring cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
         isActive
-          ? 'bg-sky-500 text-white shadow-sm shadow-sky-500/20'
+          ? 'bg-blue-600 text-white font-semibold shadow-xs'
           : 'text-slate-400 hover:text-white hover:bg-white/5'
       } ${className}`}
     >

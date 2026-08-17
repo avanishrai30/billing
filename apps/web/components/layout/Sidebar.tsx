@@ -33,7 +33,7 @@ interface NavItem {
   permission?: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
+export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
   { label: 'POS Terminal', href: '/pos', icon: ShoppingCart, permission: 'invoices.create' },
   { label: 'Product Master', href: '/products', icon: Package, permission: 'products.view' },
@@ -79,21 +79,21 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div
           data-testid="sidebar-backdrop"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-xs lg:hidden"
         />
       )}
 
       {/* Sidebar Container */}
       <aside
         data-testid="sidebar-container"
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-[#021b47] border-r border-white/10 flex flex-col transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-[#0f172a] border-r border-white/10 flex flex-col transition-transform duration-200 lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
         <div className="h-16 px-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400 flex-shrink-0 overflow-hidden">
+            <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 flex-shrink-0 overflow-hidden">
               {showLogoImage ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -103,10 +103,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onError={() => setLogoFailed(true)}
                 />
               ) : (
-                <ShieldCheck className="w-5 h-5" />
+                <ShieldCheck className="w-5 h-5 text-blue-400" />
               )}
             </div>
-            <span className="font-bold text-sm text-white truncate">{brandTitle}</span>
+            <span className="font-semibold text-sm text-white truncate">{brandTitle}</span>
           </div>
           <button
             onClick={onClose}
@@ -128,10 +128,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 onClick={() => onClose()}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                 }`}
               >
                 <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
@@ -142,8 +142,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer info */}
-        <div className="p-4 border-t border-white/10 text-[11px] text-slate-400">
+        <div className="px-4 py-3 border-t border-white/10 text-[11px] text-slate-400 flex items-center justify-between">
           <span>AIAVRO v2.0 Enterprise</span>
+          <span className="text-[10px] text-slate-400 font-mono">PROD</span>
         </div>
       </aside>
     </>
