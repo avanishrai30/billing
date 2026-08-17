@@ -15,12 +15,19 @@ export const PRODUCT_KEYS = {
 /**
  * Query hook to fetch and filter product catalog with Realtime sync.
  */
-export function useProductsQuery(filters?: Partial<ProductFilterState>) {
+export function useProductsQuery(
+  filters?: Partial<ProductFilterState>,
+  onProductUpdated?: (productId: string) => void
+) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const unsubProductUpdated = realtimeManager.subscribe('product_updated', () => {
+    const unsubProductUpdated = realtimeManager.subscribe('product_updated', (envelope) => {
       queryClient.invalidateQueries({ queryKey: PRODUCT_KEYS.all });
+      const id = (envelope?.data as { id?: string; _id?: string })?.id || (envelope?.data as { id?: string; _id?: string })?._id;
+      if (id && onProductUpdated) {
+        onProductUpdated(String(id));
+      }
     });
 
     const unsubProductDeleted = realtimeManager.subscribe('product_deleted', () => {
@@ -31,7 +38,7 @@ export function useProductsQuery(filters?: Partial<ProductFilterState>) {
       unsubProductUpdated();
       unsubProductDeleted();
     };
-  }, [queryClient]);
+  }, [queryClient, onProductUpdated]);
 
   return useQuery<ProductDoc[], Error>({
     queryKey: PRODUCT_KEYS.list(filters),
