@@ -168,7 +168,7 @@ export function StockTransferModal({
 
         {/* Available Stock Indicator */}
         {selectedItem && (
-          <div className="p-3 rounded-xl bg-[#021b47] border border-white/10 flex items-center justify-between text-xs">
+          <div className="p-3 rounded-xl bg-[#0f172a] border border-white/10 flex items-center justify-between text-xs">
             <span className="text-slate-400">Available at Source Outlet:</span>
             <span className="font-mono font-bold text-white tabular-nums">
               {availableStock.toLocaleString('en-IN', { maximumFractionDigits: 2 })} units

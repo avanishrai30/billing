@@ -51,7 +51,7 @@ export function InvoiceDetailDrawer({
     >
       <div className="space-y-4 text-xs">
         {/* Status & Quick Action Banner */}
-        <div className="p-3.5 rounded-2xl bg-[#021b47] border border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-[#0f172a] border border-white/10 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <InvoiceStatusBadge status={invoice.status} isArchived={invoice.isArchived} />
             <Badge variant={payConfig.variant} size="sm">
@@ -92,7 +92,7 @@ export function InvoiceDetailDrawer({
         </div>
 
         {/* Header Metadata Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[#021b47] border border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[#0f172a] border border-white/10">
           {/* Customer info */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
@@ -139,8 +139,8 @@ export function InvoiceDetailDrawer({
         </div>
 
         {/* Line Items Table */}
-        <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#021b47]">
-          <div className="p-3 bg-[#032154] border-b border-white/10 font-bold text-white flex items-center gap-2">
+        <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#0f172a]">
+          <div className="p-3 bg-[#0f172a] border-b border-white/10 font-bold text-white flex items-center gap-2">
             <FileText className="w-4 h-4 text-sky-400" />
             <span>Billed Items ({items.length})</span>
           </div>
@@ -174,7 +174,7 @@ export function InvoiceDetailDrawer({
         </div>
 
         {/* Financial Settlement Breakdown */}
-        <div className="p-3.5 rounded-2xl bg-[#021b47] border border-white/10 space-y-2">
+        <div className="p-3.5 rounded-2xl bg-[#0f172a] border border-white/10 space-y-2">
           <div className="flex justify-between text-slate-400">
             <span>Taxable Subtotal:</span>
             <span className="font-mono text-slate-200 tabular-nums">

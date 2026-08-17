@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useProductsQuery } from '../../../features/products/hooks';
+import { useRealtimeHighlight } from '../../../lib/realtime/useRealtimeHighlight';
 import {
   ProductHeader,
   ProductSummaryCards,
@@ -24,6 +25,8 @@ export default function ProductsPage() {
   const canEdit = hasPermission('products.update');
   const canArchive = hasPermission('products.archive') || hasPermission('products.delete');
   const canImport = hasPermission('products.import') || hasPermission('products.import.preview');
+
+  const { triggerHighlight, highlightedIds } = useRealtimeHighlight(1500);
 
   // Filter State
   const [filters, setFilters] = useState<ProductFilterState>({
@@ -47,8 +50,11 @@ export default function ProductsPage() {
 
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  // Queries
-  const { data: products = [], isLoading, isError, error, refetch } = useProductsQuery(filters);
+  // Queries with realtime highlight callback
+  const { data: products = [], isLoading, isError, error, refetch } = useProductsQuery(
+    filters,
+    (updatedId) => triggerHighlight(updatedId)
+  );
 
   // Dynamic Options (Categories, Brands, Suppliers)
   const { categories, brands, suppliers } = useMemo(() => {
@@ -211,6 +217,7 @@ export default function ProductsPage() {
           isLoading={isLoading}
           canEdit={canEdit}
           canArchive={canArchive}
+          highlightedIds={highlightedIds}
           onInspect={handleOpenInspect}
           onEdit={handleOpenEdit}
           onArchive={handleOpenArchive}

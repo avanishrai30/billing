@@ -234,7 +234,7 @@ export function ProductImportDialog({
             {/* Preview Table */}
             <div className="border border-white/10 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
               <table className="w-full text-left text-xs border-collapse font-mono">
-                <thead className="bg-[#021b47] text-slate-300 sticky top-0">
+                <thead className="bg-[#131d33] text-slate-300 sticky top-0">
                   <tr>
                     <th className="p-2.5 border-b border-white/10">Row</th>
                     <th className="p-2.5 border-b border-white/10">Status</th>
@@ -244,7 +244,7 @@ export function ProductImportDialog({
                     <th className="p-2.5 border-b border-white/10">Price (₹)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 bg-[#111827]">
+                <tbody className="divide-y divide-white/5 bg-[#0f172a]">
                   {previewData.rows.slice(0, 50).map((r, idx) => (
                     <tr key={idx} className="hover:bg-white/5">
                       <td className="p-2.5 text-slate-400">{r.rowNumber}</td>

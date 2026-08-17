@@ -33,7 +33,7 @@ export function InvoiceFilters({
   ];
 
   return (
-    <div className="bg-[#021b47] border border-white/10 rounded-2xl p-3.5 sm:p-4 space-y-3">
+    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-3.5 sm:p-4 space-y-3">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1">
@@ -61,7 +61,7 @@ export function InvoiceFilters({
           <select
             value={paymentModeFilter}
             onChange={(e) => onPaymentModeFilterChange(e.target.value)}
-            className="px-3 py-2 bg-[#032154] border border-white/15 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-sky-400 cursor-pointer"
+            className="px-3 py-2 bg-[#0f172a] border border-white/15 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-sky-400 cursor-pointer"
             aria-label="Filter by Payment Mode"
           >
             <option value="ALL">All Payment Modes</option>

@@ -47,7 +47,7 @@ export default function DiagnosticsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Backend Gateway Health */}
-        <section className="bg-[#032154] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+        <section className="bg-[#0f172a] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-white">Backend Gateway</h2>
             <span
@@ -71,7 +71,7 @@ export default function DiagnosticsPage() {
         </section>
 
         {/* Public Settings */}
-        <section className="bg-[#032154] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+        <section className="bg-[#0f172a] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-white">Public Settings API</h2>
             <span
@@ -94,7 +94,7 @@ export default function DiagnosticsPage() {
         </section>
 
         {/* Auth State */}
-        <section className="bg-[#032154] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+        <section className="bg-[#0f172a] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-white">Auth Foundation</h2>
             <span
@@ -121,7 +121,7 @@ export default function DiagnosticsPage() {
         </section>
 
         {/* Realtime Socket */}
-        <section className="bg-[#032154] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+        <section className="bg-[#0f172a] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-white">Realtime Gateway</h2>
             <span

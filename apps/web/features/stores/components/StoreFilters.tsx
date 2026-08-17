@@ -16,7 +16,7 @@ export function StoreFilters({
   onClearFilters
 }: StoreFiltersProps) {
   return (
-    <div className="bg-[#021b47] border border-white/10 rounded-2xl p-3.5 sm:p-4">
+    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-3.5 sm:p-4">
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Input

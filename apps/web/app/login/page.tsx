@@ -267,7 +267,7 @@ export default function LoginPage() {
       <LoginVisualLayer />
 
       {/* Modern Centered Glassmorphism Login Card */}
-      <div className="relative z-10 w-full max-w-md bg-[#032154]/90 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-md bg-[#0f172a]/90 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
         {/* Header Branding with Fixed Geometry (Isolated Memoized Component) */}
         <LoginBrandHeader branding={branding} isLoading={isBrandingLoading} />
 
@@ -278,7 +278,7 @@ export default function LoginPage() {
         />
 
         {/* Footer */}
-        <div className="px-8 py-4 bg-[#021b47]/80 border-t border-white/10 text-center">
+        <div className="px-8 py-4 bg-[#0f172a]/80 border-t border-white/10 text-center">
           <p className="text-[11px] text-slate-400">
             AIAVRO Billing OS • Multi-Outlet Gateway
           </p>

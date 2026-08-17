@@ -30,7 +30,7 @@ export function ProductCard({
   return (
     <div
       data-testid={`product-card-${product.id}`}
-      className={`group relative bg-[#032154] border rounded-2xl p-3.5 flex flex-col justify-between transition-colors overflow-hidden ${
+      className={`group relative bg-[#0f172a] border rounded-2xl p-3.5 flex flex-col justify-between transition-colors overflow-hidden ${
         cartQuantity > 0
           ? 'border-sky-500/50 bg-[#042864]'
           : 'border-white/10 hover:border-white/20'

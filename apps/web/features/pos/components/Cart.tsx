@@ -45,7 +45,7 @@ export function Cart({
   return (
     <div
       data-testid="pos-cart-panel"
-      className="bg-[#032154] border border-white/10 rounded-2xl flex flex-col h-full overflow-hidden shadow-xl"
+      className="bg-[#0f172a] border border-white/10 rounded-2xl flex flex-col h-full overflow-hidden shadow-xl"
     >
       {/* Header */}
       <div className="p-4 border-b border-white/10 flex items-center justify-between">
@@ -110,7 +110,7 @@ export function Cart({
       </div>
 
       {/* Bottom Valuation & Checkout Panel */}
-      <div className="p-3.5 border-t border-white/10 bg-[#021b47]/80 space-y-3">
+      <div className="p-3.5 border-t border-white/10 bg-[#0f172a]/80 space-y-3">
         {!isCartEmpty && (
           <DiscountControl
             discount={discount}

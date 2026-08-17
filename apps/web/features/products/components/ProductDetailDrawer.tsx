@@ -99,7 +99,7 @@ export function ProductDetailDrawer({
         </div>
 
         {/* 2. Commercial Pricing & Tax Breakdown */}
-        <div className="p-4 rounded-xl bg-[#0a0f1d] border border-white/10 space-y-3">
+        <div className="p-4 rounded-xl bg-[#131d33] border border-white/10 space-y-3">
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-emerald-400" />
             Commercial Pricing & Margin
@@ -148,7 +148,7 @@ export function ProductDetailDrawer({
           </h4>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between p-2.5 bg-[#0a0f1d] border border-white/10 rounded-lg text-xs">
+            <div className="flex items-center justify-between p-2.5 bg-[#131d33] border border-white/10 rounded-lg text-xs">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-400/20">
                   PRIMARY
@@ -164,7 +164,7 @@ export function ProductDetailDrawer({
               product.barcodes.map((b, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-2.5 bg-[#0a0f1d] border border-white/10 rounded-lg text-xs"
+                  className="flex items-center justify-between p-2.5 bg-[#131d33] border border-white/10 rounded-lg text-xs"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] uppercase font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-400/20">

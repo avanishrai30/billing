@@ -49,7 +49,7 @@ export function AuditFilters({
     endDate !== '';
 
   return (
-    <div className="bg-[#021b47] p-3.5 rounded-xl border border-white/10 space-y-3">
+    <div className="bg-[#0f172a] p-3.5 rounded-xl border border-white/10 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Search */}
         <div className="lg:col-span-2">

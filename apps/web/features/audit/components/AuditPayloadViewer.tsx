@@ -64,7 +64,7 @@ export function AuditPayloadViewer({ before, after, title }: AuditPayloadViewerP
       {/* Field Changes Table if diff exists */}
       {diffs.length > 0 && !isCreation && !isDeletion && (
         <div className="rounded-xl border border-white/10 overflow-hidden bg-black/20">
-          <div className="bg-[#021b47] px-3 py-2 border-b border-white/10 text-xs font-bold text-slate-300 flex items-center justify-between">
+          <div className="bg-[#0f172a] px-3 py-2 border-b border-white/10 text-xs font-bold text-slate-300 flex items-center justify-between">
             <span>State Mutation Diffs</span>
             <span className="text-[10px] text-slate-400 font-mono">({diffs.length} fields modified)</span>
           </div>
@@ -89,7 +89,7 @@ export function AuditPayloadViewer({ before, after, title }: AuditPayloadViewerP
       {/* Creation snapshot */}
       {isCreation && (
         <div className="rounded-xl border border-white/10 overflow-hidden bg-black/20">
-          <div className="bg-[#021b47] px-3 py-2 border-b border-white/10 text-xs font-bold text-emerald-300 flex items-center justify-between">
+          <div className="bg-[#0f172a] px-3 py-2 border-b border-white/10 text-xs font-bold text-emerald-300 flex items-center justify-between">
             <span>Created Resource Snapshot</span>
             <span className="text-[10px] text-slate-400 font-mono">({Object.keys(sanitizedAfter).length} fields)</span>
           </div>
@@ -107,7 +107,7 @@ export function AuditPayloadViewer({ before, after, title }: AuditPayloadViewerP
       {/* Deletion snapshot */}
       {isDeletion && (
         <div className="rounded-xl border border-white/10 overflow-hidden bg-black/20">
-          <div className="bg-[#021b47] px-3 py-2 border-b border-white/10 text-xs font-bold text-rose-300 flex items-center justify-between">
+          <div className="bg-[#0f172a] px-3 py-2 border-b border-white/10 text-xs font-bold text-rose-300 flex items-center justify-between">
             <span>Deleted Resource Snapshot (Before Deletion)</span>
             <span className="text-[10px] text-slate-400 font-mono">({Object.keys(sanitizedBefore).length} fields)</span>
           </div>

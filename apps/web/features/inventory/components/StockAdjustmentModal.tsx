@@ -161,7 +161,7 @@ export function StockAdjustmentModal({
         </FormField>
 
         {/* Quantity Reconciliation Grid */}
-        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#021b47] border border-white/10">
+        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#0f172a] border border-white/10">
           <div>
             <span className="text-[11px] text-slate-400 block">Current Balance</span>
             <span className="text-sm font-mono font-bold text-white tabular-nums">

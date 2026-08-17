@@ -33,7 +33,7 @@ export function PreferenceSettings() {
         )}
       </div>
 
-      <div className="bg-[#021b47] border border-white/10 rounded-2xl p-5 space-y-4">
+      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0 mt-0.5">

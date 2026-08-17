@@ -23,7 +23,7 @@ export function FranchiseFilters({
   const isFiltered = search !== '' || status !== 'ALL';
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-[#021b47] p-3 rounded-xl border border-white/10">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-[#0f172a] p-3 rounded-xl border border-white/10">
       <div className="flex-1 min-w-[200px]">
         <Input
           placeholder="Search by franchise name, owner, city, phone or GSTIN..."

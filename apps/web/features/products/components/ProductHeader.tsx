@@ -18,10 +18,10 @@ export function ProductHeader({
   onOpenImport
 }: ProductHeaderProps) {
   return (
-    <div className="bg-[#021b47] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-xs">
       {/* Title & Description */}
       <div className="flex items-center gap-3.5">
-        <div className="w-11 h-11 rounded-xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400 flex-shrink-0">
+        <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0">
           <Package className="w-6 h-6" />
         </div>
         <div>

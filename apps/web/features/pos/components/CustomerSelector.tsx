@@ -71,7 +71,7 @@ export function CustomerSelector({
   ];
 
   return (
-    <div className="bg-[#021b47] border border-white/10 rounded-xl p-3 space-y-2">
+    <div className="bg-[#0f172a] border border-white/10 rounded-xl p-3 space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
           <User className="w-3.5 h-3.5 text-sky-400" />

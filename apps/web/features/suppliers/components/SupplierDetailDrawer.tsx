@@ -50,7 +50,7 @@ export function SupplierDetailDrawer({
     >
       <div className="space-y-4 text-xs">
         {/* Profile Card & Action Banner */}
-        <div className="p-4 rounded-2xl bg-[#021b47] border border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 rounded-2xl bg-[#0f172a] border border-white/10 flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-white tracking-tight">{supplier.name}</h2>
@@ -90,7 +90,7 @@ export function SupplierDetailDrawer({
         </div>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[#021b47] border border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[#0f172a] border border-white/10">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
               <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -117,7 +117,7 @@ export function SupplierDetailDrawer({
 
         {/* Lifetime Procurement Statistics Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3.5 rounded-xl bg-[#021b47] border border-white/10">
+          <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/10">
             <div className="flex items-center justify-between text-slate-400 mb-1">
               <span>Total Orders</span>
               <ShoppingCart className="w-4 h-4 text-amber-400" />
@@ -127,7 +127,7 @@ export function SupplierDetailDrawer({
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#021b47] border border-white/10">
+          <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/10">
             <div className="flex items-center justify-between text-slate-400 mb-1">
               <span>Procurement Volume</span>
               <Package className="w-4 h-4 text-emerald-400" />
@@ -139,8 +139,8 @@ export function SupplierDetailDrawer({
         </div>
 
         {/* Supplier Procurement History Ledger */}
-        <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#021b47]">
-          <div className="p-3 bg-[#032154] border-b border-white/10 font-bold text-white flex items-center justify-between">
+        <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#0f172a]">
+          <div className="p-3 bg-[#0f172a] border-b border-white/10 font-bold text-white flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Truck className="w-4 h-4 text-amber-400" />
               <span>Inward Purchase Ledger ({purchases.length})</span>

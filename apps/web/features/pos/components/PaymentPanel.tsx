@@ -114,7 +114,7 @@ export function PaymentPanel({
         )}
 
         {/* Grand Total Callout */}
-        <div className="p-4 rounded-xl bg-[#021b47] border border-white/10 flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-[#0f172a] border border-white/10 flex items-center justify-between">
           <div>
             <span className="text-xs text-slate-400 block">Total Due</span>
             <span className="text-2xl font-bold font-mono text-emerald-400 tabular-nums">
@@ -148,7 +148,7 @@ export function PaymentPanel({
                   className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs font-semibold transition-colors cursor-pointer ${
                     isSelected
                       ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-md shadow-sky-500/10'
-                      : 'bg-[#021b47] border-white/10 hover:border-white/20 text-slate-300'
+                      : 'bg-[#0f172a] border-white/10 hover:border-white/20 text-slate-300'
                   }`}
                 >
                   <Icon className={`w-4 h-4 ${isSelected ? 'text-sky-400' : 'text-slate-400'}`} />
@@ -176,7 +176,7 @@ export function PaymentPanel({
             </FormField>
 
             <FormField label="Change Return (₹)">
-              <div className="h-10 px-3.5 bg-[#021b47] border border-white/15 rounded-xl flex items-center font-mono font-bold text-amber-400 text-sm tabular-nums">
+              <div className="h-10 px-3.5 bg-[#0f172a] border border-white/15 rounded-xl flex items-center font-mono font-bold text-amber-400 text-sm tabular-nums">
                 ₹ {changeDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
             </FormField>

@@ -44,7 +44,7 @@ export function TaxFilters({
   ];
 
   return (
-    <div className="bg-[#021b47] p-3.5 rounded-2xl border border-white/10 space-y-3">
+    <div className="bg-[#0f172a] p-3.5 rounded-2xl border border-white/10 space-y-3">
       {/* Top Filter Controls */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 flex-wrap">

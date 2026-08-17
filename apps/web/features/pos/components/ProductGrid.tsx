@@ -31,7 +31,7 @@ export function ProductGrid({
         {Array.from({ length: 10 }).map((_, idx) => (
           <div
             key={idx}
-            className="bg-[#032154] border border-white/10 rounded-2xl p-3.5 space-y-3"
+            className="bg-[#0f172a] border border-white/10 rounded-2xl p-3.5 space-y-3"
           >
             <Skeleton variant="rectangular" className="w-full h-28 rounded-xl" />
             <Skeleton variant="text" className="w-1/2 h-3" />

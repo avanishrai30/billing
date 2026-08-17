@@ -46,7 +46,7 @@ export function PurchaseVoidDialog({
         </div>
 
         {/* Purchase Summary */}
-        <div className="p-3 rounded-xl bg-[#021b47] border border-white/10 text-xs space-y-1">
+        <div className="p-3 rounded-xl bg-[#0f172a] border border-white/10 text-xs space-y-1">
           <div className="flex justify-between">
             <span className="text-slate-400">Supplier:</span>
             <span className="font-semibold text-white">{purchase.supplierName || 'General Supplier'}</span>

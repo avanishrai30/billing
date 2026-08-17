@@ -25,7 +25,7 @@ export function CartItem({
   return (
     <div
       data-testid={`cart-item-${item.productId}`}
-      className="p-3 rounded-xl bg-[#021b47] border border-white/5 space-y-2 text-xs"
+      className="p-3 rounded-xl bg-[#0f172a] border border-white/5 space-y-2 text-xs"
     >
       {/* Top row: Name, unit price, remove button */}
       <div className="flex items-start justify-between gap-2">
@@ -57,7 +57,7 @@ export function CartItem({
       {/* Bottom row: Qty Controls, Discount trigger, and Line Total */}
       <div className="flex items-center justify-between pt-1">
         {/* Quantity Controls */}
-        <div className="flex items-center gap-1 bg-[#032154] border border-white/10 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-[#0f172a] border border-white/10 rounded-lg p-0.5">
           <IconButton
             aria-label="Decrease quantity"
             variant="ghost"

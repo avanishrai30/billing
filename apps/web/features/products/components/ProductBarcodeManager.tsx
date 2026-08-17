@@ -98,7 +98,7 @@ export function ProductBarcodeManager({
           {barcodes.map((b, index) => (
             <div
               key={index}
-              className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-[#0a0f1d] border border-white/10 rounded-lg p-2.5"
+              className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-[#131d33] border border-white/10 rounded-lg p-2.5"
             >
               <div className="sm:col-span-5">
                 <Input

@@ -17,7 +17,7 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
         {Array.from({ length: 4 }).map((_, idx) => (
           <div
             key={idx}
-            className="bg-[#021b47] border border-white/10 rounded-2xl p-4 space-y-2.5"
+            className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-2.5"
           >
             <div className="flex justify-between items-center">
               <Skeleton variant="text" className="w-24 h-3.5" />
@@ -77,7 +77,7 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
         return (
           <div
             key={c.label}
-            className="bg-[#021b47] border border-white/10 rounded-2xl p-4 flex flex-col justify-between"
+            className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 flex flex-col justify-between"
           >
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-xs font-semibold text-slate-400 truncate">

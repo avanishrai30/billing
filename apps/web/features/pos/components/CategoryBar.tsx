@@ -35,7 +35,7 @@ export function CategoryBar({
             className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex-shrink-0 ${
               isSelected
                 ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                : 'bg-[#021b47] hover:bg-white/10 text-slate-300 border border-white/10'
+                : 'bg-[#0f172a] hover:bg-white/10 text-slate-300 border border-white/10'
             }`}
           >
             {displayName}

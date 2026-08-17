@@ -11,7 +11,7 @@ export function CartTotals({ totals }: CartTotalsProps) {
   const totalDiscount = (totals.itemDiscountTotal || 0) + (totals.cartDiscount || 0);
 
   return (
-    <div className="bg-[#021b47] border border-white/10 rounded-xl p-3.5 space-y-2 text-xs">
+    <div className="bg-[#0f172a] border border-white/10 rounded-xl p-3.5 space-y-2 text-xs">
       {/* Subtotal */}
       <div className="flex items-center justify-between text-slate-300">
         <span>Items Subtotal</span>

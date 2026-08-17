@@ -60,7 +60,7 @@ export function ProductFilters({
     filters.status !== 'active';
 
   return (
-    <div className="bg-[#111827] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4">
+    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Search */}
         <div className="lg:col-span-2">

@@ -24,7 +24,7 @@ export function OutwardGSTTable({ invoices, isLoading }: OutwardGSTTableProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-[#021b47] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
+      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
         Loading outward sales GST ledger...
       </div>
     );
@@ -41,7 +41,7 @@ export function OutwardGSTTable({ invoices, isLoading }: OutwardGSTTableProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#021b47]">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
       <div className="p-4 border-b border-white/10 flex items-center justify-between">
         <h3 className="text-sm font-bold text-white tracking-tight">
           Outward GST Supply Ledger (Sales Invoices)

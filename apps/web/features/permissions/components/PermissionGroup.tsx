@@ -25,7 +25,7 @@ export function PermissionGroup({
   const isPartiallySelected = activeCount > 0 && !isAllSelected;
 
   return (
-    <div className="bg-[#021b47] rounded-xl border border-white/10 p-4 space-y-3">
+    <div className="bg-[#0f172a] rounded-xl border border-white/10 p-4 space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
         <div>
           <div className="flex items-center gap-2">

@@ -24,7 +24,7 @@ export function InventoryHeader({
   onOpenTransfer
 }: InventoryHeaderProps) {
   return (
-    <div className="bg-[#021b47] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
       {/* Title & Scope */}
       <div className="flex items-center gap-3.5">
         <div className="w-11 h-11 rounded-xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400 flex-shrink-0">
@@ -51,7 +51,7 @@ export function InventoryHeader({
           <select
             value={selectedLocation}
             onChange={(e) => onSelectLocation(e.target.value)}
-            className="px-3 py-2 bg-[#032154] border border-white/15 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-sky-400 cursor-pointer"
+            className="px-3 py-2 bg-[#0f172a] border border-white/15 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-sky-400 cursor-pointer"
             aria-label="Filter inventory by outlet"
           >
             {storeOptions.map((opt) => (

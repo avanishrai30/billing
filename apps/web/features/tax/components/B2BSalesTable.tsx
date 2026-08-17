@@ -21,7 +21,7 @@ export interface B2BSalesTableProps {
 export function B2BSalesTable({ entries, isLoading }: B2BSalesTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#021b47] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
+      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
         Loading B2B registered sales...
       </div>
     );
@@ -38,7 +38,7 @@ export function B2BSalesTable({ entries, isLoading }: B2BSalesTableProps) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#021b47]">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
       <div className="p-4 border-b border-white/10 flex items-center justify-between">
         <h3 className="text-sm font-bold text-white tracking-tight">
           B2B Registered Invoices (Verified GSTIN)

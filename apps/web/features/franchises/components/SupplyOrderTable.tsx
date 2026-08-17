@@ -37,7 +37,7 @@ export function SupplyOrderTable({
 
   if (isLoading) {
     return (
-      <div className="bg-[#021b47] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
+      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
         Loading supply order ledger...
       </div>
     );
@@ -56,7 +56,7 @@ export function SupplyOrderTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#021b47]">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
       <Table density="dense">
         <TableHeader>
           <tr>

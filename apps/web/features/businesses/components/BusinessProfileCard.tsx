@@ -13,7 +13,7 @@ export interface BusinessProfileCardProps {
 export function BusinessProfileCard({ business, isLoading }: BusinessProfileCardProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#021b47] border border-white/10 rounded-2xl p-5 space-y-4">
+      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 space-y-4">
         <Skeleton variant="text" className="w-48 h-6" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Skeleton variant="rectangular" className="h-20 rounded-xl" />
@@ -26,14 +26,14 @@ export function BusinessProfileCard({ business, isLoading }: BusinessProfileCard
 
   if (!business) {
     return (
-      <div className="bg-[#021b47] border border-white/10 rounded-2xl p-6 text-center text-xs text-slate-400">
+      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 text-center text-xs text-slate-400">
         No business profile configured. Please register a legal business entity.
       </div>
     );
   }
 
   return (
-    <div className="bg-[#021b47] border border-white/10 rounded-2xl p-5 space-y-5">
+    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 space-y-5">
       {/* Brand & Primary Details */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
@@ -67,7 +67,7 @@ export function BusinessProfileCard({ business, isLoading }: BusinessProfileCard
       {/* 3 Section Grid: Legal / Tax, Address, Banking */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
         {/* Tax & Identification */}
-        <div className="p-3.5 rounded-xl bg-[#032154] border border-white/5 space-y-2">
+        <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/5 space-y-2">
           <div className="flex items-center gap-1.5 font-semibold text-slate-400">
             <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
             <span>Tax & Legal Info</span>
@@ -85,7 +85,7 @@ export function BusinessProfileCard({ business, isLoading }: BusinessProfileCard
         </div>
 
         {/* Location & Address */}
-        <div className="p-3.5 rounded-xl bg-[#032154] border border-white/5 space-y-2">
+        <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/5 space-y-2">
           <div className="flex items-center gap-1.5 font-semibold text-slate-400">
             <MapPin className="w-3.5 h-3.5 text-amber-400" />
             <span>Registered Address</span>
@@ -96,7 +96,7 @@ export function BusinessProfileCard({ business, isLoading }: BusinessProfileCard
         </div>
 
         {/* Banking & UPI */}
-        <div className="p-3.5 rounded-xl bg-[#032154] border border-white/5 space-y-2">
+        <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/5 space-y-2">
           <div className="flex items-center gap-1.5 font-semibold text-slate-400">
             <Landmark className="w-3.5 h-3.5 text-sky-400" />
             <span>Banking Credentials</span>

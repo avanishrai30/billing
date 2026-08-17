@@ -78,7 +78,7 @@ export function LogoUploader({
   };
 
   return (
-    <div className="bg-[#021b47] border border-white/10 rounded-2xl p-5 space-y-4">
+    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 space-y-4">
       <div>
         <label className="text-sm font-semibold text-slate-200 block">{label}</label>
         <p className="text-xs text-slate-400 mt-0.5">{description}</p>

@@ -46,7 +46,7 @@ export function InventoryTable({
 }: InventoryTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#021b47] border border-white/10 rounded-2xl p-4 space-y-3">
+      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-3">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4 py-2">
             <Skeleton variant="text" className="w-1/4 h-5" />
@@ -76,7 +76,7 @@ export function InventoryTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#021b47]">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
       <Table density="dense">
         <TableHeader>
           <tr>
