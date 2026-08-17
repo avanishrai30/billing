@@ -18,9 +18,11 @@ import { realtimeManager } from '../../../lib/realtime/socket';
 import { useQueryClient } from '@tanstack/react-query';
 import { settingsQueryKeys } from '../../../features/settings/hooks';
 import { storeQueryKeys } from '../../../features/stores/hooks';
+import { AccessDeniedState } from '../../../components/ui';
 
 export default function SettingsPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
+  const canView = hasPermission('settings.view');
   const { activeStoreId } = useStoreScope();
   const { data: stores = [], refetch: refetchStores, isLoading: isStoresLoading } = useStoresQuery();
   const { refetch: refetchSettings, isLoading: isSettingsLoading } = usePortalSettingsQuery();
@@ -49,6 +51,16 @@ export default function SettingsPage() {
     };
   }, [queryClient]);
 
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Settings & Configurations Restricted"
+        message="Your role permissions do not authorize modification of system configurations, branding tokens, or print preferences."
+        requiredPermission="settings.view"
+      />
+    );
+  }
+
   const handleRefreshAll = () => {
     refetchSettings();
     refetchStores();
@@ -66,44 +78,41 @@ export default function SettingsPage() {
       <SettingsHeader
         activeStoreName={activeStoreName}
         isSuperAdmin={isSuperAdmin}
-        onRefresh={handleRefreshAll}
         isLoading={isSettingsLoading || isStoresLoading}
+        onRefresh={handleRefreshAll}
       />
 
-      {/* Segmented Tab Navigation */}
-      <div className="flex items-center gap-2 p-1.5 bg-[#001845]/40 border border-white/10 rounded-xl overflow-x-auto">
+      {/* Settings Navigation Tabs */}
+      <div className="flex border-b border-white/10 gap-2 overflow-x-auto pb-px">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
-
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'border-blue-500 text-white bg-white/5 rounded-t-lg'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.02]'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {tab.label}
+              <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
+              <span>{tab.label}</span>
             </button>
           );
         })}
       </div>
 
       {/* Active Tab Panel */}
-      <div className="space-y-6">
+      <div className="pt-2">
         {activeTab === 'branding' && <BrandingSettings />}
-
         {activeTab === 'business' && (
-          <>
+          <div className="space-y-6">
             <BusinessSettings />
             <StoreSettings />
-          </>
+          </div>
         )}
-
         {activeTab === 'preferences' && <PreferenceSettings />}
       </div>
     </div>

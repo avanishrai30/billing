@@ -12,11 +12,12 @@ import {
   RecentPurchasesTable,
   DashboardSkeleton
 } from '../../../features/dashboard/components';
-import { ErrorState } from '../../../components/ui';
+import { ErrorState, AccessDeniedState } from '../../../components/ui';
 import { useStoreScope } from '../../../providers/StoreScopeProvider';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const canView = hasPermission('dashboard.view');
   const { activeStoreId } = useStoreScope();
   const storeId = activeStoreId || user?.assignedStoreId || 'all';
 
@@ -28,6 +29,16 @@ export default function DashboardPage() {
     refetch,
     isFetching
   } = useDashboardMetrics(storeId);
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Dashboard Overview Restricted"
+        message="Your role permissions do not authorize viewing executive operational metrics and sales analytics."
+        requiredPermission="dashboard.view"
+      />
+    );
+  }
 
   if (isLoading) {
     return <DashboardSkeleton />;

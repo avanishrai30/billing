@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Info } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import {
   useRolePermissionsQuery,
@@ -10,9 +10,11 @@ import {
   PermissionMatrix,
   type RolePermissionsMatrix
 } from '../../../features/permissions';
+import { AccessDeniedState } from '../../../components/ui';
 
 export default function PermissionsPage() {
   const { user: currentUser, hasPermission } = useAuth();
+  const canView = hasPermission('roles.view');
   const canUpdate = hasPermission('roles.update');
 
   const { data: serverMatrix, isLoading } = useRolePermissionsQuery();
@@ -47,6 +49,16 @@ export default function PermissionsPage() {
     const dAud = [...(draftMatrix.auditor || [])].sort().join(',');
     return sAdm !== dAdm || sEmp !== dEmp || sAud !== dAud;
   }, [serverMatrix, draftMatrix]);
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Role Permissions Restricted"
+        message="You do not have administrative privileges to inspect or modify the RBAC role permissions matrix."
+        requiredPermission="roles.view"
+      />
+    );
+  }
 
   const handleSave = async () => {
     await saveMutation.mutateAsync(draftMatrix);
@@ -87,7 +99,7 @@ export default function PermissionsPage() {
       </div>
 
       {isLoading ? (
-        <div className="bg-[#021b47] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
+        <div className="bg-[#111827] border border-white/10 rounded-xl p-6 text-center text-slate-400 text-sm">
           Loading RBAC permissions matrix...
         </div>
       ) : (

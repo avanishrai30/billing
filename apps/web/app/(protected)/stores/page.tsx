@@ -20,9 +20,11 @@ import {
 import { calculateStoreMetrics } from '../../../features/stores/calculations';
 import type { StoreDoc } from '../../../features/stores/types';
 import type { BusinessDoc } from '../../../features/businesses/types';
+import { AccessDeniedState } from '../../../components/ui';
 
 export default function StoresPage() {
   const { hasPermission } = useAuth();
+  const canView = hasPermission('stores.view');
 
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -62,14 +64,23 @@ export default function StoresPage() {
     });
   }, [stores, searchQuery]);
 
-  // Metrics
-  const metrics = useMemo(() => {
+  // Derived Metrics
+  const storeMetrics = useMemo(() => {
     return calculateStoreMetrics(stores);
   }, [stores]);
 
-  const isFiltered = searchQuery.trim() !== '';
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Outlets Management Restricted"
+        message="Your role permissions do not authorize management of physical store outlets or business entity profiles."
+        requiredPermission="stores.view"
+      />
+    );
+  }
 
-  const handleOpenCreateStore = () => {
+  // Handlers
+  const handleOpenAddStore = () => {
     setActiveModalStore(null);
     setIsStoreModalOpen(true);
   };
@@ -85,9 +96,9 @@ export default function StoresPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* 1. Legal Business Entity Section */}
-      <section className="space-y-3">
+    <div className="space-y-8 pb-12">
+      {/* SECTION 1: Business Identity & Legal Entity Profile */}
+      <section className="space-y-4">
         <BusinessHeader
           canEdit={canEditBusiness}
           onOpenEdit={() => setIsBusinessModalOpen(true)}
@@ -98,17 +109,14 @@ export default function StoresPage() {
         />
       </section>
 
-      {/* 2. Store Outlets Section */}
-      <section className="space-y-3 pt-2">
+      {/* SECTION 2: Multi-Store Outlets Registry */}
+      <section className="space-y-6 pt-4 border-t border-white/10">
         <StoreHeader
           canCreate={canCreateStore}
-          onOpenCreate={handleOpenCreateStore}
+          onOpenCreate={handleOpenAddStore}
         />
 
-        <StoreSummaryCards
-          metrics={metrics}
-          isLoading={isLoadingStores}
-        />
+        <StoreSummaryCards metrics={storeMetrics} isLoading={isLoadingStores} />
 
         <StoreFilters
           searchQuery={searchQuery}
@@ -123,26 +131,24 @@ export default function StoresPage() {
           canDelete={canDeleteStore}
           onEditStore={handleOpenEditStore}
           onDeleteStore={handleOpenDeleteStore}
+          isFiltered={searchQuery.trim() !== ''}
           onClearFilters={() => setSearchQuery('')}
-          isFiltered={isFiltered}
         />
       </section>
 
-      {/* Store Create/Edit Modal */}
+      {/* Modals & Dialogs */}
       <StoreModal
         isOpen={isStoreModalOpen}
         onClose={() => setIsStoreModalOpen(false)}
         store={activeModalStore}
       />
 
-      {/* Store Delete Confirmation Dialog */}
       <StoreDeleteDialog
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         store={activeDeleteStore}
       />
 
-      {/* Business Edit Modal */}
       <BusinessModal
         isOpen={isBusinessModalOpen}
         onClose={() => setIsBusinessModalOpen(false)}

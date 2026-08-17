@@ -13,10 +13,12 @@ import {
   SupplierDeleteDialog
 } from '../../../features/suppliers/components';
 import { calculateSupplierMetrics } from '../../../features/suppliers/calculations';
+import { AccessDeniedState } from '../../../components/ui';
 import type { SupplierDoc } from '../../../features/suppliers/types';
 
 export default function SuppliersPage() {
   const { hasPermission } = useAuth();
+  const canView = hasPermission('suppliers.view');
 
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -37,6 +39,16 @@ export default function SuppliersPage() {
   const canCreate = hasPermission('suppliers.create');
   const canEdit = hasPermission('suppliers.update');
   const canDelete = hasPermission('suppliers.delete');
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Supplier Directory Restricted"
+        message="Your role permissions do not authorize browsing vendor supplier profiles or procurement ledgers."
+        requiredPermission="suppliers.view"
+      />
+    );
+  }
 
   // Filtered Suppliers (memoized search)
   const filteredSuppliers = useMemo(() => {

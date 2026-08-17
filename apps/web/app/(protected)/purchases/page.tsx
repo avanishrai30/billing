@@ -24,7 +24,8 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
-  useToast
+  useToast,
+  AccessDeniedState
 } from '../../../components/ui';
 import type {
   PurchaseItem,
@@ -33,7 +34,8 @@ import type {
 } from '../../../features/purchases/types';
 
 export default function PurchasesPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const canView = hasPermission('purchases.view');
   const { success, error: toastError } = useToast();
   const { suppliers, stores, products } = usePurchaseLookups();
 
@@ -45,6 +47,16 @@ export default function PurchasesPage() {
 
   // Active view tab: 'entry' or 'history'
   const [activeTab, setActiveTab] = useState('entry');
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Purchases & Procurement Restricted"
+        message="Your role permissions do not authorize creating or reviewing supplier purchase orders and inbound transport entries."
+        requiredPermission="purchases.view"
+      />
+    );
+  }
 
   // Form State
   const [supplierName, setSupplierName] = useState('');

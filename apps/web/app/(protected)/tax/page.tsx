@@ -21,9 +21,11 @@ import {
   type TaxReportingTab
 } from '../../../features/tax';
 import type { CustomerDoc } from '../../../features/customers/types';
+import { AccessDeniedState } from '../../../components/ui';
 
 export default function TaxPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
+  const canView = hasPermission('invoices.view');
   const { activeStoreId, isRestricted } = useStoreScope();
   const { data: stores = [] } = useStoresQuery();
 
@@ -48,6 +50,16 @@ export default function TaxPage() {
     startDate: startDate || undefined,
     endDate: endDate || undefined
   });
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Tax & GST Ledger Restricted"
+        message="Your role permissions do not authorize access to tax computations, B2B ITC returns, or GST filing ledgers."
+        requiredPermission="invoices.view"
+      />
+    );
+  }
 
   const invoices = data?.invoices || [];
   const purchases = data?.purchases || [];

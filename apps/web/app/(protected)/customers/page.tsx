@@ -13,10 +13,12 @@ import {
   CustomerDeleteDialog
 } from '../../../features/customers/components';
 import { calculateCustomerMetrics } from '../../../features/customers/calculations';
+import { AccessDeniedState } from '../../../components/ui';
 import type { CustomerDoc } from '../../../features/customers/types';
 
 export default function CustomersPage() {
   const { hasPermission } = useAuth();
+  const canView = hasPermission('customers.view');
 
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -37,6 +39,16 @@ export default function CustomersPage() {
   const canCreate = hasPermission('customers.create');
   const canEdit = hasPermission('customers.update');
   const canDelete = hasPermission('customers.delete');
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Customer Directory Restricted"
+        message="Your role permissions do not authorize browsing customer accounts or credit history records."
+        requiredPermission="customers.view"
+      />
+    );
+  }
 
   // Filtered Customers (memoized search)
   const filteredCustomers = useMemo(() => {

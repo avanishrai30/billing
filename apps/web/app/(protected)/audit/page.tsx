@@ -15,12 +15,13 @@ import {
   type AuditLogDoc,
   type AuditQueryParams
 } from '../../../features/audit';
-import { Button } from '../../../components/ui';
+import { Button, AccessDeniedState } from '../../../components/ui';
 
 const PAGE_SIZE = 100;
 
 export default function AuditPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
+  const canView = hasPermission('audit.view');
   const { activeStoreId, isRestricted } = useStoreScope();
   const { data: stores = [] } = useStoresQuery();
 
@@ -61,38 +62,60 @@ export default function AuditPage() {
   }, [skip, entityFilter, startDate, endDate, effectiveStoreId]);
 
   // Query
-  const { data: logs = [], isLoading, refetch } = useAuditLogsQuery(queryParams);
+  const {
+    data = [],
+    isLoading: isLoadingLogs,
+    isRefetching,
+    refetch
+  } = useAuditLogsQuery(queryParams);
 
-  // Client-Side Search & Action Filter
+  const logs: AuditLogDoc[] = Array.isArray(data) ? data : [];
+  const totalLogs = logs.length;
+
+  // Filter logs locally by search and action
   const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      // Filter by Action
+    return logs.filter((log: AuditLogDoc) => {
+      // Action filter
       if (actionFilter !== 'ALL' && log.action !== actionFilter) {
         return false;
       }
 
-      // Filter by Search text
-      if (!search.trim()) return true;
-      const query = search.toLowerCase().trim();
-      return (
-        log.details?.toLowerCase().includes(query) ||
-        log.user?.toLowerCase().includes(query) ||
-        log.performedBy?.toLowerCase().includes(query) ||
-        log.entityId?.toLowerCase().includes(query) ||
-        log.eventType?.toLowerCase().includes(query) ||
-        log.requestId?.toLowerCase().includes(query) ||
-        log.businessName?.toLowerCase().includes(query)
-      );
+      // Search query (username, details, IP, entityId)
+      if (search.trim()) {
+        const q = search.toLowerCase().trim();
+        const matchUser = (log.user || log.performedBy || '').toLowerCase().includes(q);
+        const matchAction = (log.action || '').toLowerCase().includes(q);
+        const matchEntity = (log.entity || '').toLowerCase().includes(q);
+        const matchEntityId = (log.entityId || '').toLowerCase().includes(q);
+        const matchDetails = (log.details || '').toLowerCase().includes(q);
+        const matchIp = (log.ip || '').toLowerCase().includes(q);
+
+        if (!matchUser && !matchAction && !matchEntity && !matchEntityId && !matchDetails && !matchIp) {
+          return false;
+        }
+      }
+
+      return true;
     });
   }, [logs, actionFilter, search]);
 
   // Summary Metrics
-  const metrics = useMemo(() => {
-    return calculateAuditSummary(filteredLogs);
-  }, [filteredLogs]);
+  const summary = useMemo(() => {
+    return calculateAuditSummary(logs);
+  }, [logs]);
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Audit Trail Restricted"
+        message="Your role permissions do not authorize inspection of immutable compliance and forensic audit logs."
+        requiredPermission="audit.view"
+      />
+    );
+  }
 
   // Handlers
-  const handleOpenDetail = (log: AuditLogDoc) => {
+  const handleInspectLog = (log: AuditLogDoc) => {
     setActiveLog(log);
     setIsDrawerOpen(true);
   };
@@ -107,27 +130,19 @@ export default function AuditPage() {
     setSkip(0);
   };
 
-  const handleNextPage = () => {
-    setSkip((prev) => prev + PAGE_SIZE);
-  };
-
-  const handlePrevPage = () => {
-    setSkip((prev) => Math.max(0, prev - PAGE_SIZE));
-  };
-
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
       <AuditHeader
-        totalLoaded={filteredLogs.length}
-        isLoading={isLoading}
+        totalLoaded={totalLogs}
+        isLoading={isRefetching}
         onRefresh={() => refetch()}
       />
 
-      {/* KPI Summary Cards */}
-      <AuditSummary metrics={metrics} isLoading={isLoading} />
+      {/* Summary KPI Cards */}
+      <AuditSummary metrics={summary} isLoading={isLoadingLogs} />
 
-      {/* Search & Filters */}
+      {/* Filter Bar */}
       <AuditFilters
         search={search}
         onSearchChange={setSearch}
@@ -146,11 +161,11 @@ export default function AuditPage() {
         onReset={handleResetFilters}
       />
 
-      {/* Audit Data Table */}
+      {/* Audit Log Table */}
       <AuditTable
         logs={filteredLogs}
-        isLoading={isLoading}
-        onViewLog={handleOpenDetail}
+        isLoading={isLoadingLogs}
+        onViewLog={handleInspectLog}
         onClearFilters={handleResetFilters}
         isFiltered={
           search !== '' ||
@@ -163,34 +178,34 @@ export default function AuditPage() {
       />
 
       {/* Pagination Controls */}
-      <div className="flex items-center justify-between bg-[#021b47] p-3.5 rounded-xl border border-white/10 text-xs text-slate-300">
-        <div>
-          Showing events <span className="font-mono text-white font-bold">{skip + 1}</span> to{' '}
-          <span className="font-mono text-white font-bold">{skip + logs.length}</span>
+      {totalLogs >= PAGE_SIZE && (
+        <div className="flex items-center justify-between px-2 pt-2 text-xs text-slate-400">
+          <span>
+            Showing <strong className="text-white">{skip + 1}</strong> to{' '}
+            <strong className="text-white">{skip + totalLogs}</strong> audit entries
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={skip === 0 || isLoadingLogs}
+              onClick={() => setSkip((prev) => Math.max(0, prev - PAGE_SIZE))}
+            >
+              Previous Page
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={totalLogs < PAGE_SIZE || isLoadingLogs}
+              onClick={() => setSkip((prev) => prev + PAGE_SIZE)}
+            >
+              Next Page
+            </Button>
+          </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrevPage}
-            disabled={skip === 0 || isLoading}
-          >
-            Previous
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNextPage}
-            disabled={logs.length < PAGE_SIZE || isLoading}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-
-      {/* Detail Slide-Over Drawer */}
+      {/* Forensic Detail Drawer */}
       <AuditDetailDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}

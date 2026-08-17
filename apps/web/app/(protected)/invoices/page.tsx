@@ -14,10 +14,12 @@ import {
 } from '../../../features/invoices/components';
 import { calculateInvoiceSummary } from '../../../features/invoices/calculations';
 import { useStoreScope } from '../../../providers/StoreScopeProvider';
+import { AccessDeniedState } from '../../../components/ui';
 import type { Invoice } from '../../../features/invoices/types';
 
 export default function InvoicesPage() {
   const { user, hasPermission } = useAuth();
+  const canView = hasPermission('invoices.view');
   const { activeStoreId } = useStoreScope();
 
   const assignedStoreId =
@@ -53,6 +55,16 @@ export default function InvoicesPage() {
     status: statusFilter,
     search: searchQuery.trim() || undefined
   });
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Sales Invoices Restricted"
+        message="Your role permissions do not authorize browsing historical customer invoices, sales ledgers, or issuing void reversals."
+        requiredPermission="invoices.view"
+      />
+    );
+  }
 
   const invoices = response?.invoices || [];
   const pagination = response?.pagination || {

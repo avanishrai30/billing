@@ -19,6 +19,7 @@ import {
 import { deriveStockStatus } from '../../../features/inventory/calculations';
 import { useStoreScope } from '../../../providers/StoreScopeProvider';
 import type { InventoryBalance, StockStatus } from '../../../features/inventory/types';
+import { AccessDeniedState } from '../../../components/ui';
 
 export default function InventoryPage() {
   const { user, hasPermission } = useAuth();
@@ -54,8 +55,19 @@ export default function InventoryPage() {
   const { data: stores = [] } = usePOSStoresQuery();
 
   // Permissions
+  const canView = hasPermission('inventory.view');
   const canAdjust = hasPermission('inventory.adjust');
   const canTransfer = hasPermission('inventory.transfer');
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Inventory Ledger Restricted"
+        message="Your role permissions do not authorize viewing stock inventory balances or executing warehouse transfers."
+        requiredPermission="inventory.view"
+      />
+    );
+  }
 
   // Store options
   const storeOptions = useMemo(() => {

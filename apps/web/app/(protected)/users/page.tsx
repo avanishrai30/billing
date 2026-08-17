@@ -20,9 +20,11 @@ import {
   type UserFormValues,
   type UserSummaryMetrics
 } from '../../../features/users';
+import { AccessDeniedState } from '../../../components/ui';
 
 export default function UsersPage() {
   const { user: currentUser, hasPermission } = useAuth();
+  const canView = hasPermission('users.view');
   const canCreate = hasPermission('users.create') || hasPermission('users.update');
   const canManage = hasPermission('users.update') || hasPermission('users.create');
 
@@ -96,6 +98,16 @@ export default function UsersPage() {
       );
     });
   }, [users, search, categoryFilter, statusFilter]);
+
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="User Management Restricted"
+        message="You do not have administrative privileges to view team user accounts or directory credentials."
+        requiredPermission="users.view"
+      />
+    );
+  }
 
   // Handlers
   const handleOpenAddUser = () => {

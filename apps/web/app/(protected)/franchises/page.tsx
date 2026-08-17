@@ -24,10 +24,11 @@ import {
   type FranchiseFormValues,
   type SupplyOrderFormValues
 } from '../../../features/franchises';
-import { Tabs, TabsList, TabsTrigger } from '../../../components/ui';
+import { Tabs, TabsList, TabsTrigger, AccessDeniedState } from '../../../components/ui';
 
 export default function FranchisesPage() {
   const { hasPermission } = useAuth();
+  const canView = hasPermission('franchise.view');
   const canManage = hasPermission('franchise.manage');
 
   // Active Tab: 'directory' vs 'orders'
@@ -60,75 +61,84 @@ export default function FranchisesPage() {
   const [isSupplyModalOpen, setIsSupplyModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [activeFranchise, setActiveFranchise] = useState<FranchiseDoc | null>(null);
+  const [selectedFranchise, setSelectedFranchise] = useState<FranchiseDoc | null>(null);
 
-  // Summary Metrics
+  // Derived Metrics
   const metrics = useMemo(() => {
     return calculateFranchiseMetrics(franchises, supplyOrders);
   }, [franchises, supplyOrders]);
 
-  // Filtered Franchises
+  // Filtered Directory
   const filteredFranchises = useMemo(() => {
     return franchises.filter((f) => {
-      const matchesStatus = statusFilter === 'ALL' || f.status === statusFilter;
-      if (!matchesStatus) return false;
+      const matchStatus = statusFilter === 'ALL' || f.status === statusFilter;
+      if (!matchStatus) return false;
 
       if (!search.trim()) return true;
-      const query = search.toLowerCase().trim();
-      return (
-        f.name?.toLowerCase().includes(query) ||
-        f.owner?.toLowerCase().includes(query) ||
-        f.location?.toLowerCase().includes(query) ||
-        f.phone?.toLowerCase().includes(query) ||
-        f.email?.toLowerCase().includes(query) ||
-        f.gstin?.toLowerCase().includes(query)
-      );
+      const q = search.toLowerCase().trim();
+      const matchName = (f.name || '').toLowerCase().includes(q);
+      const matchLocation = (f.location || '').toLowerCase().includes(q);
+      const matchOwner = (f.owner || '').toLowerCase().includes(q);
+      const matchPhone = (f.phone || '').toLowerCase().includes(q);
+      const matchGstin = (f.gstin || '').toLowerCase().includes(q);
+      return matchName || matchLocation || matchOwner || matchPhone || matchGstin;
     });
   }, [franchises, search, statusFilter]);
 
+  if (!canView) {
+    return (
+      <AccessDeniedState
+        title="Franchise Network Restricted"
+        message="Your role permissions do not authorize access to partner franchise records or supply dispatch ledgers."
+        requiredPermission="franchise.view"
+      />
+    );
+  }
+
   // Handlers
-  const handleOpenCreateModal = () => {
-    setActiveFranchise(null);
+  const handleOpenAdd = () => {
+    setSelectedFranchise(null);
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (franchise: FranchiseDoc) => {
-    setActiveFranchise(franchise);
+  const handleOpenEdit = (franchise: FranchiseDoc) => {
+    setSelectedFranchise(franchise);
     setIsModalOpen(true);
-  };
-
-  const handleOpenRecordSupply = (franchise?: FranchiseDoc) => {
-    setActiveFranchise(franchise || null);
-    setIsSupplyModalOpen(true);
   };
 
   const handleOpenDetail = (franchise: FranchiseDoc) => {
-    setActiveFranchise(franchise);
+    setSelectedFranchise(franchise);
     setIsDetailOpen(true);
   };
 
   const handleOpenDelete = (franchise: FranchiseDoc) => {
-    setActiveFranchise(franchise);
+    setSelectedFranchise(franchise);
     setIsDeleteOpen(true);
+  };
+
+  const handleOpenSupplyOrder = (franchise?: FranchiseDoc) => {
+    if (franchise) setSelectedFranchise(franchise);
+    setIsSupplyModalOpen(true);
   };
 
   const handleSaveFranchise = async (values: FranchiseFormValues) => {
     await saveMutation.mutateAsync(values);
   };
 
-  const handleDeleteFranchise = async () => {
-    if (activeFranchise?.id) {
-      await deleteMutation.mutateAsync(activeFranchise.id);
+  const handleConfirmDelete = async () => {
+    if (selectedFranchise) {
+      await deleteMutation.mutateAsync(selectedFranchise.id);
       setIsDeleteOpen(false);
-      setActiveFranchise(null);
+      setSelectedFranchise(null);
     }
   };
 
   const handleCreateSupplyOrder = async (values: SupplyOrderFormValues) => {
     await createOrderMutation.mutateAsync(values);
+    setIsSupplyModalOpen(false);
   };
 
-  const handleResetFilters = () => {
+  const handleClearFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
   };
@@ -140,106 +150,98 @@ export default function FranchisesPage() {
         totalFranchises={metrics.totalFranchises}
         activeFranchises={metrics.activeFranchises}
         canManage={canManage}
-        onRegisterFranchise={handleOpenCreateModal}
-        onCreateSupplyOrder={() => handleOpenRecordSupply()}
+        onRegisterFranchise={handleOpenAdd}
+        onCreateSupplyOrder={() => handleOpenSupplyOrder()}
       />
 
-      {/* Summary KPI Cards */}
-      <FranchiseSummaryCards
-        metrics={metrics}
-        isLoading={isLoadingFranchises || isLoadingOrders}
-      />
+      {/* KPI Cards */}
+      <FranchiseSummaryCards metrics={metrics} isLoading={isLoadingFranchises} />
 
-      {/* Tabs Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
-        <Tabs defaultValue="directory" value={activeTab} onValueChange={(val) => setActiveTab(val as 'directory' | 'orders')}>
-          <TabsList className="bg-black/30 p-1 border border-white/10">
-            <TabsTrigger value="directory" className="text-xs flex items-center gap-1.5">
-              <Store className="h-3.5 w-3.5" />
+      {/* Module Navigation Tabs */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <Tabs defaultValue="directory" value={activeTab} onValueChange={(v) => setActiveTab(v as 'directory' | 'orders')}>
+          <TabsList>
+            <TabsTrigger value="directory" icon={<Store className="w-3.5 h-3.5" />}>
               Franchise Directory ({franchises.length})
             </TabsTrigger>
-            <TabsTrigger value="orders" className="text-xs flex items-center gap-1.5">
-              <Package className="h-3.5 w-3.5" />
-              Supply Orders ({supplyOrders.length})
+            <TabsTrigger value="orders" icon={<Package className="w-3.5 h-3.5" />}>
+              Supply Chain Orders ({supplyOrders.length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {activeTab === 'directory' ? (
+      {/* TAB 1: FRANCHISE PARTNER DIRECTORY */}
+      {activeTab === 'directory' && (
         <div className="space-y-4">
-          {/* Filters */}
           <FranchiseFilters
             search={search}
             onSearchChange={setSearch}
             status={statusFilter}
             onStatusChange={setStatusFilter}
-            onReset={handleResetFilters}
+            onReset={handleClearFilters}
           />
 
-          {/* Directory Table */}
           <FranchiseTable
             franchises={filteredFranchises}
             isLoading={isLoadingFranchises}
             canManage={canManage}
             onViewDetail={handleOpenDetail}
-            onRecordSupply={handleOpenRecordSupply}
-            onEditFranchise={handleOpenEditModal}
+            onRecordSupply={handleOpenSupplyOrder}
+            onEditFranchise={handleOpenEdit}
             onDeleteFranchise={handleOpenDelete}
-            onClearFilters={handleResetFilters}
+            onClearFilters={handleClearFilters}
             isFiltered={search !== '' || statusFilter !== 'ALL'}
-          />
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Supply Order Ledger Table */}
-          <SupplyOrderTable
-            orders={supplyOrders}
-            franchises={franchises}
-            isLoading={isLoadingOrders}
-            onClearFilters={handleResetFilters}
           />
         </div>
       )}
 
-      {/* Franchise Create/Edit Modal */}
+      {/* TAB 2: SUPPLY ORDERS & DISPATCH LEDGER */}
+      {activeTab === 'orders' && (
+        <div className="space-y-4">
+          <SupplyOrderTable
+            orders={supplyOrders}
+            franchises={franchises}
+            isLoading={isLoadingOrders}
+          />
+        </div>
+      )}
+
+      {/* Modals & Drawers */}
       <FranchiseModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        franchise={activeFranchise}
+        franchise={selectedFranchise}
         onSubmit={handleSaveFranchise}
         isLoading={saveMutation.isPending}
       />
 
-      {/* Record Supply Order Modal */}
       <SupplyOrderForm
         isOpen={isSupplyModalOpen}
         onClose={() => setIsSupplyModalOpen(false)}
-        franchises={franchises}
-        selectedFranchiseId={activeFranchise?.id}
+        franchises={franchises.filter((f) => f.status === 'active')}
+        selectedFranchiseId={selectedFranchise?.id}
         onSubmit={handleCreateSupplyOrder}
         isLoading={createOrderMutation.isPending}
       />
 
-      {/* Partner Detail Drawer */}
       <FranchiseDetailDrawer
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        franchise={activeFranchise}
+        franchise={selectedFranchise}
         orders={supplyOrders}
         canManage={canManage}
-        onRecordSupply={(fran) => {
+        onRecordSupply={(f: FranchiseDoc) => {
           setIsDetailOpen(false);
-          handleOpenRecordSupply(fran);
+          handleOpenSupplyOrder(f);
         }}
       />
 
-      {/* Partner Delete Confirmation Dialog */}
       <FranchiseDeleteDialog
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
-        franchise={activeFranchise}
-        onConfirm={handleDeleteFranchise}
+        franchise={selectedFranchise}
+        onConfirm={handleConfirmDelete}
         isLoading={deleteMutation.isPending}
       />
     </div>

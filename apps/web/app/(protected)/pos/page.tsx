@@ -22,7 +22,7 @@ import {
   calculatePOSTotals
 } from '../../../features/pos/calculations';
 import { posApi } from '../../../features/pos/api';
-import { Drawer, useToast } from '../../../components/ui';
+import { Drawer, useToast, AccessDeniedState } from '../../../components/ui';
 import type {
   POSProduct,
   POSCartItem,
@@ -32,7 +32,8 @@ import type {
 } from '../../../features/pos/types';
 
 export default function POSTerminalPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const canCreate = hasPermission('invoices.create');
   const { success, error: toastError, info } = useToast();
 
   const { data: products = [], isLoading: isLoadingProducts } = usePOSProductsQuery();
@@ -49,6 +50,16 @@ export default function POSTerminalPage() {
   const [cartDiscount, setCartDiscount] = useState<number>(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+
+  if (!canCreate) {
+    return (
+      <AccessDeniedState
+        title="POS Terminal Restricted"
+        message="Your role permissions do not authorize creating point-of-sale customer invoices or processing checkout transactions."
+        requiredPermission="invoices.create"
+      />
+    );
+  }
 
   // Active Store location resolution
   const userStore = stores.find((s) => s.id === user?.assignedStoreId);
