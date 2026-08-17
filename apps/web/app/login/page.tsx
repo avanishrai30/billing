@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { ApiError } from '../../lib/errors/types';
 import { normalizePublicAssetUrl } from '../../lib/utils/media';
+import { SmokeyBackground } from '../../components/ui/smokey-background';
 
 export default function LoginPage() {
   const { login, isAuthenticated, lifecycle } = useAuth();
@@ -69,8 +70,12 @@ export default function LoginPage() {
   const showImageLogo = !!brandLogoUrl && !imageError;
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#001845]">
-      <div className="w-full max-w-md bg-[#032154] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#001845] overflow-hidden">
+      {/* Decorative Interactive WebGL Smokey Background */}
+      <SmokeyBackground color="#003882" backdropBlurAmount="md" className="z-0" />
+
+      {/* Login Card Surface */}
+      <div className="relative z-10 w-full max-w-md bg-[#032154]/90 backdrop-blur-xl border border-white/15 rounded-2xl shadow-2xl overflow-hidden">
         {/* Header Branding */}
         <div className="p-8 pb-6 border-b border-white/10 text-center flex flex-col items-center">
           <div className="w-14 h-14 mb-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">

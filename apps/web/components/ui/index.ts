@@ -25,3 +25,4 @@ export * from './HeadersAndBars';
 export * from './StatCard';
 export * from './FeedbackStates';
 export * from './Toast';
+export * from './smokey-background';
