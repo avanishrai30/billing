@@ -91,6 +91,7 @@ describe('StoreScopeProvider & useStoreScope Unit Suite', () => {
   });
 
   it('2. Assigned user is restricted to assignedStoreId and cannot switch away', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     (useAuth as jest.Mock).mockReturnValue({
       user: {
         id: 'u2',
@@ -115,9 +116,14 @@ describe('StoreScopeProvider & useStoreScope Unit Suite', () => {
     });
 
     expect(screen.getByTestId('active-store')).toHaveTextContent('store-1');
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[StoreScope] Restricted user cannot switch away from assigned store: store-1'
+    );
+    warnSpy.mockRestore();
   });
 
   it('3. Invalid or non-existent store ID in localStorage automatically falls back to "all"', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     localStorage.setItem('aiavro_selected_store_id', 'non-existent-store-999');
 
     (useAuth as jest.Mock).mockReturnValue({
@@ -129,14 +135,18 @@ describe('StoreScopeProvider & useStoreScope Unit Suite', () => {
       }
     });
 
-    render(
-      <StoreScopeProvider>
-        <ScopeConsumer />
-      </StoreScopeProvider>
-    );
+    act(() => {
+      render(
+        <StoreScopeProvider>
+          <ScopeConsumer />
+        </StoreScopeProvider>
+      );
+    });
 
     // After render and stores validation effect, should fall back to 'all'
     expect(screen.getByTestId('active-store')).toHaveTextContent('all');
     expect(screen.getByTestId('is-all')).toHaveTextContent('yes');
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });

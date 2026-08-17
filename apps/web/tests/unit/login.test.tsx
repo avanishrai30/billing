@@ -20,6 +20,14 @@ jest.mock('next/navigation', () => ({
 }));
 
 describe('Login Component, Branding & Error Handling Suite', () => {
+  beforeAll(() => {
+    jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
   beforeEach(() => {
     sessionManager.clearSession();
     jest.clearAllMocks();

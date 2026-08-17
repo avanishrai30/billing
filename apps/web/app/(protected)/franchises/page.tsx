@@ -165,7 +165,7 @@ export default function FranchisesPage() {
               Franchise Directory ({franchises.length})
             </TabsTrigger>
             <TabsTrigger value="orders" icon={<Package className="w-3.5 h-3.5" />}>
-              Supply Chain Orders ({supplyOrders.length})
+              Supply Orders ({supplyOrders.length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
