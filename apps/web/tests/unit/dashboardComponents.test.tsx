@@ -38,7 +38,7 @@ describe('Dashboard Component Rendering & Information Hierarchy', () => {
     expect(
       screen.getByRole('heading', { name: /business intelligence & operational kpis/i })
     ).toBeInTheDocument();
-    expect(screen.getByText(/all outlets \(consolidated\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/all stores \(enterprise\)/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sync metrics/i })).toBeInTheDocument();
   });
 
