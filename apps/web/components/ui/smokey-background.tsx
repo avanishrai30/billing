@@ -77,9 +77,10 @@ function hexToRgb(hex: string): [number, number, number] {
 
 /**
  * SmokeyBackground — High-performance, anti-flicker WebGL interactive shader background.
+ * Wrapped in React.memo to isolate rendering from parent tree and input keystrokes.
  * Uses refs for high-frequency mouse state to eliminate unnecessary React re-renders.
  */
-export function SmokeyBackground({
+export const SmokeyBackground = React.memo(function SmokeyBackground({
   backdropBlurAmount = 'md',
   color = '#003882',
   className = ''
@@ -245,4 +246,6 @@ export function SmokeyBackground({
       <div className={`absolute inset-0 bg-[#001845]/40 ${finalBlurClass}`} />
     </div>
   );
-}
+});
+
+SmokeyBackground.displayName = 'SmokeyBackground';

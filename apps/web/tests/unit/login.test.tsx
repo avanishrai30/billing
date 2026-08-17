@@ -157,4 +157,34 @@ describe('Login Component, Branding & Error Handling Suite', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(/account has been suspended/i);
     });
   });
+
+  it('8. Supports rapid sequential keystrokes without losing input state or unmounting background', () => {
+    const { container } = render(
+      <AppProviders>
+        <LoginPage />
+      </AppProviders>
+    );
+
+    const canvas = container.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    const usernameInput = screen.getByPlaceholderText(/enter your username/i) as HTMLInputElement;
+    const passwordInput = screen.getByPlaceholderText(/enter your password/i) as HTMLInputElement;
+
+    // Simulate rapid typing
+    const testUsername = 'admin.cashier';
+    for (let i = 1; i <= testUsername.length; i++) {
+      fireEvent.change(usernameInput, { target: { value: testUsername.substring(0, i) } });
+    }
+    expect(usernameInput.value).toBe('admin.cashier');
+
+    const testPassword = 'SecurePassword123!';
+    for (let i = 1; i <= testPassword.length; i++) {
+      fireEvent.change(passwordInput, { target: { value: testPassword.substring(0, i) } });
+    }
+    expect(passwordInput.value).toBe('SecurePassword123!');
+
+    // Canvas must remain mounted in DOM throughout
+    expect(container.querySelector('canvas')).toBe(canvas);
+  });
 });
