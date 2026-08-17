@@ -71,9 +71,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       >
         {toasts.map((toast) => {
           const typeStyles = {
-            success: 'bg-[#022b68] border-emerald-500/30 text-emerald-300',
-            error: 'bg-[#022b68] border-rose-500/30 text-rose-300',
-            info: 'bg-[#022b68] border-sky-500/30 text-sky-300'
+            success: 'bg-[#0f172a] border-emerald-500/30 text-emerald-300',
+            error: 'bg-[#0f172a] border-rose-500/30 text-rose-300',
+            info: 'bg-[#0f172a] border-blue-500/30 text-blue-300'
           };
 
           const Icon =
@@ -87,7 +87,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <div
               key={toast.id}
               role="status"
-              className={`p-3.5 rounded-xl border shadow-xl flex items-start gap-3 pointer-events-auto transition-opacity ${
+              className={`p-3.5 rounded-xl border shadow-2xl flex items-start gap-3 pointer-events-auto transition-opacity ${
                 typeStyles[toast.type]
               }`}
             >

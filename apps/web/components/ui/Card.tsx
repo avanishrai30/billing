@@ -13,11 +13,11 @@ export function Card({
   ...props
 }: CardProps) {
   const variantStyles = {
-    default: 'bg-[#111827] border border-white/10 shadow-xs',
+    default: 'bg-[#0f172a] border border-white/10 shadow-xs',
     elevated: 'bg-[#1a2542] border border-white/15 shadow-sm',
-    subtle: 'bg-[#0f172a] border border-white/5',
+    subtle: 'bg-[#090d16] border border-white/5',
     interactive:
-      'bg-[#111827] border border-white/10 hover:border-white/20 active:bg-[#1a2542] cursor-pointer transition-colors shadow-xs'
+      'bg-[#0f172a] border border-white/10 hover:border-white/20 hover:bg-[#131d33] active:bg-[#16223b] cursor-pointer transition-colors shadow-xs'
   };
 
   return (
@@ -29,3 +29,4 @@ export function Card({
     </div>
   );
 }
+

@@ -42,7 +42,7 @@ export function StatCard({
 
   return (
     <div
-      className={`p-5 bg-[#111827] border border-white/10 rounded-xl flex flex-col justify-between shadow-xs ${className}`}
+      className={`p-5 bg-[#0f172a] border border-white/10 rounded-xl flex flex-col justify-between shadow-xs transition-colors hover:border-white/20 ${className}`}
     >
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
@@ -54,7 +54,7 @@ export function StatCard({
       </div>
 
       <div className="space-y-1">
-        <div className="text-2xl font-bold tracking-tight text-white tabular-nums">
+        <div className="text-2xl font-bold tracking-tight text-white tabular-nums font-mono">
           {isCurrency && typeof value === 'number'
             ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value)
             : value}
@@ -96,14 +96,14 @@ export function MetricCard({
   className = ''
 }: MetricCardProps) {
   const statusBorder = {
-    normal: 'border-white/10',
+    normal: 'border-white/10 hover:border-white/20',
     warning: 'border-amber-500/30',
     critical: 'border-rose-500/30',
     success: 'border-emerald-500/30'
   };
 
   const statusBg = {
-    normal: 'bg-[#111827]',
+    normal: 'bg-[#0f172a]',
     warning: 'bg-amber-500/5',
     critical: 'bg-rose-500/5',
     success: 'bg-emerald-500/5'
@@ -111,11 +111,12 @@ export function MetricCard({
 
   return (
     <div
-      className={`p-4 border rounded-xl flex flex-col justify-between ${statusBg[status]} ${statusBorder[status]} ${className}`}
+      className={`p-4 border rounded-xl flex flex-col justify-between shadow-xs transition-colors ${statusBg[status]} ${statusBorder[status]} ${className}`}
     >
       <span className="text-xs text-slate-400 font-medium">{title}</span>
-      <div className="text-xl font-bold text-white mt-1 tabular-nums">{metric}</div>
+      <div className="text-xl font-bold text-white mt-1 tabular-nums font-mono">{metric}</div>
       {description && <span className="text-[11px] text-slate-400 mt-1">{description}</span>}
     </div>
   );
 }
+

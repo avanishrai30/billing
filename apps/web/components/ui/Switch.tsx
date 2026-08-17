@@ -28,8 +28,8 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
             className="peer sr-only"
             {...props}
           />
-          <div className="w-9 h-5 bg-[#032154] border border-white/20 peer-checked:bg-sky-500 peer-checked:border-sky-500 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-sky-400" />
-          <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-150 peer-checked:translate-x-4" />
+          <div className="w-9 h-5 bg-[#131d33] border border-white/20 peer-checked:bg-blue-600 peer-checked:border-blue-600 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500/50" />
+          <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-150 peer-checked:translate-x-4 shadow-xs" />
         </div>
         {(label || helperText) && (
           <div className="flex flex-col">
@@ -43,3 +43,4 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
 );
 
 Switch.displayName = 'Switch';
+

@@ -26,7 +26,7 @@ export function Pagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#032154] border border-white/10 rounded-xl text-xs text-slate-300 ${className}`}
+      className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#0f172a] border border-white/10 rounded-xl text-xs text-slate-300 shadow-xs ${className}`}
     >
       {totalItems !== undefined ? (
         <div className="font-mono text-slate-400">

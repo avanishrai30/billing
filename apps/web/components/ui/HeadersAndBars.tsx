@@ -64,7 +64,7 @@ export interface ToolbarProps {
 export function Toolbar({ left, right, className = '' }: ToolbarProps) {
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-[#032154] border border-white/10 rounded-xl mb-4 ${className}`}
+      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-[#0f172a] border border-white/10 rounded-xl mb-4 shadow-xs ${className}`}
     >
       <div className="flex items-center gap-2 flex-wrap">{left}</div>
       <div className="flex items-center gap-2 flex-wrap">{right}</div>
@@ -81,9 +81,10 @@ export interface FilterBarProps {
 export function FilterBar({ children, onReset, className = '' }: FilterBarProps) {
   return (
     <div
-      className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4 bg-[#032154] border border-white/10 rounded-2xl mb-4 ${className}`}
+      className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4 bg-[#0f172a] border border-white/10 rounded-xl mb-4 shadow-xs ${className}`}
     >
       {children}
     </div>
   );
 }
+

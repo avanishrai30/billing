@@ -7,8 +7,9 @@ export interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> 
   stickyHeader?: boolean;
 }
 
-const TableContext = React.createContext<{ density: 'dense' | 'comfortable' }>({
-  density: 'comfortable'
+const TableContext = React.createContext<{ density: 'dense' | 'comfortable'; stickyHeader: boolean }>({
+  density: 'comfortable',
+  stickyHeader: false
 });
 
 export function Table({
@@ -19,8 +20,8 @@ export function Table({
   ...props
 }: TableProps) {
   return (
-    <TableContext.Provider value={{ density }}>
-      <div className="w-full overflow-x-auto rounded-xl border border-white/10 bg-[#111827]">
+    <TableContext.Provider value={{ density, stickyHeader }}>
+      <div className="w-full overflow-x-auto rounded-xl border border-white/10 bg-[#0f172a] shadow-xs">
         <table className={`w-full text-left text-xs text-slate-300 ${className}`} {...props}>
           {children}
         </table>
@@ -30,8 +31,11 @@ export function Table({
 }
 
 export function TableHeader({ children, className = '', ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
+  const { stickyHeader } = React.useContext(TableContext);
+  const stickyClass = stickyHeader ? 'sticky top-0 z-10 backdrop-blur-md bg-[#131d33]/90' : 'bg-[#131d33]';
+
   return (
-    <thead className={`bg-[#0f172a] border-b border-white/10 text-slate-400 font-semibold uppercase tracking-wider text-[11px] ${className}`} {...props}>
+    <thead className={`${stickyClass} border-b border-white/10 text-slate-400 font-semibold uppercase tracking-wider text-[11px] select-none ${className}`} {...props}>
       {children}
     </thead>
   );
@@ -53,7 +57,7 @@ export function TableRow({ isInteractive = false, children, className = '', ...p
   return (
     <tr
       className={`transition-colors ${
-        isInteractive ? 'hover:bg-white/5 cursor-pointer' : 'hover:bg-white/[0.02]'
+        isInteractive ? 'hover:bg-white/5 active:bg-white/10 cursor-pointer' : 'hover:bg-white/[0.03]'
       } ${className}`}
       {...props}
     >
@@ -68,8 +72,8 @@ export interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElem
 
 export function TableHead({ isNumeric, children, className = '', ...props }: TableHeadProps) {
   const { density } = React.useContext(TableContext);
-  const padding = density === 'dense' ? 'px-3 py-2.5' : 'px-4 py-3';
-  const numericClass = isNumeric ? 'text-right font-mono' : '';
+  const padding = density === 'dense' ? 'px-3 py-2' : 'px-4 py-3';
+  const numericClass = isNumeric ? 'text-right font-mono tabular-nums' : '';
 
   return (
     <th className={`${padding} text-slate-400 font-semibold select-none ${numericClass} ${className}`} {...props}>
@@ -85,7 +89,7 @@ export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElem
 export function TableCell({ isNumeric, children, className = '', ...props }: TableCellProps) {
   const { density } = React.useContext(TableContext);
   const padding = density === 'dense' ? 'px-3 py-2' : 'px-4 py-3';
-  const numericClass = isNumeric ? 'text-right font-mono' : '';
+  const numericClass = isNumeric ? 'text-right font-mono tabular-nums' : '';
 
   return (
     <td className={`${padding} ${numericClass} ${className}`} {...props}>
@@ -103,3 +107,4 @@ export function TableEmptyRow({ colSpan, message = 'No records found' }: { colSp
     </tr>
   );
 }
+

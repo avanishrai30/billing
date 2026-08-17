@@ -28,8 +28,8 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
             className="peer sr-only"
             {...props}
           />
-          <div className="w-4 h-4 rounded-full border border-white/20 bg-[#021b47] peer-checked:border-sky-500 peer-focus-visible:ring-2 peer-focus-visible:ring-sky-400 transition-colors flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-sky-500 opacity-0 peer-checked:opacity-100 transition-opacity" />
+          <div className="w-4 h-4 rounded-full border border-white/20 bg-[#0f172a] peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500/50 transition-colors flex items-center justify-center">
+            <div className="w-2 h-2 rounded-full bg-blue-600 opacity-0 peer-checked:opacity-100 transition-opacity" />
           </div>
         </div>
         {(label || helperText) && (
@@ -44,3 +44,4 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
 );
 
 Radio.displayName = 'Radio';
+

@@ -13,23 +13,23 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-sky-500 hover:bg-sky-400 active:bg-sky-600 text-white shadow-sm shadow-sky-500/20 border border-transparent',
+    'bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-xs shadow-blue-600/30 border border-blue-500/40',
   secondary:
-    'bg-[#032154] hover:bg-[#042968] active:bg-[#05327d] text-slate-200 border border-white/10 hover:border-white/20',
+    'bg-[#131d33] hover:bg-[#1a2542] active:bg-[#0f172a] text-slate-200 border border-white/10 hover:border-white/20 shadow-xs',
   ghost:
     'bg-transparent hover:bg-white/5 active:bg-white/10 text-slate-300 hover:text-white border border-transparent',
   danger:
-    'bg-rose-500/15 hover:bg-rose-500/25 active:bg-rose-500/35 text-rose-300 border border-rose-500/30',
+    'bg-rose-500/15 hover:bg-rose-500/25 active:bg-rose-500/35 text-rose-300 border border-rose-500/30 shadow-xs',
   success:
-    'bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/35 text-emerald-300 border border-emerald-500/30',
+    'bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/35 text-emerald-300 border border-emerald-500/30 shadow-xs',
   outline:
     'bg-transparent hover:bg-white/5 active:bg-white/10 text-slate-200 border border-white/20 hover:border-white/40'
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
   sm: 'w-8 h-8 rounded-lg text-xs',
-  md: 'w-10 h-10 rounded-xl text-sm',
-  lg: 'w-12 h-12 rounded-xl text-base'
+  md: 'w-9 h-9 rounded-lg text-xs',
+  lg: 'w-10.5 h-10.5 rounded-xl text-sm'
 };
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
@@ -58,7 +58,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       >
         {isLoading ? (
           <span
-            className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+            className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
             aria-hidden="true"
           />
         ) : (
@@ -70,3 +70,4 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
 );
 
 IconButton.displayName = 'IconButton';
+

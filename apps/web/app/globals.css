@@ -2,60 +2,68 @@
 
 @layer base {
   :root {
-    /* Core Semantic Backgrounds (Refined Enterprise Dark Console) */
-    --color-bg-canvas: #0b0f19;
-    --color-bg-surface: #0f172a;
-    --color-bg-surface-subtle: #131d33;
-    --color-bg-surface-elevated: #1a2542;
-    --color-bg-overlay: rgba(5, 8, 15, 0.8);
+    /* 1. Core Surfaces & Viewport Canvas */
+    --bg-canvas: #090d16;
+    --bg-surface: #0f172a;
+    --bg-surface-subtle: #131d33;
+    --bg-surface-elevated: #1a2542;
+    --bg-surface-interactive: #16223b;
+    --bg-surface-hover: rgba(255, 255, 255, 0.04);
+    --bg-surface-active: rgba(255, 255, 255, 0.08);
+    --bg-overlay: rgba(3, 7, 18, 0.80);
 
-    /* Borders */
-    --color-border-subtle: rgba(255, 255, 255, 0.06);
-    --color-border: rgba(255, 255, 255, 0.10);
-    --color-border-strong: rgba(255, 255, 255, 0.20);
+    /* 2. Borders & Structure */
+    --border-hairline: rgba(255, 255, 255, 0.05);
+    --border-default: rgba(255, 255, 255, 0.10);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --border-focus: #3b82f6;
 
-    /* Typography & Text */
-    --color-text-primary: #f8fafc;
-    --color-text-secondary: #cbd5e1;
-    --color-text-muted: #94a3b8;
-    --color-text-disabled: #64748b;
-    --color-text-inverse: #0f172a;
+    /* 3. Typography Hierarchy */
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --text-inverse: #090d16;
 
-    /* Semantic Accents */
-    --color-brand: #2563eb;
-    --color-brand-hover: #3b82f6;
-    --color-brand-soft: rgba(37, 99, 235, 0.12);
+    /* 4. Semantic Accents & Status */
+    --accent-primary: #2563eb;
+    --accent-primary-hover: #3b82f6;
+    --accent-primary-soft: rgba(37, 99, 235, 0.12);
 
-    --color-success: #10b981;
-    --color-success-hover: #34d399;
-    --color-success-soft: rgba(16, 185, 129, 0.12);
+    --accent-success: #10b981;
+    --accent-success-hover: #34d399;
+    --accent-success-soft: rgba(16, 185, 129, 0.12);
 
-    --color-warning: #f59e0b;
-    --color-warning-hover: #fbbf24;
-    --color-warning-soft: rgba(245, 158, 11, 0.12);
+    --accent-warning: #f59e0b;
+    --accent-warning-hover: #fbbf24;
+    --accent-warning-soft: rgba(245, 158, 11, 0.12);
 
-    --color-danger: #ef4444;
-    --color-danger-hover: #f87171;
-    --color-danger-soft: rgba(239, 68, 68, 0.12);
+    --accent-danger: #ef4444;
+    --accent-danger-hover: #f87171;
+    --accent-danger-soft: rgba(239, 68, 68, 0.12);
 
-    --color-info: #6366f1;
-    --color-info-hover: #818cf8;
-    --color-info-soft: rgba(99, 102, 241, 0.12);
+    --accent-info: #6366f1;
+    --accent-info-hover: #818cf8;
+    --accent-info-soft: rgba(99, 102, 241, 0.12);
 
-    /* Financial Indicators */
-    --color-financial-positive: #10b981;
-    --color-financial-negative: #ef4444;
-    --color-financial-neutral: #94a3b8;
+    /* 5. Realtime Contextual Highlights */
+    --highlight-flash: rgba(59, 130, 246, 0.25);
+    --highlight-success: rgba(16, 185, 129, 0.25);
 
-    /* System Font Stack (Local Only - Zero External Web Fonts) */
+    /* 6. Standardized Control Heights */
+    --control-height-sm: 32px;
+    --control-height-md: 36px;
+    --control-height-lg: 42px;
+
+    /* 7. Typography Stack (Local & Zero Web Fonts) */
     --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
 
   html,
   body {
-    background-color: var(--color-bg-canvas);
-    color: var(--color-text-primary);
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
     font-family: var(--font-system);
     min-height: 100vh;
     margin: 0;
@@ -65,22 +73,24 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Strict Anti-Flicker Reset: No global animation hacks or layout-shifting transitions */
-  * {
+  /* Strict Anti-Flicker & Precision Geometry */
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
   }
 
-  /* Financial and numeric alignment */
+  /* Tabular Numerals for Financial Ledgers & Quantities */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
 
-  /* Focus ring utility with paint-only outline */
+  /* Paint-only Focus Ring Utility */
   .focus-ring {
     outline: none;
   }
   .focus-ring:focus-visible {
-    outline: 2px solid var(--color-brand);
+    outline: 2px solid var(--border-focus);
     outline-offset: 2px;
   }
 }

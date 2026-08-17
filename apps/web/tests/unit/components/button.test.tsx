@@ -8,7 +8,7 @@ describe('UI Primitives: Button & IconButton', () => {
     render(<Button variant="primary">Submit Order</Button>);
     const btn = screen.getByRole('button', { name: /submit order/i });
     expect(btn).toBeInTheDocument();
-    expect(btn).toHaveClass('bg-sky-500');
+    expect(btn).toHaveClass('bg-blue-600');
   });
 
   it('2. Disables interaction and shows spinner when isLoading is true', () => {

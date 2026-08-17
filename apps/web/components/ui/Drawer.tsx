@@ -73,15 +73,15 @@ export function Drawer({
       <div
         data-testid="drawer-backdrop"
         onClick={onClose}
-        className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-black/80 backdrop-blur-xs transition-opacity"
       />
 
       {/* Drawer Surface */}
       <div
-        className={`fixed z-10 w-full ${widthStyles[maxWidth]} bg-[#111827] ${positionClass} shadow-2xl flex flex-col h-full ${className}`}
+        className={`fixed z-10 w-full ${widthStyles[maxWidth]} bg-[#0f172a] ${positionClass} shadow-2xl flex flex-col h-full ${className}`}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 bg-[#131d33] border-b border-white/10 flex items-center justify-between gap-4">
           <div>
             {title && <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>}
             {description && <p className="text-xs text-slate-400 mt-0.5">{description}</p>}
@@ -101,7 +101,7 @@ export function Drawer({
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-3.5 bg-[#0f172a] border-t border-white/10 flex items-center justify-end gap-3">
+          <div className="px-6 py-3.5 bg-[#131d33] border-t border-white/10 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}
@@ -109,3 +109,4 @@ export function Drawer({
     </div>
   );
 }
+
