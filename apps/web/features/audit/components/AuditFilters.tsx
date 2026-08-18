@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, RotateCcw, Filter } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { Input, Select, Button } from '../../../components/ui';
 import type { StoreDoc } from '../../stores/types';
 
@@ -68,14 +68,14 @@ export function AuditFilters({
             value={action}
             onChange={(e) => onActionChange(e.target.value)}
             options={[
-              { value: 'ALL', label: '⚡ All Action Types' },
-              { value: 'auth', label: '🔑 Authentications (Login/Logout)' },
-              { value: 'billing', label: '💳 POS Transactions (Sales)' },
-              { value: 'create', label: '➕ Record Creations' },
-              { value: 'update', label: '✏️ Updates & Adjustments' },
-              { value: 'delete', label: '🗑️ Deletions & Voids' },
-              { value: 'transfer', label: '📦 Stock Transfers' },
-              { value: 'security', label: '🚨 Security Alerts & Denials' }
+              { value: 'ALL', label: 'All Action Types' },
+              { value: 'auth', label: 'Authentications (Login/Logout)' },
+              { value: 'billing', label: 'POS Transactions (Sales)' },
+              { value: 'create', label: 'Record Creations' },
+              { value: 'update', label: 'Updates & Adjustments' },
+              { value: 'delete', label: 'Deletions & Voids' },
+              { value: 'transfer', label: 'Stock Transfers' },
+              { value: 'security', label: 'Security Alerts & Denials' }
             ]}
             className="text-xs"
           />
@@ -88,10 +88,10 @@ export function AuditFilters({
             onChange={(e) => onStoreIdChange(e.target.value)}
             disabled={isStoreScoped}
             options={[
-              { value: 'all', label: '🌐 All Stores (Global Enterprise)' },
+              { value: 'all', label: 'All Stores (Global Enterprise)' },
               ...stores.map((s) => ({
                 value: s.id,
-                label: `📍 ${s.name} (${s.code || s.address || 'Store'})`
+                label: `${s.name} (${s.code || s.address || 'Store'})`
               }))
             ]}
             className="text-xs"
@@ -127,7 +127,7 @@ export function AuditFilters({
               value={entity}
               onChange={(e) => onEntityChange(e.target.value)}
               options={[
-                { value: 'ALL', label: '📁 All Entities' },
+                { value: 'ALL', label: 'All Entities' },
                 { value: 'billing', label: 'Invoices / POS' },
                 { value: 'inventory', label: 'Products & Stock' },
                 { value: 'purchase', label: 'Purchases' },

@@ -43,68 +43,68 @@ export function AuditDetailDrawer({ isOpen, onClose, log }: AuditDetailDrawerPro
     >
       <div className="space-y-6 py-2 overflow-y-auto">
         {/* Event Header Pill */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-black/20 p-3.5 rounded-xl border border-white/5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div className="flex items-center gap-2 flex-wrap">
             <AuditEventBadge eventType={log.eventType} action={log.action} size="md" />
             <Badge variant="neutral">ACTION: {log.action.toUpperCase()}</Badge>
             <Badge variant="neutral">VIEW: {log.view.toUpperCase()}</Badge>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono tabular-nums">
             <Calendar className="h-3.5 w-3.5" />
             <span>{dateFormatted}</span>
           </div>
         </div>
 
         {/* Human-Readable Details */}
-        <div className="bg-[#001845] p-4 rounded-xl border border-white/10 space-y-1.5">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300 uppercase tracking-wider">
-            <FileText className="h-4 w-4 text-amber-400" />
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1.5">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+            <FileText className="h-4 w-4 text-amber-600" />
             <span>Event Summary Details</span>
           </div>
-          <p className="text-xs text-slate-200 leading-relaxed font-medium">
+          <p className="text-xs text-slate-700 leading-relaxed font-medium">
             {log.details || log.eventType}
           </p>
         </div>
 
         {/* Actor & Attribution Metadata */}
-        <div className="bg-[#001845] p-4 rounded-xl border border-white/10 space-y-3">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+          <h4 className="text-xs font-semibold text-slate-900">
             Actor & Security Attribution
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600">
               <User className="h-4 w-4 text-slate-400 shrink-0" />
               <span>
-                Actor: <strong className="text-white">{log.user || log.performedBy}</strong>
+                Actor: <strong className="text-slate-950">{log.user || log.performedBy}</strong>
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600">
               <Shield className="h-4 w-4 text-slate-400 shrink-0" />
               <span>
-                Role: <strong className="text-amber-400">{log.role || 'SYSTEM'}</strong>
+                Role: <strong className="text-amber-700">{log.role || 'SYSTEM'}</strong>
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600">
               <Store className="h-4 w-4 text-slate-400 shrink-0" />
               <span>
-                Store: <strong className="text-white">{log.businessName || log.businessId}</strong>
+                Store: <strong className="text-slate-950">{log.businessName || log.businessId}</strong>
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600">
               <Globe className="h-4 w-4 text-slate-400 shrink-0" />
               <span>
-                Client IP: <code className="text-sky-300 font-mono">{log.ip || '127.0.0.1'}</code>
+                Client IP: <code className="text-blue-700 font-mono">{log.ip || '127.0.0.1'}</code>
               </span>
             </div>
 
-            <div className="sm:col-span-2 flex items-start gap-2 text-slate-300">
+            <div className="sm:col-span-2 flex items-start gap-2 text-slate-600">
               <Network className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <span className="text-slate-400">User Agent:</span>
-                <p className="text-[11px] text-slate-300 font-mono break-all mt-0.5">
+                <span className="text-slate-500">User Agent:</span>
+                <p className="text-[11px] text-slate-700 font-mono break-all mt-0.5">
                   {log.userAgent || 'system'}
                 </p>
               </div>

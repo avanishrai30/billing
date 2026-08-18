@@ -97,13 +97,13 @@ describe('Audit UI Components Suite', () => {
       />
     );
 
-    expect(screen.getByText('POS SALE')).toBeInTheDocument();
-    expect(screen.getByText('INV-9901')).toBeInTheDocument();
-    expect(screen.getByText('Ramesh Patil (@ramesh.cashier)')).toBeInTheDocument();
-    expect(screen.getByText('EMPLOYEE')).toBeInTheDocument();
-    expect(screen.getByText('Mumbai Flagship')).toBeInTheDocument();
+    expect(screen.getAllByText('POS SALE')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('INV-9901')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Ramesh Patil (@ramesh.cashier)')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('EMPLOYEE')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Mumbai Flagship')[0]).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText('Inspect audit log details for invoice_created'));
+    fireEvent.click(screen.getAllByLabelText('Inspect audit log details for invoice_created')[0]);
     expect(onView).toHaveBeenCalledWith(mockLog);
   });
 

@@ -29,7 +29,7 @@ export function PermissionGroup({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
         <div>
           <div className="flex items-center gap-2">
-            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">{group.title}</h4>
+            <h4 className="text-xs font-semibold text-slate-900">{group.title}</h4>
             <span className="text-[10px] text-slate-500 font-mono">
               ({activeCount}/{groupPermissionIds.length} enabled)
             </span>
@@ -80,9 +80,9 @@ export function PermissionGroup({
               />
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                   <span className="text-xs font-semibold">{perm.name}</span>
-                  <code className="text-[10px] font-mono text-slate-500 bg-white px-1 py-0.5 rounded border border-slate-200">
+                  <code className="text-[10px] font-mono text-slate-500 bg-white px-1 py-0.5 rounded border border-slate-200 break-all">
                     {perm.id}
                   </code>
                 </div>

@@ -38,6 +38,19 @@ export function FranchiseTable({
   onClearFilters,
   isFiltered = false
 }: FranchiseTableProps) {
+  const [isMobileLayout, setIsMobileLayout] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const syncLayout = () => setIsMobileLayout(mediaQuery.matches);
+
+    syncLayout();
+    mediaQuery.addEventListener('change', syncLayout);
+    return () => mediaQuery.removeEventListener('change', syncLayout);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-500 text-sm shadow-xs">
@@ -63,7 +76,89 @@ export function FranchiseTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+    <>
+      {isMobileLayout && (
+      <div className="space-y-3">
+        {franchises.map((fran) => {
+          const itemCount = fran.supplyList ? fran.supplyList.length : 0;
+
+          return (
+            <article key={fran.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-900 truncate" title={fran.name}>
+                    {fran.name}
+                  </div>
+                  <div className="text-[11px] text-slate-500 truncate">{fran.location}</div>
+                </div>
+                {fran.status === 'active' ? (
+                  <Badge variant="success" size="sm" dot>
+                    Active
+                  </Badge>
+                ) : fran.status === 'suspended' ? (
+                  <Badge variant="danger" size="sm" dot>
+                    Suspended
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral" size="sm" dot>
+                    Inactive
+                  </Badge>
+                )}
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-1.5 text-[11px] text-slate-600">
+                <span>
+                  Owner: <strong className="text-slate-900">{fran.owner}</strong>
+                </span>
+                <span className="font-mono">{fran.phone || fran.email || 'N/A'}</span>
+                <span className="font-mono">GSTIN: {fran.gstin || 'Unregistered'}</span>
+                <Badge variant={itemCount > 0 ? 'info' : 'neutral'} size="sm">
+                  {itemCount} {itemCount === 1 ? 'Product' : 'Products'}
+                </Badge>
+              </div>
+
+              <div className="mt-3 flex items-center justify-end gap-1">
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onViewDetail(fran)}
+                  aria-label={`View franchise details for ${fran.name}`}
+                  icon={<Eye className="h-4 w-4 text-blue-600" />}
+                />
+                {canManage && (
+                  <>
+                    <IconButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRecordSupply(fran)}
+                      aria-label={`Record supply dispatch for ${fran.name}`}
+                      icon={<Package className="h-4 w-4 text-emerald-600" />}
+                    />
+                    <IconButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditFranchise(fran)}
+                      aria-label={`Edit franchise ${fran.name}`}
+                      icon={<Edit2 className="h-4 w-4 text-slate-600" />}
+                    />
+                    <IconButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDeleteFranchise(fran)}
+                      aria-label={`Delete franchise ${fran.name}`}
+                      icon={<Trash2 className="h-4 w-4 text-rose-600" />}
+                    />
+                  </>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      )}
+
+      {!isMobileLayout && (
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -95,7 +190,7 @@ export function FranchiseTable({
                 <TableCell>
                   <div className="text-xs text-slate-800 font-medium">{fran.owner}</div>
                   <div className="text-[11px] text-slate-500 font-mono">
-                    {fran.phone || fran.email || '—'}
+                    {fran.phone || fran.email || 'N/A'}
                   </div>
                 </TableCell>
 
@@ -172,6 +267,8 @@ export function FranchiseTable({
           })}
         </TableBody>
       </Table>
-    </div>
+      </div>
+      )}
+    </>
   );
 }

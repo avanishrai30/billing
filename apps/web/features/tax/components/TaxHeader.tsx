@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Landmark, RefreshCw, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Landmark, RefreshCw, CheckCircle2, MapPin } from 'lucide-react';
 import { Button, Badge } from '../../../components/ui';
 
 export interface TaxHeaderProps {
@@ -37,7 +37,8 @@ export function TaxHeader({ isLoading, onRefresh, activeStoreName }: TaxHeaderPr
 
         {activeStoreName && (
           <Badge variant="neutral" size="md">
-            📍 {activeStoreName}
+            <MapPin className="h-3.5 w-3.5 mr-1" />
+            {activeStoreName}
           </Badge>
         )}
 

@@ -15,24 +15,21 @@ export function RoleTabs({
   onChangeRole,
   permissionCounts
 }: RoleTabsProps) {
-  const roles: Array<{ id: MatrixRole; label: string; icon: React.ReactNode; color: string }> = [
+  const roles: Array<{ id: MatrixRole; label: string; icon: React.ReactNode }> = [
     {
       id: 'admin',
       label: 'Admin',
-      icon: <Shield className="h-4 w-4 text-purple-400" />,
-      color: 'purple'
+      icon: <Shield className="h-4 w-4" />
     },
     {
       id: 'employee',
       label: 'Employee / Cashier',
-      icon: <UserCheck className="h-4 w-4 text-emerald-400" />,
-      color: 'emerald'
+      icon: <UserCheck className="h-4 w-4" />
     },
     {
       id: 'auditor',
       label: 'Auditor',
-      icon: <Eye className="h-4 w-4 text-amber-400" />,
-      color: 'amber'
+      icon: <Eye className="h-4 w-4" />
     }
   ];
 
@@ -48,7 +45,7 @@ export function RoleTabs({
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer border ${
               isActive
                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-slate-950'
             }`}
           >
             {r.icon}

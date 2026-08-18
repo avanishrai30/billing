@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ShieldCheck, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Tag, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Button, Input } from '../../../components/ui';
 import { BrandingFormSchema, type BrandingFormValues } from '../schemas';
 import { usePortalSettingsQuery, useUpdatePortalSettingsMutation } from '../hooks';
@@ -48,7 +48,7 @@ export function BrandingSettings() {
     try {
       const res = await updateMutation.mutateAsync(values);
       if (res.success) {
-        setFeedback({ type: 'success', message: 'Portal branding updated successfully!' });
+        setFeedback({ type: 'success', message: 'Portal branding updated successfully.' });
         refetch();
         setTimeout(() => setFeedback(null), 4000);
       } else {
@@ -60,18 +60,19 @@ export function BrandingSettings() {
   };
 
   return (
-    <div className="bg-[#001845]/60 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-white/10 pb-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.04)] space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 pb-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            🏷️ Global Portal Branding
+          <h2 className="text-base font-semibold text-slate-950 flex items-center gap-2">
+            <Tag className="w-4 h-4 text-blue-600" />
+            Global Portal Branding
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Configure system-wide portal title, brand identity, and application logo.
           </p>
         </div>
         {!canUpdateBranding && (
-          <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
             Read-only mode (Requires settings.update permission)
           </div>
         )}
@@ -89,19 +90,19 @@ export function BrandingSettings() {
 
         {/* Portal Title Input */}
         <div className="space-y-1.5">
-          <label className="text-sm font-semibold text-slate-200 block">
-            Portal Application Title <span className="text-rose-400">*</span>
+          <label className="text-sm font-semibold text-slate-800 block">
+            Portal Application Title <span className="text-rose-600">*</span>
           </label>
           <Input
             {...register('title')}
             placeholder="e.g. VC Organics Billing OS"
             disabled={!canUpdateBranding || isLoading}
-            className="bg-black/30 border-white/10 text-white font-medium"
+            className="font-medium"
           />
           {errors.title && (
-            <p className="text-xs text-rose-400">{errors.title.message}</p>
+            <p className="text-xs text-rose-700">{errors.title.message}</p>
           )}
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Displayed on browser tabs, login portal banner, and system-wide header badges.
           </p>
         </div>
@@ -111,8 +112,8 @@ export function BrandingSettings() {
           <div
             className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs ${
               feedback.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-rose-50 border-rose-200 text-rose-700'
             }`}
           >
             {feedback.type === 'success' ? (

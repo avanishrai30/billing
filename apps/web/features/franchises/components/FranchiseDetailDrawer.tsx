@@ -70,69 +70,69 @@ export function FranchiseDetailDrawer({
     >
       <div className="space-y-6 py-2 overflow-y-auto">
         {/* Status Badge */}
-        <div className="flex items-center justify-between bg-black/20 p-2.5 rounded-lg border border-white/5">
-          <span className="text-xs text-slate-400">Partner Status</span>
+        <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+          <span className="text-xs text-slate-600">Partner Status</span>
           <Badge variant={franchise.status === 'active' ? 'success' : 'neutral'} dot>
             {franchise.status.toUpperCase()}
           </Badge>
         </div>
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-3 gap-3 bg-black/20 p-3.5 rounded-xl border border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-semibold text-slate-500">
               Total Supply
             </span>
-            <p className="text-sm sm:text-base font-extrabold text-white mt-0.5">
+            <p className="text-sm sm:text-base font-extrabold text-slate-950 mt-0.5">
               ₹{totalDispatched.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
             </p>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-semibold text-slate-500">
               Paid Realized
             </span>
-            <p className="text-sm sm:text-base font-extrabold text-emerald-400 mt-0.5">
+            <p className="text-sm sm:text-base font-extrabold text-emerald-700 mt-0.5">
               ₹{totalPaid.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
             </p>
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] font-semibold text-slate-500">
               Pending Credit
             </span>
-            <p className="text-sm sm:text-base font-extrabold text-amber-400 mt-0.5">
+            <p className="text-sm sm:text-base font-extrabold text-amber-700 mt-0.5">
               ₹{pendingAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>
 
         {/* Profile Details */}
-        <div className="bg-[#001845] p-4 rounded-xl border border-white/10 space-y-3">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+          <h4 className="text-xs font-semibold text-slate-900">
             Franchise Partner Profile
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600">
               <User className="h-4 w-4 text-slate-400" />
               <span>
-                Owner: <strong className="text-white">{franchise.owner}</strong>
+                Owner: <strong className="text-slate-950">{franchise.owner}</strong>
               </span>
             </div>
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600">
               <Phone className="h-4 w-4 text-slate-400" />
               <span>
-                Phone: <strong className="text-white">{franchise.phone || 'N/A'}</strong>
+                Phone: <strong className="text-slate-950">{franchise.phone || 'N/A'}</strong>
               </span>
             </div>
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600">
               <Mail className="h-4 w-4 text-slate-400" />
               <span>
-                Email: <strong className="text-white">{franchise.email || 'N/A'}</strong>
+                Email: <strong className="text-slate-950">{franchise.email || 'N/A'}</strong>
               </span>
             </div>
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-600">
               <FileText className="h-4 w-4 text-slate-400" />
               <span>
-                GSTIN: <strong className="text-white font-mono">{franchise.gstin || 'Unregistered'}</strong>
+                GSTIN: <strong className="text-slate-950 font-mono">{franchise.gstin || 'Unregistered'}</strong>
               </span>
             </div>
           </div>
@@ -140,15 +140,15 @@ export function FranchiseDetailDrawer({
 
         {/* Supply Agreement Catalog */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+          <h4 className="text-xs font-semibold text-slate-900">
             Wholesale Pricing Catalog ({franchise.supplyList?.length || 0} Products)
           </h4>
           {!franchise.supplyList || franchise.supplyList.length === 0 ? (
-            <div className="bg-black/20 p-3 rounded-lg text-center text-xs text-slate-400">
+            <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-center text-xs text-slate-500">
               No custom products mapped. Standard central catalog pricing applies.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#001845]">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
               <Table density="dense">
                 <TableHeader>
                   <tr>
@@ -161,15 +161,15 @@ export function FranchiseDetailDrawer({
                   {franchise.supplyList.map((item, idx) => (
                     <TableRow key={`${item.productId}-${idx}`}>
                       <TableCell>
-                        <span className="font-semibold text-white text-xs">{item.name}</span>
+                        <span className="font-semibold text-slate-950 text-xs">{item.name}</span>
                       </TableCell>
                       <TableCell isNumeric>
-                        <span className="text-emerald-400 font-bold text-xs">
+                        <span className="text-emerald-700 font-bold text-xs">
                           ₹{Number(item.supplyPrice || 0).toFixed(2)}
                         </span>
                       </TableCell>
                       <TableCell isNumeric>
-                        <span className="text-slate-300 text-xs">
+                        <span className="text-slate-600 text-xs">
                           ₹{Number(item.retailPrice || 0).toFixed(2)}
                         </span>
                       </TableCell>
@@ -183,15 +183,15 @@ export function FranchiseDetailDrawer({
 
         {/* Supply Dispatch History */}
         <div className="space-y-2">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+          <h4 className="text-xs font-semibold text-slate-900">
             Supply Dispatch History ({franchiseOrders.length} Orders)
           </h4>
           {franchiseOrders.length === 0 ? (
-            <div className="bg-black/20 p-3 rounded-lg text-center text-xs text-slate-400">
+            <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-center text-xs text-slate-500">
               No supply orders dispatched to this franchise yet.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#001845]">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
               <Table density="dense">
                 <TableHeader>
                   <tr>
@@ -205,17 +205,17 @@ export function FranchiseDetailDrawer({
                   {franchiseOrders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell>
-                        <div className="font-mono text-xs text-white">{order.id}</div>
+                        <div className="font-mono text-xs text-slate-950">{order.id}</div>
                         <div className="text-[10px] text-slate-400 flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {order.date || order.createdAt ? new Date(order.date || order.createdAt).toLocaleDateString('en-IN') : '—'}
+                          {order.date || order.createdAt ? new Date(order.date || order.createdAt).toLocaleDateString('en-IN') : 'N/A'}
                         </div>
                       </TableCell>
                       <TableCell isNumeric>
-                        <span className="text-xs text-slate-300">{order.items?.length || 0}</span>
+                        <span className="text-xs text-slate-600">{order.items?.length || 0}</span>
                       </TableCell>
                       <TableCell isNumeric>
-                        <span className="text-xs font-bold text-white">
+                        <span className="text-xs font-bold text-slate-950">
                           ₹{Number(order.grandTotal || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                         </span>
                       </TableCell>

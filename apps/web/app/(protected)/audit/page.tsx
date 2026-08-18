@@ -179,10 +179,10 @@ export default function AuditPage() {
 
       {/* Pagination Controls */}
       {totalLogs >= PAGE_SIZE && (
-        <div className="flex items-center justify-between px-2 pt-2 text-xs text-slate-400">
+        <div className="flex items-center justify-between px-2 pt-2 text-xs text-slate-500">
           <span>
-            Showing <strong className="text-white">{skip + 1}</strong> to{' '}
-            <strong className="text-white">{skip + totalLogs}</strong> audit entries
+            Showing <strong className="text-slate-900">{skip + 1}</strong> to{' '}
+            <strong className="text-slate-900">{skip + totalLogs}</strong> audit entries
           </span>
           <div className="flex gap-2">
             <Button

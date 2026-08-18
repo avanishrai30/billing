@@ -276,7 +276,7 @@ test.describe('Phase 15B Tax & GST Reporting Ledger E2E Suite', () => {
     await expect(page.getByText('18% Rate', { exact: true })).toBeVisible();
 
     // 4. Switch to B2B vs B2C Tab
-    await page.getByRole('button', { name: /b2b vs b2c matrix/i }).click();
+    await page.getByRole('button', { name: /b2b vs b2c/i }).click();
     await expect(page.getByText('Reliance Retail Ltd')).toBeVisible();
     await expect(page.getByText('27AAAAA0000A1Z5')).toBeVisible();
     await expect(page.getByText('Rahul Sharma')).toBeVisible();

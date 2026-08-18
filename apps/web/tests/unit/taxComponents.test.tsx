@@ -78,7 +78,7 @@ describe('Tax UI Components Suite', () => {
 
     expect(screen.getByText('GST Compliance & Tax Reporting Ledger')).toBeInTheDocument();
     expect(screen.getByText('100% Tax Ledger Reconciled')).toBeInTheDocument();
-    expect(screen.getByText('📍 Mumbai Flagship')).toBeInTheDocument();
+    expect(screen.getByText('Mumbai Flagship')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Refresh Reports'));
     expect(onRefresh).toHaveBeenCalledTimes(1);
@@ -137,7 +137,7 @@ describe('Tax UI Components Suite', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('🏷️ GST Slabs (0/5/12/18%)'));
+    fireEvent.click(screen.getByText('GST Slabs'));
     expect(onTabChange).toHaveBeenCalledWith('slabs');
 
     fireEvent.click(screen.getByText('Reset Filters'));

@@ -9,14 +9,14 @@ export function StoreSettings() {
   const { data: stores = [], isLoading } = useStoresQuery();
 
   return (
-    <div className="bg-[#001845]/60 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-white/10 pb-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.04)] space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 pb-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Store className="w-5 h-5 text-blue-400" />
+          <h2 className="text-base font-semibold text-slate-950 flex items-center gap-2">
+            <Store className="w-5 h-5 text-blue-600" />
             Registered Store Outlets & Branches
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Select an active store to scope settings or view branch operational status.
           </p>
         </div>
@@ -26,11 +26,11 @@ export function StoreSettings() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8 text-slate-400 text-sm">
+        <div className="text-center py-8 text-slate-500 text-sm">
           Loading store outlets...
         </div>
       ) : stores.length === 0 ? (
-        <div className="text-center py-8 text-slate-400 text-sm">
+        <div className="text-center py-8 text-slate-500 text-sm">
           No stores found in directory.
         </div>
       ) : (
@@ -44,14 +44,14 @@ export function StoreSettings() {
                 key={store.id}
                 className={`p-4 rounded-xl border transition-colors ${
                   isSelected
-                    ? 'bg-blue-500/10 border-blue-500/30'
-                    : 'bg-black/20 border-white/5 hover:border-white/10'
+                    ? 'bg-blue-50 border-blue-200'
+                    : 'bg-slate-50/70 border-slate-200 hover:border-slate-300 hover:bg-white'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-white text-sm">{store.name}</span>
+                      <span className="font-semibold text-slate-950 text-sm">{store.name}</span>
                       <Badge variant="neutral" className="text-[10px] font-mono">
                         {store.code || store.id}
                       </Badge>
@@ -63,7 +63,7 @@ export function StoreSettings() {
                       )}
                     </div>
                     {s.subtitle && (
-                      <p className="text-xs text-slate-400 italic">{s.subtitle}</p>
+                      <p className="text-xs text-slate-500 italic">{s.subtitle}</p>
                     )}
                   </div>
 
@@ -79,28 +79,28 @@ export function StoreSettings() {
                   )}
                 </div>
 
-                <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-slate-400">
+                <div className="mt-3 pt-3 border-t border-slate-200 space-y-1.5 text-xs text-slate-500">
                   {store.address && (
                     <div className="flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                       <span className="truncate">{store.address}</span>
                     </div>
                   )}
                   {store.phone && (
                     <div className="flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                      <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                       <span>{store.phone}</span>
                     </div>
                   )}
                   {s.email && (
                     <div className="flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                      <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                       <span>{s.email}</span>
                     </div>
                   )}
                   {s.gstin && (
                     <div className="flex items-center gap-1.5 font-mono">
-                      <Hash className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                      <Hash className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                       <span>GSTIN: {s.gstin}</span>
                     </div>
                   )}

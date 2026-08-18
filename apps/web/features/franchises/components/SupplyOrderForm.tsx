@@ -173,7 +173,7 @@ export function SupplyOrderForm({
                   value: f.id,
                   label: `${f.name} (${f.location})`
                 }))}
-                className="bg-black/20 text-xs"
+                className="text-xs"
               />
             </FormField>
           </div>
@@ -184,16 +184,16 @@ export function SupplyOrderForm({
               <Input
                 type="date"
                 {...register('date')}
-                className="bg-black/20 text-xs"
+                className="text-xs"
               />
             </FormField>
           </div>
         </div>
 
         {/* Line Items Container */}
-        <div className="space-y-2 border-t border-white/10 pt-3">
+        <div className="space-y-2 border-t border-slate-200 pt-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+            <h4 className="text-xs font-semibold text-slate-900">
               Dispatched Line Items
             </h4>
             <Button
@@ -219,20 +219,20 @@ export function SupplyOrderForm({
           {fields.map((field, index) => (
             <div
               key={field.id}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-black/30 p-2.5 rounded-lg border border-white/5"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200"
             >
               <div className="flex-1 min-w-[140px]">
                 <select
-                  className="w-full bg-[#001845] border border-white/10 rounded-lg p-1.5 text-xs text-white"
+                  className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-900 focus-ring"
                   defaultValue={field.productId}
                   onChange={(e) => handleProductChange(index, e.target.value)}
                 >
-                  <option value="">-- Choose Product --</option>
+                  <option value="">Choose Product</option>
                   {activeFranchise?.supplyList && activeFranchise.supplyList.length > 0 ? (
                     <optgroup label="Agreed Franchise Catalog">
                       {activeFranchise.supplyList.map((item) => (
                         <option key={item.productId} value={item.productId}>
-                          ⭐ {item.name} (₹{item.supplyPrice})
+                          {item.name} (₹{item.supplyPrice})
                         </option>
                       ))}
                     </optgroup>
@@ -240,7 +240,7 @@ export function SupplyOrderForm({
                   <optgroup label="General Central Catalog">
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        📦 {p.name}
+                        {p.name}
                       </option>
                     ))}
                   </optgroup>
@@ -253,7 +253,7 @@ export function SupplyOrderForm({
                   step="any"
                   placeholder="Wholesale ₹"
                   {...register(`items.${index}.supplyPrice`, { valueAsNumber: true })}
-                  className="bg-black/20 text-xs"
+                  className="text-xs"
                 />
               </div>
 
@@ -262,7 +262,7 @@ export function SupplyOrderForm({
                   type="number"
                   placeholder="Qty"
                   {...register(`items.${index}.qty`, { valueAsNumber: true })}
-                  className="bg-black/20 text-xs"
+                  className="text-xs"
                 />
               </div>
 
@@ -271,7 +271,7 @@ export function SupplyOrderForm({
                   type="number"
                   placeholder="GST %"
                   {...register(`items.${index}.gst`, { valueAsNumber: true })}
-                  className="bg-black/20 text-xs"
+                  className="text-xs"
                 />
               </div>
 
@@ -281,14 +281,14 @@ export function SupplyOrderForm({
                 size="sm"
                 onClick={() => remove(index)}
                 aria-label="Remove item"
-                icon={<Trash2 className="h-4 w-4 text-rose-400" />}
+                icon={<Trash2 className="h-4 w-4 text-rose-600" />}
               />
             </div>
           ))}
         </div>
 
         {/* Payment & Financial Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/10 pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-200 pt-3">
           <div className="space-y-3">
             <FormField label="Payment Status">
               <Select
@@ -299,7 +299,7 @@ export function SupplyOrderForm({
                   { value: 'credit', label: 'Supplied on Credit' },
                   { value: 'unpaid', label: 'Unpaid' }
                 ]}
-                className="bg-black/20 text-xs"
+                className="text-xs"
               />
             </FormField>
 
@@ -307,24 +307,24 @@ export function SupplyOrderForm({
               <Input
                 placeholder="e.g. Batch #401 via Central Transport"
                 {...register('notes')}
-                className="bg-black/20 text-xs"
+                className="text-xs"
               />
             </FormField>
           </div>
 
           {/* Financial Summary Card */}
-          <div className="bg-black/40 p-3.5 rounded-xl border border-white/10 space-y-2 text-xs">
-            <div className="flex justify-between text-slate-400">
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
+            <div className="flex justify-between text-slate-600">
               <span>Subtotal:</span>
-              <span className="font-mono text-white">₹{totals.subtotal.toFixed(2)}</span>
+              <span className="font-mono text-slate-950">₹{totals.subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-slate-400">
+            <div className="flex justify-between text-slate-600">
               <span>Total GST:</span>
-              <span className="font-mono text-amber-400">₹{totals.tax.toFixed(2)}</span>
+              <span className="font-mono text-amber-700">₹{totals.tax.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm font-bold border-t border-white/10 pt-2 text-white">
+            <div className="flex justify-between text-sm font-bold border-t border-slate-200 pt-2 text-slate-950">
               <span>Grand Total:</span>
-              <span className="font-mono text-emerald-400">₹{totals.grandTotal.toFixed(2)}</span>
+              <span className="font-mono text-emerald-700">₹{totals.grandTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>

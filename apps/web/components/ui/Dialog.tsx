@@ -75,7 +75,7 @@ export function Dialog({
         className={`relative z-10 w-full ${maxWidthStyles[maxWidth]} bg-white border border-slate-200 rounded-lg shadow-[0_24px_70px_rgba(15,23,42,0.18)] overflow-hidden flex flex-col max-h-[90vh] ${className}`}
       >
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4">
+        <div className="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4">
           <div>
             {title && <h2 className="text-base font-semibold text-slate-900 tracking-tight">{title}</h2>}
             {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
@@ -91,11 +91,11 @@ export function Dialog({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto flex-1">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
 
         {/* Optional Footer */}
         {footer && (
-          <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+          <div className="px-4 sm:px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-end gap-3">
             {footer}
           </div>
         )}

@@ -52,24 +52,24 @@ export function CustomerDetailDrawer({
     >
       <div className="space-y-4 text-xs">
         {/* Profile Card & Action Banner */}
-        <div className="p-4 rounded-2xl bg-[#0f172a] border border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-white tracking-tight">{customer.name}</h2>
+              <h2 className="text-base font-bold text-slate-950">{customer.name}</h2>
               {gstDisplay !== 'Unregistered' && (
                 <Badge variant="info" size="sm">
                   GST Verified
                 </Badge>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-slate-300">
+            <div className="flex flex-wrap items-center gap-3 text-slate-600">
               <span className="flex items-center gap-1 font-mono">
-                <Phone className="w-3.5 h-3.5 text-sky-400" />
+                  <Phone className="w-3.5 h-3.5 text-blue-600" />
                 {formattedPhone}
               </span>
               {customer.email && (
                 <span className="flex items-center gap-1">
-                  <Mail className="w-3.5 h-3.5 text-purple-400" />
+                  <Mail className="w-3.5 h-3.5 text-indigo-600" />
                   {customer.email}
                 </span>
               )}
@@ -92,26 +92,26 @@ export function CustomerDetailDrawer({
         </div>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[#0f172a] border border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
           <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
-              <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+              <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>Tax & Identification</span>
             </div>
-            <div className="text-slate-200 font-mono text-[11px]">
-              GSTIN: <strong className="text-white">{gstDisplay}</strong>
+            <div className="text-slate-600 font-mono text-[11px]">
+              GSTIN: <strong className="text-slate-950">{gstDisplay}</strong>
             </div>
-            <div className="text-slate-400 text-[11px]">
+            <div className="text-slate-500 text-[11px]">
               Registered: {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}
             </div>
           </div>
 
           <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
-              <MapPin className="w-3.5 h-3.5 text-amber-400" />
+            <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+              <MapPin className="w-3.5 h-3.5 text-amber-600" />
               <span>Billing Address</span>
             </div>
-            <div className="text-slate-300 text-[11px] leading-relaxed">
+            <div className="text-slate-600 text-[11px] leading-relaxed">
               {customer.address || 'No billing address specified on profile'}
             </div>
           </div>
@@ -119,32 +119,32 @@ export function CustomerDetailDrawer({
 
         {/* Lifetime Sales Statistics Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
               <span>Total Orders</span>
-              <Receipt className="w-4 h-4 text-sky-400" />
+              <Receipt className="w-4 h-4 text-blue-600" />
             </div>
-            <div className="text-lg font-mono font-bold text-white tabular-nums">
+            <div className="text-lg font-mono font-bold text-slate-950 tabular-nums">
               {activeInvoices.length} Bills
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
               <span>Total Billed Spend</span>
-              <ShoppingBag className="w-4 h-4 text-emerald-400" />
+              <ShoppingBag className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="text-lg font-mono font-bold text-emerald-400 tabular-nums">
+            <div className="text-lg font-mono font-bold text-emerald-700 tabular-nums">
               ₹ {totalSpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>
 
         {/* Customer Invoice History Ledger */}
-        <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#0f172a]">
-          <div className="p-3 bg-[#0f172a] border-b border-white/10 font-bold text-white flex items-center justify-between">
+        <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs">
+          <div className="p-3 bg-slate-50 border-b border-slate-200 font-semibold text-slate-950 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-sky-400" />
+              <Receipt className="w-4 h-4 text-blue-600" />
               <span>Purchase History ({invoices.length})</span>
             </div>
           </div>
@@ -161,7 +161,7 @@ export function CustomerDetailDrawer({
               description="This customer has zero completed purchase transactions recorded in the system."
             />
           ) : (
-            <div className="divide-y divide-white/5 max-h-80 overflow-y-auto">
+            <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
               {invoices.map((inv) => {
                 const isVoided = inv.status === 'VOIDED' || inv.isArchived;
                 const grandTotal = Number(inv.grandTotal ?? inv.grandtotal ?? 0);
@@ -176,22 +176,22 @@ export function CustomerDetailDrawer({
                 return (
                   <div
                     key={inv.id || inv._id || inv.invoiceNumber}
-                    className={`p-3 flex items-center justify-between gap-3 hover:bg-white/[0.02] ${
-                      isVoided ? 'opacity-50 bg-rose-500/[0.02]' : ''
+                    className={`p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-slate-50 ${
+                      isVoided ? 'opacity-70 bg-rose-50/60' : ''
                     }`}
                   >
                     <div>
-                      <div className="font-mono font-bold text-white text-xs">
+                      <div className="font-mono font-bold text-slate-950 text-xs">
                         {inv.invoiceNumber || inv.id}
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5">
-                        {invDate} • {inv.items?.length || 0} items • {inv.locationId || 'Store'}
+                        {invDate} / {inv.items?.length || 0} items / {inv.locationId || 'Store'}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="font-mono font-bold text-white text-xs tabular-nums">
+                    <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end">
+                      <div className="text-left sm:text-right">
+                        <div className="font-mono font-bold text-slate-950 text-xs tabular-nums">
                           ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <InvoiceStatusBadge status={inv.status} isArchived={inv.isArchived} />
@@ -204,7 +204,7 @@ export function CustomerDetailDrawer({
                         className="inline-flex"
                       >
                         <Button variant="ghost" size="sm" aria-label={`Download PDF for ${inv.invoiceNumber}`}>
-                          <Download className="w-3.5 h-3.5 text-slate-300" />
+                          <Download className="w-3.5 h-3.5 text-slate-500" />
                         </Button>
                       </a>
                     </div>

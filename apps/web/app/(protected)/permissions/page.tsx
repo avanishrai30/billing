@@ -86,20 +86,20 @@ export default function PermissionsPage() {
       />
 
       {/* Super Admin Notice Banner */}
-      <div className="flex items-start gap-3 bg-purple-500/10 border border-purple-500/20 p-3.5 rounded-xl text-xs text-purple-200">
-        <ShieldCheck className="h-5 w-5 text-purple-400 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl text-xs text-slate-700 shadow-xs">
+        <ShieldCheck className="h-5 w-5 text-indigo-600 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <strong className="text-white font-semibold">Super Admin Master Bypass Policy</strong>
-          <p className="text-purple-300/80 leading-relaxed">
-            The <strong>Super Admin / Owner</strong> role retains permanent wildcard access (<code>*</code>) across
+          <strong className="text-slate-950 font-semibold">Super Admin Master Bypass Policy</strong>
+          <p className="text-slate-600 leading-relaxed">
+            The <strong className="text-slate-900">Super Admin / Owner</strong> role retains permanent wildcard access (<code className="rounded border border-indigo-100 bg-white px-1 text-indigo-700">*</code>) across
             all system features, store scopes, and operational commands. The RBAC matrix below configures permissions
-            for <strong>Admin</strong>, <strong>Employee / Cashier</strong>, and <strong>Auditor</strong> roles.
+            for <strong className="text-slate-900">Admin</strong>, <strong className="text-slate-900">Employee / Cashier</strong>, and <strong className="text-slate-900">Auditor</strong> roles.
           </p>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="bg-[#111827] border border-white/10 rounded-xl p-6 text-center text-slate-400 text-sm">
+        <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-slate-500 text-sm shadow-xs">
           Loading RBAC permissions matrix...
         </div>
       ) : (

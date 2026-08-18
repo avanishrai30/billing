@@ -50,24 +50,24 @@ export function SupplierDetailDrawer({
     >
       <div className="space-y-4 text-xs">
         {/* Profile Card & Action Banner */}
-        <div className="p-4 rounded-2xl bg-[#0f172a] border border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-white tracking-tight">{supplier.name}</h2>
+              <h2 className="text-base font-bold text-slate-950">{supplier.name}</h2>
               {gstDisplay !== 'Unregistered' && (
                 <Badge variant="warning" size="sm">
                   GST Verified
                 </Badge>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-slate-300">
+            <div className="flex flex-wrap items-center gap-3 text-slate-600">
               <span className="flex items-center gap-1 font-mono">
-                <Phone className="w-3.5 h-3.5 text-amber-400" />
+                  <Phone className="w-3.5 h-3.5 text-amber-600" />
                 {formattedContact}
               </span>
               {supplier.email && (
                 <span className="flex items-center gap-1">
-                  <Mail className="w-3.5 h-3.5 text-sky-400" />
+                  <Mail className="w-3.5 h-3.5 text-blue-600" />
                   {supplier.email}
                 </span>
               )}
@@ -90,26 +90,26 @@ export function SupplierDetailDrawer({
         </div>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[#0f172a] border border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
           <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
-              <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+              <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>Tax & Identification</span>
             </div>
-            <div className="text-slate-200 font-mono text-[11px]">
-              GSTIN: <strong className="text-white">{gstDisplay}</strong>
+            <div className="text-slate-600 font-mono text-[11px]">
+              GSTIN: <strong className="text-slate-950">{gstDisplay}</strong>
             </div>
-            <div className="text-slate-400 text-[11px]">
+            <div className="text-slate-500 text-[11px]">
               Registered: {supplier.createdAt ? new Date(supplier.createdAt).toLocaleDateString() : 'N/A'}
             </div>
           </div>
 
           <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
-              <MapPin className="w-3.5 h-3.5 text-amber-400" />
+            <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+              <MapPin className="w-3.5 h-3.5 text-amber-600" />
               <span>Warehouse / Dispatch Location</span>
             </div>
-            <div className="text-slate-300 text-[11px] leading-relaxed">
+            <div className="text-slate-600 text-[11px] leading-relaxed">
               {supplier.address || 'No dispatch address specified on profile'}
             </div>
           </div>
@@ -117,32 +117,32 @@ export function SupplierDetailDrawer({
 
         {/* Lifetime Procurement Statistics Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
               <span>Total Orders</span>
-              <ShoppingCart className="w-4 h-4 text-amber-400" />
+              <ShoppingCart className="w-4 h-4 text-amber-600" />
             </div>
-            <div className="text-lg font-mono font-bold text-white tabular-nums">
+            <div className="text-lg font-mono font-bold text-slate-950 tabular-nums">
               {activePurchases.length} Inward Bills
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#0f172a] border border-white/10">
-            <div className="flex items-center justify-between text-slate-400 mb-1">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 mb-1">
               <span>Procurement Volume</span>
-              <Package className="w-4 h-4 text-emerald-400" />
+              <Package className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="text-lg font-mono font-bold text-emerald-400 tabular-nums">
+            <div className="text-lg font-mono font-bold text-emerald-700 tabular-nums">
               ₹ {totalProcurementSpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>
 
         {/* Supplier Procurement History Ledger */}
-        <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#0f172a]">
-          <div className="p-3 bg-[#0f172a] border-b border-white/10 font-bold text-white flex items-center justify-between">
+        <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs">
+          <div className="p-3 bg-slate-50 border-b border-slate-200 font-semibold text-slate-950 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Truck className="w-4 h-4 text-amber-400" />
+              <Truck className="w-4 h-4 text-amber-600" />
               <span>Inward Purchase Ledger ({purchases.length})</span>
             </div>
           </div>
@@ -159,7 +159,7 @@ export function SupplierDetailDrawer({
               description="Zero procurement stock batch entries have been registered with this supplier."
             />
           ) : (
-            <div className="divide-y divide-white/5 max-h-80 overflow-y-auto">
+            <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
               {purchases.map((p) => {
                 const isVoided = p.status === 'VOIDED' || p.isArchived;
                 const grandTotal = Number(p.grandTotal ?? 0);
@@ -174,16 +174,16 @@ export function SupplierDetailDrawer({
                 return (
                   <div
                     key={p.id || p._id || p.invoiceNumber}
-                    className={`p-3 flex items-center justify-between gap-3 hover:bg-white/[0.02] ${
-                      isVoided ? 'opacity-50 bg-rose-500/[0.02]' : ''
+                    className={`p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-slate-50 ${
+                      isVoided ? 'opacity-70 bg-rose-50/60' : ''
                     }`}
                   >
                     <div>
-                      <div className="font-mono font-bold text-white text-xs">
+                      <div className="font-mono font-bold text-slate-950 text-xs">
                         {p.invoiceNumber || p.id}
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5">
-                        {pDate} • {p.items?.length || 0} items • {p.locationId || p.storeId || 'Store'}
+                        {pDate} / {p.items?.length || 0} items / {p.locationId || p.storeId || 'Store'}
                       </div>
                       {p.transport?.docketNumber && (
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5">
@@ -192,8 +192,8 @@ export function SupplierDetailDrawer({
                       )}
                     </div>
 
-                    <div className="text-right">
-                      <div className="font-mono font-bold text-white text-xs tabular-nums">
+                    <div className="text-left sm:text-right self-stretch sm:self-auto">
+                      <div className="font-mono font-bold text-slate-950 text-xs tabular-nums">
                         ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                       <Badge variant={isVoided ? 'danger' : 'success'} size="sm">

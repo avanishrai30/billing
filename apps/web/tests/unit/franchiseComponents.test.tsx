@@ -113,21 +113,21 @@ describe('Franchise UI Components Suite', () => {
       />
     );
 
-    expect(screen.getByText('VC Organics Thane')).toBeInTheDocument();
-    expect(screen.getByText('Vikram Shinde')).toBeInTheDocument();
-    expect(screen.getByText('27AAAAA0000A1Z5')).toBeInTheDocument();
-    expect(screen.getByText('1 Product')).toBeInTheDocument();
+    expect(screen.getAllByText('VC Organics Thane')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Vikram Shinde')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('27AAAAA0000A1Z5')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('1 Product')[0]).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText('View franchise details for VC Organics Thane'));
+    fireEvent.click(screen.getAllByLabelText('View franchise details for VC Organics Thane')[0]);
     expect(onView).toHaveBeenCalledWith(mockFranchise);
 
-    fireEvent.click(screen.getByLabelText('Record supply dispatch for VC Organics Thane'));
+    fireEvent.click(screen.getAllByLabelText('Record supply dispatch for VC Organics Thane')[0]);
     expect(onSupply).toHaveBeenCalledWith(mockFranchise);
 
-    fireEvent.click(screen.getByLabelText('Edit franchise VC Organics Thane'));
+    fireEvent.click(screen.getAllByLabelText('Edit franchise VC Organics Thane')[0]);
     expect(onEdit).toHaveBeenCalledWith(mockFranchise);
 
-    fireEvent.click(screen.getByLabelText('Delete franchise VC Organics Thane'));
+    fireEvent.click(screen.getAllByLabelText('Delete franchise VC Organics Thane')[0]);
     expect(onDelete).toHaveBeenCalledWith(mockFranchise);
   });
 
@@ -140,11 +140,11 @@ describe('Franchise UI Components Suite', () => {
       />
     );
 
-    expect(screen.getByText('fso-1')).toBeInTheDocument();
-    expect(screen.getByText('VC Organics Thane')).toBeInTheDocument();
-    expect(screen.getByText('₹5,250')).toBeInTheDocument();
-    expect(screen.getByText('PAID')).toBeInTheDocument();
-    expect(screen.getByText('Morning batch dispatch')).toBeInTheDocument();
+    expect(screen.getAllByText('fso-1')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('VC Organics Thane')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('₹5,250')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('PAID')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Morning batch dispatch')[0]).toBeInTheDocument();
   });
 
   it('5. FranchiseDeleteDialog confirms partner deletion', () => {

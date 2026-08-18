@@ -78,15 +78,15 @@ export function LogoUploader({
   };
 
   return (
-    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-5 space-y-4">
+    <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
       <div>
-        <label className="text-sm font-semibold text-slate-200 block">{label}</label>
-        <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+        <label className="text-sm font-semibold text-slate-900 block">{label}</label>
+        <p className="text-xs text-slate-500 mt-0.5">{description}</p>
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-5">
         {/* Logo Preview Frame */}
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center p-2 overflow-hidden flex-shrink-0 relative">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-2 overflow-hidden flex-shrink-0 relative shadow-xs">
           {effectiveDisplayUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -102,8 +102,8 @@ export function LogoUploader({
           )}
 
           {uploadMutation.isPending && (
-            <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+            <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
             </div>
           )}
         </div>
@@ -125,16 +125,15 @@ export function LogoUploader({
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled || uploadMutation.isPending}
-              className="border-white/10 text-white hover:bg-white/10"
             >
               {uploadMutation.isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-blue-400" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-blue-600" />
                   Optimizing...
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4 mr-2 text-blue-400" />
+                  <Upload className="w-4 h-4 mr-2 text-blue-600" />
                   Upload Custom Logo
                 </>
               )}
@@ -146,7 +145,6 @@ export function LogoUploader({
               size="sm"
               onClick={handleResetToDefault}
               disabled={disabled || uploadMutation.isPending}
-              className="text-slate-400 hover:text-slate-200"
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
               Reset Default
@@ -154,14 +152,14 @@ export function LogoUploader({
           </div>
 
           {errorMsg && (
-            <div className="flex items-center gap-1.5 text-xs text-rose-400">
+            <div className="flex items-center gap-1.5 text-xs text-rose-700">
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+            <div className="flex items-center gap-1.5 text-xs text-emerald-700">
               <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{successMsg}</span>
             </div>

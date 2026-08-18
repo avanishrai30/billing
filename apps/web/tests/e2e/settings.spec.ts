@@ -181,7 +181,7 @@ test.describe('Phase 16B Settings & Configuration E2E Suite', () => {
     await expect(saveBrandingBtn).toBeEnabled();
     await saveBrandingBtn.click();
 
-    await expect(page.getByText('Portal branding updated successfully!')).toBeVisible();
+    await expect(page.getByText('Portal branding updated successfully.')).toBeVisible();
 
     // 3. Switch to Store & Business Profile Tab
     await page.getByRole('button', { name: /store & business profile/i }).click();
@@ -196,7 +196,7 @@ test.describe('Phase 16B Settings & Configuration E2E Suite', () => {
     await expect(saveStoreBtn).toBeEnabled();
     await saveStoreBtn.click();
 
-    await expect(page.getByText(/store profile for 'mumbai flagship mega store' saved successfully!/i)).toBeVisible();
+    await expect(page.getByText(/store profile for 'mumbai flagship mega store' saved successfully\./i)).toBeVisible();
 
     // 4. Switch to Workstation Preferences Tab
     await page.getByRole('button', { name: /workstation preferences/i }).click();

@@ -80,7 +80,7 @@ export function BusinessSettings() {
         storeId: currentStore.id,
         payload: values
       });
-      setFeedback({ type: 'success', message: `Store profile for '${values.name}' saved successfully!` });
+      setFeedback({ type: 'success', message: `Store profile for '${values.name}' saved successfully.` });
       refetch();
       setTimeout(() => setFeedback(null), 4000);
     } catch (err: any) {
@@ -89,19 +89,19 @@ export function BusinessSettings() {
   };
 
   return (
-    <div className="bg-[#001845]/60 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-white/10 pb-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.04)] space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 pb-4">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-400" />
+          <h2 className="text-base font-semibold text-slate-950 flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-blue-600" />
             Store & Business Billing Profile
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Configure legal entity details, tax identification numbers, and contact info for invoices.
           </p>
         </div>
         {!canManageStores && (
-          <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
             Read-only mode (Requires stores.manage permission)
           </div>
         )}
@@ -120,63 +120,60 @@ export function BusinessSettings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Business / Store Name */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-              Store / Business Name <span className="text-rose-400">*</span>
+            <label className="text-xs font-semibold text-slate-700 block">
+              Store / Business Name <span className="text-rose-600">*</span>
             </label>
             <Input
               {...register('name')}
               placeholder="e.g. VC Organics Mumbai Flagship"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white"
             />
-            {errors.name && <p className="text-xs text-rose-400">{errors.name.message}</p>}
+            {errors.name && <p className="text-xs text-rose-700">{errors.name.message}</p>}
           </div>
 
           {/* Tagline / Subtitle */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-semibold text-slate-700 block">
               Tagline / Subtitle
             </label>
             <Input
               {...register('subtitle')}
               placeholder="e.g. Pure Organics & A2 Farm Dairy"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white"
             />
-            {errors.subtitle && <p className="text-xs text-rose-400">{errors.subtitle.message}</p>}
+            {errors.subtitle && <p className="text-xs text-rose-700">{errors.subtitle.message}</p>}
           </div>
 
           {/* GSTIN */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-semibold text-slate-700 block">
               GSTIN / Tax Registration No.
             </label>
             <Input
               {...register('gstin')}
               placeholder="e.g. 27AAAAA0000A1Z5"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white font-mono"
+              className="font-mono"
             />
-            {errors.gstin && <p className="text-xs text-rose-400">{errors.gstin.message}</p>}
+            {errors.gstin && <p className="text-xs text-rose-700">{errors.gstin.message}</p>}
           </div>
 
           {/* Contact Phone */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-semibold text-slate-700 block">
               Contact Phone
             </label>
             <Input
               {...register('phone')}
               placeholder="e.g. +91 98765 43210"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white"
             />
-            {errors.phone && <p className="text-xs text-rose-400">{errors.phone.message}</p>}
+            {errors.phone && <p className="text-xs text-rose-700">{errors.phone.message}</p>}
           </div>
 
           {/* Support Email */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-semibold text-slate-700 block">
               Support / Billing Email
             </label>
             <Input
@@ -184,65 +181,63 @@ export function BusinessSettings() {
               type="email"
               placeholder="e.g. support@vcorganics.com"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white"
             />
-            {errors.email && <p className="text-xs text-rose-400">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-rose-700">{errors.email.message}</p>}
           </div>
 
           {/* UPI ID */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-semibold text-slate-700 block">
               Payment UPI ID (for QR Code)
             </label>
             <Input
               {...register('upiId')}
               placeholder="e.g. vcorganics@icici"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white font-mono"
+              className="font-mono"
             />
-            {errors.upiId && <p className="text-xs text-rose-400">{errors.upiId.message}</p>}
+            {errors.upiId && <p className="text-xs text-rose-700">{errors.upiId.message}</p>}
           </div>
 
           {/* Invoice Prefix */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-semibold text-slate-700 block">
               Invoice Prefix
             </label>
             <Input
               {...register('invoicePrefix')}
               placeholder="e.g. VC-MUM-"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white font-mono"
+              className="font-mono"
             />
-            {errors.invoicePrefix && <p className="text-xs text-rose-400">{errors.invoicePrefix.message}</p>}
+            {errors.invoicePrefix && <p className="text-xs text-rose-700">{errors.invoicePrefix.message}</p>}
           </div>
 
           {/* Currency */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-semibold text-slate-700 block">
               Billing Currency
             </label>
             <Input
               {...register('currency')}
               placeholder="e.g. INR"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white font-mono"
+              className="font-mono"
             />
-            {errors.currency && <p className="text-xs text-rose-400">{errors.currency.message}</p>}
+            {errors.currency && <p className="text-xs text-rose-700">{errors.currency.message}</p>}
           </div>
 
           {/* Address Location */}
           <div className="space-y-1.5 md:col-span-2">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+            <label className="text-xs font-semibold text-slate-700 block">
               Business Location / Street Address
             </label>
             <Input
               {...register('address')}
               placeholder="e.g. Shop #4, Market Yard, Pune, Maharashtra 411037"
               disabled={!canManageStores || isStoresLoading}
-              className="bg-black/30 border-white/10 text-white"
             />
-            {errors.address && <p className="text-xs text-rose-400">{errors.address.message}</p>}
+            {errors.address && <p className="text-xs text-rose-700">{errors.address.message}</p>}
           </div>
         </div>
 
@@ -251,8 +246,8 @@ export function BusinessSettings() {
           <div
             className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs ${
               feedback.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-rose-50 border-rose-200 text-rose-700'
             }`}
           >
             {feedback.type === 'success' ? (

@@ -122,7 +122,7 @@ export function FranchiseModal({
             <Input
               placeholder="e.g. VC Organics - Thane West"
               {...register('name')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -131,7 +131,7 @@ export function FranchiseModal({
             <Input
               placeholder="e.g. Thane, Maharashtra"
               {...register('location')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -140,7 +140,7 @@ export function FranchiseModal({
             <Input
               placeholder="e.g. Vikram Shinde"
               {...register('owner')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -149,7 +149,7 @@ export function FranchiseModal({
             <Input
               placeholder="e.g. 9876543210"
               {...register('phone')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -159,7 +159,7 @@ export function FranchiseModal({
               type="email"
               placeholder="e.g. franchise@example.com"
               {...register('email')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -168,7 +168,7 @@ export function FranchiseModal({
             <Input
               placeholder="e.g. 27AAAAA0000A1Z5"
               {...register('gstin')}
-              className="bg-black/20 font-mono uppercase text-xs"
+              className="font-mono uppercase text-xs"
             />
           </FormField>
 
@@ -181,19 +181,19 @@ export function FranchiseModal({
                 { value: 'inactive', label: 'Inactive' },
                 { value: 'suspended', label: 'Suspended' }
               ]}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
         </div>
 
         {/* Supply Agreement Catalog */}
-        <div className="border-t border-white/10 pt-4 space-y-3">
+        <div className="border-t border-slate-200 pt-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+              <h4 className="text-xs font-semibold text-slate-900">
                 Wholesale Supply Agreement Catalog
               </h4>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Pre-agreed wholesale supply prices and recommended retail MRP for this partner
               </p>
             </div>
@@ -217,7 +217,7 @@ export function FranchiseModal({
           </div>
 
           {fields.length === 0 ? (
-            <div className="bg-black/20 rounded-xl p-4 text-center text-xs text-slate-400 border border-white/5">
+            <div className="bg-slate-50 rounded-xl p-4 text-center text-xs text-slate-500 border border-slate-200">
               No custom products added yet. Click &quot;Add Product&quot; to define pre-set wholesale prices.
             </div>
           ) : (
@@ -225,15 +225,15 @@ export function FranchiseModal({
               {fields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-black/30 p-2.5 rounded-lg border border-white/5"
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200"
                 >
                   <div className="flex-1 min-w-[140px]">
                     <select
-                      className="w-full bg-[#001845] border border-white/10 rounded-lg p-1.5 text-xs text-white"
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-900 focus-ring"
                       defaultValue={field.productId}
                       onChange={(e) => handleProductSelect(index, e.target.value)}
                     >
-                      <option value="">-- Select Product --</option>
+                      <option value="">Select Product</option>
                       {products.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -248,7 +248,7 @@ export function FranchiseModal({
                       step="any"
                       placeholder="Supply Price"
                       {...register(`supplyList.${index}.supplyPrice`, { valueAsNumber: true })}
-                      className="bg-black/20 text-xs"
+                      className="text-xs"
                     />
                   </div>
 
@@ -258,7 +258,7 @@ export function FranchiseModal({
                       step="any"
                       placeholder="Retail MRP"
                       {...register(`supplyList.${index}.retailPrice`, { valueAsNumber: true })}
-                      className="bg-black/20 text-xs"
+                      className="text-xs"
                     />
                   </div>
 
@@ -268,7 +268,7 @@ export function FranchiseModal({
                     size="sm"
                     onClick={() => remove(index)}
                     aria-label="Remove item"
-                    icon={<Trash2 className="h-4 w-4 text-rose-400" />}
+                    icon={<Trash2 className="h-4 w-4 text-rose-600" />}
                   />
                 </div>
               ))}

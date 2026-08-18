@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RotateCcw, Filter, Calendar, Store as StoreIcon } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { Select, Button } from '../../../components/ui';
 import type { StoreDoc } from '../../stores/types';
 import type { TaxReportingTab } from '../types';
@@ -36,11 +36,11 @@ export function TaxFilters({
   const isFiltered = storeId !== 'all' || startDate !== '' || endDate !== '';
 
   const tabs: Array<{ id: TaxReportingTab; label: string }> = [
-    { id: 'overview', label: '📊 Compliance Overview' },
-    { id: 'slabs', label: '🏷️ GST Slabs (0/5/12/18%)' },
-    { id: 'b2b_b2c', label: '🏢 B2B vs B2C Matrix' },
-    { id: 'outward', label: '💳 Outward GST (Sales)' },
-    { id: 'inward', label: '📦 Inward GST (ITC)' }
+    { id: 'overview', label: 'Compliance Overview' },
+    { id: 'slabs', label: 'GST Slabs' },
+    { id: 'b2b_b2c', label: 'B2B vs B2C' },
+    { id: 'outward', label: 'Outward GST' },
+    { id: 'inward', label: 'Inward GST' }
   ];
 
   return (
@@ -55,10 +55,10 @@ export function TaxFilters({
               onChange={(e) => onStoreIdChange(e.target.value)}
               disabled={isStoreScoped}
               options={[
-                { value: 'all', label: '🌐 All Stores (Enterprise)' },
+                { value: 'all', label: 'All Stores (Enterprise)' },
                 ...stores.map((s) => ({
                   value: s.id,
-                  label: `📍 ${s.name}`
+                  label: s.name
                 }))
               ]}
               className="text-xs"
@@ -102,7 +102,7 @@ export function TaxFilters({
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors duration-150 cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors duration-150 cursor-pointer focus-ring ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'

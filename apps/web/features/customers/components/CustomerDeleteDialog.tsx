@@ -57,19 +57,19 @@ export function CustomerDeleteDialog({
     >
       <div className="space-y-3 text-xs">
         {serverError && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-start gap-2.5 text-rose-300">
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-rose-700">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>{serverError}</span>
           </div>
         )}
 
-        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 space-y-1.5">
-          <div className="font-bold flex items-center gap-1.5 text-sm text-amber-200">
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 space-y-1.5">
+          <div className="font-bold flex items-center gap-1.5 text-sm text-amber-900">
+            <AlertTriangle className="w-4 h-4 text-amber-600" />
             <span>Directory Removal Notice</span>
           </div>
-          <p className="text-amber-200/90 leading-relaxed">
-            Deleting <strong className="text-white">{customer.name}</strong> ({customer.phone}) will remove their profile from future POS customer lookups. All past historical sales invoices will remain safely preserved in the immutable ledger.
+          <p className="text-amber-800 leading-relaxed">
+            Deleting <strong className="text-amber-950">{customer.name}</strong> ({customer.phone}) will remove their profile from future POS customer lookups. All past historical sales invoices will remain safely preserved in the immutable ledger.
           </p>
         </div>
       </div>

@@ -16,14 +16,14 @@ export function SettingsHeader({
   isLoading
 }: SettingsHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#001845]/60 border border-white/10 p-5 rounded-2xl backdrop-blur-md">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 p-4 sm:p-5 rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
       <div className="flex items-center gap-3.5">
-        <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+        <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
           <SettingsIcon className="w-6 h-6" />
         </div>
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-semibold text-slate-950 tracking-tight">
               Settings & Configuration
             </h1>
             <Badge variant="success" className="gap-1 px-2.5 py-0.5 text-xs font-semibold">
@@ -31,12 +31,12 @@ export function SettingsHeader({
               Live Configuration
             </Badge>
           </div>
-          <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-            <span className="flex items-center gap-1 font-medium text-slate-300">
-              <Store className="w-3.5 h-3.5 text-blue-400" />
+          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+            <span className="flex items-center gap-1 font-medium text-slate-700">
+              <Store className="w-3.5 h-3.5 text-blue-600" />
               {activeStoreName}
             </span>
-            <span>•</span>
+            <span className="h-1 w-1 rounded-full bg-slate-300" aria-hidden="true" />
             <span>{isSuperAdmin ? 'Full Enterprise Administration' : 'Store Scoped Profile'}</span>
           </div>
         </div>
@@ -49,7 +49,6 @@ export function SettingsHeader({
             size="sm"
             onClick={onRefresh}
             disabled={isLoading}
-            className="border-white/10 text-slate-300 hover:text-white"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
