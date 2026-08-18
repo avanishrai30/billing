@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, Input, Select, Button, FormField, Textarea } from '../../../components/ui';
@@ -74,7 +74,7 @@ export function ProductModal({
   const watchPurchasePrice = watch('purchasePrice') || 0;
   const marginPercent = calculateProductMargin(watchSellingPrice, watchPurchasePrice);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isOpen) {
       setServerError(null);
       if (product) {

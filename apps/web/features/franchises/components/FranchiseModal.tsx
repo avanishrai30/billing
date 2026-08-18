@@ -61,7 +61,7 @@ export function FranchiseModal({
     name: 'supplyList'
   });
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (isOpen) {
       reset({
         id: franchise?.id || undefined,

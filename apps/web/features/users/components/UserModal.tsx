@@ -60,7 +60,7 @@ export function UserModal({
 
   const watchedCategory = watch('category');
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (isOpen) {
       reset({
         id: user?.id || undefined,
@@ -124,7 +124,7 @@ export function UserModal({
             <Input
               placeholder="e.g. Ramesh Patil"
               {...register('name')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -134,7 +134,7 @@ export function UserModal({
               placeholder="e.g. ramesh.patil"
               {...register('username')}
               disabled={isEditing}
-              className="bg-black/20 font-mono text-xs"
+              className="font-mono text-xs"
             />
           </FormField>
 
@@ -144,7 +144,7 @@ export function UserModal({
               type="email"
               placeholder="e.g. ramesh@example.com"
               {...register('email')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -153,7 +153,7 @@ export function UserModal({
             <Input
               placeholder="e.g. 9876543210"
               {...register('phone')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -167,7 +167,7 @@ export function UserModal({
               type="password"
               placeholder={isEditing ? '••••••••' : 'Enter strong password (min 6 chars)'}
               {...register('password')}
-              className="bg-black/20 text-xs font-mono"
+              className="text-xs font-mono"
             />
           </FormField>
 
@@ -176,7 +176,7 @@ export function UserModal({
             <Input
               placeholder="e.g. Senior Branch Cashier / Store Manager"
               {...register('role')}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -190,7 +190,7 @@ export function UserModal({
                 { value: 'auditor', label: 'Auditor (Read-Only Ledger & Tax Access)' },
                 { value: 'super admin', label: 'Super Admin (Unrestricted System Owner)' }
               ]}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -207,7 +207,7 @@ export function UserModal({
                 }))
               ]}
               disabled={watchedCategory === 'super admin'}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
 
@@ -220,7 +220,7 @@ export function UserModal({
                 { value: 'suspended', label: 'Suspended (Access Blocked)' },
                 { value: 'inactive', label: 'Inactive (Decommissioned)' }
               ]}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </FormField>
         </div>
