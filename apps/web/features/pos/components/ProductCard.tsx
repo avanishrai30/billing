@@ -79,7 +79,7 @@ export function ProductCard({
             )}
           </div>
           <h3
-            className="font-semibold text-xs text-slate-900 line-clamp-2 mt-0.5 leading-snug"
+            className="font-semibold text-xs text-slate-900 line-clamp-3 mt-0.5 leading-snug min-h-[3rem]"
             title={product.name}
           >
             {product.name}
@@ -87,12 +87,12 @@ export function ProductCard({
         </div>
 
         {/* Price & Add Action Row */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-semibold font-mono text-emerald-700 tabular-nums">
-              ₹ {price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+        <div className="pt-2 border-t border-slate-100 grid grid-cols-[minmax(0,1fr)_66px] items-center gap-2">
+          <div className="min-w-0">
+            <div className="text-[12px] sm:text-[13px] font-semibold font-mono text-emerald-700 tabular-nums whitespace-nowrap leading-tight">
+              ₹{price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
-            <div className="text-[10px] text-slate-500">
+            <div className="text-[10px] text-slate-500 leading-tight break-words">
               per {product.unit || 'unit'}
             </div>
           </div>
@@ -102,14 +102,14 @@ export function ProductCard({
             disabled={isOutOfStock}
             onClick={() => onAddToCart(product)}
             aria-label={`Add ${product.name} to cart`}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-ring ${
+            className={`w-[66px] h-8 justify-center rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-ring shrink-0 ${
               cartQuantity > 0
                 ? 'bg-blue-700 hover:bg-blue-800 text-white shadow-[0_8px_18px_rgba(37,99,235,0.16)]'
                 : 'bg-slate-100 hover:bg-blue-700 text-slate-700 hover:text-white'
             }`}
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{cartQuantity > 0 ? 'Add' : 'Add'}</span>
+            <Plus className="w-3.5 h-3.5 shrink-0" />
+            <span>Add</span>
           </button>
         </div>
       </div>

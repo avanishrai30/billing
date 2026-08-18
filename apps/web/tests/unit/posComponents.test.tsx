@@ -35,12 +35,37 @@ describe('POS Component Layer & Interaction Unit Suite', () => {
 
     expect(screen.getByText('Organic Cow Ghee 500ml')).toBeInTheDocument();
     expect(screen.getByText(/GHEE-500/)).toBeInTheDocument();
-    expect(screen.getByText(/₹ 350.00/)).toBeInTheDocument();
+    expect(screen.getByText(/₹350.00/)).toBeInTheDocument();
 
     const addBtn = screen.getByRole('button', { name: /add organic cow ghee 500ml to cart/i });
     fireEvent.click(addBtn);
     expect(handleAdd).toHaveBeenCalledTimes(1);
     expect(handleAdd).toHaveBeenCalledWith(sampleProduct);
+  });
+
+  it('1b. ProductCard keeps long titles, large prices, and Add action in stable columns', () => {
+    const longProduct: POSProduct = {
+      ...sampleProduct,
+      id: 'prod-long-price',
+      name: 'Organic A2 Gir Cow Cultured Ghee Premium 1 Litre Jar',
+      price: 12000,
+      sellingPrice: 12000,
+      unit: '1 litre jars'
+    };
+
+    render(
+      <ProductCard
+        product={longProduct}
+        onAddToCart={jest.fn()}
+        cartQuantity={0}
+      />
+    );
+
+    expect(screen.getByText(longProduct.name)).toHaveClass('line-clamp-3', 'min-h-[3rem]');
+    expect(screen.getByText(/₹12,000.00/)).toHaveClass('whitespace-nowrap');
+
+    const addBtn = screen.getByRole('button', { name: /add organic a2 gir cow cultured ghee premium 1 litre jar to cart/i });
+    expect(addBtn).toHaveClass('w-[66px]', 'h-8', 'shrink-0', 'justify-center');
   });
 
   it('2. CategoryBar renders all categories and handles selection', () => {
