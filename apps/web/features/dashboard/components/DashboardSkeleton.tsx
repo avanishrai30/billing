@@ -9,7 +9,7 @@ export function DashboardSkeleton() {
       {/* Primary KPI Grid (4 Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="p-5 bg-[#0f172a] border border-white/10 rounded-xl space-y-3">
+          <div key={i} className="p-5 bg-white border border-slate-200 rounded-xl space-y-3 shadow-xs">
             <Skeleton height={14} width={120} />
             <Skeleton height={28} width={160} />
             <Skeleton height={12} width={100} />
@@ -20,7 +20,7 @@ export function DashboardSkeleton() {
       {/* Secondary Operational KPIs (4 Cards) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="p-4 bg-[#0f172a] border border-white/10 rounded-xl space-y-2">
+          <div key={i} className="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-xs">
             <Skeleton height={12} width={90} />
             <Skeleton height={22} width={70} />
             <Skeleton height={10} width={110} />
@@ -49,7 +49,7 @@ export function DashboardSkeleton() {
             </div>
             <div className="space-y-4">
               <Skeleton height={14} width={180} />
-              <div className="p-4 rounded-xl bg-[#0f172a] border border-white/10 space-y-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-4">
                 <Skeleton height={16} width={200} />
                 <Skeleton height={12} className="w-full" />
                 <div className="grid grid-cols-2 gap-3 pt-2">

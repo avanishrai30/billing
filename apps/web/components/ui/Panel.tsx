@@ -11,14 +11,14 @@ export interface PanelProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Panel({ title, subtitle, action, children, className = '', ...props }: PanelProps) {
   return (
     <div
-      className={`bg-[#0f172a] border border-white/10 rounded-xl overflow-hidden shadow-xs ${className}`}
+      className={`bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs ${className}`}
       {...props}
     >
       {(title || action) && (
-        <div className="px-5 py-3.5 bg-[#131d33] border-b border-white/10 flex items-center justify-between gap-4">
+        <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4">
           <div>
-            {title && <h3 className="text-sm font-semibold text-white">{title}</h3>}
-            {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+            {title && <h3 className="text-sm font-semibold text-slate-900">{title}</h3>}
+            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
           {action && <div className="flex-shrink-0">{action}</div>}
         </div>

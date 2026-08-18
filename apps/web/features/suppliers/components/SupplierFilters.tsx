@@ -16,7 +16,7 @@ export function SupplierFilters({
   onClearFilters
 }: SupplierFiltersProps) {
   return (
-    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-3.5 sm:p-4">
+    <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 shadow-xs">
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Input
@@ -42,9 +42,9 @@ export function SupplierFilters({
           <button
             type="button"
             onClick={onClearFilters}
-            className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-medium text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 transition-colors cursor-pointer flex items-center gap-1.5 flex-shrink-0"
           >
-            <X className="w-3.5 h-3.5 text-slate-400" />
+            <X className="w-3.5 h-3.5 text-slate-500" />
             <span>Reset</span>
           </button>
         )}

@@ -15,17 +15,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-xs shadow-blue-600/30 border border-blue-500/40',
+    'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-xs border border-blue-600 active:scale-[0.98]',
   secondary:
-    'bg-[#131d33] hover:bg-[#1a2542] active:bg-[#0f172a] text-slate-200 border border-white/10 hover:border-white/20 shadow-xs',
+    'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 border border-slate-200 hover:border-slate-300 shadow-xs active:scale-[0.98]',
   ghost:
-    'bg-transparent hover:bg-white/5 active:bg-white/10 text-slate-300 hover:text-white border border-transparent',
+    'bg-transparent hover:bg-slate-100 active:bg-slate-200 text-slate-600 hover:text-slate-900 border border-transparent active:scale-[0.98]',
   danger:
-    'bg-rose-500/15 hover:bg-rose-500/25 active:bg-rose-500/35 text-rose-300 border border-rose-500/30 shadow-xs',
+    'bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-200 shadow-xs active:scale-[0.98]',
   success:
-    'bg-emerald-500/15 hover:bg-emerald-500/25 active:bg-emerald-500/35 text-emerald-300 border border-emerald-500/30 shadow-xs',
+    'bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-700 border border-emerald-200 shadow-xs active:scale-[0.98]',
   outline:
-    'bg-transparent hover:bg-white/5 active:bg-white/10 text-slate-200 border border-white/20 hover:border-white/40'
+    'bg-transparent hover:bg-slate-50 active:bg-slate-100 text-slate-700 border border-slate-300 active:scale-[0.98]'
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

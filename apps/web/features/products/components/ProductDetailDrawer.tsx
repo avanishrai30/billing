@@ -57,8 +57,8 @@ export function ProductDetailDrawer({
     >
       <div className="space-y-6">
         {/* 1. Header Hero Card with Image & Core Metrics */}
-        <div className="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
-          <div className="w-24 h-24 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <div className="w-24 h-24 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs">
             {normalizedImageUrl ? (
               <img
                 src={normalizedImageUrl}
@@ -69,7 +69,7 @@ export function ProductDetailDrawer({
                 }}
               />
             ) : (
-              <ImageIcon className="w-8 h-8 text-slate-500" />
+              <ImageIcon className="w-8 h-8 text-slate-400" />
             )}
           </div>
 
@@ -84,13 +84,13 @@ export function ProductDetailDrawer({
               <StatusBadge status={product.isArchived ? 'archived' : product.status || 'active'} />
             </div>
 
-            <p className="text-sm font-semibold text-white truncate">{product.brand || 'VC Organic'}</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-sm font-semibold text-slate-900 truncate">{product.brand || 'VC Organic'}</p>
+            <p className="text-xs text-slate-500">
               {product.supplier ? `Vendor: ${product.supplier}` : 'Direct Farm Procurement'}
             </p>
 
-            <div className="text-xs text-slate-300 flex items-center gap-2">
-              <span>Unit: <strong className="text-white font-mono">{product.unit || 'pc'}</strong></span>
+            <div className="text-xs text-slate-600 flex items-center gap-2">
+              <span>Unit: <strong className="text-slate-900 font-mono">{product.unit || 'pc'}</strong></span>
               {product.weight ? (
                 <span>• {product.weight} {product.weightUnit || 'g'}</span>
               ) : null}
@@ -99,80 +99,80 @@ export function ProductDetailDrawer({
         </div>
 
         {/* 2. Commercial Pricing & Tax Breakdown */}
-        <div className="p-4 rounded-xl bg-[#131d33] border border-white/10 space-y-3">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-emerald-400" />
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-emerald-600" />
             Commercial Pricing & Margin
           </h4>
 
           <div className="grid grid-cols-3 gap-3 pt-1">
-            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
+            <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-xs">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider block">
                 Purchase Cost
               </span>
-              <span className="text-sm font-bold font-mono text-slate-200">
+              <span className="text-sm font-bold font-mono text-slate-700">
                 ₹{(product.purchasePrice || product.cost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </span>
             </div>
 
-            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
+            <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-xs">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider block">
                 Selling Price
               </span>
-              <span className="text-sm font-bold font-mono text-white">
+              <span className="text-sm font-bold font-mono text-slate-900">
                 ₹{(product.sellingPrice || product.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </span>
             </div>
 
-            <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-              <span className="text-[10px] text-emerald-400 uppercase tracking-wider block">
+            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 shadow-xs">
+              <span className="text-[10px] text-emerald-700 uppercase tracking-wider block font-medium">
                 Gross Margin
               </span>
-              <span className="text-sm font-bold font-mono text-emerald-300">
+              <span className="text-sm font-bold font-mono text-emerald-800">
                 {margin}%
               </span>
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/5">
-            <span>GST Tax Slab: <strong className="text-white font-mono">{product.gst || 0}%</strong></span>
-            <span>Reorder Threshold: <strong className="text-white font-mono">{product.reorderLevel || 5} {product.unit || 'units'}</strong></span>
+          <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-200">
+            <span>GST Tax Slab: <strong className="text-slate-900 font-mono">{product.gst || 0}%</strong></span>
+            <span>Reorder Threshold: <strong className="text-slate-900 font-mono">{product.reorderLevel || 5} {product.unit || 'units'}</strong></span>
           </div>
         </div>
 
         {/* 3. Barcodes & Scanner Identifiers */}
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <Barcode className="w-4 h-4 text-sky-400" />
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+            <Barcode className="w-4 h-4 text-blue-600" />
             Registered Barcode Mappings
           </h4>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between p-2.5 bg-[#131d33] border border-white/10 rounded-lg text-xs">
+            <div className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg text-xs shadow-xs">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-400/20">
+                <span className="text-[10px] uppercase font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                   PRIMARY
                 </span>
-                <span className="font-mono text-white">
+                <span className="font-mono text-slate-900">
                   {product.barcode || 'No primary barcode assigned'}
                 </span>
               </div>
-              <span className="text-slate-400 text-[11px]">Primary Retail Unit</span>
+              <span className="text-slate-500 text-[11px]">Primary Retail Unit</span>
             </div>
 
             {product.barcodes && product.barcodes.length > 0 ? (
               product.barcodes.map((b, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-2.5 bg-[#131d33] border border-white/10 rounded-lg text-xs"
+                  className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg text-xs shadow-xs"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-400/20">
+                    <span className="text-[10px] uppercase font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
                       {b.type || 'ALTERNATE'}
                     </span>
-                    <span className="font-mono text-slate-200">{b.barcode}</span>
+                    <span className="font-mono text-slate-800">{b.barcode}</span>
                   </div>
-                  <span className="text-slate-400 text-[11px]">{b.variantName || 'Unit'}</span>
+                  <span className="text-slate-500 text-[11px]">{b.variantName || 'Unit'}</span>
                 </div>
               ))
             ) : null}
@@ -182,17 +182,17 @@ export function ProductDetailDrawer({
         {/* 4. Description & Notes */}
         {product.description && (
           <div className="space-y-1.5">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
               Catalog Notes & Description
             </h4>
-            <p className="text-xs text-slate-300 leading-relaxed p-3 rounded-lg bg-white/5 border border-white/10">
+            <p className="text-xs text-slate-700 leading-relaxed p-3 rounded-lg bg-slate-50 border border-slate-200">
               {product.description}
             </p>
           </div>
         )}
 
         {/* Action Controls */}
-        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+        <div className="flex items-center justify-between pt-4 border-t border-slate-200">
           <div>
             {canArchive && !product.isArchived && (
               <Button
@@ -202,7 +202,7 @@ export function ProductDetailDrawer({
                   onClose();
                   onArchive?.(product);
                 }}
-                leftIcon={<Trash2 className="w-4 h-4 text-rose-400" />}
+                leftIcon={<Trash2 className="w-4 h-4 text-rose-600" />}
               >
                 Archive Product
               </Button>

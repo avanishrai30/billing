@@ -73,24 +73,24 @@ export function Drawer({
       <div
         data-testid="drawer-backdrop"
         onClick={onClose}
-        className="fixed inset-0 bg-black/80 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
       />
 
       {/* Drawer Surface */}
       <div
-        className={`fixed z-10 w-full ${widthStyles[maxWidth]} bg-[#0f172a] ${positionClass} shadow-2xl flex flex-col h-full ${className}`}
+        className={`fixed z-10 w-full ${widthStyles[maxWidth]} bg-white ${positionClass} shadow-2xl flex flex-col h-full ${className}`}
       >
         {/* Header */}
-        <div className="px-6 py-4 bg-[#131d33] border-b border-white/10 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4">
           <div>
-            {title && <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>}
-            {description && <p className="text-xs text-slate-400 mt-0.5">{description}</p>}
+            {title && <h2 className="text-base font-semibold text-slate-900 tracking-tight">{title}</h2>}
+            {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close drawer"
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -101,7 +101,7 @@ export function Drawer({
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-3.5 bg-[#131d33] border-t border-white/10 flex items-center justify-end gap-3">
+          <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}

@@ -12,10 +12,10 @@ export function Section({ title, description, action, children, className = '', 
   return (
     <section className={`space-y-4 ${className}`} {...props}>
       {(title || description || action) && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-white/10 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200 pb-3">
           <div>
-            {title && <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>}
-            {description && <p className="text-xs text-slate-400 mt-0.5">{description}</p>}
+            {title && <h2 className="text-base font-semibold text-slate-900 tracking-tight">{title}</h2>}
+            {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
           </div>
           {action && <div className="flex items-center gap-2 mt-2 sm:mt-0">{action}</div>}
         </div>
@@ -86,18 +86,18 @@ export interface DividerProps extends React.HTMLAttributes<HTMLHRElement> {
 
 export function Divider({ label, orientation = 'horizontal', className = '', ...props }: DividerProps) {
   if (orientation === 'vertical') {
-    return <div className={`w-[1px] bg-white/10 self-stretch ${className}`} />;
+    return <div className={`w-[1px] bg-slate-200 self-stretch ${className}`} />;
   }
 
   if (label) {
     return (
       <div className={`flex items-center gap-3 w-full my-4 ${className}`}>
-        <div className="flex-1 h-[1px] bg-white/10" />
-        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">{label}</span>
-        <div className="flex-1 h-[1px] bg-white/10" />
+        <div className="flex-1 h-[1px] bg-slate-200" />
+        <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">{label}</span>
+        <div className="flex-1 h-[1px] bg-slate-200" />
       </div>
     );
   }
 
-  return <hr className={`border-0 h-[1px] bg-white/10 my-4 w-full ${className}`} {...props} />;
+  return <hr className={`border-0 h-[1px] bg-slate-200 my-4 w-full ${className}`} {...props} />;
 }

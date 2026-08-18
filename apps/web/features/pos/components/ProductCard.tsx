@@ -30,14 +30,14 @@ export function ProductCard({
   return (
     <div
       data-testid={`product-card-${product.id}`}
-      className={`group relative bg-[#0f172a] border rounded-2xl p-3.5 flex flex-col justify-between transition-colors overflow-hidden ${
+      className={`group relative bg-white border rounded-2xl p-3.5 flex flex-col justify-between transition-colors overflow-hidden shadow-xs ${
         cartQuantity > 0
-          ? 'border-blue-500/50 bg-[#131d33] ring-1 ring-blue-500/20'
-          : 'border-white/10 hover:border-white/20'
+          ? 'border-blue-500 bg-blue-50/40 ring-1 ring-blue-200'
+          : 'border-slate-200 hover:border-slate-300'
       }`}
     >
       {/* Top Media Container - Fixed Deterministic Geometry */}
-      <div className="w-full h-28 mb-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center overflow-hidden relative">
+      <div className="w-full h-28 mb-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden relative">
         {showImage ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -47,14 +47,14 @@ export function ProductCard({
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-500">
+          <div className="w-full h-full flex items-center justify-center text-slate-400">
             <Package className="w-8 h-8" />
           </div>
         )}
 
         {/* In Cart Indicator Pill */}
         {cartQuantity > 0 && (
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-sky-500 text-white font-bold text-[10px] flex items-center gap-1 shadow-md">
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-blue-600 text-white font-bold text-[10px] flex items-center gap-1 shadow-sm">
             <Check className="w-3 h-3" />
             <span>{cartQuantity} in cart</span>
           </div>
@@ -62,7 +62,7 @@ export function ProductCard({
 
         {/* GST / Tax Tag */}
         {Number(product.gst || product.tax || 0) > 0 && (
-          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/50 text-slate-300 font-mono text-[9px]">
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-slate-900/70 text-white font-mono text-[9px]">
             {product.gst || product.tax}% GST
           </div>
         )}
@@ -71,16 +71,16 @@ export function ProductCard({
       {/* Product Content Details */}
       <div className="flex-1 flex flex-col justify-between space-y-2">
         <div>
-          <div className="flex items-center justify-between gap-1 text-[11px] text-slate-400">
+          <div className="flex items-center justify-between gap-1 text-[11px] text-slate-500">
             <span className="truncate">{product.category || 'General'}</span>
             {product.sku && (
-              <span className="font-mono text-[10px] text-slate-400 truncate">
+              <span className="font-mono text-[10px] text-slate-500 truncate">
                 {product.sku}
               </span>
             )}
           </div>
           <h3
-            className="font-semibold text-xs text-white line-clamp-2 mt-0.5 leading-snug"
+            className="font-semibold text-xs text-slate-900 line-clamp-2 mt-0.5 leading-snug"
             title={product.name}
           >
             {product.name}
@@ -88,12 +88,12 @@ export function ProductCard({
         </div>
 
         {/* Price & Add Action Row */}
-        <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-2">
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
           <div>
-            <div className="text-sm font-bold font-mono text-emerald-400 tabular-nums">
+            <div className="text-sm font-bold font-mono text-emerald-700 tabular-nums">
               ₹ {price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
-            <div className="text-[10px] text-slate-400">
+            <div className="text-[10px] text-slate-500">
               per {product.unit || 'unit'}
             </div>
           </div>
@@ -105,8 +105,8 @@ export function ProductCard({
             aria-label={`Add ${product.name} to cart`}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               cartQuantity > 0
-                ? 'bg-sky-500 hover:bg-sky-400 text-white shadow-md shadow-sky-500/20'
-                : 'bg-white/10 hover:bg-sky-500 text-white hover:shadow-md'
+                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                : 'bg-slate-100 hover:bg-blue-600 text-slate-700 hover:text-white'
             }`}
           >
             <Plus className="w-3.5 h-3.5" />

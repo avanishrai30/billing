@@ -25,20 +25,20 @@ export function CartItem({
   return (
     <div
       data-testid={`cart-item-${item.productId}`}
-      className="p-3 rounded-xl bg-[#0f172a] border border-white/5 space-y-2 text-xs"
+      className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs"
     >
       {/* Top row: Name, unit price, remove button */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-white truncate" title={item.name}>
+          <h4 className="font-semibold text-slate-900 truncate" title={item.name}>
             {item.name}
           </h4>
-          <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-mono">
+          <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5 font-mono">
             <span>
               ₹ {item.price.toFixed(2)} / {item.unit}
             </span>
             {item.gst > 0 && (
-              <span className="px-1 py-0.2 rounded bg-white/5 text-slate-300 text-[10px]">
+              <span className="px-1 py-0.2 rounded bg-slate-200/80 text-slate-700 text-[10px]">
                 {item.gst}% GST
               </span>
             )}
@@ -50,22 +50,22 @@ export function CartItem({
           variant="ghost"
           size="sm"
           onClick={onRemove}
-          icon={<Trash2 className="w-3.5 h-3.5 text-rose-400" />}
+          icon={<Trash2 className="w-3.5 h-3.5 text-rose-600" />}
         />
       </div>
 
       {/* Bottom row: Qty Controls, Discount trigger, and Line Total */}
       <div className="flex items-center justify-between pt-1">
         {/* Quantity Controls */}
-        <div className="flex items-center gap-1 bg-[#0f172a] border border-white/10 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-xs">
           <IconButton
             aria-label="Decrease quantity"
             variant="ghost"
             size="sm"
             onClick={onDecrement}
-            icon={<Minus className="w-3 h-3 text-slate-300" />}
+            icon={<Minus className="w-3 h-3 text-slate-600" />}
           />
-          <span className="w-8 text-center font-mono font-bold text-white tabular-nums">
+          <span className="w-8 text-center font-mono font-bold text-slate-900 tabular-nums">
             {item.quantity}
           </span>
           <IconButton
@@ -73,7 +73,7 @@ export function CartItem({
             variant="ghost"
             size="sm"
             onClick={onIncrement}
-            icon={<Plus className="w-3 h-3 text-slate-300" />}
+            icon={<Plus className="w-3 h-3 text-slate-600" />}
           />
         </div>
 
@@ -85,8 +85,8 @@ export function CartItem({
             aria-label="Toggle item discount"
             className={`p-1 rounded-md text-[11px] flex items-center gap-1 transition-colors cursor-pointer ${
               item.discountPercent > 0
-                ? 'bg-amber-500/20 text-amber-300 font-semibold'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-amber-100 text-amber-800 font-semibold'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <Tag className="w-3 h-3" />
@@ -94,7 +94,7 @@ export function CartItem({
           </button>
 
           {/* Line Total */}
-          <div className="font-mono font-bold text-white text-sm tabular-nums text-right">
+          <div className="font-mono font-bold text-slate-900 text-sm tabular-nums text-right">
             ₹ {item.lineTotal.toFixed(2)}
           </div>
         </div>

@@ -148,17 +148,17 @@ export function PurchaseHistory({
                     : 'N/A';
 
                   return (
-                    <TableRow key={purchase.id || purchase._id} className={isVoided ? 'opacity-60' : ''}>
-                      <TableCell className="font-mono font-medium text-white text-xs">
+                    <TableRow key={purchase.id || purchase._id} className={isVoided ? 'opacity-60 bg-rose-50' : ''}>
+                      <TableCell className="font-mono font-medium text-slate-900 text-xs">
                         {poNum}
                       </TableCell>
-                      <TableCell className="font-semibold text-slate-200">
+                      <TableCell className="font-semibold text-slate-900">
                         {purchase.supplierName || 'General Supplier'}
                       </TableCell>
-                      <TableCell className="font-mono text-slate-300 text-xs">
+                      <TableCell className="font-mono text-slate-700 text-xs">
                         {purchase.invoiceNumber || 'N/A'}
                       </TableCell>
-                      <TableCell className="text-slate-400 text-xs">
+                      <TableCell className="text-slate-600 text-xs">
                         {purchase.locationId || purchase.storeId || 'All'}
                       </TableCell>
                       <TableCell>
@@ -178,10 +178,10 @@ export function PurchaseHistory({
                           {purchase.paymentStatus || 'PAID'}
                         </Badge>
                       </TableCell>
-                      <TableCell isNumeric className="font-mono font-bold text-emerald-400 tabular-nums">
+                      <TableCell isNumeric className="font-mono font-bold text-emerald-700 tabular-nums">
                         ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </TableCell>
-                      <TableCell align="right" className="font-mono text-slate-400 text-xs">
+                      <TableCell align="right" className="font-mono text-slate-500 text-xs">
                         {dateStr}
                       </TableCell>
                       <TableCell align="center">
@@ -191,7 +191,7 @@ export function PurchaseHistory({
                             variant="ghost"
                             size="sm"
                             onClick={() => onSelectPurchase(purchase)}
-                            icon={<Eye className="w-3.5 h-3.5 text-sky-400" />}
+                            icon={<Eye className="w-3.5 h-3.5 text-blue-600" />}
                           />
                           {!isVoided && (
                             <IconButton
@@ -199,7 +199,7 @@ export function PurchaseHistory({
                               variant="ghost"
                               size="sm"
                               onClick={() => onRequestVoid(purchase)}
-                              icon={<Ban className="w-3.5 h-3.5 text-rose-400" />}
+                              icon={<Ban className="w-3.5 h-3.5 text-rose-600" />}
                             />
                           )}
                         </div>

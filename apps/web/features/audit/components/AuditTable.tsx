@@ -33,7 +33,7 @@ export function AuditTable({
 }: AuditTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-500 text-sm shadow-xs">
         Loading immutable audit ledger...
       </div>
     );
@@ -56,7 +56,7 @@ export function AuditTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -89,7 +89,7 @@ export function AuditTable({
               <TableRow key={rowKey}>
                 {/* Timestamp */}
                 <TableCell>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-300 font-mono tabular-nums whitespace-nowrap">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-700 font-mono tabular-nums whitespace-nowrap">
                     <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                     <span>{dateFormatted}</span>
                   </div>
@@ -99,15 +99,15 @@ export function AuditTable({
                 <TableCell>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <AuditEventBadge eventType={log.eventType} action={log.action} />
-                    <span className="text-[10px] font-mono text-slate-400 uppercase">({log.action})</span>
+                    <span className="text-[10px] font-mono text-slate-500 uppercase">({log.action})</span>
                   </div>
                 </TableCell>
 
                 {/* Entity / Target ID */}
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-semibold text-white capitalize">{log.entity || 'System'}</span>
-                    <code className="text-[10px] font-mono text-sky-300 bg-black/30 px-1 py-0.5 rounded border border-white/5 truncate max-w-[140px]" title={log.entityId}>
+                    <span className="text-xs font-semibold text-slate-900 capitalize">{log.entity || 'System'}</span>
+                    <code className="text-[10px] font-mono text-blue-700 bg-blue-50 px-1 py-0.5 rounded border border-blue-100 truncate max-w-[140px]" title={log.entityId}>
                       {log.entityId || '—'}
                     </code>
                   </div>
@@ -116,13 +116,13 @@ export function AuditTable({
                 {/* Actor & Role */}
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-1 text-xs font-medium text-slate-200">
+                    <div className="flex items-center gap-1 text-xs font-medium text-slate-900">
                       <User className="h-3 w-3 text-slate-400 shrink-0" />
                       <span className="truncate max-w-[150px]" title={log.user || log.performedBy}>
                         {log.user || log.performedBy || 'System'}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold text-amber-400/90 tracking-wider">
+                    <span className="text-[10px] font-bold text-amber-700 tracking-wider">
                       {log.role || 'SYSTEM'}
                     </span>
                   </div>
@@ -130,8 +130,8 @@ export function AuditTable({
 
                 {/* Store Scope */}
                 <TableCell>
-                  <div className="flex items-center gap-1 text-xs text-slate-300">
-                    <Store className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <div className="flex items-center gap-1 text-xs text-slate-700">
+                    <Store className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                     <span className="truncate max-w-[130px]" title={log.businessName || log.businessId}>
                       {log.businessName || log.businessId || 'All Outlets'}
                     </span>
@@ -140,7 +140,7 @@ export function AuditTable({
 
                 {/* Event Summary */}
                 <TableCell>
-                  <p className="text-xs text-slate-300 line-clamp-2 max-w-[280px]" title={log.details}>
+                  <p className="text-xs text-slate-600 line-clamp-2 max-w-[280px]" title={log.details}>
                     {log.details || log.eventType}
                   </p>
                 </TableCell>
@@ -152,7 +152,7 @@ export function AuditTable({
                     size="sm"
                     onClick={() => onViewLog(log)}
                     aria-label={`Inspect audit log details for ${log.eventType}`}
-                    icon={<Eye className="h-4 w-4 text-sky-400" />}
+                    icon={<Eye className="h-4 w-4 text-blue-600" />}
                   />
                 </TableCell>
               </TableRow>

@@ -17,7 +17,7 @@ export function StoreSummaryCards({ metrics, isLoading }: StoreSummaryCardsProps
         {Array.from({ length: 3 }).map((_, idx) => (
           <div
             key={idx}
-            className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-2.5"
+            className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-xs"
           >
             <div className="flex justify-between items-center">
               <Skeleton variant="text" className="w-24 h-3.5" />
@@ -36,24 +36,24 @@ export function StoreSummaryCards({ metrics, isLoading }: StoreSummaryCardsProps
       value: metrics.totalStores.toLocaleString('en-IN'),
       subtext: 'Physical branches & retail points',
       icon: Store,
-      color: 'text-sky-400',
-      bg: 'bg-sky-500/10 border-sky-400/20'
+      color: 'text-blue-600',
+      bg: 'bg-blue-50 border-blue-200'
     },
     {
       label: 'Active Operating Outlets',
       value: metrics.activeStoresCount.toLocaleString('en-IN'),
       subtext: 'Operational billing terminals',
       icon: CheckCircle,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10 border-emerald-400/20'
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50 border-emerald-200'
     },
     {
       label: 'Inactive / Suspended',
       value: metrics.inactiveStoresCount.toLocaleString('en-IN'),
       subtext: 'Offline outlet configurations',
       icon: XCircle,
-      color: 'text-rose-400',
-      bg: 'bg-rose-500/10 border-rose-400/20'
+      color: 'text-rose-600',
+      bg: 'bg-rose-50 border-rose-200'
     }
   ];
 
@@ -64,10 +64,10 @@ export function StoreSummaryCards({ metrics, isLoading }: StoreSummaryCardsProps
         return (
           <div
             key={c.label}
-            className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 flex flex-col justify-between"
+            className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs"
           >
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-semibold text-slate-400 truncate">
+              <span className="text-xs font-semibold text-slate-500 truncate">
                 {c.label}
               </span>
               <div
@@ -78,10 +78,10 @@ export function StoreSummaryCards({ metrics, isLoading }: StoreSummaryCardsProps
             </div>
 
             <div>
-              <div className="text-lg sm:text-xl font-bold font-mono text-white tracking-tight tabular-nums">
+              <div className="text-lg sm:text-xl font-bold font-mono text-slate-900 tracking-tight tabular-nums">
                 {c.value}
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+              <div className="text-[11px] text-slate-500 mt-0.5 truncate">
                 {c.subtext}
               </div>
             </div>

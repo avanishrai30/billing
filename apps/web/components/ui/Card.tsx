@@ -13,16 +13,16 @@ export function Card({
   ...props
 }: CardProps) {
   const variantStyles = {
-    default: 'bg-[#0f172a] border border-white/10 shadow-xs',
-    elevated: 'bg-[#1a2542] border border-white/15 shadow-sm',
-    subtle: 'bg-[#090d16] border border-white/5',
+    default: 'bg-white border border-slate-200 shadow-xs text-slate-900',
+    elevated: 'bg-white border border-slate-200 shadow-sm text-slate-900',
+    subtle: 'bg-slate-50 border border-slate-200/80 text-slate-900',
     interactive:
-      'bg-[#0f172a] border border-white/10 hover:border-white/20 hover:bg-[#131d33] active:bg-[#16223b] cursor-pointer transition-colors shadow-xs'
+      'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 active:bg-slate-100 cursor-pointer transition-colors shadow-xs text-slate-900'
   };
 
   return (
     <div
-      className={`rounded-xl p-5 sm:p-6 text-white ${variantStyles[variant]} ${className}`}
+      className={`rounded-xl p-5 sm:p-6 ${variantStyles[variant]} ${className}`}
       {...props}
     >
       {children}

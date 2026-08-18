@@ -71,9 +71,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       >
         {toasts.map((toast) => {
           const typeStyles = {
-            success: 'bg-[#0f172a] border-emerald-500/30 text-emerald-300',
-            error: 'bg-[#0f172a] border-rose-500/30 text-rose-300',
-            info: 'bg-[#0f172a] border-blue-500/30 text-blue-300'
+            success: 'bg-white border-emerald-200 text-emerald-800 shadow-lg',
+            error: 'bg-white border-rose-200 text-rose-800 shadow-lg',
+            info: 'bg-white border-blue-200 text-blue-800 shadow-lg'
           };
 
           const Icon =
@@ -87,22 +87,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <div
               key={toast.id}
               role="status"
-              className={`p-3.5 rounded-xl border shadow-2xl flex items-start gap-3 pointer-events-auto transition-opacity ${
+              className={`p-3.5 rounded-xl border flex items-start gap-3 pointer-events-auto transition-opacity ${
                 typeStyles[toast.type]
               }`}
             >
               <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <div className="flex-1 text-left">
-                <h4 className="text-xs font-semibold text-white leading-tight">{toast.title}</h4>
+                <h4 className="text-xs font-semibold text-slate-900 leading-tight">{toast.title}</h4>
                 {toast.message && (
-                  <p className="text-[11px] text-slate-300 mt-0.5 leading-normal">{toast.message}</p>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-normal">{toast.message}</p>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
                 aria-label="Dismiss toast notification"
-                className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

@@ -35,8 +35,8 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
     const [showPassword, setShowPassword] = useState(false);
 
     const errorBorder = hasError
-      ? 'border-rose-500/50 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/40 text-rose-200'
-      : 'border-white/10 hover:border-white/20 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30';
+      ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 text-rose-900'
+      : 'border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
 
     const sz = sizeStyles[sizeVariant];
 
@@ -46,7 +46,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           ref={ref}
           type={showPassword ? 'text' : 'password'}
           disabled={disabled}
-          className={`w-full ${sz.height} ${sz.text} ${sz.px} ${sz.pr} bg-[#0f172a] rounded-lg text-white placeholder-slate-500 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border ${errorBorder} ${className}`}
+          className={`w-full ${sz.height} ${sz.text} ${sz.px} ${sz.pr} bg-white rounded-lg text-slate-900 placeholder-slate-400 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed border ${errorBorder} ${className}`}
           {...props}
         />
         <button
@@ -54,7 +54,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           onClick={() => setShowPassword(!showPassword)}
           aria-label={showPassword ? 'Hide password' : 'Show password'}
           disabled={disabled}
-          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none disabled:opacity-50 cursor-pointer"
+          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none disabled:opacity-50 cursor-pointer"
         >
           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>

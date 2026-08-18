@@ -158,7 +158,7 @@ export default function FranchisesPage() {
       <FranchiseSummaryCards metrics={metrics} isLoading={isLoadingFranchises} />
 
       {/* Module Navigation Tabs */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-3">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
         <Tabs defaultValue="directory" value={activeTab} onValueChange={(v) => setActiveTab(v as 'directory' | 'orders')}>
           <TabsList>
             <TabsTrigger value="directory" icon={<Store className="w-3.5 h-3.5" />}>

@@ -26,24 +26,24 @@ export function Pagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#0f172a] border border-white/10 rounded-xl text-xs text-slate-300 shadow-xs ${className}`}
+      className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 shadow-xs ${className}`}
     >
       {totalItems !== undefined ? (
-        <div className="font-mono text-slate-400">
+        <div className="font-mono text-slate-500">
           Showing{' '}
-          <span className="text-white font-medium">
+          <span className="text-slate-900 font-medium">
             {totalItems === 0 ? 0 : (currentPage - 1) * (pageSize || 10) + 1}
           </span>{' '}
           to{' '}
-          <span className="text-white font-medium">
+          <span className="text-slate-900 font-medium">
             {Math.min(currentPage * (pageSize || 10), totalItems)}
           </span>{' '}
-          of <span className="text-white font-medium">{totalItems}</span> entries
+          of <span className="text-slate-900 font-medium">{totalItems}</span> entries
         </div>
       ) : (
-        <div className="font-mono text-slate-400">
-          Page <span className="text-white font-medium">{currentPage}</span> of{' '}
-          <span className="text-white font-medium">{Math.max(totalPages, 1)}</span>
+        <div className="font-mono text-slate-500">
+          Page <span className="text-slate-900 font-medium">{currentPage}</span> of{' '}
+          <span className="text-slate-900 font-medium">{Math.max(totalPages, 1)}</span>
         </div>
       )}
 
@@ -57,7 +57,7 @@ export function Pagination({
         >
           Previous
         </Button>
-        <div className="px-2 py-1 bg-white/5 rounded-lg font-mono text-xs text-slate-200">
+        <div className="px-2 py-1 bg-slate-100 border border-slate-200 rounded-lg font-mono text-xs text-slate-700">
           {currentPage} / {Math.max(totalPages, 1)}
         </div>
         <Button

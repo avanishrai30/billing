@@ -52,7 +52,7 @@ export function InvoiceTable({
 }: InvoiceTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-3">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4 py-2">
             <Skeleton variant="text" className="w-1/4 h-5" />
@@ -83,7 +83,7 @@ export function InvoiceTable({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
         <Table density="dense">
           <TableHeader>
             <tr>
@@ -105,7 +105,7 @@ export function InvoiceTable({
               const payConfig = getPaymentModeBadgeConfig(inv.paymentMode || inv.paymentMethod);
               const itemCount = inv.items?.length || 0;
               const dateDisplay = inv.createdAt
-                ? new Date(inv.createdAt).toLocaleDateString('en-IN', {
+                 ? new Date(inv.createdAt).toLocaleDateString('en-IN', {
                     day: 'numeric',
                     month: 'short',
                     year: 'numeric'
@@ -118,25 +118,25 @@ export function InvoiceTable({
               return (
                 <TableRow
                   key={inv.id || inv._id || invoiceNo}
-                  className={isVoided ? 'opacity-60 bg-rose-500/[0.02]' : ''}
+                  className={isVoided ? 'opacity-60 bg-rose-50' : ''}
                 >
                   {/* Invoice # & Date */}
                   <TableCell>
-                    <div className="font-mono font-bold text-white text-xs">
+                    <div className="font-mono font-bold text-slate-900 text-xs">
                       {invoiceNo}
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
+                    <div className="text-[11px] text-slate-500 mt-0.5">
                       {dateDisplay}
                     </div>
                   </TableCell>
 
                   {/* Customer Details */}
                   <TableCell>
-                    <div className="font-semibold text-slate-200 text-xs truncate max-w-[180px]">
+                    <div className="font-semibold text-slate-800 text-xs truncate max-w-[180px]">
                       {inv.customerName || 'Walk-in Customer'}
                     </div>
                     {inv.customerPhone && (
-                      <div className="font-mono text-[11px] text-slate-400 mt-0.5">
+                      <div className="font-mono text-[11px] text-slate-500 mt-0.5">
                         {inv.customerPhone}
                       </div>
                     )}
@@ -144,7 +144,7 @@ export function InvoiceTable({
 
                   {/* Outlet */}
                   <TableCell>
-                    <span className="text-xs text-slate-300 font-mono">
+                    <span className="text-xs text-slate-700 font-mono">
                       {inv.locationId || inv.storeId || 'All Stores'}
                     </span>
                   </TableCell>
@@ -158,14 +158,14 @@ export function InvoiceTable({
 
                   {/* Tax */}
                   <TableCell isNumeric>
-                    <span className="text-slate-300 text-xs tabular-nums">
+                    <span className="text-slate-600 text-xs tabular-nums">
                       ₹ {tax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </TableCell>
 
                   {/* Grand Total */}
                   <TableCell isNumeric>
-                    <span className="font-mono font-bold text-white text-xs tabular-nums">
+                    <span className="font-mono font-bold text-slate-900 text-xs tabular-nums">
                       ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </TableCell>
@@ -190,7 +190,7 @@ export function InvoiceTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewDetail(inv)}
-                        icon={<Eye className="w-3.5 h-3.5 text-sky-400" />}
+                        icon={<Eye className="w-3.5 h-3.5 text-blue-600" />}
                       />
                       <a
                         href={invoicesApi.getPdfUrl(invoiceNo)}
@@ -202,7 +202,7 @@ export function InvoiceTable({
                           aria-label={`Download PDF for invoice ${invoiceNo}`}
                           variant="ghost"
                           size="sm"
-                          icon={<Download className="w-3.5 h-3.5 text-slate-300" />}
+                          icon={<Download className="w-3.5 h-3.5 text-slate-600" />}
                         />
                       </a>
                       {canVoid && !isVoided && (
@@ -211,7 +211,7 @@ export function InvoiceTable({
                           variant="ghost"
                           size="sm"
                           onClick={() => onVoidInvoice(inv)}
-                          icon={<Ban className="w-3.5 h-3.5 text-rose-400" />}
+                          icon={<Ban className="w-3.5 h-3.5 text-rose-600" />}
                         />
                       )}
                     </div>
@@ -225,10 +225,10 @@ export function InvoiceTable({
 
       {/* Server Pagination Footer */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-400">
+        <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-600">
           <div>
-            Showing Page <strong className="text-white">{pagination.page}</strong> of{' '}
-            <strong className="text-white">{pagination.totalPages}</strong> ({pagination.total} total records)
+            Showing Page <strong className="text-slate-900">{pagination.page}</strong> of{' '}
+            <strong className="text-slate-900">{pagination.totalPages}</strong> ({pagination.total} total records)
           </div>
           <div className="flex items-center gap-2">
             <Button

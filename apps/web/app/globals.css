@@ -2,53 +2,53 @@
 
 @layer base {
   :root {
-    /* 1. Core Surfaces & Viewport Canvas */
-    --bg-canvas: #090d16;
-    --bg-surface: #0f172a;
-    --bg-surface-subtle: #131d33;
-    --bg-surface-elevated: #1a2542;
-    --bg-surface-interactive: #16223b;
-    --bg-surface-hover: rgba(255, 255, 255, 0.04);
-    --bg-surface-active: rgba(255, 255, 255, 0.08);
-    --bg-overlay: rgba(3, 7, 18, 0.80);
+    /* 1. Core Surfaces & Viewport Canvas (Light Premium Enterprise) */
+    --bg-canvas: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-subtle: #f1f5f9;
+    --bg-surface-elevated: #ffffff;
+    --bg-surface-interactive: #f8fafc;
+    --bg-surface-hover: rgba(0, 0, 0, 0.03);
+    --bg-surface-active: rgba(0, 0, 0, 0.06);
+    --bg-overlay: rgba(15, 23, 42, 0.45);
 
     /* 2. Borders & Structure */
-    --border-hairline: rgba(255, 255, 255, 0.05);
-    --border-default: rgba(255, 255, 255, 0.10);
-    --border-strong: rgba(255, 255, 255, 0.18);
-    --border-focus: #3b82f6;
+    --border-hairline: #f1f5f9;
+    --border-default: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --border-focus: #2563eb;
 
     /* 3. Typography Hierarchy */
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --text-inverse: #090d16;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --text-inverse: #ffffff;
 
     /* 4. Semantic Accents & Status */
     --accent-primary: #2563eb;
-    --accent-primary-hover: #3b82f6;
-    --accent-primary-soft: rgba(37, 99, 235, 0.12);
+    --accent-primary-hover: #1d4ed8;
+    --accent-primary-soft: rgba(37, 99, 235, 0.08);
 
-    --accent-success: #10b981;
-    --accent-success-hover: #34d399;
-    --accent-success-soft: rgba(16, 185, 129, 0.12);
+    --accent-success: #059669;
+    --accent-success-hover: #047857;
+    --accent-success-soft: rgba(5, 150, 105, 0.08);
 
-    --accent-warning: #f59e0b;
-    --accent-warning-hover: #fbbf24;
-    --accent-warning-soft: rgba(245, 158, 11, 0.12);
+    --accent-warning: #d97706;
+    --accent-warning-hover: #b45309;
+    --accent-warning-soft: rgba(217, 119, 6, 0.08);
 
-    --accent-danger: #ef4444;
-    --accent-danger-hover: #f87171;
-    --accent-danger-soft: rgba(239, 68, 68, 0.12);
+    --accent-danger: #dc2626;
+    --accent-danger-hover: #b91c1c;
+    --accent-danger-soft: rgba(220, 38, 38, 0.08);
 
-    --accent-info: #6366f1;
-    --accent-info-hover: #818cf8;
-    --accent-info-soft: rgba(99, 102, 241, 0.12);
+    --accent-info: #4f46e5;
+    --accent-info-hover: #4338ca;
+    --accent-info-soft: rgba(79, 70, 229, 0.08);
 
     /* 5. Realtime Contextual Highlights */
-    --highlight-flash: rgba(59, 130, 246, 0.25);
-    --highlight-success: rgba(16, 185, 129, 0.25);
+    --highlight-flash: rgba(37, 99, 235, 0.12);
+    --highlight-success: rgba(5, 150, 105, 0.12);
 
     /* 6. Standardized Control Heights */
     --control-height-sm: 32px;

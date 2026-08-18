@@ -40,7 +40,7 @@ export function FranchiseTable({
 }: FranchiseTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-500 text-sm shadow-xs">
         Loading franchise partners...
       </div>
     );
@@ -63,7 +63,7 @@ export function FranchiseTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -83,25 +83,25 @@ export function FranchiseTable({
               <TableRow key={fran.id}>
                 {/* Franchise Outlet */}
                 <TableCell>
-                  <div className="font-semibold text-white truncate max-w-[200px]" title={fran.name}>
+                  <div className="font-semibold text-slate-900 truncate max-w-[200px]" title={fran.name}>
                     {fran.name}
                   </div>
-                  <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                  <div className="text-[11px] text-slate-500 truncate max-w-[200px]">
                     {fran.location}
                   </div>
                 </TableCell>
 
                 {/* Owner & Contact */}
                 <TableCell>
-                  <div className="text-xs text-slate-200 font-medium">{fran.owner}</div>
-                  <div className="text-[11px] text-slate-400 font-mono">
+                  <div className="text-xs text-slate-800 font-medium">{fran.owner}</div>
+                  <div className="text-[11px] text-slate-500 font-mono">
                     {fran.phone || fran.email || '—'}
                   </div>
                 </TableCell>
 
                 {/* GSTIN */}
                 <TableCell>
-                  <span className="font-mono text-xs text-slate-300">
+                  <span className="font-mono text-xs text-slate-700">
                     {fran.gstin || 'Unregistered'}
                   </span>
                 </TableCell>
@@ -138,7 +138,7 @@ export function FranchiseTable({
                       size="sm"
                       onClick={() => onViewDetail(fran)}
                       aria-label={`View franchise details for ${fran.name}`}
-                      icon={<Eye className="h-4 w-4 text-blue-400" />}
+                      icon={<Eye className="h-4 w-4 text-blue-600" />}
                     />
                     {canManage && (
                       <>
@@ -147,21 +147,21 @@ export function FranchiseTable({
                           size="sm"
                           onClick={() => onRecordSupply(fran)}
                           aria-label={`Record supply dispatch for ${fran.name}`}
-                          icon={<Package className="h-4 w-4 text-emerald-400" />}
+                          icon={<Package className="h-4 w-4 text-emerald-600" />}
                         />
                         <IconButton
                           variant="ghost"
                           size="sm"
                           onClick={() => onEditFranchise(fran)}
                           aria-label={`Edit franchise ${fran.name}`}
-                          icon={<Edit2 className="h-4 w-4 text-slate-300" />}
+                          icon={<Edit2 className="h-4 w-4 text-slate-600" />}
                         />
                         <IconButton
                           variant="ghost"
                           size="sm"
                           onClick={() => onDeleteFranchise(fran)}
                           aria-label={`Delete franchise ${fran.name}`}
-                          icon={<Trash2 className="h-4 w-4 text-rose-400" />}
+                          icon={<Trash2 className="h-4 w-4 text-rose-600" />}
                         />
                       </>
                     )}

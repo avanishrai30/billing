@@ -51,8 +51,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     ref
   ) => {
     const errorBorder = hasError
-      ? 'border-rose-500/50 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/40 text-rose-200'
-      : 'border-white/10 hover:border-white/20 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30';
+      ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 text-rose-900'
+      : 'border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
 
     const sz = sizeStyles[sizeVariant];
 
@@ -66,7 +66,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           disabled={disabled}
-          className={`w-full ${sz.height} ${sz.text} bg-[#0f172a] rounded-lg text-white placeholder-slate-500 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`w-full ${sz.height} ${sz.text} bg-white rounded-lg text-slate-900 placeholder-slate-400 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
             leftIcon ? sz.paddingLeftWithIcon : sz.px
           } ${rightIcon ? sz.paddingRightWithIcon : sz.px} ${
             isNumeric ? 'tabular-nums font-mono text-right' : ''

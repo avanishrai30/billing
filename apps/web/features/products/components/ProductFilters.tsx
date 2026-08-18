@@ -60,7 +60,7 @@ export function ProductFilters({
     filters.status !== 'active';
 
   return (
-    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {/* Search */}
         <div className="lg:col-span-2">
@@ -114,10 +114,10 @@ export function ProductFilters({
       </div>
 
       {/* Secondary Bar with Status and Reset */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/5 text-xs text-slate-400">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200 text-xs text-slate-500">
         <div className="flex items-center gap-3">
-          <span className="font-mono text-slate-300">
-            Showing <strong className="text-white font-semibold">{totalResults}</strong> matching SKU records
+          <span className="font-mono text-slate-600">
+            Showing <strong className="text-slate-900 font-semibold">{totalResults}</strong> matching SKU records
           </span>
           <div className="w-36">
             <Select

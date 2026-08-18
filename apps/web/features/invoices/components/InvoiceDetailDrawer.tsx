@@ -51,7 +51,7 @@ export function InvoiceDetailDrawer({
     >
       <div className="space-y-4 text-xs">
         {/* Status & Quick Action Banner */}
-        <div className="p-3.5 rounded-2xl bg-[#0f172a] border border-white/10 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2">
             <InvoiceStatusBadge status={invoice.status} isArchived={invoice.isArchived} />
             <Badge variant={payConfig.variant} size="sm">
@@ -92,28 +92,28 @@ export function InvoiceDetailDrawer({
         </div>
 
         {/* Header Metadata Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[#0f172a] border border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 shadow-xs">
           {/* Customer info */}
           <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
-              <User className="w-3.5 h-3.5 text-sky-400" />
+            <div className="flex items-center gap-1.5 text-slate-500 font-semibold">
+              <User className="w-3.5 h-3.5 text-blue-600" />
               <span>Customer Information</span>
             </div>
-            <div className="font-bold text-white text-sm">
+            <div className="font-bold text-slate-900 text-sm">
               {invoice.customerName || 'Walk-in Customer'}
             </div>
             {invoice.customerPhone && (
-              <div className="text-slate-300 font-mono">
+              <div className="text-slate-600 font-mono">
                 Phone: {invoice.customerPhone}
               </div>
             )}
             {invoice.customerGst && (
-              <div className="text-slate-300 font-mono">
+              <div className="text-slate-600 font-mono">
                 GSTIN: {invoice.customerGst}
               </div>
             )}
             {invoice.customerAddress && (
-              <div className="text-slate-400">
+              <div className="text-slate-500">
                 {invoice.customerAddress}
               </div>
             )}
@@ -121,17 +121,17 @@ export function InvoiceDetailDrawer({
 
           {/* Store & Date Info */}
           <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-slate-400 font-semibold">
-              <Store className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="flex items-center gap-1.5 text-slate-500 font-semibold">
+              <Store className="w-3.5 h-3.5 text-emerald-600" />
               <span>Store & Session Info</span>
             </div>
-            <div className="text-slate-200">
-              Outlet: <strong className="text-white font-mono">{invoice.locationId || invoice.storeId || 'Main Outlet'}</strong>
+            <div className="text-slate-700">
+              Outlet: <strong className="text-slate-900 font-mono">{invoice.locationId || invoice.storeId || 'Main Outlet'}</strong>
             </div>
-            <div className="text-slate-300">
-              Cashier: <strong className="text-white">{invoice.cashierName || invoice.cashier || 'System'}</strong>
+            <div className="text-slate-700">
+              Cashier: <strong className="text-slate-900">{invoice.cashierName || invoice.cashier || 'System'}</strong>
             </div>
-            <div className="flex items-center gap-1 text-slate-400 font-mono pt-1">
+            <div className="flex items-center gap-1 text-slate-500 font-mono pt-1">
               <Calendar className="w-3.5 h-3.5" />
               <span>{formattedDate}</span>
             </div>
@@ -139,31 +139,31 @@ export function InvoiceDetailDrawer({
         </div>
 
         {/* Line Items Table */}
-        <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#0f172a]">
-          <div className="p-3 bg-[#0f172a] border-b border-white/10 font-bold text-white flex items-center gap-2">
-            <FileText className="w-4 h-4 text-sky-400" />
+        <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-xs">
+          <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-slate-900 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-blue-600" />
             <span>Billed Items ({items.length})</span>
           </div>
 
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-slate-100">
             {items.map((item, idx) => (
-              <div key={idx} className="p-3 flex items-center justify-between gap-3 hover:bg-white/[0.02]">
+              <div key={idx} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-50/60">
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-white truncate">
+                  <div className="font-semibold text-slate-900 truncate">
                     {item.name}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                     <span className="font-mono">{item.sku || 'No SKU'}</span>
                     <span>• {item.quantity} {item.unit || 'units'} × ₹{Number(item.price ?? item.sellingPrice ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div className="text-right flex-shrink-0">
-                  <div className="font-mono font-bold text-white text-xs tabular-nums">
+                  <div className="font-mono font-bold text-slate-900 text-xs tabular-nums">
                     ₹{Number(item.lineTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   {item.tax ? (
-                    <div className="text-[10px] text-slate-400 font-mono">
+                    <div className="text-[10px] text-slate-500 font-mono">
                       Tax: ₹{Number(item.tax).toFixed(2)}
                     </div>
                   ) : null}
@@ -174,33 +174,33 @@ export function InvoiceDetailDrawer({
         </div>
 
         {/* Financial Settlement Breakdown */}
-        <div className="p-3.5 rounded-2xl bg-[#0f172a] border border-white/10 space-y-2">
-          <div className="flex justify-between text-slate-400">
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 shadow-xs">
+          <div className="flex justify-between text-slate-600">
             <span>Taxable Subtotal:</span>
-            <span className="font-mono text-slate-200 tabular-nums">
+            <span className="font-mono text-slate-800 tabular-nums">
               ₹ {subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
           {discount > 0 && (
-            <div className="flex justify-between text-slate-400">
+            <div className="flex justify-between text-slate-600">
               <span>Discounts Applied:</span>
-              <span className="font-mono text-rose-400 tabular-nums">
+              <span className="font-mono text-rose-600 tabular-nums">
                 - ₹ {discount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           )}
 
-          <div className="flex justify-between text-slate-400">
+          <div className="flex justify-between text-slate-600">
             <span>GST Tax Liability:</span>
-            <span className="font-mono text-amber-400 tabular-nums">
+            <span className="font-mono text-amber-700 tabular-nums">
               + ₹ {tax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
-          <div className="pt-2 border-t border-white/10 flex justify-between items-center">
-            <span className="text-sm font-bold text-white">Grand Total Payable:</span>
-            <span className="text-base font-mono font-bold text-emerald-400 tabular-nums">
+          <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
+            <span className="text-sm font-bold text-slate-900">Grand Total Payable:</span>
+            <span className="text-base font-mono font-bold text-emerald-700 tabular-nums">
               ₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -208,12 +208,12 @@ export function InvoiceDetailDrawer({
 
         {/* Void / Audit Memo if voided */}
         {isVoided && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-1">
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 space-y-1">
             <div className="font-bold flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-rose-400" />
+              <ShieldCheck className="w-4 h-4 text-rose-600" />
               <span>Invoice Voided Record</span>
             </div>
-            <p className="text-[11px] text-rose-200">
+            <p className="text-[11px] text-rose-700">
               This invoice was voided on {invoice.voidedAt ? new Date(invoice.voidedAt).toLocaleString() : 'N/A'}. All inventory units were automatically reverted back to stock.
             </p>
           </div>

@@ -114,25 +114,25 @@ export function PaymentPanel({
         )}
 
         {/* Grand Total Callout */}
-        <div className="p-4 rounded-xl bg-[#0f172a] border border-white/10 flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
           <div>
-            <span className="text-xs text-slate-400 block">Total Due</span>
-            <span className="text-2xl font-bold font-mono text-emerald-400 tabular-nums">
+            <span className="text-xs text-slate-500 block">Total Due</span>
+            <span className="text-2xl font-bold font-mono text-emerald-700 tabular-nums">
               ₹ {totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
           </div>
           {customer && (
             <div className="text-right text-xs">
-              <span className="text-slate-400 block">Customer</span>
-              <span className="font-semibold text-white">{customer.name}</span>
-              <span className="text-slate-400 block font-mono text-[11px]">{customer.phone}</span>
+              <span className="text-slate-500 block">Customer</span>
+              <span className="font-semibold text-slate-900">{customer.name}</span>
+              <span className="text-slate-500 block font-mono text-[11px]">{customer.phone}</span>
             </div>
           )}
         </div>
 
         {/* Payment Mode Selector */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">
+          <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">
             Select Payment Method
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -147,11 +147,11 @@ export function PaymentPanel({
                   onClick={() => setPaymentMode(mode.id)}
                   className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs font-semibold transition-colors cursor-pointer ${
                     isSelected
-                      ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-md shadow-sky-500/10'
-                      : 'bg-[#0f172a] border-white/10 hover:border-white/20 text-slate-300'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-xs'
+                      : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isSelected ? 'text-sky-400' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
                   <span>{mode.label}</span>
                 </button>
               );
@@ -176,7 +176,7 @@ export function PaymentPanel({
             </FormField>
 
             <FormField label="Change Return (₹)">
-              <div className="h-10 px-3.5 bg-[#0f172a] border border-white/15 rounded-xl flex items-center font-mono font-bold text-amber-400 text-sm tabular-nums">
+              <div className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center font-mono font-bold text-amber-700 text-sm tabular-nums">
                 ₹ {changeDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
             </FormField>

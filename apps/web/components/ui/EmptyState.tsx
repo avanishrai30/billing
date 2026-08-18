@@ -23,14 +23,14 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-[#111827] border border-white/10 rounded-xl ${className}`}
+      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-slate-50 border border-slate-200 rounded-xl ${className}`}
     >
-      <div className="w-12 h-12 mb-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
+      <div className="w-12 h-12 mb-3 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 shadow-xs">
         {icon || <PackageOpen className="w-6 h-6" />}
       </div>
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
+      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
       {description && (
-        <p className="text-xs text-slate-400 mt-1 max-w-sm leading-relaxed">{description}</p>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm leading-relaxed">{description}</p>
       )}
       {actionLabel && onAction && (
         <div className="mt-4">
@@ -71,7 +71,7 @@ export function Skeleton({
 
   return (
     <div
-      className={`bg-white/10 animate-pulse ${variantClasses[variant]} ${className}`}
+      className={`bg-slate-200/80 animate-pulse ${variantClasses[variant]} ${className}`}
       style={inlineStyles}
       {...props}
     />

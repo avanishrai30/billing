@@ -17,7 +17,7 @@ export function InvoiceSummary({ metrics, isLoading }: InvoiceSummaryProps) {
         {Array.from({ length: 4 }).map((_, idx) => (
           <div
             key={idx}
-            className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-2.5"
+            className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-xs"
           >
             <div className="flex justify-between items-center">
               <Skeleton variant="text" className="w-24 h-3.5" />
@@ -36,32 +36,32 @@ export function InvoiceSummary({ metrics, isLoading }: InvoiceSummaryProps) {
       value: metrics.totalInvoices.toLocaleString('en-IN'),
       subtext: 'Active non-voided sales',
       icon: Receipt,
-      color: 'text-sky-400',
-      bg: 'bg-sky-500/10 border-sky-400/20'
+      color: 'text-blue-600',
+      bg: 'bg-blue-50 border-blue-200'
     },
     {
       label: 'Gross Sales Revenue',
       value: `₹ ${metrics.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       subtext: 'Billed sales volume',
       icon: IndianRupee,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10 border-emerald-400/20'
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50 border-emerald-200'
     },
     {
       label: 'Total GST Tax Collected',
       value: `₹ ${metrics.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       subtext: 'Output GST liability',
       icon: Percent,
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/10 border-amber-400/20'
+      color: 'text-amber-600',
+      bg: 'bg-amber-50 border-amber-200'
     },
     {
       label: 'Average Ticket Value',
       value: `₹ ${metrics.averageTicket.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       subtext: 'Per customer bill average',
       icon: TrendingUp,
-      color: 'text-purple-400',
-      bg: 'bg-purple-500/10 border-purple-400/20'
+      color: 'text-indigo-600',
+      bg: 'bg-indigo-50 border-indigo-200'
     }
   ];
 
@@ -72,10 +72,10 @@ export function InvoiceSummary({ metrics, isLoading }: InvoiceSummaryProps) {
         return (
           <div
             key={c.label}
-            className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 flex flex-col justify-between"
+            className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs"
           >
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-semibold text-slate-400 truncate">
+              <span className="text-xs font-semibold text-slate-500 truncate">
                 {c.label}
               </span>
               <div
@@ -86,10 +86,10 @@ export function InvoiceSummary({ metrics, isLoading }: InvoiceSummaryProps) {
             </div>
 
             <div>
-              <div className="text-lg sm:text-xl font-bold font-mono text-white tracking-tight tabular-nums">
+              <div className="text-lg sm:text-xl font-bold font-mono text-slate-900 tracking-tight tabular-nums">
                 {c.value}
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+              <div className="text-[11px] text-slate-500 mt-0.5 truncate">
                 {c.subtext}
               </div>
             </div>

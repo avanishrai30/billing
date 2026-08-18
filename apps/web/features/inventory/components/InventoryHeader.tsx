@@ -24,22 +24,22 @@ export function InventoryHeader({
   onOpenTransfer
 }: InventoryHeaderProps) {
   return (
-    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-xs">
       {/* Title & Scope */}
       <div className="flex items-center gap-3.5">
-        <div className="w-11 h-11 rounded-xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400 flex-shrink-0">
+        <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0">
           <Package className="w-6 h-6" />
         </div>
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
               Inventory & Stock Management
             </h1>
             <Badge variant="success" size="sm" dot>
               REALTIME
             </Badge>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Authoritative stock balances, inter-store transfers, and immutable movement ledger
           </p>
         </div>
@@ -51,11 +51,11 @@ export function InventoryHeader({
           <select
             value={selectedLocation}
             onChange={(e) => onSelectLocation(e.target.value)}
-            className="px-3 py-2 bg-[#0f172a] border border-white/15 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-sky-400 cursor-pointer"
+            className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer shadow-xs"
             aria-label="Filter inventory by outlet"
           >
             {storeOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+              <option key={opt.value} value={opt.value} className="bg-white text-slate-900">
                 {opt.label}
               </option>
             ))}

@@ -49,7 +49,7 @@ export function AuditFilters({
     endDate !== '';
 
   return (
-    <div className="bg-[#0f172a] p-3.5 rounded-xl border border-white/10 space-y-3">
+    <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-3 shadow-xs">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Search */}
         <div className="lg:col-span-2">
@@ -58,7 +58,7 @@ export function AuditFilters({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             leftIcon={<Search className="h-4 w-4 text-slate-400" />}
-            className="bg-black/20 text-xs"
+            className="text-xs"
           />
         </div>
 
@@ -77,7 +77,7 @@ export function AuditFilters({
               { value: 'transfer', label: '📦 Stock Transfers' },
               { value: 'security', label: '🚨 Security Alerts & Denials' }
             ]}
-            className="bg-black/20 text-xs"
+            className="text-xs"
           />
         </div>
 
@@ -94,30 +94,30 @@ export function AuditFilters({
                 label: `📍 ${s.name} (${s.code || s.address || 'Store'})`
               }))
             ]}
-            className="bg-black/20 text-xs"
+            className="text-xs"
           />
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1 border-t border-white/5">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1 border-t border-slate-100">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span>From:</span>
             <input
               type="date"
               value={startDate}
               onChange={(e) => onStartDateChange(e.target.value)}
-              className="bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-400"
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-500 shadow-xs"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span>To:</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => onEndDateChange(e.target.value)}
-              className="bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-400"
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-blue-500 shadow-xs"
             />
           </div>
 
@@ -138,7 +138,7 @@ export function AuditFilters({
                 { value: 'permissions', label: 'RBAC Roles' },
                 { value: 'auth', label: 'Auth Gateway' }
               ]}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </div>
         </div>

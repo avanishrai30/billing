@@ -22,8 +22,8 @@ export function DashboardHeader({
       title="Business Intelligence & Operational KPIs"
       description="Real-time synchronized revenue, margin valuations, inventory ledger, and procurement flow."
       badge={
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-xs text-slate-300 font-mono">
-          <Store className="w-3.5 h-3.5 text-blue-400" />
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs text-slate-700 font-mono">
+          <Store className="w-3.5 h-3.5 text-blue-600" />
           <span>{storeLabel}</span>
         </div>
       }

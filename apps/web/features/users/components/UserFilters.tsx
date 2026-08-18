@@ -27,14 +27,14 @@ export function UserFilters({
   const isFiltered = search !== '' || category !== 'ALL' || status !== 'ALL';
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-[#0f172a] p-3 rounded-xl border border-white/10">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
       <div className="flex-1 min-w-[200px]">
         <Input
           placeholder="Search by full name, @username, email, or role title..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           leftIcon={<Search className="h-4 w-4 text-slate-400" />}
-          className="bg-black/20 text-xs"
+          className="text-xs"
         />
       </div>
 
@@ -49,7 +49,7 @@ export function UserFilters({
             { value: 'employee', label: 'Staff / Cashier' },
             { value: 'auditor', label: 'Auditor' }
           ]}
-          className="bg-black/20 text-xs"
+          className="text-xs"
         />
       </div>
 
@@ -63,7 +63,7 @@ export function UserFilters({
             { value: 'suspended', label: 'Suspended' },
             { value: 'inactive', label: 'Inactive' }
           ]}
-          className="bg-black/20 text-xs"
+          className="text-xs"
         />
       </div>
 

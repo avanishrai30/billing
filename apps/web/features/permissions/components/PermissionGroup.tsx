@@ -25,23 +25,23 @@ export function PermissionGroup({
   const isPartiallySelected = activeCount > 0 && !isAllSelected;
 
   return (
-    <div className="bg-[#0f172a] rounded-xl border border-white/10 p-4 space-y-3">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+    <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
         <div>
           <div className="flex items-center gap-2">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">{group.title}</h4>
-            <span className="text-[10px] text-slate-400 font-mono">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">{group.title}</h4>
+            <span className="text-[10px] text-slate-500 font-mono">
               ({activeCount}/{groupPermissionIds.length} enabled)
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">{group.description}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">{group.description}</p>
         </div>
 
         {!disabled && (
           <button
             type="button"
             onClick={() => onToggleGroup(groupPermissionIds, !isAllSelected)}
-            className="text-[11px] font-bold text-sky-400 hover:text-sky-300 transition-colors self-start sm:self-auto cursor-pointer"
+            className="text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors self-start sm:self-auto cursor-pointer"
           >
             {isAllSelected ? 'Deselect All' : 'Select All'}
           </button>
@@ -57,15 +57,15 @@ export function PermissionGroup({
               key={perm.id}
               className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition-colors cursor-pointer select-none ${
                 isChecked
-                  ? 'bg-sky-500/10 border-sky-500/30 text-white'
-                  : 'bg-black/20 border-white/5 text-slate-400 hover:bg-black/30'
+                  ? 'bg-blue-50/70 border-blue-200 text-slate-900'
+                  : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100/60'
               } ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <div
                 className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center shrink-0 border ${
                   isChecked
-                    ? 'bg-sky-500 border-sky-400 text-black'
-                    : 'bg-black/40 border-white/20'
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'bg-white border-slate-300'
                 }`}
               >
                 {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
@@ -82,11 +82,11 @@ export function PermissionGroup({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-xs font-semibold">{perm.name}</span>
-                  <code className="text-[10px] font-mono text-slate-400 bg-black/30 px-1 py-0.5 rounded">
+                  <code className="text-[10px] font-mono text-slate-500 bg-white px-1 py-0.5 rounded border border-slate-200">
                     {perm.id}
                   </code>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{perm.description}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{perm.description}</p>
               </div>
             </label>
           );

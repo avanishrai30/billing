@@ -42,7 +42,7 @@ export function CustomerTable({
 }: CustomerTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-3">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4 py-2">
             <Skeleton variant="text" className="w-1/4 h-5" />
@@ -72,7 +72,7 @@ export function CustomerTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -94,24 +94,24 @@ export function CustomerTable({
               <TableRow key={cust.id}>
                 {/* Name */}
                 <TableCell>
-                  <div className="font-semibold text-white truncate max-w-[200px]" title={cust.name}>
+                  <div className="font-semibold text-slate-900 truncate max-w-[200px]" title={cust.name}>
                     {cust.name}
                   </div>
-                  <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
                     {cust.id}
                   </div>
                 </TableCell>
 
                 {/* Phone */}
                 <TableCell>
-                  <span className="font-mono text-slate-200 text-xs">
+                  <span className="font-mono text-slate-800 text-xs">
                     {formattedPhone}
                   </span>
                 </TableCell>
 
                 {/* Email */}
                 <TableCell>
-                  <span className="text-slate-300 text-xs truncate max-w-[180px] block">
+                  <span className="text-slate-700 text-xs truncate max-w-[180px] block">
                     {cust.email || '-'}
                   </span>
                 </TableCell>
@@ -119,7 +119,7 @@ export function CustomerTable({
                 {/* GSTIN */}
                 <TableCell>
                   {isGstRegistered ? (
-                    <span className="font-mono font-bold text-sky-400 text-[11px] bg-sky-500/10 px-2 py-0.5 rounded border border-sky-400/20">
+                    <span className="font-mono font-bold text-blue-700 text-[11px] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                       {gstDisplay}
                     </span>
                   ) : (
@@ -131,7 +131,7 @@ export function CustomerTable({
 
                 {/* Address */}
                 <TableCell>
-                  <span className="text-slate-400 text-xs truncate max-w-[220px] block" title={cust.address || ''}>
+                  <span className="text-slate-600 text-xs truncate max-w-[220px] block" title={cust.address || ''}>
                     {cust.address || '-'}
                   </span>
                 </TableCell>
@@ -144,7 +144,7 @@ export function CustomerTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onViewDetail(cust)}
-                      icon={<Eye className="w-3.5 h-3.5 text-sky-400" />}
+                      icon={<Eye className="w-3.5 h-3.5 text-blue-600" />}
                     />
                     {canEdit && (
                       <IconButton
@@ -152,7 +152,7 @@ export function CustomerTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onEditCustomer(cust)}
-                        icon={<Edit className="w-3.5 h-3.5 text-amber-400" />}
+                        icon={<Edit className="w-3.5 h-3.5 text-slate-600" />}
                       />
                     )}
                     {canDelete && (
@@ -161,7 +161,7 @@ export function CustomerTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onDeleteCustomer(cust)}
-                        icon={<Trash2 className="w-3.5 h-3.5 text-rose-400" />}
+                        icon={<Trash2 className="w-3.5 h-3.5 text-rose-600" />}
                       />
                     )}
                   </div>

@@ -37,7 +37,7 @@ export function SupplyOrderTable({
 
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-500 text-sm shadow-xs">
         Loading supply order ledger...
       </div>
     );
@@ -56,7 +56,7 @@ export function SupplyOrderTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -81,8 +81,8 @@ export function SupplyOrderTable({
               <TableRow key={order.id}>
                 {/* Order Details */}
                 <TableCell>
-                  <div className="font-mono font-bold text-xs text-white">{order.id}</div>
-                  <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                  <div className="font-mono font-bold text-xs text-slate-900">{order.id}</div>
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                     <Calendar className="h-3 w-3" />
                     {formattedDate}
                   </div>
@@ -90,11 +90,11 @@ export function SupplyOrderTable({
 
                 {/* Target Franchise */}
                 <TableCell>
-                  <div className="font-semibold text-white text-xs truncate max-w-[180px]" title={fran?.name || order.franchiseId}>
+                  <div className="font-semibold text-slate-900 text-xs truncate max-w-[180px]" title={fran?.name || order.franchiseId}>
                     {fran?.name || order.franchiseId}
                   </div>
                   {fran?.location && (
-                    <div className="text-[11px] text-slate-400 truncate max-w-[180px]">
+                    <div className="text-[11px] text-slate-500 truncate max-w-[180px]">
                       {fran.location}
                     </div>
                   )}
@@ -102,28 +102,28 @@ export function SupplyOrderTable({
 
                 {/* Line Items */}
                 <TableCell isNumeric>
-                  <span className="font-mono text-xs text-slate-300">
+                  <span className="font-mono text-xs text-slate-700">
                     {order.items?.length || 0} {order.items?.length === 1 ? 'item' : 'items'}
                   </span>
                 </TableCell>
 
                 {/* Subtotal */}
                 <TableCell isNumeric>
-                  <span className="font-mono text-xs text-slate-300">
+                  <span className="font-mono text-xs text-slate-700">
                     ₹{Number(order.subtotal || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 
                 {/* GST Tax */}
                 <TableCell isNumeric>
-                  <span className="font-mono text-xs text-amber-400">
+                  <span className="font-mono text-xs text-amber-700">
                     ₹{Number(order.tax || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 
                 {/* Grand Total */}
                 <TableCell isNumeric>
-                  <span className="font-mono font-bold text-xs text-emerald-400">
+                  <span className="font-mono font-bold text-xs text-emerald-700">
                     ₹{Number(order.grandTotal || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
@@ -151,7 +151,7 @@ export function SupplyOrderTable({
 
                 {/* Notes */}
                 <TableCell>
-                  <span className="text-xs text-slate-400 truncate max-w-[140px] block" title={order.notes || ''}>
+                  <span className="text-xs text-slate-600 truncate max-w-[140px] block" title={order.notes || ''}>
                     {order.notes || '—'}
                   </span>
                 </TableCell>

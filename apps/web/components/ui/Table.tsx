@@ -21,8 +21,8 @@ export function Table({
 }: TableProps) {
   return (
     <TableContext.Provider value={{ density, stickyHeader }}>
-      <div className="w-full overflow-x-auto rounded-xl border border-white/10 bg-[#0f172a] shadow-xs">
-        <table className={`w-full text-left text-xs text-slate-300 ${className}`} {...props}>
+      <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+        <table className={`w-full text-left text-xs text-slate-700 ${className}`} {...props}>
           {children}
         </table>
       </div>
@@ -32,10 +32,10 @@ export function Table({
 
 export function TableHeader({ children, className = '', ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
   const { stickyHeader } = React.useContext(TableContext);
-  const stickyClass = stickyHeader ? 'sticky top-0 z-10 backdrop-blur-md bg-[#131d33]/90' : 'bg-[#131d33]';
+  const stickyClass = stickyHeader ? 'sticky top-0 z-10 backdrop-blur-md bg-slate-50/95' : 'bg-slate-50';
 
   return (
-    <thead className={`${stickyClass} border-b border-white/10 text-slate-400 font-semibold uppercase tracking-wider text-[11px] select-none ${className}`} {...props}>
+    <thead className={`${stickyClass} border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px] select-none ${className}`} {...props}>
       {children}
     </thead>
   );
@@ -43,7 +43,7 @@ export function TableHeader({ children, className = '', ...props }: React.HTMLAt
 
 export function TableBody({ children, className = '', ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <tbody className={`divide-y divide-white/5 ${className}`} {...props}>
+    <tbody className={`divide-y divide-slate-100 bg-white ${className}`} {...props}>
       {children}
     </tbody>
   );
@@ -57,7 +57,7 @@ export function TableRow({ isInteractive = false, children, className = '', ...p
   return (
     <tr
       className={`transition-colors ${
-        isInteractive ? 'hover:bg-white/5 active:bg-white/10 cursor-pointer' : 'hover:bg-white/[0.03]'
+        isInteractive ? 'hover:bg-slate-50 active:bg-slate-100 cursor-pointer' : 'hover:bg-slate-50/70'
       } ${className}`}
       {...props}
     >

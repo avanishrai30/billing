@@ -53,18 +53,18 @@ export function InventoryLedgerDrawer({
     >
       <div className="space-y-4">
         {/* Type Filter Bar */}
-        <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#0f172a] border border-white/10">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Filter className="w-3.5 h-3.5 text-sky-400" />
+        <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <Filter className="w-3.5 h-3.5 text-blue-600" />
             <span>Filter Type:</span>
           </div>
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-2.5 py-1.5 bg-[#0f172a] border border-white/15 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-sky-400 cursor-pointer"
+            className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer shadow-xs"
           >
             {typeOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+              <option key={opt.value} value={opt.value} className="bg-white text-slate-900">
                 {opt.label}
               </option>
             ))}
@@ -77,7 +77,7 @@ export function InventoryLedgerDrawer({
             {Array.from({ length: 6 }).map((_, idx) => (
               <div
                 key={idx}
-                className="p-3.5 rounded-xl bg-[#0f172a] border border-white/10 space-y-2"
+                className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 shadow-xs"
               >
                 <div className="flex justify-between items-center">
                   <Skeleton variant="text" className="w-28 h-4" />
@@ -106,7 +106,7 @@ export function InventoryLedgerDrawer({
               return (
                 <div
                   key={log._id || log.movementId}
-                  className="p-3.5 rounded-xl bg-[#0f172a] border border-white/10 space-y-2 text-xs"
+                  className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 text-xs shadow-xs"
                 >
                   {/* Top Row: Movement Type + Delta */}
                   <div className="flex items-center justify-between gap-2">
@@ -114,14 +114,14 @@ export function InventoryLedgerDrawer({
                       <Badge variant={badge.variant} size="sm">
                         {badge.label}
                       </Badge>
-                      <span className="font-mono text-slate-400 text-[11px]">
+                      <span className="font-mono text-slate-500 text-[11px]">
                         Ref: {log.referenceId}
                       </span>
                     </div>
 
                     <div
                       className={`flex items-center gap-1 font-mono font-bold text-sm tabular-nums ${
-                        isPositive ? 'text-emerald-400' : 'text-rose-400'
+                        isPositive ? 'text-emerald-700' : 'text-rose-700'
                       }`}
                     >
                       {isPositive ? (
@@ -136,17 +136,17 @@ export function InventoryLedgerDrawer({
                   </div>
 
                   {/* Quantity Progression: Before -> After */}
-                  <div className="flex items-center justify-between text-[11px] bg-white/5 rounded-lg px-2.5 py-1.5 text-slate-300 font-mono">
+                  <div className="flex items-center justify-between text-[11px] bg-slate-50 rounded-lg px-2.5 py-1.5 text-slate-700 font-mono border border-slate-100">
                     <span>Balance: {log.beforeQuantity}</span>
-                    <span className="text-slate-500">→</span>
-                    <span className="text-white font-bold">New: {log.afterQuantity}</span>
-                    <span className="text-slate-400">({log.locationId})</span>
+                    <span className="text-slate-400">→</span>
+                    <span className="text-slate-900 font-bold">New: {log.afterQuantity}</span>
+                    <span className="text-slate-500">({log.locationId})</span>
                   </div>
 
                   {/* Footer metadata: User, Notes, Date */}
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
                     <span className="truncate max-w-[200px]">
-                      By: <strong className="text-slate-300">{log.performedBy}</strong>
+                      By: <strong className="text-slate-800">{log.performedBy}</strong>
                       {log.notes ? ` • ${log.notes}` : ''}
                     </span>
                     <span className="flex-shrink-0 font-mono">{formattedDate}</span>

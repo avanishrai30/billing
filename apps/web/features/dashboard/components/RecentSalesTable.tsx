@@ -55,19 +55,19 @@ export function RecentSalesTable({ invoices }: RecentSalesTableProps) {
 
               return (
                 <TableRow key={inv._id || inv.id || invNum}>
-                  <TableCell className="font-mono text-white font-medium text-xs">
+                  <TableCell className="font-mono text-slate-900 font-medium text-xs">
                     {invNum}
                   </TableCell>
-                  <TableCell className="text-slate-300">
+                  <TableCell className="text-slate-700">
                     {inv.customerName || 'Walk-in Retail Customer'}
                   </TableCell>
-                  <TableCell isNumeric className="font-semibold text-emerald-400">
+                  <TableCell isNumeric className="font-semibold text-emerald-700">
                     ₹ {amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={inv.status || 'paid'} />
                   </TableCell>
-                  <TableCell align="right" className="font-mono text-slate-400 text-[11px]">
+                  <TableCell align="right" className="font-mono text-slate-500 text-[11px]">
                     {dateStr}
                   </TableCell>
                 </TableRow>

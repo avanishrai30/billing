@@ -13,10 +13,10 @@ export interface LoadingStateProps {
 export function LoadingState({ message = 'Loading data...', className = '' }: LoadingStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-[#111827] border border-white/10 rounded-xl ${className}`}
+      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white border border-slate-200 rounded-xl shadow-xs ${className}`}
     >
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-      <span className="text-xs text-slate-300 font-mono">{message}</span>
+      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3" />
+      <span className="text-xs text-slate-600 font-mono">{message}</span>
     </div>
   );
 }
@@ -37,13 +37,13 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-[#111827] border border-rose-500/30 rounded-xl ${className}`}
+      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white border border-rose-200 rounded-xl shadow-xs ${className}`}
     >
-      <div className="w-12 h-12 mb-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+      <div className="w-12 h-12 mb-3 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
         <AlertTriangle className="w-6 h-6" />
       </div>
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
-      <p className="text-xs text-slate-300 mt-1 max-w-sm leading-relaxed">{message}</p>
+      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      <p className="text-xs text-slate-600 mt-1 max-w-sm leading-relaxed">{message}</p>
       {onRetry && (
         <div className="mt-4">
           <Button
@@ -77,16 +77,16 @@ export function AccessDeniedState({
     <div
       role="alert"
       data-testid="access-denied-state"
-      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-[#111827] border border-amber-500/30 rounded-xl ${className}`}
+      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white border border-amber-200 rounded-xl shadow-xs ${className}`}
     >
-      <div className="w-12 h-12 mb-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+      <div className="w-12 h-12 mb-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
         <ShieldAlert className="w-6 h-6" />
       </div>
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
-      <p className="text-xs text-slate-300 mt-1 max-w-md leading-relaxed">{message}</p>
+      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      <p className="text-xs text-slate-600 mt-1 max-w-md leading-relaxed">{message}</p>
       {requiredPermission && (
-        <div className="mt-2 text-[11px] font-mono text-slate-400 bg-white/5 px-2.5 py-1 rounded border border-white/10">
-          Required privilege: <span className="text-amber-300">{requiredPermission}</span>
+        <div className="mt-2 text-[11px] font-mono text-slate-700 bg-amber-50 px-2.5 py-1 rounded border border-amber-200">
+          Required privilege: <span className="text-amber-800 font-semibold">{requiredPermission}</span>
         </div>
       )}
       <div className="mt-5">

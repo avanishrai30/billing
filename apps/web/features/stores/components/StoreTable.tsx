@@ -39,7 +39,7 @@ export function StoreTable({
 }: StoreTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-3">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
         {Array.from({ length: 5 }).map((_, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4 py-2">
             <Skeleton variant="text" className="w-1/4 h-5" />
@@ -69,7 +69,7 @@ export function StoreTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -89,31 +89,31 @@ export function StoreTable({
               <TableRow key={store.id}>
                 {/* Store Name & ID */}
                 <TableCell>
-                  <div className="font-semibold text-white truncate max-w-[200px]" title={store.name}>
+                  <div className="font-semibold text-slate-900 truncate max-w-[200px]" title={store.name}>
                     {store.name}
                   </div>
-                  <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
                     {store.id}
                   </div>
                 </TableCell>
 
                 {/* Code */}
                 <TableCell>
-                  <span className="font-mono font-bold text-sky-400 text-xs bg-sky-500/10 px-2 py-0.5 rounded border border-sky-400/20">
+                  <span className="font-mono font-bold text-blue-700 text-xs bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                     {store.code || 'N/A'}
                   </span>
                 </TableCell>
 
                 {/* Address */}
                 <TableCell>
-                  <span className="text-slate-300 text-xs truncate max-w-[240px] block" title={store.address || ''}>
+                  <span className="text-slate-600 text-xs truncate max-w-[240px] block" title={store.address || ''}>
                     {store.address || '-'}
                   </span>
                 </TableCell>
 
                 {/* Phone */}
                 <TableCell>
-                  <span className="font-mono text-slate-400 text-xs">
+                  <span className="font-mono text-slate-700 text-xs">
                     {store.phone || '-'}
                   </span>
                 </TableCell>
@@ -134,7 +134,7 @@ export function StoreTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onEditStore(store)}
-                        icon={<Edit className="w-3.5 h-3.5 text-amber-400" />}
+                        icon={<Edit className="w-3.5 h-3.5 text-slate-600" />}
                       />
                     )}
                     {canDelete && (
@@ -143,7 +143,7 @@ export function StoreTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onDeleteStore(store)}
-                        icon={<Trash2 className="w-3.5 h-3.5 text-rose-400" />}
+                        icon={<Trash2 className="w-3.5 h-3.5 text-rose-600" />}
                       />
                     )}
                   </div>

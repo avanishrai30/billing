@@ -50,7 +50,7 @@ export function TabsList({ children, className = '' }: TabsListProps) {
   return (
     <div
       role="tablist"
-      className={`inline-flex items-center gap-1 p-1 bg-[#0f172a] border border-white/10 rounded-lg ${className}`}
+      className={`inline-flex items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-lg ${className}`}
     >
       {children}
     </div>
@@ -85,13 +85,13 @@ export function TabsTrigger({
       disabled={disabled}
       onClick={() => context.setActiveTab(value)}
       className={`relative inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${
-        isActive ? 'text-white font-semibold' : 'text-slate-400 hover:text-white hover:bg-white/5'
+        isActive ? 'text-blue-700 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
       } ${className}`}
     >
       {isActive && (
         <span
           data-testid="active-tab-indicator"
-          className="absolute inset-0 bg-blue-600 rounded-md shadow-xs -z-10"
+          className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
         />
       )}
       {icon && <span className="w-3.5 h-3.5 flex-shrink-0 relative z-10">{icon}</span>}

@@ -18,25 +18,25 @@ export function POSHeader({
   onOpenMobileCart
 }: POSHeaderProps) {
   return (
-    <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xs">
       {/* Left: Terminal context */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400 flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0">
           <Cpu className="w-5 h-5" />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-white tracking-tight">POS Terminal</h2>
+            <h2 className="text-sm font-bold text-slate-900 tracking-tight">POS Terminal</h2>
             <Badge variant="success" size="sm" dot>
               LIVE
             </Badge>
           </div>
-          <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+          <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
             <span className="flex items-center gap-1">
-              <Store className="w-3.5 h-3.5 text-sky-400" />
+              <Store className="w-3.5 h-3.5 text-blue-600" />
               {storeName}
             </span>
-            <span className="text-slate-600">•</span>
+            <span className="text-slate-300">•</span>
             <span className="flex items-center gap-1">
               <UserCircle className="w-3.5 h-3.5 text-slate-400" />
               {cashierName}
@@ -47,8 +47,8 @@ export function POSHeader({
 
       {/* Right: Cart Status & Mobile Trigger */}
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-300">
-          <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700">
+          <Wifi className="w-3.5 h-3.5 text-emerald-600" />
           <span>Realtime Sync Connected</span>
         </div>
 

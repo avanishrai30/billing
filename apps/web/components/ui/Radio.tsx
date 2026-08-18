@@ -28,14 +28,14 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
             className="peer sr-only"
             {...props}
           />
-          <div className="w-4 h-4 rounded-full border border-white/20 bg-[#0f172a] peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500/50 transition-colors flex items-center justify-center">
+          <div className="w-4 h-4 rounded-full border border-slate-300 bg-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500/30 transition-colors flex items-center justify-center">
             <div className="w-2 h-2 rounded-full bg-blue-600 opacity-0 peer-checked:opacity-100 transition-opacity" />
           </div>
         </div>
         {(label || helperText) && (
           <div className="flex flex-col">
-            {label && <span className="text-xs font-medium text-slate-200">{label}</span>}
-            {helperText && <span className="text-[11px] text-slate-400">{helperText}</span>}
+            {label && <span className="text-xs font-medium text-slate-800">{label}</span>}
+            {helperText && <span className="text-[11px] text-slate-500">{helperText}</span>}
           </div>
         )}
       </label>

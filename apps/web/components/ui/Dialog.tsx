@@ -67,24 +67,24 @@ export function Dialog({
       <div
         data-testid="dialog-backdrop"
         onClick={onClose}
-        className="fixed inset-0 bg-black/80 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
       />
 
       {/* Dialog Surface */}
       <div
-        className={`relative z-10 w-full ${maxWidthStyles[maxWidth]} bg-[#0f172a] border border-white/15 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${className}`}
+        className={`relative z-10 w-full ${maxWidthStyles[maxWidth]} bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${className}`}
       >
         {/* Header */}
-        <div className="px-6 py-4 bg-[#131d33] border-b border-white/10 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4">
           <div>
-            {title && <h2 className="text-base font-semibold text-white tracking-tight">{title}</h2>}
-            {description && <p className="text-xs text-slate-400 mt-0.5">{description}</p>}
+            {title && <h2 className="text-base font-semibold text-slate-900 tracking-tight">{title}</h2>}
+            {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -95,7 +95,7 @@ export function Dialog({
 
         {/* Optional Footer */}
         {footer && (
-          <div className="px-6 py-3.5 bg-[#131d33] border-t border-white/10 flex items-center justify-end gap-3">
+          <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}

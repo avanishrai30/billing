@@ -35,85 +35,87 @@ export default function DiagnosticsPage() {
   const baseUrl = mounted ? getApiBaseUrl() : 'Resolving gateway...';
 
   return (
-    <main className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col gap-6 bg-[#001845] text-white">
-      <header className="border-b border-white/10 pb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-white mb-2">
+    <main className="min-h-screen p-8 max-w-4xl mx-auto flex flex-col gap-6 bg-slate-50 text-slate-900">
+      <header className="border-b border-slate-200 pb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">
           AIAVRO Billing OS — Infrastructure Diagnostics
         </h1>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-slate-500">
           Internal Diagnostics Workspace (App Router + TanStack Query + Socket.IO)
         </p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Backend Gateway Health */}
-        <section className="bg-[#0f172a] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+        <section className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">Backend Gateway</h2>
+            <h2 className="text-base font-semibold text-slate-900">Backend Gateway</h2>
             <span
               className={`px-2.5 py-1 text-xs rounded-full font-medium ${
                 healthQuery.isLoading
-                  ? 'bg-amber-500/20 text-amber-300'
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
                   : healthQuery.isSuccess
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : 'bg-rose-500/20 text-rose-300'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200'
               }`}
             >
               {healthQuery.isLoading ? 'Checking...' : healthQuery.isSuccess ? 'Connected' : 'Unavailable'}
             </span>
           </div>
-          <div className="text-xs text-slate-300 space-y-1 font-mono">
-            <p>Target URL: <span className="text-sky-400">{baseUrl}</span></p>
-            <p>Health Status: <span className="text-slate-200">{healthQuery.data?.status || 'N/A'}</span></p>
-            <p>Database: <span className="text-slate-200">{healthQuery.data?.database || 'N/A'}</span></p>
-            <p>Uptime: <span className="text-slate-200">{healthQuery.data?.uptime || 'N/A'}</span></p>
+          <div className="text-xs text-slate-600 space-y-1 font-mono">
+            <p>Target URL: <span className="text-blue-600">{baseUrl}</span></p>
+            <p>Health Status: <span className="text-slate-800 font-semibold">{healthQuery.data?.status || 'N/A'}</span></p>
+            <p>Database: <span className="text-slate-800">{healthQuery.data?.database || 'N/A'}</span></p>
+            <p>Uptime: <span className="text-slate-800">{healthQuery.data?.uptime || 'N/A'}</span></p>
           </div>
         </section>
 
         {/* Public Settings */}
-        <section className="bg-[#0f172a] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+        <section className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">Public Settings API</h2>
+            <h2 className="text-base font-semibold text-slate-900">Public Settings API</h2>
             <span
               className={`px-2.5 py-1 text-xs rounded-full font-medium ${
                 settingsQuery.isLoading
-                  ? 'bg-amber-500/20 text-amber-300'
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
                   : settingsQuery.isSuccess
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : 'bg-rose-500/20 text-rose-300'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200'
               }`}
             >
               {settingsQuery.isLoading ? 'Loading...' : settingsQuery.isSuccess ? 'Loaded' : 'Failed'}
             </span>
           </div>
-          <div className="text-xs text-slate-300 space-y-1 font-mono">
-            <p>Endpoint: <span className="text-sky-400">/api/v1/public/settings</span></p>
-            <p>Portal Title: <span className="text-slate-200">{settingsQuery.data?.title || 'N/A'}</span></p>
-            <p>Brand Logo: <span className="text-slate-200">{settingsQuery.data?.logo || 'N/A'}</span></p>
+          <div className="text-xs text-slate-600 space-y-1 font-mono">
+            <p>Endpoint: <span className="text-blue-600">/api/v1/public/settings</span></p>
+            <p>Portal Title: <span className="text-slate-800 font-semibold">{settingsQuery.data?.title || 'N/A'}</span></p>
+            <p>Brand Logo: <span className="text-slate-800">{settingsQuery.data?.logo || 'N/A'}</span></p>
           </div>
         </section>
 
         {/* Auth State */}
-        <section className="bg-[#0f172a] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+        <section className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">Auth Foundation</h2>
+            <h2 className="text-base font-semibold text-slate-900">Auth Foundation</h2>
             <span
               className={`px-2.5 py-1 text-xs rounded-full font-medium ${
-                isAuthenticated ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-500/20 text-slate-300'
+                isAuthenticated
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
               }`}
             >
               {isAuthenticated ? 'Authenticated' : 'Anonymous'}
             </span>
           </div>
-          <div className="text-xs text-slate-300 space-y-1 font-mono">
-            <p>User: <span className="text-slate-200">{user?.username || 'None'}</span></p>
-            <p>Role: <span className="text-slate-200">{user?.role || 'None'}</span></p>
-            <p>Store: <span className="text-slate-200">{user?.assignedStoreId || 'None'}</span></p>
+          <div className="text-xs text-slate-600 space-y-1 font-mono">
+            <p>User: <span className="text-slate-800 font-semibold">{user?.username || 'None'}</span></p>
+            <p>Role: <span className="text-slate-800">{user?.role || 'None'}</span></p>
+            <p>Store: <span className="text-slate-800">{user?.assignedStoreId || 'None'}</span></p>
           </div>
           {isAuthenticated && (
             <button
               onClick={() => logout()}
-              className="mt-2 text-xs bg-rose-600/30 hover:bg-rose-600/50 text-rose-200 px-3 py-1.5 rounded-lg border border-rose-500/30 self-start"
+              className="mt-2 text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-lg border border-rose-200 self-start cursor-pointer transition-colors"
             >
               Logout Session
             </button>
@@ -121,31 +123,33 @@ export default function DiagnosticsPage() {
         </section>
 
         {/* Realtime Socket */}
-        <section className="bg-[#0f172a] border border-white/10 rounded-xl p-5 flex flex-col gap-3">
+        <section className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">Realtime Gateway</h2>
+            <h2 className="text-base font-semibold text-slate-900">Realtime Gateway</h2>
             <span
               className={`px-2.5 py-1 text-xs rounded-full font-medium ${
-                isConnected ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-500/20 text-slate-300'
+                isConnected
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
               }`}
             >
               {isConnected ? 'Socket Active' : 'Disconnected'}
             </span>
           </div>
-          <div className="text-xs text-slate-300 space-y-1 font-mono">
-            <p>Transport: <span className="text-sky-400">WebSocket / Polling</span></p>
-            <p>State: <span className="text-slate-200">{isConnected ? 'Listening for Store Events' : 'Inactive (Requires Login)'}</span></p>
+          <div className="text-xs text-slate-600 space-y-1 font-mono">
+            <p>Transport: <span className="text-blue-600">WebSocket / Polling</span></p>
+            <p>State: <span className="text-slate-800">{isConnected ? 'Listening for Store Events' : 'Inactive (Requires Login)'}</span></p>
           </div>
         </section>
       </div>
 
-      <footer className="mt-8 border-t border-white/10 pt-4 flex items-center justify-between text-xs text-slate-400">
+      <footer className="mt-8 border-t border-slate-200 pt-4 flex items-center justify-between text-xs text-slate-500">
         <div>Next.js 16 App Router | React 19 | Tailwind CSS v4</div>
         <div className="flex gap-4">
-          <Link href="/login" className="text-sky-400 hover:underline">
+          <Link href="/login" className="text-blue-600 hover:underline">
             Login Route →
           </Link>
-          <Link href="/dashboard" className="text-sky-400 hover:underline">
+          <Link href="/dashboard" className="text-blue-600 hover:underline">
             Protected Area →
           </Link>
         </div>

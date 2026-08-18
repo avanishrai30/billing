@@ -27,9 +27,9 @@ export function StatCard({
   className = ''
 }: StatCardProps) {
   const trendColors = {
-    up: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-    down: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
-    neutral: 'text-slate-400 bg-white/5 border-white/10'
+    up: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+    down: 'text-rose-700 bg-rose-50 border-rose-200',
+    neutral: 'text-slate-600 bg-slate-100 border-slate-200'
   };
 
   const TrendIcon = trend
@@ -42,19 +42,19 @@ export function StatCard({
 
   return (
     <div
-      className={`p-5 bg-[#0f172a] border border-white/10 rounded-xl flex flex-col justify-between shadow-xs transition-colors hover:border-white/20 ${className}`}
+      className={`p-5 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-xs transition-colors hover:border-slate-300 ${className}`}
     >
       <div className="flex items-center justify-between gap-2 mb-2.5">
-        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{label}</span>
+        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
         {icon && (
-          <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 flex-shrink-0">
             {icon}
           </div>
         )}
       </div>
 
       <div className="space-y-1">
-        <div className="text-2xl font-bold tracking-tight text-white tabular-nums font-mono">
+        <div className="text-2xl font-bold tracking-tight text-slate-900 tabular-nums font-mono">
           {isCurrency && typeof value === 'number'
             ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value)
             : value}
@@ -72,7 +72,7 @@ export function StatCard({
                 <span>{trend.value}</span>
               </span>
             )}
-            {subtext && <span className="text-[11px] text-slate-400 truncate">{subtext}</span>}
+            {subtext && <span className="text-[11px] text-slate-500 truncate">{subtext}</span>}
           </div>
         )}
       </div>
@@ -96,26 +96,26 @@ export function MetricCard({
   className = ''
 }: MetricCardProps) {
   const statusBorder = {
-    normal: 'border-white/10 hover:border-white/20',
-    warning: 'border-amber-500/30',
-    critical: 'border-rose-500/30',
-    success: 'border-emerald-500/30'
+    normal: 'border-slate-200 hover:border-slate-300',
+    warning: 'border-amber-200',
+    critical: 'border-rose-200',
+    success: 'border-emerald-200'
   };
 
   const statusBg = {
-    normal: 'bg-[#0f172a]',
-    warning: 'bg-amber-500/5',
-    critical: 'bg-rose-500/5',
-    success: 'bg-emerald-500/5'
+    normal: 'bg-white',
+    warning: 'bg-amber-50/60',
+    critical: 'bg-rose-50/60',
+    success: 'bg-emerald-50/60'
   };
 
   return (
     <div
       className={`p-4 border rounded-xl flex flex-col justify-between shadow-xs transition-colors ${statusBg[status]} ${statusBorder[status]} ${className}`}
     >
-      <span className="text-xs text-slate-400 font-medium">{title}</span>
-      <div className="text-xl font-bold text-white mt-1 tabular-nums font-mono">{metric}</div>
-      {description && <span className="text-[11px] text-slate-400 mt-1">{description}</span>}
+      <span className="text-xs text-slate-500 font-medium">{title}</span>
+      <div className="text-xl font-bold text-slate-900 mt-1 tabular-nums font-mono">{metric}</div>
+      {description && <span className="text-[11px] text-slate-500 mt-1">{description}</span>}
     </div>
   );
 }

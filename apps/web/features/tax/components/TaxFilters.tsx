@@ -44,7 +44,7 @@ export function TaxFilters({
   ];
 
   return (
-    <div className="bg-[#0f172a] p-3.5 rounded-2xl border border-white/10 space-y-3">
+    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-3 shadow-xs">
       {/* Top Filter Controls */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -61,28 +61,28 @@ export function TaxFilters({
                   label: `📍 ${s.name}`
                 }))
               ]}
-              className="bg-black/20 text-xs"
+              className="text-xs"
             />
           </div>
 
           {/* Date Range */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span>From:</span>
             <input
               type="date"
               value={startDate}
               onChange={(e) => onStartDateChange(e.target.value)}
-              className="bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-400"
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500 shadow-xs"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <span>To:</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => onEndDateChange(e.target.value)}
-              className="bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-sky-400"
+              className="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500 shadow-xs"
             />
           </div>
         </div>
@@ -95,17 +95,17 @@ export function TaxFilters({
       </div>
 
       {/* Segmented Navigation Tab Buttons */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-white/5 no-scrollbar">
+      <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-slate-100 no-scrollbar">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors duration-150 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors duration-150 cursor-pointer ${
                 isActive
-                  ? 'bg-sky-500 text-white shadow-xs'
-                  : 'bg-black/20 text-slate-300 hover:bg-white/5 hover:text-white'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               {tab.label}

@@ -51,7 +51,7 @@ export function UserTable({
 
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 text-center text-slate-400 text-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-500 text-sm shadow-xs">
         Loading user directory...
       </div>
     );
@@ -74,7 +74,7 @@ export function UserTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -111,14 +111,14 @@ export function UserTable({
                 {/* User Profile */}
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-300 font-bold text-xs shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
                       {initials}
                     </div>
                     <div>
-                      <div className="font-semibold text-white text-xs truncate max-w-[180px]" title={user.name}>
+                      <div className="font-semibold text-slate-900 text-xs truncate max-w-[180px]" title={user.name}>
                         {user.name}
                       </div>
-                      <div className="text-[11px] text-slate-400 font-mono truncate max-w-[180px]">
+                      <div className="text-[11px] text-slate-500 font-mono truncate max-w-[180px]">
                         {user.email || user.phone || '—'}
                       </div>
                     </div>
@@ -128,11 +128,11 @@ export function UserTable({
                 {/* Username */}
                 <TableCell>
                   <div className="flex items-center gap-1.5">
-                    <code className="font-mono text-xs text-sky-300 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                    <code className="font-mono text-xs text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 font-semibold">
                       @{user.username}
                     </code>
                     {isSelf && (
-                      <span className="text-[10px] text-emerald-400 font-bold tracking-wider">
+                      <span className="text-[10px] text-emerald-700 font-bold tracking-wider">
                         (YOU)
                       </span>
                     )}
@@ -142,7 +142,7 @@ export function UserTable({
                 {/* Role / Category */}
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-xs text-slate-200">{user.role}</span>
+                    <span className="font-medium text-xs text-slate-900">{user.role}</span>
                     <div className="flex items-center gap-1">
                       <Badge variant={categoryVariant} size="sm">
                         {user.category?.toUpperCase() || 'EMPLOYEE'}
@@ -154,12 +154,12 @@ export function UserTable({
                 {/* Store Scope */}
                 <TableCell>
                   {user.assignedStoreId === 'all' || !user.assignedStoreId ? (
-                    <div className="flex items-center gap-1 text-xs text-slate-300">
-                      <span className="text-emerald-400">🌐</span> All Stores (Global)
+                    <div className="flex items-center gap-1 text-xs text-slate-700">
+                      <span className="text-emerald-600">🌐</span> All Stores (Global)
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 text-xs text-amber-300">
-                      <Store className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                    <div className="flex items-center gap-1 text-xs text-amber-700 font-medium">
+                      <Store className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                       <span className="truncate max-w-[150px]" title={storeObj?.name || user.assignedStoreId}>
                         {storeObj?.name || user.assignedStoreId}
                       </span>
@@ -188,7 +188,7 @@ export function UserTable({
                       size="sm"
                       onClick={() => onViewUser(user)}
                       aria-label={`View user details for ${user.name}`}
-                      icon={<Eye className="h-4 w-4 text-sky-400" />}
+                      icon={<Eye className="h-4 w-4 text-blue-600" />}
                     />
                     {canManage && (
                       <>
@@ -197,7 +197,7 @@ export function UserTable({
                           size="sm"
                           onClick={() => onEditUser(user)}
                           aria-label={`Edit user ${user.name}`}
-                          icon={<Edit2 className="h-4 w-4 text-slate-300" />}
+                          icon={<Edit2 className="h-4 w-4 text-slate-600" />}
                         />
                         {!isSelf && (
                           <IconButton
@@ -205,7 +205,7 @@ export function UserTable({
                             size="sm"
                             onClick={() => onDeactivateUser(user)}
                             aria-label={`Deactivate user ${user.name}`}
-                            icon={<UserX className="h-4 w-4 text-rose-400" />}
+                            icon={<UserX className="h-4 w-4 text-rose-600" />}
                           />
                         )}
                       </>

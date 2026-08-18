@@ -42,7 +42,7 @@ export function SupplierTable({
 }: SupplierTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-3">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4 py-2">
             <Skeleton variant="text" className="w-1/4 h-5" />
@@ -72,7 +72,7 @@ export function SupplierTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -94,24 +94,24 @@ export function SupplierTable({
               <TableRow key={sup.id}>
                 {/* Name */}
                 <TableCell>
-                  <div className="font-semibold text-white truncate max-w-[200px]" title={sup.name}>
+                  <div className="font-semibold text-slate-900 truncate max-w-[200px]" title={sup.name}>
                     {sup.name}
                   </div>
-                  <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
                     {sup.id}
                   </div>
                 </TableCell>
 
                 {/* Contact */}
                 <TableCell>
-                  <span className="font-mono text-slate-200 text-xs">
+                  <span className="font-mono text-slate-800 text-xs">
                     {formattedContact}
                   </span>
                 </TableCell>
 
                 {/* Email */}
                 <TableCell>
-                  <span className="text-slate-300 text-xs truncate max-w-[180px] block">
+                  <span className="text-slate-700 text-xs truncate max-w-[180px] block">
                     {sup.email || '-'}
                   </span>
                 </TableCell>
@@ -119,7 +119,7 @@ export function SupplierTable({
                 {/* GSTIN */}
                 <TableCell>
                   {isGstRegistered ? (
-                    <span className="font-mono font-bold text-amber-400 text-[11px] bg-amber-500/10 px-2 py-0.5 rounded border border-amber-400/20">
+                    <span className="font-mono font-bold text-amber-700 text-[11px] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                       {gstDisplay}
                     </span>
                   ) : (
@@ -131,7 +131,7 @@ export function SupplierTable({
 
                 {/* Address */}
                 <TableCell>
-                  <span className="text-slate-400 text-xs truncate max-w-[220px] block" title={sup.address || ''}>
+                  <span className="text-slate-600 text-xs truncate max-w-[220px] block" title={sup.address || ''}>
                     {sup.address || '-'}
                   </span>
                 </TableCell>
@@ -144,7 +144,7 @@ export function SupplierTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onViewDetail(sup)}
-                      icon={<Eye className="w-3.5 h-3.5 text-sky-400" />}
+                      icon={<Eye className="w-3.5 h-3.5 text-blue-600" />}
                     />
                     {canEdit && (
                       <IconButton
@@ -152,7 +152,7 @@ export function SupplierTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onEditSupplier(sup)}
-                        icon={<Edit className="w-3.5 h-3.5 text-amber-400" />}
+                        icon={<Edit className="w-3.5 h-3.5 text-slate-600" />}
                       />
                     )}
                     {canDelete && (
@@ -161,7 +161,7 @@ export function SupplierTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onDeleteSupplier(sup)}
-                        icon={<Trash2 className="w-3.5 h-3.5 text-rose-400" />}
+                        icon={<Trash2 className="w-3.5 h-3.5 text-rose-600" />}
                       />
                     )}
                   </div>

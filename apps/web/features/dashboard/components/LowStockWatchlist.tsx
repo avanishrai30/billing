@@ -63,28 +63,28 @@ export function LowStockWatchlist({ items }: LowStockWatchlistProps) {
               const isOutOfStock = item.stock <= 0;
               return (
                 <TableRow key={item.id || item.sku}>
-                  <TableCell className="font-mono text-slate-400 text-[11px]">
+                  <TableCell className="font-mono text-slate-500 text-[11px]">
                     {item.sku || 'N/A'}
                   </TableCell>
-                  <TableCell className="font-semibold text-white">
+                  <TableCell className="font-semibold text-slate-900">
                     {item.name}
                   </TableCell>
                   <TableCell>
-                    <span className="text-slate-400 text-xs">{item.category}</span>
+                    <span className="text-slate-600 text-xs">{item.category}</span>
                   </TableCell>
                   <TableCell isNumeric>
                     <span
                       className={`font-semibold ${
-                        isOutOfStock ? 'text-rose-400 font-bold' : 'text-amber-400'
+                        isOutOfStock ? 'text-rose-700 font-bold' : 'text-amber-700'
                       }`}
                     >
                       {item.stock} {item.unit}
                     </span>
                   </TableCell>
-                  <TableCell isNumeric className="text-slate-400">
+                  <TableCell isNumeric className="text-slate-500">
                     {item.reorder} {item.unit}
                   </TableCell>
-                  <TableCell isNumeric className="text-slate-300">
+                  <TableCell isNumeric className="text-slate-700 font-medium font-mono">
                     ₹ {item.cost.toFixed(2)}
                   </TableCell>
                   <TableCell align="center">

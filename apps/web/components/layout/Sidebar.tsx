@@ -79,21 +79,21 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div
           data-testid="sidebar-backdrop"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden"
         />
       )}
 
       {/* Sidebar Container */}
       <aside
         data-testid="sidebar-container"
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-[#0f172a] border-r border-white/10 flex flex-col transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-white border-r border-slate-200 shadow-xs flex flex-col transition-transform duration-200 lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
-        <div className="h-16 px-5 border-b border-white/10 flex items-center justify-between">
+        <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 flex-shrink-0 overflow-hidden">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-blue-600 flex-shrink-0 overflow-hidden">
               {showLogoImage ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -103,15 +103,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onError={() => setLogoFailed(true)}
                 />
               ) : (
-                <ShieldCheck className="w-5 h-5 text-blue-400" />
+                <ShieldCheck className="w-5 h-5 text-blue-600" />
               )}
             </div>
-            <span className="font-semibold text-sm text-white truncate">{brandTitle}</span>
+            <span className="font-semibold text-sm text-slate-900 truncate">{brandTitle}</span>
           </div>
           <button
             onClick={onClose}
             aria-label="Close sidebar"
-            className="lg:hidden text-slate-400 hover:text-white p-1 rounded-md cursor-pointer"
+            className="lg:hidden text-slate-400 hover:text-slate-700 p-1 rounded-md cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -130,11 +130,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 onClick={() => onClose()}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-blue-600 text-white font-semibold shadow-xs'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                    ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs border-l-2 border-blue-600'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
                 <span className="truncate">{item.label}</span>
               </Link>
             );
@@ -142,7 +142,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer info */}
-        <div className="px-4 py-3 border-t border-white/10 text-[11px] text-slate-400 flex items-center justify-between">
+        <div className="px-4 py-3 border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">
           <span>AIAVRO v2.0 Enterprise</span>
           <span className="text-[10px] text-slate-400 font-mono">PROD</span>
         </div>

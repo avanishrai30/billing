@@ -49,8 +49,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     ref
   ) => {
     const errorBorder = hasError
-      ? 'border-rose-500/50 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/40 text-rose-200'
-      : 'border-white/10 hover:border-white/20 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 text-white';
+      ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 text-rose-900'
+      : 'border-slate-200 hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-slate-900';
 
     const sz = sizeStyles[sizeVariant];
 
@@ -59,11 +59,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           disabled={disabled}
-          className={`w-full ${sz.height} ${sz.text} ${sz.px} bg-[#0f172a] rounded-lg text-white transition-colors focus:outline-none appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border ${errorBorder} ${className}`}
+          className={`w-full ${sz.height} ${sz.text} ${sz.px} bg-white rounded-lg text-slate-900 transition-colors focus:outline-none appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border ${errorBorder} ${className}`}
           {...props}
         >
           {placeholder && (
-            <option value="" disabled className="bg-[#0f172a] text-slate-400">
+            <option value="" disabled className="bg-white text-slate-400">
               {placeholder}
             </option>
           )}
@@ -72,7 +72,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               key={String(opt.value)}
               value={opt.value}
               disabled={opt.disabled}
-              className="bg-[#0f172a] text-white"
+              className="bg-white text-slate-900"
             >
               {opt.label}
             </option>

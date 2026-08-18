@@ -83,7 +83,7 @@ export default function SettingsPage() {
       />
 
       {/* Settings Navigation Tabs */}
-      <div className="flex border-b border-white/10 gap-2 overflow-x-auto pb-px">
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto pb-px">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -93,11 +93,11 @@ export default function SettingsPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? 'border-blue-500 text-white bg-white/5 rounded-t-lg'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.02]'
+                  ? 'border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-lg font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
+              <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
               <span>{tab.label}</span>
             </button>
           );

@@ -46,7 +46,7 @@ export function InventoryTable({
 }: InventoryTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-3">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4 py-2">
             <Skeleton variant="text" className="w-1/4 h-5" />
@@ -76,7 +76,7 @@ export function InventoryTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -101,10 +101,10 @@ export function InventoryTable({
               <TableRow key={`${item.productId}-${item.locationId}`}>
                 {/* Product Details */}
                 <TableCell>
-                  <div className="font-semibold text-white truncate max-w-[220px]" title={item.productName || item.productId}>
+                  <div className="font-semibold text-slate-900 truncate max-w-[220px]" title={item.productName || item.productId}>
                     {item.productName || item.productId}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                     <span className="font-mono">{item.sku || 'No SKU'}</span>
                     {item.category && <span>• {item.category}</span>}
                   </div>
@@ -112,35 +112,35 @@ export function InventoryTable({
 
                 {/* Outlet */}
                 <TableCell>
-                  <span className="text-xs text-slate-300 font-mono">
+                  <span className="text-xs text-slate-700 font-mono">
                     {item.locationId === 'all' ? 'All Stores' : item.locationId}
                   </span>
                 </TableCell>
 
                 {/* Current Stock */}
                 <TableCell isNumeric>
-                  <span className="font-bold text-white text-xs">
+                  <span className="font-bold text-slate-900 text-xs">
                     {Number(item.quantity ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })} {item.unit || 'units'}
                   </span>
                 </TableCell>
 
                 {/* Reserved */}
                 <TableCell isNumeric>
-                  <span className="text-slate-400 text-xs">
+                  <span className="text-slate-500 text-xs">
                     {Number(item.reservedQuantity ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 
                 {/* Available */}
                 <TableCell isNumeric>
-                  <span className="font-bold text-emerald-400 text-xs">
+                  <span className="font-bold text-emerald-700 text-xs">
                     {Number(avail ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 
                 {/* Reorder Level */}
                 <TableCell isNumeric>
-                  <span className="text-slate-400 text-xs">
+                  <span className="text-slate-500 text-xs">
                     {item.reorderLevel}
                   </span>
                 </TableCell>
@@ -164,7 +164,7 @@ export function InventoryTable({
 
                 {/* Valuation */}
                 <TableCell isNumeric>
-                  <span className="font-semibold text-slate-200 text-xs">
+                  <span className="font-semibold text-slate-900 font-mono text-xs">
                     ₹ {val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
@@ -177,7 +177,7 @@ export function InventoryTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onViewLedger(item)}
-                      icon={<History className="w-3.5 h-3.5 text-sky-400" />}
+                      icon={<History className="w-3.5 h-3.5 text-blue-600" />}
                     />
                     {canAdjust && (
                       <IconButton
@@ -185,7 +185,7 @@ export function InventoryTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onAdjustStock(item)}
-                        icon={<SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />}
+                        icon={<SlidersHorizontal className="w-3.5 h-3.5 text-amber-600" />}
                       />
                     )}
                     {canTransfer && (
@@ -194,7 +194,7 @@ export function InventoryTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onTransferStock(item)}
-                        icon={<ArrowLeftRight className="w-3.5 h-3.5 text-emerald-400" />}
+                        icon={<ArrowLeftRight className="w-3.5 h-3.5 text-emerald-600" />}
                       />
                     )}
                   </div>
