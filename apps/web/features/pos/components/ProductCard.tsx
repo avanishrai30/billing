@@ -32,7 +32,7 @@ export function ProductCard({
       data-testid={`product-card-${product.id}`}
       className={`group relative bg-[#0f172a] border rounded-2xl p-3.5 flex flex-col justify-between transition-colors overflow-hidden ${
         cartQuantity > 0
-          ? 'border-sky-500/50 bg-[#042864]'
+          ? 'border-blue-500/50 bg-[#131d33] ring-1 ring-blue-500/20'
           : 'border-white/10 hover:border-white/20'
       }`}
     >
