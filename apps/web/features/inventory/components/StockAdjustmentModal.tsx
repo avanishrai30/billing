@@ -134,7 +134,7 @@ export function StockAdjustmentModal({
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {serverError && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-start gap-2.5 text-rose-300 text-xs">
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-rose-700 text-xs">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>{serverError}</span>
           </div>
@@ -161,22 +161,22 @@ export function StockAdjustmentModal({
         </FormField>
 
         {/* Quantity Reconciliation Grid */}
-        <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#0f172a] border border-white/10">
+        <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
           <div>
-            <span className="text-[11px] text-slate-400 block">Current Balance</span>
-            <span className="text-sm font-mono font-bold text-white tabular-nums">
+            <span className="text-[11px] text-slate-600 block">Current Balance</span>
+            <span className="text-sm font-mono font-semibold text-slate-950 tabular-nums">
               {currentStock.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
             </span>
           </div>
           <div>
-            <span className="text-[11px] text-slate-400 block">Adjustment Delta</span>
+            <span className="text-[11px] text-slate-600 block">Adjustment Delta</span>
             <span
               className={`text-sm font-mono font-bold tabular-nums ${
                 delta > 0
-                  ? 'text-emerald-400'
+                  ? 'text-emerald-700'
                   : delta < 0
-                  ? 'text-rose-400'
-                  : 'text-slate-300'
+                  ? 'text-rose-700'
+                  : 'text-slate-600'
               }`}
             >
               {delta > 0 ? `+${delta}` : delta}

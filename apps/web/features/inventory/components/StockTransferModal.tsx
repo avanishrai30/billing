@@ -131,7 +131,7 @@ export function StockTransferModal({
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {serverError && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-start gap-2.5 text-rose-300 text-xs">
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-rose-700 text-xs">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>{serverError}</span>
           </div>
@@ -168,9 +168,9 @@ export function StockTransferModal({
 
         {/* Available Stock Indicator */}
         {selectedItem && (
-          <div className="p-3 rounded-xl bg-[#0f172a] border border-white/10 flex items-center justify-between text-xs">
-            <span className="text-slate-400">Available at Source Outlet:</span>
-            <span className="font-mono font-bold text-white tabular-nums">
+          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <span className="text-slate-600">Available at Source Outlet:</span>
+            <span className="font-mono font-semibold text-slate-950 tabular-nums">
               {availableStock.toLocaleString('en-IN', { maximumFractionDigits: 2 })} units
             </span>
           </div>

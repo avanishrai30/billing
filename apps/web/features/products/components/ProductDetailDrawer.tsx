@@ -52,12 +52,12 @@ export function ProductDetailDrawer({
       isOpen={isOpen}
       onClose={onClose}
       title={product.name}
-      description={`SKU: ${product.sku} • Category: ${product.category || 'General'}`}
+      description={`SKU: ${product.sku} / Category: ${product.category || 'General'}`}
       maxWidth="md"
     >
       <div className="space-y-6">
         {/* 1. Header Hero Card with Image & Core Metrics */}
-        <div className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+        <div className="flex gap-4 p-4 rounded-lg bg-slate-50 border border-slate-200">
           <div className="w-24 h-24 rounded-lg bg-white border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs">
             {normalizedImageUrl ? (
               <img
@@ -92,43 +92,43 @@ export function ProductDetailDrawer({
             <div className="text-xs text-slate-600 flex items-center gap-2">
               <span>Unit: <strong className="text-slate-900 font-mono">{product.unit || 'pc'}</strong></span>
               {product.weight ? (
-                <span>• {product.weight} {product.weightUnit || 'g'}</span>
+                <span>/ {product.weight} {product.weightUnit || 'g'}</span>
               ) : null}
             </div>
           </div>
         </div>
 
         {/* 2. Commercial Pricing & Tax Breakdown */}
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+        <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+          <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-emerald-600" />
             Commercial Pricing & Margin
           </h4>
 
           <div className="grid grid-cols-3 gap-3 pt-1">
             <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-xs">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider block">
+              <span className="text-[10px] text-slate-500 block">
                 Purchase Cost
               </span>
-              <span className="text-sm font-bold font-mono text-slate-700">
+              <span className="text-sm font-semibold font-mono text-slate-700">
                 ₹{(product.purchasePrice || product.cost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </span>
             </div>
 
             <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-xs">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider block">
+              <span className="text-[10px] text-slate-500 block">
                 Selling Price
               </span>
-              <span className="text-sm font-bold font-mono text-slate-900">
+              <span className="text-sm font-semibold font-mono text-slate-950">
                 ₹{(product.sellingPrice || product.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </span>
             </div>
 
             <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 shadow-xs">
-              <span className="text-[10px] text-emerald-700 uppercase tracking-wider block font-medium">
+              <span className="text-[10px] text-emerald-700 block font-medium">
                 Gross Margin
               </span>
-              <span className="text-sm font-bold font-mono text-emerald-800">
+              <span className="text-sm font-semibold font-mono text-emerald-800">
                 {margin}%
               </span>
             </div>
@@ -141,8 +141,8 @@ export function ProductDetailDrawer({
         </div>
 
         {/* 3. Barcodes & Scanner Identifiers */}
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+        <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+          <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
             <Barcode className="w-4 h-4 text-blue-600" />
             Registered Barcode Mappings
           </h4>
@@ -150,7 +150,7 @@ export function ProductDetailDrawer({
           <div className="space-y-2">
             <div className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg text-xs shadow-xs">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                   PRIMARY
                 </span>
                 <span className="font-mono text-slate-900">
@@ -167,7 +167,7 @@ export function ProductDetailDrawer({
                   className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg text-xs shadow-xs"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                    <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
                       {b.type || 'ALTERNATE'}
                     </span>
                     <span className="font-mono text-slate-800">{b.barcode}</span>
@@ -182,7 +182,7 @@ export function ProductDetailDrawer({
         {/* 4. Description & Notes */}
         {product.description && (
           <div className="space-y-1.5">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <h4 className="text-xs font-semibold text-slate-700">
               Catalog Notes & Description
             </h4>
             <p className="text-xs text-slate-700 leading-relaxed p-3 rounded-lg bg-slate-50 border border-slate-200">

@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Store, RefreshCw } from 'lucide-react';
-import { PageHeader, Button, Badge } from '../../../components/ui';
+import { Store, RefreshCw, Activity } from 'lucide-react';
+import { PageHeader, Button } from '../../../components/ui';
 
 export interface DashboardHeaderProps {
   storeId?: string;
@@ -20,11 +20,12 @@ export function DashboardHeader({
   return (
     <PageHeader
       title="Business Intelligence & Operational KPIs"
-      description="Real-time synchronized revenue, margin valuations, inventory ledger, and procurement flow."
+      description="Revenue, margin, inventory risk, and procurement flow in one synchronized owner view."
       badge={
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs text-slate-700 font-mono">
+        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 shadow-[0_6px_16px_rgba(15,23,42,0.035)]">
           <Store className="w-3.5 h-3.5 text-blue-600" />
-          <span>{storeLabel}</span>
+          <span className="font-mono">{storeLabel}</span>
+          <Activity className={`w-3.5 h-3.5 text-emerald-600 ${isRefetching ? 'animate-pulse' : ''}`} />
         </div>
       }
       actions={

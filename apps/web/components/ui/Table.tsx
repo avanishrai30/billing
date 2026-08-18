@@ -21,7 +21,7 @@ export function Table({
 }: TableProps) {
   return (
     <TableContext.Provider value={{ density, stickyHeader }}>
-      <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="w-full overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-[0_8px_26px_rgba(15,23,42,0.035)]">
         <table className={`w-full text-left text-xs text-slate-700 ${className}`} {...props}>
           {children}
         </table>
@@ -32,10 +32,10 @@ export function Table({
 
 export function TableHeader({ children, className = '', ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
   const { stickyHeader } = React.useContext(TableContext);
-  const stickyClass = stickyHeader ? 'sticky top-0 z-10 backdrop-blur-md bg-slate-50/95' : 'bg-slate-50';
+  const stickyClass = stickyHeader ? 'sticky top-0 z-10 backdrop-blur-md bg-slate-50/95' : 'bg-slate-50/90';
 
   return (
-    <thead className={`${stickyClass} border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px] select-none ${className}`} {...props}>
+    <thead className={`${stickyClass} border-b border-slate-200 text-slate-600 font-semibold text-[11px] select-none ${className}`} {...props}>
       {children}
     </thead>
   );
@@ -107,4 +107,3 @@ export function TableEmptyRow({ colSpan, message = 'No records found' }: { colSp
     </tr>
   );
 }
-

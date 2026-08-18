@@ -60,8 +60,8 @@ export function Drawer({
 
   const positionClass =
     position === 'right'
-      ? 'right-0 top-0 bottom-0 border-l border-white/15'
-      : 'left-0 top-0 bottom-0 border-r border-white/15';
+      ? 'right-0 top-0 bottom-0 border-l border-slate-200'
+      : 'left-0 top-0 bottom-0 border-r border-slate-200';
 
   return (
     <div
@@ -73,12 +73,12 @@ export function Drawer({
       <div
         data-testid="drawer-backdrop"
         onClick={onClose}
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-950/35 backdrop-blur-xs transition-opacity"
       />
 
       {/* Drawer Surface */}
       <div
-        className={`fixed z-10 w-full ${widthStyles[maxWidth]} bg-white ${positionClass} shadow-2xl flex flex-col h-full ${className}`}
+        className={`fixed z-10 w-full ${widthStyles[maxWidth]} bg-white ${positionClass} shadow-[0_24px_70px_rgba(15,23,42,0.18)] flex flex-col h-full ${className}`}
       >
         {/* Header */}
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4">
@@ -90,7 +90,7 @@ export function Drawer({
             type="button"
             onClick={onClose}
             aria-label="Close drawer"
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer focus-ring"
           >
             <X className="w-5 h-5" />
           </button>
@@ -109,4 +109,3 @@ export function Drawer({
     </div>
   );
 }
-

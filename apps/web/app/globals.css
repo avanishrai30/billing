@@ -3,18 +3,18 @@
 @layer base {
   :root {
     /* 1. Core Surfaces & Viewport Canvas (Light Premium Enterprise) */
-    --bg-canvas: #f8fafc;
+    --bg-canvas: #f6f7f9;
     --bg-surface: #ffffff;
-    --bg-surface-subtle: #f1f5f9;
+    --bg-surface-subtle: #f3f5f8;
     --bg-surface-elevated: #ffffff;
     --bg-surface-interactive: #f8fafc;
-    --bg-surface-hover: rgba(0, 0, 0, 0.03);
-    --bg-surface-active: rgba(0, 0, 0, 0.06);
+    --bg-surface-hover: rgba(15, 23, 42, 0.035);
+    --bg-surface-active: rgba(15, 23, 42, 0.065);
     --bg-overlay: rgba(15, 23, 42, 0.45);
 
     /* 2. Borders & Structure */
-    --border-hairline: #f1f5f9;
-    --border-default: #e2e8f0;
+    --border-hairline: #eef2f6;
+    --border-default: #dce3eb;
     --border-strong: #cbd5e1;
     --border-focus: #2563eb;
 
@@ -65,7 +65,7 @@
     background-color: var(--bg-canvas);
     color: var(--text-primary);
     font-family: var(--font-system);
-    min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
@@ -106,10 +106,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(100, 116, 139, 0.36);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(71, 85, 105, 0.5);
 }

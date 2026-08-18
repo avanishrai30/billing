@@ -28,7 +28,7 @@ const sizeStyles: Record<InputSize, { height: string; text: string; paddingLeftW
     paddingRightWithIcon: 'pr-9'
   },
   lg: {
-    height: 'h-10.5',
+    height: 'h-[42px]',
     text: 'text-sm',
     px: 'px-3.5',
     paddingLeftWithIcon: 'pl-10',
@@ -66,7 +66,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           disabled={disabled}
-          className={`w-full ${sz.height} ${sz.text} bg-white rounded-lg text-slate-900 placeholder-slate-400 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`w-full ${sz.height} ${sz.text} bg-white rounded-lg text-slate-900 placeholder-slate-500 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
             leftIcon ? sz.paddingLeftWithIcon : sz.px
           } ${rightIcon ? sz.paddingRightWithIcon : sz.px} ${
             isNumeric ? 'tabular-nums font-mono text-right' : ''
@@ -84,4 +84,3 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
-

@@ -45,16 +45,16 @@ export function Cart({
   return (
     <div
       data-testid="pos-cart-panel"
-      className="bg-white border border-slate-200 rounded-2xl flex flex-col h-full overflow-hidden shadow-xs"
+      className="bg-white border border-slate-200 rounded-lg flex flex-col h-full overflow-hidden shadow-[0_14px_38px_rgba(15,23,42,0.06)]"
     >
       {/* Header */}
       <div className="p-4 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+          <div className="w-7 h-7 rounded-md bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
             <ShoppingCart className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+            <h3 className="text-xs font-semibold text-slate-950">
               Current Sale Cart
             </h3>
             <span className="text-[11px] text-slate-500">
@@ -87,7 +87,7 @@ export function Cart({
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {isCartEmpty ? (
           <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-center p-6 text-slate-500">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mb-3 text-slate-400">
+            <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center mb-3 text-slate-400">
               <ShoppingCart className="w-6 h-6" />
             </div>
             <p className="text-xs font-semibold text-slate-800">Cart is Empty</p>

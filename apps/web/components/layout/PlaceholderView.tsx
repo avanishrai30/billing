@@ -20,7 +20,7 @@ export function PlaceholderView({ title, description, phase, endpoint }: Placeho
       <div className="bg-white border border-slate-200 p-6 rounded-xl flex flex-col gap-3 shadow-xs">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-          <span className="text-xs font-semibold text-slate-900 uppercase tracking-wider">{phase} Migration Target</span>
+          <span className="text-xs font-semibold text-slate-900">{phase} Migration Target</span>
         </div>
         <p className="text-xs text-slate-600 leading-relaxed">
           The {title} module will be migrated during {phase} following the strict contract freeze rules.

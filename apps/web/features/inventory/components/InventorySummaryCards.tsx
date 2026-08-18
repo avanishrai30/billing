@@ -13,11 +13,11 @@ export interface InventorySummaryCardsProps {
 export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, idx) => (
           <div
             key={idx}
-            className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 space-y-2.5"
+            className="bg-white border border-slate-200 rounded-lg p-4 space-y-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]"
           >
             <div className="flex justify-between items-center">
               <Skeleton variant="text" className="w-24 h-3.5" />
@@ -41,46 +41,46 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
       value: totalUnits.toLocaleString('en-IN', { maximumFractionDigits: 2 }),
       subtext: `${summary?.totalTrackedItems ?? 0} tracked product lines`,
       icon: Layers,
-      color: 'text-sky-400',
-      bg: 'bg-sky-500/10 border-sky-400/20'
+      color: 'text-blue-700',
+      bg: 'bg-blue-50 border-blue-100'
     },
     {
       label: 'Low Stock Warnings',
       value: lowStock.toString(),
       subtext: 'Below reorder threshold',
       icon: AlertTriangle,
-      color: lowStock > 0 ? 'text-amber-400' : 'text-slate-400',
-      bg: lowStock > 0 ? 'bg-amber-500/10 border-amber-400/20' : 'bg-white/5 border-white/10'
+      color: lowStock > 0 ? 'text-amber-700' : 'text-slate-500',
+      bg: lowStock > 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'
     },
     {
       label: 'Out of Stock Items',
       value: outOfStock.toString(),
       subtext: 'Requires replenishment',
       icon: XCircle,
-      color: outOfStock > 0 ? 'text-rose-400' : 'text-slate-400',
-      bg: outOfStock > 0 ? 'bg-rose-500/10 border-rose-400/20' : 'bg-white/5 border-white/10'
+      color: outOfStock > 0 ? 'text-rose-700' : 'text-slate-500',
+      bg: outOfStock > 0 ? 'bg-rose-50 border-rose-200' : 'bg-slate-50 border-slate-200'
     },
     {
-      label: 'Total Stock Valuation',
+      label: 'Stock Valuation',
       value: `₹ ${valuation.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       subtext: 'Based on purchase cost',
       icon: IndianRupee,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10 border-emerald-400/20'
+      color: 'text-emerald-700',
+      bg: 'bg-emerald-50 border-emerald-200'
     }
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {cards.map((c) => {
         const Icon = c.icon;
         return (
           <div
             key={c.label}
-            className="bg-[#0f172a] border border-white/10 rounded-2xl p-4 flex flex-col justify-between"
+            className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col justify-between shadow-[0_8px_24px_rgba(15,23,42,0.035)]"
           >
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-semibold text-slate-400 truncate">
+              <span className="text-xs font-semibold text-slate-600">
                 {c.label}
               </span>
               <div
@@ -91,10 +91,10 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
             </div>
 
             <div>
-              <div className="text-lg sm:text-xl font-bold font-mono text-white tracking-tight tabular-nums">
+              <div className="text-lg sm:text-xl font-semibold font-mono text-slate-950 tracking-tight tabular-nums">
                 {c.value}
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5 truncate">
+              <div className="text-[11px] text-slate-600 mt-0.5 truncate">
                 {c.subtext}
               </div>
             </div>

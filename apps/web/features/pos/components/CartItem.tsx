@@ -25,7 +25,7 @@ export function CartItem({
   return (
     <div
       data-testid={`cart-item-${item.productId}`}
-      className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs"
+      className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2 text-xs"
     >
       {/* Top row: Name, unit price, remove button */}
       <div className="flex items-start justify-between gap-2">
@@ -38,7 +38,7 @@ export function CartItem({
               ₹ {item.price.toFixed(2)} / {item.unit}
             </span>
             {item.gst > 0 && (
-              <span className="px-1 py-0.2 rounded bg-slate-200/80 text-slate-700 text-[10px]">
+              <span className="px-1 py-[1px] rounded bg-slate-200/80 text-slate-700 text-[10px]">
                 {item.gst}% GST
               </span>
             )}
@@ -103,7 +103,7 @@ export function CartItem({
       {/* Expandable Discount Input */}
       {showDiscount && (
         <div className="flex items-center gap-2 pt-1 border-t border-white/5">
-          <span className="text-[11px] text-slate-400">Discount %:</span>
+            <span className="text-[11px] text-slate-600">Discount %:</span>
           <div className="flex items-center gap-1">
             {[0, 5, 10, 15, 20].map((pct) => (
               <button
@@ -112,8 +112,8 @@ export function CartItem({
                 onClick={() => onUpdateDiscount(pct)}
                 className={`px-2 py-0.5 rounded text-[10px] font-mono cursor-pointer ${
                   item.discountPercent === pct
-                    ? 'bg-sky-500 text-white font-bold'
-                    : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                    ? 'bg-blue-700 text-white font-bold'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
                 }`}
               >
                 {pct}%

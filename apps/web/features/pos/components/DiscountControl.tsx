@@ -22,19 +22,19 @@ export function DiscountControl({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="w-full py-1.5 px-3 rounded-xl border border-dashed border-white/20 hover:border-white/40 text-slate-400 hover:text-white text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+        className="w-full py-2 px-3 rounded-lg border border-dashed border-slate-300 hover:border-blue-300 text-slate-600 hover:text-blue-700 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer focus-ring"
       >
-        <Tag className="w-3.5 h-3.5 text-sky-400" />
+        <Tag className="w-3.5 h-3.5 text-blue-600" />
         <span>Apply Cart Discount / Coupon</span>
       </button>
     );
   }
 
   return (
-    <div className="bg-[#0f172a] border border-white/10 rounded-xl p-3 space-y-2">
+    <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold text-slate-300 flex items-center gap-1.5">
-          <Tag className="w-3.5 h-3.5 text-sky-400" />
+        <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+          <Tag className="w-3.5 h-3.5 text-blue-600" />
           Cart Level Discount
         </span>
         <IconButton
@@ -74,8 +74,8 @@ export function DiscountControl({
               onClick={() => onChange(amt)}
               className={`px-2 py-1 rounded-lg text-[10px] font-mono cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
                 discount === amt
-                  ? 'bg-sky-500 text-white font-bold'
-                  : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                  ? 'bg-blue-700 text-white font-bold'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
               }`}
             >
               ₹{amt}

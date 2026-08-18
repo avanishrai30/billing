@@ -159,7 +159,7 @@ export function ProductImportDialog({
         {errorMsg && (
           <div
             role="alert"
-            className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs font-medium"
+            className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs font-medium"
           >
             {errorMsg}
           </div>
@@ -168,8 +168,8 @@ export function ProductImportDialog({
         {/* STEP 1: Upload */}
         {step === 'upload' && (
           <div className="space-y-4">
-            <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+              <label className="block text-xs font-semibold text-slate-700">
                 Import Strategy & Collision Resolution
               </label>
               <Select
@@ -181,7 +181,7 @@ export function ProductImportDialog({
 
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-white/20 hover:border-sky-400/50 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-white/[0.02] hover:bg-white/[0.04]"
+              className="border-2 border-dashed border-slate-300 hover:border-blue-300 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50/40"
             >
               <input
                 type="file"
@@ -190,17 +190,17 @@ export function ProductImportDialog({
                 accept=".csv,.json"
                 className="hidden"
               />
-              <div className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center text-sky-400 mb-3">
+              <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 mb-3">
                 <Upload className="w-6 h-6" />
               </div>
-              <p className="text-sm font-semibold text-white">Click or drag CSV / JSON file to upload</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm">
+              <p className="text-sm font-semibold text-slate-950">Click or drag CSV / JSON file to upload</p>
+              <p className="text-xs text-slate-600 mt-1 max-w-sm">
                 Supported columns: SKU, Name, Category, Brand, Cost Price, Selling Price, GST, Unit, Barcode.
               </p>
             </div>
 
             {previewMutation.isPending && (
-              <div className="flex items-center justify-center gap-2 text-xs text-sky-400 py-2">
+              <div className="flex items-center justify-center gap-2 text-xs text-blue-700 py-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Validating catalog schema and checking collisions...
               </div>
@@ -213,41 +213,41 @@ export function ProductImportDialog({
           <div className="space-y-4">
             {/* KPI Summary */}
             <div className="grid grid-cols-4 gap-3">
-              <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-center">
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Total Rows</span>
-                <span className="text-base font-bold font-mono text-white">{previewData.totalRows}</span>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
+                <span className="text-[10px] text-slate-600 block">Total Rows</span>
+                <span className="text-base font-semibold font-mono text-slate-950">{previewData.totalRows}</span>
               </div>
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-                <span className="text-[10px] text-emerald-400 uppercase tracking-wider block">Valid Rows</span>
-                <span className="text-base font-bold font-mono text-emerald-300">{previewData.validRows}</span>
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-center">
+                <span className="text-[10px] text-emerald-700 block">Valid Rows</span>
+                <span className="text-base font-semibold font-mono text-emerald-800">{previewData.validRows}</span>
               </div>
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center">
-                <span className="text-[10px] text-amber-400 uppercase tracking-wider block">Warnings</span>
-                <span className="text-base font-bold font-mono text-amber-300">{previewData.warningRows}</span>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                <span className="text-[10px] text-amber-700 block">Warnings</span>
+                <span className="text-base font-semibold font-mono text-amber-800">{previewData.warningRows}</span>
               </div>
-              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center">
-                <span className="text-[10px] text-rose-400 uppercase tracking-wider block">Error Rows</span>
-                <span className="text-base font-bold font-mono text-rose-300">{previewData.errorRows}</span>
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-center">
+                <span className="text-[10px] text-rose-700 block">Error Rows</span>
+                <span className="text-base font-semibold font-mono text-rose-800">{previewData.errorRows}</span>
               </div>
             </div>
 
             {/* Preview Table */}
-            <div className="border border-white/10 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+            <div className="border border-slate-200 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
               <table className="w-full text-left text-xs border-collapse font-mono">
-                <thead className="bg-[#131d33] text-slate-300 sticky top-0">
+                <thead className="bg-slate-50 text-slate-600 sticky top-0">
                   <tr>
-                    <th className="p-2.5 border-b border-white/10">Row</th>
-                    <th className="p-2.5 border-b border-white/10">Status</th>
-                    <th className="p-2.5 border-b border-white/10">Action</th>
-                    <th className="p-2.5 border-b border-white/10">SKU</th>
-                    <th className="p-2.5 border-b border-white/10">Name</th>
-                    <th className="p-2.5 border-b border-white/10">Price (₹)</th>
+                    <th className="p-2.5 border-b border-slate-200">Row</th>
+                    <th className="p-2.5 border-b border-slate-200">Status</th>
+                    <th className="p-2.5 border-b border-slate-200">Action</th>
+                    <th className="p-2.5 border-b border-slate-200">SKU</th>
+                    <th className="p-2.5 border-b border-slate-200">Name</th>
+                    <th className="p-2.5 border-b border-slate-200">Price (₹)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 bg-[#0f172a]">
+                <tbody className="divide-y divide-slate-100 bg-white">
                   {previewData.rows.slice(0, 50).map((r, idx) => (
-                    <tr key={idx} className="hover:bg-white/5">
-                      <td className="p-2.5 text-slate-400">{r.rowNumber}</td>
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="p-2.5 text-slate-500">{r.rowNumber}</td>
                       <td className="p-2.5">
                         <Badge
                           variant={
@@ -258,17 +258,17 @@ export function ProductImportDialog({
                           {r.status}
                         </Badge>
                       </td>
-                      <td className="p-2.5 text-slate-300">{r.action}</td>
-                      <td className="p-2.5 text-white font-bold">{r.sku}</td>
-                      <td className="p-2.5 text-slate-200 truncate max-w-[160px]">{r.name}</td>
-                      <td className="p-2.5 text-emerald-400">₹{r.sellingPrice}</td>
+                      <td className="p-2.5 text-slate-600">{r.action}</td>
+                      <td className="p-2.5 text-slate-950 font-semibold">{r.sku}</td>
+                      <td className="p-2.5 text-slate-700 truncate max-w-[160px]">{r.name}</td>
+                      <td className="p-2.5 text-emerald-700">₹{r.sellingPrice}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
               <Button variant="ghost" size="sm" onClick={handleReset}>
                 Upload Different File
               </Button>
@@ -288,22 +288,22 @@ export function ProductImportDialog({
         {/* STEP 3: Success Confirmation */}
         {step === 'success' && commitSummary && (
           <div className="space-y-4 text-center py-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto">
+            <div className="w-14 h-14 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 mx-auto">
               <CheckCircle className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Import Committed Successfully</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Successfully processed <strong className="text-white font-mono">{commitSummary.imported}</strong> catalog SKUs.
+              <h3 className="text-base font-semibold text-slate-950">Import Committed Successfully</h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Successfully processed <strong className="text-slate-950 font-mono">{commitSummary.imported}</strong> catalog SKUs.
               </p>
             </div>
 
             <div className="flex justify-center gap-4 text-xs font-mono">
-              <span className="text-emerald-400">Created: {commitSummary.created}</span>
-              <span className="text-sky-400">Updated: {commitSummary.updated}</span>
+              <span className="text-emerald-700">Created: {commitSummary.created}</span>
+              <span className="text-blue-700">Updated: {commitSummary.updated}</span>
             </div>
 
-            <div className="pt-4 border-t border-white/10 flex justify-center">
+            <div className="pt-4 border-t border-slate-200 flex justify-center">
               <Button variant="primary" size="sm" onClick={handleClose}>
                 Done & View Catalog
               </Button>

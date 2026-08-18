@@ -9,7 +9,7 @@ export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> 
 export function Label({ children, required, className = '', ...props }: LabelProps) {
   return (
     <label
-      className={`block text-xs font-semibold text-slate-300 uppercase tracking-wider select-none ${className}`}
+      className={`block text-xs font-semibold text-slate-700 select-none ${className}`}
       {...props}
     >
       {children}

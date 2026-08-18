@@ -26,16 +26,15 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
   const extPct = Math.round((metrics.externalProducts / totalProducts) * 100);
 
   return (
-    <Card variant="default">
+    <Card variant="default" className="overflow-hidden">
       <SectionHeader
         title="Financial Velocity & Portfolio Composition"
-        subtitle="Authoritative server-side aggregated ledger comparisons"
+        subtitle="Server-aggregated ledger balances and SKU portfolio mix"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-2">
-        {/* 1. Financial Distribution Scale */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-6 pt-1">
         <div className="space-y-4">
-          <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
+          <span className="text-xs font-semibold text-slate-700 block">
             Financial Balance Comparison
           </span>
 
@@ -48,7 +47,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
                   ₹ {metrics.totalSales.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-emerald-500 rounded-full"
                   style={{ width: `${Math.min(salesPct, 100)}%` }}
@@ -64,7 +63,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
                   ₹ {metrics.totalPurchases.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-500 rounded-full"
                   style={{ width: `${Math.min(purchasePct, 100)}%` }}
@@ -80,7 +79,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
                   ₹ {metrics.stockAssetValuationCost.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-amber-500 rounded-full"
                   style={{ width: `${Math.min(stockCostPct, 100)}%` }}
@@ -96,7 +95,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
                   ₹ {metrics.stockAssetValuationRetail.toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-indigo-500 rounded-full"
                   style={{ width: `${Math.min(stockRetailPct, 100)}%` }}
@@ -106,13 +105,12 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
           </div>
         </div>
 
-        {/* 2. Product Portfolio Composition */}
         <div className="space-y-4">
-          <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
+          <span className="text-xs font-semibold text-slate-700 block">
             Catalog & Brand Portfolio
           </span>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-4">
+          <div className="p-4 rounded-lg bg-slate-50/80 border border-slate-200 space-y-4">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600">Own Production vs Vendor SKUs</span>
               <span className="font-mono text-slate-900 font-semibold">
@@ -121,7 +119,7 @@ export function SalesSummaryChart({ metrics }: SalesSummaryChartProps) {
             </div>
 
             {/* Segmented Bar */}
-            <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden flex">
+            <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden flex">
               <div
                 className="h-full bg-blue-500"
                 style={{ width: `${ownPct}%` }}

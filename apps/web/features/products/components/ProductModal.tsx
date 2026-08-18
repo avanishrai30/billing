@@ -199,7 +199,7 @@ export function ProductModal({
         {serverError && (
           <div
             role="alert"
-            className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs font-medium"
+            className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs font-medium"
           >
             {serverError}
           </div>
@@ -207,8 +207,8 @@ export function ProductModal({
 
         {/* 1. Core Identification */}
         <div className="space-y-4">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-white/10 pb-2">
-            1. Product Identification
+          <h4 className="text-xs font-semibold text-slate-800 border-b border-slate-200 pb-2">
+            Product Identification
           </h4>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -277,11 +277,11 @@ export function ProductModal({
 
         {/* 2. Pricing, Tax & Commercials */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-white/10 pb-2">
-            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              2. Commercial Pricing & Tax
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <h4 className="text-xs font-semibold text-slate-800">
+              Commercial Pricing & Tax
             </h4>
-            <span className="text-xs font-mono font-semibold text-emerald-400">
+            <span className="text-xs font-mono font-semibold text-emerald-700">
               Est. Margin: {marginPercent}%
             </span>
           </div>
@@ -315,7 +315,7 @@ export function ProductModal({
                 step="0.01"
                 {...register('sellingPrice', { valueAsNumber: true })}
                 placeholder="0.00"
-                className="font-mono font-semibold text-white"
+                className="font-mono font-semibold text-slate-950"
               />
             </FormField>
 
@@ -337,8 +337,8 @@ export function ProductModal({
 
         {/* 3. Physical Specs & Formats */}
         <div className="space-y-4">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-white/10 pb-2">
-            3. Physical Specifications & Classification
+          <h4 className="text-xs font-semibold text-slate-800 border-b border-slate-200 pb-2">
+            Physical Specifications & Classification
           </h4>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -459,7 +459,7 @@ export function ProductModal({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
           <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>

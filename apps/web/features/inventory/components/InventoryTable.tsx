@@ -46,7 +46,7 @@ export function InventoryTable({
 }: InventoryTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4 py-2">
             <Skeleton variant="text" className="w-1/4 h-5" />
@@ -76,7 +76,6 @@ export function InventoryTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
       <Table density="dense">
         <TableHeader>
           <tr>
@@ -106,7 +105,7 @@ export function InventoryTable({
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                     <span className="font-mono">{item.sku || 'No SKU'}</span>
-                    {item.category && <span>• {item.category}</span>}
+                    {item.category && <span>/ {item.category}</span>}
                   </div>
                 </TableCell>
 
@@ -204,6 +203,5 @@ export function InventoryTable({
           })}
         </TableBody>
       </Table>
-    </div>
   );
 }

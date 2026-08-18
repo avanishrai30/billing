@@ -13,12 +13,10 @@ export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#090d16] flex">
-      {/* Sidebar Navigation */}
+    <div className="min-h-[100dvh] bg-[var(--bg-canvas)] text-slate-950 flex">
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
-      {/* Main Workspace Frame */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-[17rem]">
         <Topbar onOpenMobileMenu={() => setMobileMenuOpen(true)} />
         <Workspace>
           {children}

@@ -69,7 +69,7 @@ export function Avatar({
   return (
     <div className={`relative inline-flex items-center justify-center flex-shrink-0 ${className}`}>
       <div
-        className={`${sz.container} rounded-full bg-[#131d33] border border-white/15 flex items-center justify-center text-slate-200 font-semibold overflow-hidden shadow-xs select-none`}
+        className={`${sz.container} rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-semibold overflow-hidden shadow-xs select-none`}
       >
         {showImage ? (
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -82,13 +82,13 @@ export function Avatar({
         ) : initials ? (
           <span className={sz.text}>{initials}</span>
         ) : (
-          <User className={`${sz.icon} text-slate-400`} />
+          <User className={`${sz.icon} text-slate-500`} />
         )}
       </div>
 
       {status && (
         <span
-          className={`absolute bottom-0 right-0 ${sz.dot} rounded-full ${statusColors[status]} ring-2 ring-[#090d16]`}
+          className={`absolute bottom-0 right-0 ${sz.dot} rounded-full ${statusColors[status]} ring-2 ring-white`}
           aria-hidden="true"
         />
       )}

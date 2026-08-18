@@ -79,13 +79,13 @@ export function ProductImageUploader({
 
   return (
     <div className="space-y-2">
-      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider select-none">
+      <label className="block text-xs font-semibold text-slate-700 select-none">
         Product Visual Asset
       </label>
 
       <div className="flex items-center gap-4">
         {/* Preview Box */}
-        <div className="relative w-20 h-20 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="relative w-20 h-20 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
           {normalizedUrl ? (
             <img
               src={normalizedUrl}
@@ -102,7 +102,7 @@ export function ProductImageUploader({
 
           {isUploading && (
             <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 text-sky-400 animate-spin" />
+              <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
             </div>
           )}
         </div>
@@ -144,12 +144,12 @@ export function ProductImageUploader({
             )}
           </div>
 
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-600">
             JPG, PNG or WebP. Auto-compressed to 800x800 WebP with sharp optimization.
           </p>
 
           {uploadError && (
-            <p className="text-xs text-rose-400 font-medium">{uploadError}</p>
+            <p className="text-xs text-rose-600 font-medium">{uploadError}</p>
           )}
         </div>
       </div>

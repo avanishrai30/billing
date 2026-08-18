@@ -42,19 +42,19 @@ export function StatCard({
 
   return (
     <div
-      className={`p-5 bg-white border border-slate-200 rounded-xl flex flex-col justify-between shadow-xs transition-colors hover:border-slate-300 ${className}`}
+      className={`p-4 bg-white border border-slate-200 rounded-lg flex flex-col justify-between shadow-[0_8px_24px_rgba(15,23,42,0.035)] transition-colors hover:border-slate-300 ${className}`}
     >
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="text-[11px] font-semibold text-slate-600">{label}</span>
         {icon && (
-          <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 flex-shrink-0">
+          <div className="w-7 h-7 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 flex-shrink-0">
             {icon}
           </div>
         )}
       </div>
 
       <div className="space-y-1">
-        <div className="text-2xl font-bold tracking-tight text-slate-900 tabular-nums font-mono">
+        <div className="text-[1.45rem] font-semibold tracking-tight text-slate-950 tabular-nums font-mono leading-tight">
           {isCurrency && typeof value === 'number'
             ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value)
             : value}
@@ -72,7 +72,7 @@ export function StatCard({
                 <span>{trend.value}</span>
               </span>
             )}
-            {subtext && <span className="text-[11px] text-slate-500 truncate">{subtext}</span>}
+            {subtext && <span className="text-[11px] text-slate-600 leading-4">{subtext}</span>}
           </div>
         )}
       </div>
@@ -111,12 +111,11 @@ export function MetricCard({
 
   return (
     <div
-      className={`p-4 border rounded-xl flex flex-col justify-between shadow-xs transition-colors ${statusBg[status]} ${statusBorder[status]} ${className}`}
+      className={`p-4 border rounded-lg flex flex-col justify-between shadow-[0_8px_24px_rgba(15,23,42,0.035)] transition-colors ${statusBg[status]} ${statusBorder[status]} ${className}`}
     >
-      <span className="text-xs text-slate-500 font-medium">{title}</span>
-      <div className="text-xl font-bold text-slate-900 mt-1 tabular-nums font-mono">{metric}</div>
-      {description && <span className="text-[11px] text-slate-500 mt-1">{description}</span>}
+      <span className="text-xs text-slate-600 font-medium">{title}</span>
+      <div className="text-xl font-semibold text-slate-950 mt-1 tabular-nums font-mono">{metric}</div>
+      {description && <span className="text-[11px] text-slate-600 mt-1">{description}</span>}
     </div>
   );
 }
-

@@ -31,26 +31,29 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   permission?: string;
+  group: 'Operate' | 'Trade' | 'Network' | 'Control';
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
-  { label: 'POS Terminal', href: '/pos', icon: ShoppingCart, permission: 'invoices.create' },
-  { label: 'Product Master', href: '/products', icon: Package, permission: 'products.view' },
-  { label: 'Inventory', href: '/inventory', icon: Boxes, permission: 'inventory.view' },
-  { label: 'Purchases', href: '/purchases', icon: Truck, permission: 'purchases.view' },
-  { label: 'Invoices', href: '/invoices', icon: Receipt, permission: 'invoices.view' },
-  { label: 'Tax & GST', href: '/tax', icon: Landmark, permission: 'invoices.view' },
-  { label: 'Customers', href: '/customers', icon: Users, permission: 'customers.view' },
-  { label: 'Suppliers', href: '/suppliers', icon: Building2, permission: 'suppliers.view' },
-  { label: 'Outlets', href: '/stores', icon: Store, permission: 'stores.view' },
-  { label: 'Franchise', href: '/franchises', icon: Network, permission: 'franchise.view' },
-  { label: 'Users', href: '/users', icon: ShieldCheck, permission: 'users.view' },
-  { label: 'Roles & Access', href: '/permissions', icon: ShieldAlert, permission: 'roles.view' },
-  { label: 'Audit Trail', href: '/audit', icon: History, permission: 'audit.view' },
-  { label: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view' },
-  { label: 'Design System', href: '/design-system', icon: Palette, permission: 'dashboard.view' }
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.view', group: 'Operate' },
+  { label: 'POS Terminal', href: '/pos', icon: ShoppingCart, permission: 'invoices.create', group: 'Operate' },
+  { label: 'Product Master', href: '/products', icon: Package, permission: 'products.view', group: 'Operate' },
+  { label: 'Inventory', href: '/inventory', icon: Boxes, permission: 'inventory.view', group: 'Operate' },
+  { label: 'Purchases', href: '/purchases', icon: Truck, permission: 'purchases.view', group: 'Trade' },
+  { label: 'Invoices', href: '/invoices', icon: Receipt, permission: 'invoices.view', group: 'Trade' },
+  { label: 'Tax & GST', href: '/tax', icon: Landmark, permission: 'invoices.view', group: 'Trade' },
+  { label: 'Customers', href: '/customers', icon: Users, permission: 'customers.view', group: 'Network' },
+  { label: 'Suppliers', href: '/suppliers', icon: Building2, permission: 'suppliers.view', group: 'Network' },
+  { label: 'Outlets', href: '/stores', icon: Store, permission: 'stores.view', group: 'Network' },
+  { label: 'Franchise', href: '/franchises', icon: Network, permission: 'franchise.view', group: 'Network' },
+  { label: 'Users', href: '/users', icon: ShieldCheck, permission: 'users.view', group: 'Control' },
+  { label: 'Roles & Access', href: '/permissions', icon: ShieldAlert, permission: 'roles.view', group: 'Control' },
+  { label: 'Audit Trail', href: '/audit', icon: History, permission: 'audit.view', group: 'Control' },
+  { label: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view', group: 'Control' },
+  { label: 'Design System', href: '/design-system', icon: Palette, permission: 'dashboard.view', group: 'Control' }
 ];
+
+const NAV_GROUPS: NavItem['group'][] = ['Operate', 'Trade', 'Network', 'Control'];
 
 interface SidebarProps {
   isOpen: boolean;
@@ -79,21 +82,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div
           data-testid="sidebar-backdrop"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-xs lg:hidden"
         />
       )}
 
-      {/* Sidebar Container */}
       <aside
         data-testid="sidebar-container"
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-white border-r border-slate-200 shadow-xs flex flex-col transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-[17rem] bg-white border-r border-slate-200/80 shadow-[8px_0_32px_rgba(15,23,42,0.04)] flex flex-col transition-transform duration-200 ease-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Brand Header */}
-        <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
+        <div className="h-[68px] px-4 border-b border-slate-200/80 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-blue-600 flex-shrink-0 overflow-hidden">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 flex-shrink-0 overflow-hidden shadow-[0_6px_16px_rgba(37,99,235,0.08)]">
               {showLogoImage ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
@@ -106,45 +107,59 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <ShieldCheck className="w-5 h-5 text-blue-600" />
               )}
             </div>
-            <span className="font-semibold text-sm text-slate-900 truncate">{brandTitle}</span>
+            <div className="min-w-0">
+              <span className="font-semibold text-sm text-slate-950 truncate block">{brandTitle}</span>
+              <span className="text-[11px] text-slate-500">Enterprise billing workspace</span>
+            </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Close sidebar"
-            className="lg:hidden text-slate-400 hover:text-slate-700 p-1 rounded-md cursor-pointer"
+            className="lg:hidden text-slate-500 hover:text-slate-900 p-1.5 rounded-md hover:bg-slate-100 cursor-pointer focus-ring"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Navigation List */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {visibleNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+        <nav className="flex-1 px-3 py-3 overflow-y-auto" aria-label="Primary navigation">
+          {NAV_GROUPS.map((group) => {
+            const groupItems = visibleNavItems.filter((item) => item.group === group);
+            if (groupItems.length === 0) return null;
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => onClose()}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs border-l-2 border-blue-600'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
-                <span className="truncate">{item.label}</span>
-              </Link>
+              <div key={group} className="py-2 first:pt-0">
+                <div className="px-3 pb-1.5 text-[10px] font-semibold text-slate-400">
+                  {group}
+                </div>
+                <div className="space-y-1">
+                  {groupItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => onClose()}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors focus-ring ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-800 font-semibold border border-blue-100 shadow-[0_8px_20px_rgba(37,99,235,0.08)]'
+                            : 'text-slate-600 border border-transparent hover:bg-slate-50 hover:text-slate-950'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-blue-700' : 'text-slate-400'}`} />
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </nav>
 
-        {/* Footer info */}
-        <div className="px-4 py-3 border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">
-          <span>AIAVRO v2.0 Enterprise</span>
-          <span className="text-[10px] text-slate-400 font-mono">PROD</span>
+        <div className="px-4 py-3 border-t border-slate-200/80 text-[11px] text-slate-500">
+          <span>Secured by role and store scope</span>
         </div>
       </aside>
     </>

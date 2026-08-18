@@ -20,15 +20,15 @@ export function PageHeader({
   className = ''
 }: PageHeaderProps) {
   return (
-    <div className={`space-y-2 border-b border-slate-200 pb-5 mb-6 ${className}`}>
+    <div className={`space-y-2 border-b border-slate-200/80 pb-5 mb-6 ${className}`}>
       {breadcrumbs && <div className="text-xs text-slate-500 mb-1">{breadcrumbs}</div>}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
+            <h1 className="text-2xl sm:text-[1.7rem] font-semibold tracking-tight text-slate-950 leading-tight">{title}</h1>
             {badge}
           </div>
-          {description && <p className="text-xs text-slate-500">{description}</p>}
+          {description && <p className="text-sm text-slate-600 max-w-3xl leading-6">{description}</p>}
         </div>
         {actions && <div className="flex items-center gap-2.5 flex-wrap">{actions}</div>}
       </div>
@@ -45,10 +45,10 @@ export interface SectionHeaderProps {
 
 export function SectionHeader({ title, subtitle, action, className = '' }: SectionHeaderProps) {
   return (
-    <div className={`flex items-center justify-between gap-4 border-b border-slate-200 pb-3 mb-4 ${className}`}>
+    <div className={`flex items-start justify-between gap-4 border-b border-slate-200/80 pb-3 mb-4 ${className}`}>
       <div>
-        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-        {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
+        {subtitle && <p className="text-xs text-slate-600 mt-1 leading-5">{subtitle}</p>}
       </div>
       {action && <div className="flex-shrink-0">{action}</div>}
     </div>
@@ -64,7 +64,7 @@ export interface ToolbarProps {
 export function Toolbar({ left, right, className = '' }: ToolbarProps) {
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-white border border-slate-200 rounded-xl mb-4 shadow-xs ${className}`}
+      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-white border border-slate-200 rounded-lg mb-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] ${className}`}
     >
       <div className="flex items-center gap-2 flex-wrap">{left}</div>
       <div className="flex items-center gap-2 flex-wrap">{right}</div>
@@ -81,10 +81,9 @@ export interface FilterBarProps {
 export function FilterBar({ children, onReset, className = '' }: FilterBarProps) {
   return (
     <div
-      className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4 bg-white border border-slate-200 rounded-xl mb-4 shadow-xs ${className}`}
+      className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4 bg-white border border-slate-200 rounded-lg mb-4 shadow-[0_8px_28px_rgba(15,23,42,0.035)] ${className}`}
     >
       {children}
     </div>
   );
 }
-

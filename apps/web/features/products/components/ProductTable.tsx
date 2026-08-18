@@ -50,7 +50,7 @@ export function ProductTable({
 }: ProductTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 animate-pulse shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-4 animate-pulse shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
         <div className="flex justify-between items-center pb-4 border-b border-slate-200">
           <Skeleton height={20} width={200} />
           <Skeleton height={20} width={120} />
@@ -75,7 +75,7 @@ export function ProductTable({
 
   if (products.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-lg p-8 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
         <EmptyState
           title="No Product SKUs Found"
           description="No products match the selected search terms, category filters, or archive status."
@@ -85,8 +85,6 @@ export function ProductTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
-      <div className="overflow-x-auto">
         <Table stickyHeader density="comfortable">
           <TableHeader>
             <TableRow>
@@ -123,7 +121,7 @@ export function ProductTable({
                   {/* Product Name & Brand */}
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                         {imageUrl ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
@@ -144,7 +142,7 @@ export function ProductTable({
                         </div>
                         <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
                           <span>{p.brand || 'VC Organic'}</span>
-                          <span>•</span>
+                          <span>/</span>
                           <span className="font-mono text-slate-600">
                             {p.unit || 'pc'}
                             {p.sellingMode === 'loose' || p.sellingMode === 'weight_based' ? ' (Loose)' : ''}
@@ -254,8 +252,5 @@ export function ProductTable({
             })}
           </TableBody>
         </Table>
-      </div>
-    </div>
   );
 }
-

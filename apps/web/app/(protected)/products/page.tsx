@@ -178,8 +178,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* 1. Page Header & Actions */}
+    <div className="space-y-4 pb-10">
       <ProductHeader
         canCreate={canCreate}
         canImport={canImport}
@@ -187,10 +186,8 @@ export default function ProductsPage() {
         onOpenImport={() => setIsImportOpen(true)}
       />
 
-      {/* 2. Top Summary KPI Cards */}
       <ProductSummaryCards metrics={summaryMetrics} isLoading={isLoading} />
 
-      {/* 3. Search & Filter Bar */}
       <ProductFilters
         filters={filters}
         onFilterChange={handleFilterChange}
@@ -200,7 +197,6 @@ export default function ProductsPage() {
         totalResults={filteredProducts.length}
       />
 
-      {/* 4. Table / Error State */}
       {isError ? (
         <ErrorState
           title="Failed to Load Product Catalog"
@@ -224,7 +220,6 @@ export default function ProductsPage() {
         />
       )}
 
-      {/* Modals & Dialogs */}
       <ProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

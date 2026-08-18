@@ -87,7 +87,7 @@ export function PaymentPanel({
       isOpen={isOpen}
       onClose={onClose}
       title="POS Settlement & Checkout"
-      description={`Finalize payment for ${itemCount} items • ${customer ? customer.name : 'Walk-in Customer'}`}
+      description={`Finalize payment for ${itemCount} items / ${customer ? customer.name : 'Walk-in Customer'}`}
       footer={
         <div className="flex items-center justify-end gap-2 w-full">
           <Button variant="secondary" size="sm" onClick={onClose} disabled={isLoading}>
@@ -107,17 +107,17 @@ export function PaymentPanel({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-start gap-2.5 text-rose-300 text-xs">
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-rose-700 text-xs">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Grand Total Callout */}
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+        <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
           <div>
             <span className="text-xs text-slate-500 block">Total Due</span>
-            <span className="text-2xl font-bold font-mono text-emerald-700 tabular-nums">
+            <span className="text-2xl font-semibold font-mono text-emerald-700 tabular-nums">
               ₹ {totals.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -132,7 +132,7 @@ export function PaymentPanel({
 
         {/* Payment Mode Selector */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wider">
+          <label className="block text-xs font-semibold text-slate-700 mb-2">
             Select Payment Method
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -145,7 +145,7 @@ export function PaymentPanel({
                   key={mode.id}
                   type="button"
                   onClick={() => setPaymentMode(mode.id)}
-                  className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`p-3 rounded-lg border flex items-center gap-2.5 text-xs font-semibold transition-colors cursor-pointer focus-ring ${
                     isSelected
                       ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-xs'
                       : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
@@ -176,7 +176,7 @@ export function PaymentPanel({
             </FormField>
 
             <FormField label="Change Return (₹)">
-              <div className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center font-mono font-bold text-amber-700 text-sm tabular-nums">
+              <div className="h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center font-mono font-semibold text-amber-700 text-sm tabular-nums">
                 ₹ {changeDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
             </FormField>

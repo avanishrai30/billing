@@ -23,7 +23,7 @@ const sizeStyles: Record<InputSize, { height: string; text: string; px: string; 
     pr: 'pr-9'
   },
   lg: {
-    height: 'h-10.5',
+    height: 'h-[42px]',
     text: 'text-sm',
     px: 'pl-3.5',
     pr: 'pr-10'
@@ -64,4 +64,3 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
 );
 
 PasswordInput.displayName = 'PasswordInput';
-

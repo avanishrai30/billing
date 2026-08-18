@@ -32,10 +32,10 @@ export function CategoryBar({
             role="tab"
             aria-selected={isSelected}
             onClick={() => onSelectCategory(cat)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex-shrink-0 ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex-shrink-0 focus-ring ${
               isSelected
-                ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                : 'bg-[#0f172a] hover:bg-white/10 text-slate-300 border border-white/10'
+                ? 'bg-blue-700 text-white shadow-[0_8px_18px_rgba(37,99,235,0.16)]'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
             }`}
           >
             {displayName}

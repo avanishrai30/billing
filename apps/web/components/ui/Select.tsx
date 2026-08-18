@@ -29,7 +29,7 @@ const sizeStyles: Record<InputSize, { height: string; text: string; px: string }
     px: 'pl-3 pr-8'
   },
   lg: {
-    height: 'h-10.5',
+    height: 'h-[42px]',
     text: 'text-sm',
     px: 'pl-3.5 pr-9'
   }
@@ -87,4 +87,3 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 );
 
 Select.displayName = 'Select';
-

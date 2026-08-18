@@ -45,20 +45,20 @@ export function ProductArchiveDialog({
         {error && (
           <div
             role="alert"
-            className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs font-medium"
+            className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs font-medium"
           >
             {error}
           </div>
         )}
 
-        <div className="flex items-start gap-3 p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-200">
-          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+          <AlertTriangle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <p className="font-semibold text-white">Product Catalog Soft-Delete</p>
-            <p className="text-slate-300 leading-relaxed">
-              Archiving SKU <strong className="font-mono text-white">{product.sku}</strong> will:
+            <p className="font-semibold text-slate-950">Product Catalog Soft-Delete</p>
+            <p className="text-slate-700 leading-relaxed">
+              Archiving SKU <strong className="font-mono text-slate-950">{product.sku}</strong> will:
             </p>
-            <ul className="list-disc pl-4 space-y-0.5 text-slate-300">
+            <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
               <li>Hide it from POS and purchase entry dropdowns.</li>
               <li>Deactivate barcode mappings for reassignment.</li>
               <li>Retain historical sales and ledger records without data loss.</li>
@@ -66,7 +66,7 @@ export function ProductArchiveDialog({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={archiveMutation.isPending}>
             Cancel
           </Button>

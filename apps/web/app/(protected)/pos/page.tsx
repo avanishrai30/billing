@@ -327,11 +327,9 @@ export default function POSTerminalPage() {
   };
 
   return (
-    <div className="space-y-4 pb-12">
-      {/* Hardware Barcode Scanner Listener */}
+    <div className="space-y-3.5 pb-8">
       <BarcodeInput onBarcodeScanned={handleBarcodeScanned} />
 
-      {/* POS Top Header */}
       <POSHeader
         storeName={storeName}
         cashierName={user?.name || user?.username || 'Cashier'}
@@ -339,25 +337,20 @@ export default function POSTerminalPage() {
         onOpenMobileCart={() => setIsMobileCartOpen(true)}
       />
 
-      {/* Main Split Layout: Catalog (Left) + Cart (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left Column: Product Catalog, Search & Categories (8 Cols) */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-3.5">
-          {/* Search Bar */}
           <ProductSearch
             value={searchQuery}
             onChange={setSearchQuery}
             onBarcodeEnter={handleBarcodeScanned}
           />
 
-          {/* Category Bar */}
           <CategoryBar
             categories={availableCategories}
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
           />
 
-          {/* Product Cards Grid */}
           <ProductGrid
             products={filteredProducts}
             cartItems={cartItems}
@@ -372,8 +365,7 @@ export default function POSTerminalPage() {
           />
         </div>
 
-        {/* Right Column: Sticky Cart Sidebar (Desktop 4-5 Cols) */}
-        <div className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-20 h-[calc(100vh-100px)]">
+        <div className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-[88px] h-[calc(100vh-100px)]">
           <Cart
             items={cartItems}
             totals={totals}

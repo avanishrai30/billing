@@ -41,8 +41,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* 1. Page Header with Scope & Live Sync */}
+    <div className="space-y-6 pb-10">
       <DashboardHeader
         storeId={storeId}
         isRefetching={isFetching}
@@ -63,17 +62,13 @@ export default function DashboardPage() {
         />
       ) : (
         <>
-          {/* 2. Top Metric Cards (Financial + Operational) */}
           <KPIGrid metrics={data.metrics} />
 
-          {/* 3. Analytics & Portfolio Distribution */}
           <SalesSummaryChart metrics={data.metrics} />
 
-          {/* 4. Critical Stock Breaches Watchlist */}
           <LowStockWatchlist items={data.lowStockWatchlist || []} />
 
-          {/* 5. Dual Activity Tables (Recent Sales & Purchases) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <RecentSalesTable invoices={data.recentInvoices || []} />
             <RecentPurchasesTable purchases={data.recentPurchases || []} />
           </div>

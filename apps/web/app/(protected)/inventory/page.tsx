@@ -177,8 +177,7 @@ export default function InventoryPage() {
   }, [products]);
 
   return (
-    <div className="space-y-4 pb-12">
-      {/* Header */}
+    <div className="space-y-4 pb-10">
       <InventoryHeader
         selectedLocation={selectedLocation}
         storeOptions={storeOptions}
@@ -189,13 +188,11 @@ export default function InventoryPage() {
         onOpenTransfer={() => handleOpenTransfer()}
       />
 
-      {/* Summary Metric Cards */}
       <InventorySummaryCards
         summary={summary}
         isLoading={isLoadingSummary}
       />
 
-      {/* Filter Controls */}
       <InventoryFilters
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -207,7 +204,6 @@ export default function InventoryPage() {
         onClearFilters={handleClearFilters}
       />
 
-      {/* Main Inventory Table */}
       <InventoryTable
         balances={filteredBalances}
         isLoading={isLoadingBalances || isLoadingProducts}

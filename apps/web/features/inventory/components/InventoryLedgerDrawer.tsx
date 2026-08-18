@@ -53,7 +53,7 @@ export function InventoryLedgerDrawer({
     >
       <div className="space-y-4">
         {/* Type Filter Bar */}
-        <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+        <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Filter className="w-3.5 h-3.5 text-blue-600" />
             <span>Filter Type:</span>
@@ -77,7 +77,7 @@ export function InventoryLedgerDrawer({
             {Array.from({ length: 6 }).map((_, idx) => (
               <div
                 key={idx}
-                className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 shadow-xs"
+                className="p-3.5 rounded-lg bg-white border border-slate-200 space-y-2 shadow-xs"
               >
                 <div className="flex justify-between items-center">
                   <Skeleton variant="text" className="w-28 h-4" />
@@ -106,7 +106,7 @@ export function InventoryLedgerDrawer({
               return (
                 <div
                   key={log._id || log.movementId}
-                  className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 text-xs shadow-xs"
+                  className="p-3.5 rounded-lg bg-white border border-slate-200 space-y-2 text-xs shadow-xs"
                 >
                   {/* Top Row: Movement Type + Delta */}
                   <div className="flex items-center justify-between gap-2">
@@ -147,7 +147,7 @@ export function InventoryLedgerDrawer({
                   <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
                     <span className="truncate max-w-[200px]">
                       By: <strong className="text-slate-800">{log.performedBy}</strong>
-                      {log.notes ? ` • ${log.notes}` : ''}
+                      {log.notes ? ` / ${log.notes}` : ''}
                     </span>
                     <span className="flex-shrink-0 font-mono">{formattedDate}</span>
                   </div>

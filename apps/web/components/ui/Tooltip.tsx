@@ -36,7 +36,7 @@ export function Tooltip({
       {isVisible && content && (
         <div
           role="tooltip"
-          className={`absolute z-50 whitespace-nowrap px-2.5 py-1 text-[11px] font-medium text-white bg-[#1a2542] border border-white/15 rounded-md shadow-xl pointer-events-none transition-opacity ${positionStyles[position]} ${className}`}
+          className={`absolute z-50 whitespace-nowrap px-2.5 py-1 text-[11px] font-medium text-white bg-slate-900 border border-slate-700 rounded-md shadow-xl pointer-events-none transition-opacity ${positionStyles[position]} ${className}`}
         >
           {content}
         </div>

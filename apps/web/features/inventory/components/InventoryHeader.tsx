@@ -24,34 +24,32 @@ export function InventoryHeader({
   onOpenTransfer
 }: InventoryHeaderProps) {
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-xs">
-      {/* Title & Scope */}
+    <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
       <div className="flex items-center gap-3.5">
-        <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0">
+        <div className="w-11 h-11 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 flex-shrink-0">
           <Package className="w-6 h-6" />
         </div>
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-semibold text-slate-950 tracking-tight">
               Inventory & Stock Management
             </h1>
             <Badge variant="success" size="sm" dot>
               REALTIME
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Authoritative stock balances, inter-store transfers, and immutable movement ledger
+          <p className="text-sm text-slate-600 mt-1 max-w-3xl">
+            Stock balances, inter-store transfers, and immutable movement history for daily control.
           </p>
         </div>
       </div>
 
-      {/* Location Filter & Actions */}
       <div className="flex flex-wrap items-center gap-2.5">
         {storeOptions.length > 1 && (
           <select
             value={selectedLocation}
             onChange={(e) => onSelectLocation(e.target.value)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer shadow-xs"
+            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer shadow-[0_6px_16px_rgba(15,23,42,0.04)]"
             aria-label="Filter inventory by outlet"
           >
             {storeOptions.map((opt) => (

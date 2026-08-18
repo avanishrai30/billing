@@ -49,11 +49,11 @@ export function ProductBarcodeManager({
   ];
 
   return (
-    <div className="space-y-3 bg-white/5 border border-white/10 rounded-xl p-4">
+    <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Barcode className="w-4 h-4 text-sky-400" />
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+          <Barcode className="w-4 h-4 text-blue-600" />
+          <h4 className="text-xs font-semibold text-slate-800">
             Barcode Mapping Management
           </h4>
         </div>
@@ -71,7 +71,7 @@ export function ProductBarcodeManager({
 
       {/* Primary Barcode Input */}
       <div>
-        <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
           Primary Product Barcode (EAN/UPC)
         </label>
         <div className="relative">
@@ -83,22 +83,22 @@ export function ProductBarcodeManager({
             leftIcon={<Barcode className="w-4 h-4 text-slate-400" />}
           />
         </div>
-        <p className="text-[11px] text-slate-400 mt-1">
+        <p className="text-[11px] text-slate-600 mt-1">
           Unique master barcode mapped to the primary unit. Scanned at POS & Warehouse scanners.
         </p>
       </div>
 
       {/* Secondary Barcodes List */}
       {barcodes.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-white/10">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase">
+        <div className="space-y-2 pt-2 border-t border-slate-200">
+          <div className="flex items-center justify-between text-[11px] text-slate-600 font-semibold">
             <span>Additional / Pack Barcodes ({barcodes.length})</span>
           </div>
 
           {barcodes.map((b, index) => (
             <div
               key={index}
-              className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-[#131d33] border border-white/10 rounded-lg p-2.5"
+              className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white border border-slate-200 rounded-lg p-2.5"
             >
               <div className="sm:col-span-5">
                 <Input
@@ -135,7 +135,7 @@ export function ProductBarcodeManager({
                   onClick={() => handleRemoveEntry(index)}
                   disabled={disabled}
                   aria-label={`Remove barcode ${b.barcode || index + 1}`}
-                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

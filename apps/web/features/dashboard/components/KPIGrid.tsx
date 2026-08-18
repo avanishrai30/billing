@@ -20,9 +20,8 @@ export interface KPIGridProps {
 
 export function KPIGrid({ metrics }: KPIGridProps) {
   return (
-    <div className="space-y-4">
-      {/* Primary Financial KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
         <StatCard
           label="Total Gross Sales"
           value={metrics.totalSales}
@@ -56,8 +55,7 @@ export function KPIGrid({ metrics }: KPIGridProps) {
         />
       </div>
 
-      {/* Secondary Operational & Inventory KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
         <StatCard
           label="Catalog SKUs"
           value={metrics.totalProducts}

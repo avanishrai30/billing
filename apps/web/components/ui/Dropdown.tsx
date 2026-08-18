@@ -46,7 +46,7 @@ export function Dropdown({ trigger, items, align = 'right', className = '' }: Dr
       {isOpen && (
         <div
           role="menu"
-          className={`absolute z-30 mt-2 w-48 ${alignClass} bg-[#131d33] border border-white/15 rounded-xl shadow-2xl py-1 overflow-hidden focus:outline-none`}
+          className={`absolute z-30 mt-2 w-48 ${alignClass} bg-white border border-slate-200 rounded-lg shadow-[0_18px_46px_rgba(15,23,42,0.12)] py-1 overflow-hidden focus:outline-none`}
         >
           {items.map((item, idx) => (
             <button
@@ -59,8 +59,8 @@ export function Dropdown({ trigger, items, align = 'right', className = '' }: Dr
               }}
               className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                 item.danger
-                  ? 'text-rose-400 hover:bg-rose-500/15'
-                  : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                  ? 'text-rose-700 hover:bg-rose-50'
+                  : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950'
               }`}
             >
               {item.icon && <span className="w-4 h-4 flex-shrink-0">{item.icon}</span>}
@@ -108,7 +108,7 @@ export function Popover({ trigger, children, align = 'left', className = '' }: P
 
       {isOpen && (
         <div
-          className={`absolute z-30 mt-2 ${alignClass} bg-[#131d33] border border-white/15 rounded-xl shadow-2xl p-4 overflow-hidden`}
+          className={`absolute z-30 mt-2 ${alignClass} bg-white border border-slate-200 rounded-lg shadow-[0_18px_46px_rgba(15,23,42,0.12)] p-4 overflow-hidden`}
         >
           {children}
         </div>
@@ -116,4 +116,3 @@ export function Popover({ trigger, children, align = 'left', className = '' }: P
     </div>
   );
 }
-

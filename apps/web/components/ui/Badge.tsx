@@ -125,7 +125,7 @@ export interface TagProps extends React.HTMLAttributes<HTMLSpanElement> {
 export function Tag({ children, onRemove, className = '', ...props }: TagProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-slate-800/80 text-slate-200 border border-white/10 ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-slate-100 text-slate-700 border border-slate-200 ${className}`}
       {...props}
     >
       <span>{children}</span>
@@ -134,7 +134,7 @@ export function Tag({ children, onRemove, className = '', ...props }: TagProps) 
           type="button"
           onClick={onRemove}
           aria-label="Remove tag"
-          className="p-0.5 hover:bg-white/10 rounded-xs text-slate-400 hover:text-white cursor-pointer"
+            className="p-0.5 hover:bg-slate-200 rounded-xs text-slate-500 hover:text-slate-900 cursor-pointer"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
