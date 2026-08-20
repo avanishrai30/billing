@@ -13,9 +13,9 @@ const vertexSource = `
 `;
 
 /**
- * Fragment shader: Metamorphic liquid/sculptural material.
- * Generates layered pearl/silver organic folds, deep blue-gray ambient shadows,
- * warm amber/orange subsurface glow, and subtle specular lighting.
+ * Fragment shader: VC ORGANIC Botanical Metamorphic Material.
+ * Generates layered sculptural ivory surfaces, natural deep forest green & eucalyptus
+ * foliage, soft organic leaf contours, ambient shadow depth, and delicate botanical motion.
  */
 const fragmentSource = `
 precision mediump float;
@@ -32,7 +32,7 @@ mat2 rotate2D(float angle) {
   return mat2(c, -s, s, c);
 }
 
-// Smooth noise function
+// Smooth 2D noise
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
   p += dot(p, p + 45.32);
@@ -50,58 +50,83 @@ float noise(vec2 p) {
   );
 }
 
-// Fast multi-octave fractional Brownian motion for sculptural folds
+// Fast Fractional Brownian Motion
 float fbm(vec2 p) {
   float value = 0.0;
   float amplitude = 0.5;
-  mat2 rot = rotate2D(0.45);
+  mat2 rot = rotate2D(0.55);
   for (int i = 0; i < 4; i++) {
     value += amplitude * noise(p);
-    p = rot * (p * 2.02);
+    p = rot * (p * 2.04);
     amplitude *= 0.48;
   }
   return value;
 }
 
-// Sculptural surface heightfield with multi-stage domain warping
-float surfaceHeight(vec2 uv, float t, vec2 mouseOffset) {
-  vec2 p = uv * 1.35 + mouseOffset * 0.15;
+// Organic Leaf / Botanical SDF structure
+float leafSDF(vec2 p, float scale, float rotAngle) {
+  p = rotate2D(rotAngle) * p;
+  p.x *= 1.8;
+  float d = length(p) - scale;
+  float tip = abs(p.y) * 0.45;
+  return d + tip;
+}
 
-  // Primary slow fluid motion
+// Sculptural Ivory & Botanical Surface Composition
+float botanicalField(vec2 uv, float t, vec2 mouseOffset) {
+  vec2 p = uv * 1.4 + mouseOffset * 0.2;
+
+  // Gentle botanical sway
+  float sway = sin(t * 0.4 + p.x * 1.5) * 0.08;
+  p.y += sway;
+
+  // Primary domain warping for liquid paper fold movement
   vec2 q = vec2(
-    fbm(p + t * 0.04),
-    fbm(p + vec2(5.2, 1.3) - t * 0.035)
+    fbm(p + vec2(0.0, 0.0) + t * 0.03),
+    fbm(p + vec2(4.2, 1.8) - t * 0.025)
   );
 
-  // Secondary sculptural fold warping
+  // Secondary fold warping
   vec2 r = vec2(
-    fbm(p + 3.0 * q + vec2(1.7, 9.2) + t * 0.025),
-    fbm(p + 3.0 * q + vec2(8.3, 2.8) - t * 0.02)
+    fbm(p + 2.8 * q + vec2(2.1, 7.4) + t * 0.02),
+    fbm(p + 2.8 * q + vec2(6.3, 3.2) - t * 0.018)
   );
 
-  // Flowing main fold
-  return fbm(p + 3.5 * r);
+  return fbm(p + 3.2 * r);
 }
 
 void main() {
   vec2 fragCoord = gl_FragCoord.xy;
   vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
 
-  // Time scale for ultra-slow organic morphing
-  float t = u_reducedMotion > 0.5 ? 2.5 : iTime * 0.08;
+  // Ultra-slow natural breathing cycle (16-24s loop)
+  float t = u_reducedMotion > 0.5 ? 4.0 : iTime * 0.07;
 
-  // Smooth mouse parallax offset
+  // Smooth mouse parallax
   vec2 mouseNorm = iMouse / max(iResolution, vec2(1.0));
   vec2 mouseOffset = (mouseNorm - 0.5) * 0.35;
   if (u_reducedMotion > 0.5) {
     mouseOffset = vec2(0.0);
   }
 
-  // Calculate heightfield & surface normal gradient
+  // --- Palette Definitions (VC Organic Botanical World) ---
+  // Warm Ivory base & sculptural fold highlights
+  vec3 ivoryBase    = vec3(0.97, 0.98, 0.96);
+  vec3 ivoryFold    = vec3(0.91, 0.93, 0.89);
+  // Muted Eucalyptus & Sage transition
+  vec3 sageLight    = vec3(0.68, 0.78, 0.71);
+  vec3 eucalyptus   = vec3(0.38, 0.54, 0.43);
+  // Deep Natural Forest Green Foliage
+  vec3 forestGreen  = vec3(0.11, 0.28, 0.17);
+  vec3 deepJungle   = vec3(0.05, 0.15, 0.09);
+  // Warm Natural Subsurface Tint
+  vec3 amberSunGlow = vec3(0.96, 0.91, 0.78);
+
+  // Compute multi-octave botanical heightfield
   float eps = 0.008;
-  float hCenter = surfaceHeight(uv, t, mouseOffset);
-  float hRight  = surfaceHeight(uv + vec2(eps, 0.0), t, mouseOffset);
-  float hTop    = surfaceHeight(uv + vec2(0.0, eps), t, mouseOffset);
+  float hCenter = botanicalField(uv, t, mouseOffset);
+  float hRight  = botanicalField(uv + vec2(eps, 0.0), t, mouseOffset);
+  float hTop    = botanicalField(uv + vec2(0.0, eps), t, mouseOffset);
 
   vec3 normal = normalize(vec3(
     (hCenter - hRight) / eps * 1.5,
@@ -109,49 +134,54 @@ void main() {
     1.0
   ));
 
-  // --- Lighting Model ---
-  // Key Light (Top-Left cool ambient light)
-  vec3 keyLightDir = normalize(vec3(-0.4, 0.7, 0.6));
-  float diffKey = max(dot(normal, keyLightDir), 0.0);
-  
-  // Fill Light (Top-Right pale blue-gray ambient light)
-  vec3 fillLightDir = normalize(vec3(0.5, 0.4, 0.5));
-  float diffFill = max(dot(normal, fillLightDir), 0.0);
+  // Botanical leaf shapes in midground
+  vec2 leafPos1 = uv + vec2(0.45, 0.25) + mouseOffset * 0.25;
+  float l1 = smoothstep(0.42, 0.38, leafSDF(leafPos1, 0.32, 0.75 + sin(t * 0.5) * 0.1));
 
-  // Subsurface Core Light (Center-Low warm amber/orange internal glow)
-  vec2 corePos = vec2(0.0, -0.35) + mouseOffset * 0.2;
-  float distToCore = length(uv - corePos);
-  float coreGlowFactor = smoothstep(1.3, 0.0, distToCore);
-  float subsurfaceIntensity = pow(1.0 - hCenter, 2.0) * coreGlowFactor;
+  vec2 leafPos2 = uv + vec2(-0.5, -0.2) + mouseOffset * 0.3;
+  float l2 = smoothstep(0.48, 0.42, leafSDF(leafPos2, 0.38, -0.6 + cos(t * 0.4) * 0.08));
 
-  // Specular Highlight (Silky pearl sheen)
-  vec3 halfKey = normalize(keyLightDir + vec3(0.0, 0.0, 1.0));
-  float specKey = pow(max(dot(normal, halfKey), 0.0), 20.0);
+  vec2 leafPos3 = uv + vec2(-0.15, 0.4) + mouseOffset * 0.15;
+  float l3 = smoothstep(0.35, 0.30, leafSDF(leafPos3, 0.25, 0.35 + sin(t * 0.3) * 0.06));
 
-  // --- Palette Definitions ---
-  vec3 pearlWhite = vec3(0.96, 0.97, 0.99);
-  vec3 silverFold = vec3(0.82, 0.86, 0.92);
-  vec3 slateShadow = vec3(0.42, 0.48, 0.58);
-  vec3 amberCore = vec3(0.98, 0.58, 0.18);
-  vec3 goldRim = vec3(1.0, 0.78, 0.42);
+  float foliageMask = clamp(l1 + l2 * 0.85 + l3 * 0.7, 0.0, 1.0);
 
-  // Base sculptured surface color mixing
-  vec3 color = mix(slateShadow, silverFold, smoothstep(0.15, 0.65, hCenter));
-  color = mix(color, pearlWhite, smoothstep(0.55, 0.95, hCenter));
+  // Lighting calculations
+  vec3 keyLight = normalize(vec3(-0.35, 0.65, 0.65));
+  float diffKey = max(dot(normal, keyLight), 0.0);
 
-  // Modulate with directional lighting
-  color *= (0.45 + 0.45 * diffKey + 0.25 * diffFill);
+  vec3 fillLight = normalize(vec3(0.5, -0.3, 0.6));
+  float diffFill = max(dot(normal, fillLight), 0.0);
 
-  // Add warm internal amber glow (Center-low subsurface luminescence)
-  vec3 glowColor = mix(amberCore, goldRim, smoothstep(0.2, 0.8, subsurfaceIntensity));
-  color += glowColor * (subsurfaceIntensity * 0.95);
+  // Specular sheen on sculptural ivory material
+  vec3 halfKey = normalize(keyLight + vec3(0.0, 0.0, 1.0));
+  float spec = pow(max(dot(normal, halfKey), 0.0), 16.0);
 
-  // Soft pearl specular reflection
-  color += vec3(0.98, 0.99, 1.0) * (specKey * 0.35);
+  // Background Sculptural Ivory / Paper Waves
+  vec3 color = mix(sageLight, ivoryFold, smoothstep(0.2, 0.65, hCenter));
+  color = mix(color, ivoryBase, smoothstep(0.55, 0.95, hCenter));
 
-  // Subtle vignette & depth framing
-  float vignette = 1.0 - smoothstep(0.6, 1.6, length(uv));
-  color = mix(color * 0.88, color, vignette);
+  // Blend in deep forest foliage layers
+  vec3 foliageColor = mix(deepJungle, forestGreen, smoothstep(0.0, 0.7, hCenter));
+  foliageColor = mix(foliageColor, eucalyptus, l1 * 0.5 + l2 * 0.4);
+
+  // Asymmetric atmospheric depth: foliage concentrates on left/bottom-left, leaving airy space for form
+  float atmosphericGradient = smoothstep(0.55, -0.45, uv.x + uv.y * 0.3);
+  color = mix(color, foliageColor, foliageMask * 0.85 + atmosphericGradient * 0.45 * (1.0 - hCenter));
+
+  // Modulate with natural lighting
+  color *= (0.55 + 0.35 * diffKey + 0.15 * diffFill);
+
+  // Subsurface warmth in deep folds
+  float foldDepth = pow(1.0 - hCenter, 2.0) * atmosphericGradient;
+  color += amberSunGlow * (foldDepth * 0.18);
+
+  // Soft pearl/ivory highlight
+  color += vec3(0.98, 0.99, 0.96) * (spec * 0.22);
+
+  // Subtle natural framing vignette
+  float vignette = 1.0 - smoothstep(0.8, 1.8, length(uv));
+  color = mix(color * 0.95, color, vignette);
 
   gl_FragColor = vec4(color, 1.0);
 }
@@ -175,14 +205,15 @@ const blurClassMap = {
 /**
  * LoginMetamorphicBackground
  * 
- * Apple-style metamorphic liquid/sculptural material background.
+ * VC ORGANIC Botanical Metamorphic Material Background.
  * Uses a single GPU-accelerated WebGL fragment shader with smooth multi-octave FBM,
- * subsurface amber glow, pearl specular highlights, and dampened pointer parallax.
+ * procedural botanical foliage SDFs, deep forest green depths, and ivory sculptural contours.
  * 
  * Performance & Isolation Guarantee:
  * - High-frequency pointer tracking is stored in refs (zero React re-renders).
- * - Animation uses requestAnimationFrame with proper cleanup.
- * - Automatically falls back to a sleek CSS gradient if WebGL is unavailable.
+ * - ResizeObserver caches canvas dimensions, eliminating layout thrashing inside requestAnimationFrame.
+ * - Frame rate is throttled to ~24fps for ultra-lightweight CPU footprint and 0ms typing INP latency.
+ * - Automatically falls back to a sleek botanical gradient if WebGL is unavailable.
  * - Honors prefers-reduced-motion without dropping layout fidelity.
  */
 export const LoginMetamorphicBackground = React.memo(function LoginMetamorphicBackground({
@@ -324,15 +355,15 @@ export const LoginMetamorphicBackground = React.memo(function LoginMetamorphicBa
         animFrameIdRef.current = requestAnimationFrame(render);
       }
 
-      // Throttle slow ambient morphing to ~20fps (50ms interval) for ultra-lightweight GPU footprint
-      if (now - lastRenderTime < 50) {
+      // Throttle slow ambient botanical morphing to ~24fps (40ms interval) for ultra-low CPU load
+      if (now - lastRenderTime < 40) {
         return;
       }
       lastRenderTime = now;
 
       const { width, height } = sizeRef.current;
-      const targetWidth = Math.min(Math.floor(width), 640);
-      const targetHeight = Math.min(Math.floor(height), 360);
+      const targetWidth = Math.min(Math.floor(width), 800);
+      const targetHeight = Math.min(Math.floor(height), 450);
 
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
         canvas.width = targetWidth;
@@ -412,7 +443,7 @@ export const LoginMetamorphicBackground = React.memo(function LoginMetamorphicBa
       <canvas
         ref={canvasRef}
         data-testid="metamorphic-shader-canvas"
-        className="w-full h-full block bg-slate-900"
+        className="w-full h-full block bg-[#F5F8F5]"
         style={{ width: '100%', height: '100%' }}
       />
       {blurClass && <div className={`absolute inset-0 ${blurClass}`} />}

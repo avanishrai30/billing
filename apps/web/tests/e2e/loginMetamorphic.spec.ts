@@ -246,16 +246,30 @@ test.describe('Phase 23E.5 — Apple-Style Metamorphic Visual Login World Suite'
   });
 
   test('5. Capture visual baseline screenshots of new metamorphic login world', async ({ page }) => {
-    // Desktop screenshot
+    // 1. Desktop 1440x900
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'test-results/desktop-login-1440x900.png' });
     await page.screenshot({ path: 'test-results/desktop-login-metamorphic.png' });
 
-    // Mobile screenshot
+    // 2. Laptop 1280x800
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'test-results/laptop-login-1280x800.png' });
+
+    // 3. Mobile 430x932
     await page.setViewportSize({ width: 430, height: 932 });
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'test-results/mobile-login-430x932.png' });
     await page.screenshot({ path: 'test-results/mobile-login-metamorphic.png' });
+
+    // 4. Mobile 390x844
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'test-results/mobile-login-390x844.png' });
   });
 });

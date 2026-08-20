@@ -44,7 +44,7 @@ const LoginBrandHeader = React.memo(function LoginBrandHeader({
   return (
     <div className="p-8 pb-6 border-b border-slate-200/50 text-center flex flex-col items-center">
       {/* Logo Frame */}
-      <div className="w-16 h-16 mb-3.5 rounded-2xl bg-white/80 border border-slate-200/70 flex items-center justify-center p-2.5 overflow-hidden flex-shrink-0 shadow-xs">
+      <div className="w-14 h-14 mb-3 rounded-2xl bg-emerald-50/80 border border-emerald-100/70 flex items-center justify-center p-2.5 overflow-hidden flex-shrink-0 shadow-xs">
         {showImageLogo ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -54,8 +54,8 @@ const LoginBrandHeader = React.memo(function LoginBrandHeader({
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-blue-600">
-            <ShieldCheck className="w-8 h-8" />
+          <div className="w-full h-full flex items-center justify-center text-emerald-800">
+            <ShieldCheck className="w-7 h-7" />
           </div>
         )}
       </div>
@@ -69,7 +69,7 @@ const LoginBrandHeader = React.memo(function LoginBrandHeader({
           {brandTitle || 'Billing Terminal'}
         </h1>
       </div>
-      <p className="text-xs text-slate-600 mt-1 font-medium">Enterprise Point of Sale & Operations</p>
+      <p className="text-xs text-slate-600 mt-1 font-medium">Enterprise Operations & Terminal</p>
     </div>
   );
 });
@@ -174,7 +174,7 @@ const LoginForm = React.memo(function LoginForm({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
-              className="w-full pl-10 pr-3.5 py-2.5 bg-white/60 hover:bg-white/80 focus:bg-white/95 border border-slate-200/80 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-colors disabled:opacity-50 shadow-2xs"
+              className="w-full pl-10 pr-3.5 py-2.5 bg-white/70 hover:bg-white/90 focus:bg-white/95 border border-slate-200/80 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-800 focus:ring-4 focus:ring-emerald-800/10 transition-colors disabled:opacity-50 shadow-2xs"
             />
           </div>
         </div>
@@ -200,7 +200,7 @@ const LoginForm = React.memo(function LoginForm({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
-              className="w-full pl-10 pr-10 py-2.5 bg-white/60 hover:bg-white/80 focus:bg-white/95 border border-slate-200/80 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-colors disabled:opacity-50 shadow-2xs"
+              className="w-full pl-10 pr-10 py-2.5 bg-white/70 hover:bg-white/90 focus:bg-white/95 border border-slate-200/80 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-800 focus:ring-4 focus:ring-emerald-800/10 transition-colors disabled:opacity-50 shadow-2xs"
             />
             <button
               type="button"
@@ -216,7 +216,7 @@ const LoginForm = React.memo(function LoginForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full mt-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800 text-white font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full mt-2 py-3 px-4 bg-[#143924] hover:bg-[#1B4B2F] active:scale-[0.98] active:bg-[#0F2A1B] text-white font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-sm shadow-emerald-950/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isSubmitting ? (
             <>
@@ -257,12 +257,12 @@ export default function LoginPage() {
   }, [router]);
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-slate-950 overflow-hidden">
-      {/* Decorative Interactive WebGL Metamorphic Material Background (Isolated Memoized Layer) */}
+    <div className="relative min-h-screen w-full flex items-center justify-center lg:justify-end p-4 sm:p-8 lg:p-12 lg:pr-20 xl:pr-28 bg-[#F4F7F4] overflow-hidden">
+      {/* Decorative Interactive WebGL Botanical Metamorphic Background (Isolated Memoized Layer) */}
       <LoginVisualLayer />
 
-      {/* Apple-Style Translucent Metamorphic Glass Login Card */}
-      <div className="relative z-10 w-full max-w-md bg-white/70 backdrop-blur-2xl border border-white/60 rounded-3xl shadow-2xl shadow-slate-900/10 overflow-hidden">
+      {/* VC ORGANIC Translucent Botanical Glass Login Card */}
+      <div className="relative z-10 w-full max-w-md lg:max-w-[420px] bg-white/75 backdrop-blur-2xl border border-white/70 rounded-3xl shadow-[0_24px_64px_rgba(18,48,28,0.06)] overflow-hidden">
         {/* Header Branding with Fixed Geometry (Isolated Memoized Component) */}
         <LoginBrandHeader branding={branding} isLoading={isBrandingLoading} />
 
@@ -273,7 +273,7 @@ export default function LoginPage() {
         />
 
         {/* Quiet Translucent Glass Footer */}
-        <div className="px-8 py-4 bg-white/40 border-t border-slate-200/40 text-center">
+        <div className="px-8 py-3.5 bg-white/40 border-t border-slate-200/40 text-center">
           <p className="text-[11px] text-slate-500 font-medium tracking-wide">
             AIAVRO Billing OS • Multi-Outlet Gateway
           </p>
