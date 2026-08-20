@@ -289,22 +289,22 @@ test.describe('Phase 20 Product Master Catalog Migration E2E Suite', () => {
     await expect(page.getByText('Selling Formats')).toBeVisible();
 
     // 3. Table Rows Assertion
-    await expect(page.getByText('A2 Gir Cow Cultured Ghee 500ml')).toBeVisible();
-    await expect(page.getByText('GHEE-A2-500')).toBeVisible();
-    await expect(page.getByText('Wild Forest Raw Honey 500g')).toBeVisible();
+    await expect(page.getByRole('table').getByText('A2 Gir Cow Cultured Ghee 500ml')).toBeVisible();
+    await expect(page.getByRole('table').getByText('GHEE-A2-500')).toBeVisible();
+    await expect(page.getByRole('table').getByText('Wild Forest Raw Honey 500g')).toBeVisible();
 
     // 4. Search Filter Test
     const searchInput = page.getByPlaceholder('Search by SKU, product name, or barcode...');
     await searchInput.fill('Ghee');
-    await expect(page.getByText('A2 Gir Cow Cultured Ghee 500ml')).toBeVisible();
-    await expect(page.getByText('Wild Forest Raw Honey 500g')).not.toBeVisible();
+    await expect(page.getByRole('table').getByText('A2 Gir Cow Cultured Ghee 500ml')).toBeVisible();
+    await expect(page.getByRole('table').getByText('Wild Forest Raw Honey 500g')).not.toBeVisible();
 
     // Reset Search
     await searchInput.fill('');
-    await expect(page.getByText('Wild Forest Raw Honey 500g')).toBeVisible();
+    await expect(page.getByRole('table').getByText('Wild Forest Raw Honey 500g')).toBeVisible();
 
     // 5. Inspect Detail Drawer
-    const inspectBtn = page.getByLabel('Inspect A2 Gir Cow Cultured Ghee 500ml');
+    const inspectBtn = page.getByRole('table').getByLabel('Inspect A2 Gir Cow Cultured Ghee 500ml');
     await inspectBtn.click();
     const drawer = page.getByRole('dialog');
     await expect(drawer).toBeVisible();
@@ -333,11 +333,11 @@ test.describe('Phase 20 Product Master Catalog Migration E2E Suite', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify newly created product appears in catalog
-    await expect(page.getByText('Organic A2 Paneer 250g')).toBeVisible();
-    await expect(page.getByText('PAN-A2-250')).toBeVisible();
+    await expect(page.getByRole('table').getByText('Organic A2 Paneer 250g')).toBeVisible();
+    await expect(page.getByRole('table').getByText('PAN-A2-250')).toBeVisible();
 
     // 7. Edit Product Master
-    const editBtn = page.getByLabel('Edit Organic A2 Paneer 250g');
+    const editBtn = page.getByRole('table').getByLabel('Edit Organic A2 Paneer 250g');
     await editBtn.click();
     const editModal = page.getByRole('dialog');
     await expect(editModal).toBeVisible();
@@ -350,10 +350,10 @@ test.describe('Phase 20 Product Master Catalog Migration E2E Suite', () => {
     await page.waitForLoadState('networkidle');
     await expect(editModal).not.toBeVisible();
 
-    await expect(page.getByText('₹175.00')).toBeVisible();
+    await expect(page.getByRole('table').getByText('₹175.00')).toBeVisible();
 
     // 8. Archive Product SKU
-    const archiveBtn = page.getByLabel('Archive Organic A2 Paneer 250g');
+    const archiveBtn = page.getByRole('table').getByLabel('Archive Organic A2 Paneer 250g');
     await archiveBtn.click();
     const archiveDialog = page.getByRole('dialog');
     await expect(archiveDialog).toBeVisible();
@@ -394,7 +394,7 @@ test.describe('Phase 20 Product Master Catalog Migration E2E Suite', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify imported item in catalog
-    await expect(page.getByText('Imported Cold Pressed Mustard Oil 1L')).toBeVisible();
+    await expect(page.getByRole('table').getByText('Imported Cold Pressed Mustard Oil 1L')).toBeVisible();
   });
 
   test('2. Mobile Viewport (430x932 & 390x844) renders catalog without horizontal overflow', async ({ page }) => {

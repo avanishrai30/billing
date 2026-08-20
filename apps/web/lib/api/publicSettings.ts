@@ -17,7 +17,11 @@ export const publicApi = {
    * GET /api/v1/public/settings
    */
   async getPublicSettings(): Promise<PublicSettings> {
-    return apiClient.get<PublicSettings>('/api/v1/public/settings', { skipAuth: true });
+    const res = await apiClient.get<any>('/api/v1/public/settings', { skipAuth: true });
+    if (res?.data && typeof res.data.title === 'string') {
+      return res.data;
+    }
+    return res;
   },
 
   /**

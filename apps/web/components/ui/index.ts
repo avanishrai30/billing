@@ -28,6 +28,7 @@ export * from './Toast';
 export * from './Avatar';
 export * from './Tooltip';
 export * from './smokey-background';
+export * from './login-metamorphic-background';
 export { LoginForm } from './login-form';
 
 

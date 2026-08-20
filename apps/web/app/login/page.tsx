@@ -7,14 +7,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { ApiError } from '../../lib/errors/types';
 import { normalizePublicAssetUrl } from '../../lib/utils/media';
-import { SmokeyBackground } from '../../components/ui/smokey-background';
+import { LoginMetamorphicBackground } from '../../components/ui/login-metamorphic-background';
 
 /**
  * Isolated Visual Background Layer.
  * Guaranteed to mount once and NEVER re-render on login input keystrokes.
  */
 const LoginVisualLayer = React.memo(function LoginVisualLayer() {
-  return <SmokeyBackground color="#003882" backdropBlurAmount="md" className="z-0" />;
+  return <LoginMetamorphicBackground className="z-0" />;
 });
 LoginVisualLayer.displayName = 'LoginVisualLayer';
 
@@ -39,12 +39,12 @@ const LoginBrandHeader = React.memo(function LoginBrandHeader({
   const rawLogo = branding?.logo || '';
   const brandLogoUrl = normalizePublicAssetUrl(rawLogo);
   const showImageLogo = mounted && !!brandLogoUrl && !imageError;
-  const brandTitle = mounted ? branding?.title : null;
+  const brandTitle = branding?.title || null;
 
   return (
-    <div className="p-8 pb-6 border-b border-slate-100 text-center flex flex-col items-center">
+    <div className="p-8 pb-6 border-b border-slate-200/50 text-center flex flex-col items-center">
       {/* Logo Frame */}
-      <div className="w-16 h-16 mb-3.5 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center p-2.5 overflow-hidden flex-shrink-0 shadow-xs">
+      <div className="w-16 h-16 mb-3.5 rounded-2xl bg-white/80 border border-slate-200/70 flex items-center justify-center p-2.5 overflow-hidden flex-shrink-0 shadow-xs">
         {showImageLogo ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -62,19 +62,14 @@ const LoginBrandHeader = React.memo(function LoginBrandHeader({
 
       {/* Dynamic Brand Title (Deterministic First Paint) */}
       <div className="min-h-[32px] flex items-center justify-center">
-        {brandTitle ? (
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            {brandTitle}
-          </h1>
-        ) : isLoading || !mounted ? (
-          <div className="h-7 w-48 bg-slate-100 rounded-md animate-pulse" />
-        ) : (
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-            Billing Terminal
-          </h1>
-        )}
+        <h1
+          suppressHydrationWarning
+          className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900"
+        >
+          {brandTitle || 'Billing Terminal'}
+        </h1>
       </div>
-      <p className="text-xs text-slate-500 mt-1">Enterprise Point of Sale & Operations</p>
+      <p className="text-xs text-slate-600 mt-1 font-medium">Enterprise Point of Sale & Operations</p>
     </div>
   );
 });
@@ -139,7 +134,7 @@ const LoginForm = React.memo(function LoginForm({
       {isSessionExpired && (
         <div
           data-testid="session-expired-banner"
-          className="mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-amber-800 text-xs shadow-xs"
+          className="mb-5 p-3.5 rounded-xl bg-amber-50/90 border border-amber-200/80 flex items-start gap-2.5 text-amber-800 text-xs shadow-xs"
         >
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
           <span>Your session has expired. Please sign in again to continue.</span>
@@ -150,7 +145,7 @@ const LoginForm = React.memo(function LoginForm({
         <div
           role="alert"
           data-testid="login-error-alert"
-          className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-rose-800 text-xs shadow-xs"
+          className="mb-5 p-3.5 rounded-xl bg-rose-50/90 border border-rose-200/80 flex items-start gap-2.5 text-rose-800 text-xs shadow-xs"
         >
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-600" />
           <span className="leading-relaxed">{errorMessage}</span>
@@ -179,7 +174,7 @@ const LoginForm = React.memo(function LoginForm({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
-              className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-colors disabled:opacity-50"
+              className="w-full pl-10 pr-3.5 py-2.5 bg-white/60 hover:bg-white/80 focus:bg-white/95 border border-slate-200/80 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-colors disabled:opacity-50 shadow-2xs"
             />
           </div>
         </div>
@@ -205,13 +200,13 @@ const LoginForm = React.memo(function LoginForm({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
-              className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-colors disabled:opacity-50"
+              className="w-full pl-10 pr-10 py-2.5 bg-white/60 hover:bg-white/80 focus:bg-white/95 border border-slate-200/80 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/10 transition-colors disabled:opacity-50 shadow-2xs"
             />
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer z-10"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -221,7 +216,7 @@ const LoginForm = React.memo(function LoginForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full mt-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full mt-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] active:bg-blue-800 text-white font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isSubmitting ? (
             <>
@@ -262,12 +257,12 @@ export default function LoginPage() {
   }, [router]);
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-slate-900 overflow-hidden">
-      {/* Decorative Interactive WebGL Smokey Shader Background (Isolated Memoized Layer) */}
+    <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-slate-950 overflow-hidden">
+      {/* Decorative Interactive WebGL Metamorphic Material Background (Isolated Memoized Layer) */}
       <LoginVisualLayer />
 
-      {/* Modern Centered Glassmorphism Login Card */}
-      <div className="relative z-10 w-full max-w-md bg-white/95 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+      {/* Apple-Style Translucent Metamorphic Glass Login Card */}
+      <div className="relative z-10 w-full max-w-md bg-white/70 backdrop-blur-2xl border border-white/60 rounded-3xl shadow-2xl shadow-slate-900/10 overflow-hidden">
         {/* Header Branding with Fixed Geometry (Isolated Memoized Component) */}
         <LoginBrandHeader branding={branding} isLoading={isBrandingLoading} />
 
@@ -277,9 +272,9 @@ export default function LoginPage() {
           onLoginSuccess={handleLoginSuccess}
         />
 
-        {/* Footer */}
-        <div className="px-8 py-4 bg-slate-50/90 border-t border-slate-100 text-center">
-          <p className="text-[11px] text-slate-500 font-medium">
+        {/* Quiet Translucent Glass Footer */}
+        <div className="px-8 py-4 bg-white/40 border-t border-slate-200/40 text-center">
+          <p className="text-[11px] text-slate-500 font-medium tracking-wide">
             AIAVRO Billing OS • Multi-Outlet Gateway
           </p>
         </div>
