@@ -65,7 +65,7 @@ describe('POS Component Layer & Interaction Unit Suite', () => {
     expect(screen.getByText(/₹12,000.00/)).toHaveClass('whitespace-nowrap');
 
     const addBtn = screen.getByRole('button', { name: /add organic a2 gir cow cultured ghee premium 1 litre jar to cart/i });
-    expect(addBtn).toHaveClass('w-[66px]', 'h-8', 'shrink-0', 'justify-center');
+    expect(addBtn).toHaveClass('w-[72px]', 'h-8', 'shrink-0', 'justify-center');
   });
 
   it('2. CategoryBar renders all categories and handles selection', () => {

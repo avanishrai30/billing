@@ -19,6 +19,23 @@ const LoginVisualLayer = React.memo(function LoginVisualLayer() {
 LoginVisualLayer.displayName = 'LoginVisualLayer';
 
 /**
+ * Reusable Glass Input Wrapper inspired by Untitled UI.
+ */
+const GlassInputWrapper = ({
+  children,
+  className = ''
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={`rounded-2xl border border-slate-200/80 bg-white/75 backdrop-blur-sm transition-colors focus-within:border-emerald-800/80 focus-within:bg-emerald-800/5 focus-within:ring-4 focus-within:ring-emerald-800/10 ${className}`}
+  >
+    {children}
+  </div>
+);
+
+/**
  * Isolated Branding Header.
  * Re-renders only when branding query resolves, independent of input keystrokes.
  */
@@ -69,7 +86,7 @@ const LoginBrandHeader = React.memo(function LoginBrandHeader({
           {brandTitle || 'Billing Terminal'}
         </h1>
       </div>
-      <p className="text-xs text-slate-600 mt-1 font-medium">Enterprise Operations & Terminal</p>
+      <p className="text-xs text-slate-600 mt-1 font-medium">Enterprise Point of Sale & Operations</p>
     </div>
   );
 });
@@ -89,6 +106,7 @@ const LoginForm = React.memo(function LoginForm({
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -160,23 +178,25 @@ const LoginForm = React.memo(function LoginForm({
           >
             Username
           </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <User className="w-4 h-4" />
+          <GlassInputWrapper>
+            <div className="relative flex items-center">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <User className="w-4 h-4" />
+              </div>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                required
+                disabled={isSubmitting}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                className="w-full pl-10 pr-3.5 py-3 bg-transparent rounded-2xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none disabled:opacity-50"
+              />
             </div>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              autoComplete="username"
-              required
-              disabled={isSubmitting}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              className="w-full pl-10 pr-3.5 py-2.5 bg-white/70 hover:bg-white/90 focus:bg-white/95 border border-slate-200/80 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-800 focus:ring-4 focus:ring-emerald-800/10 transition-colors disabled:opacity-50 shadow-2xs"
-            />
-          </div>
+          </GlassInputWrapper>
         </div>
 
         <div>
@@ -186,37 +206,52 @@ const LoginForm = React.memo(function LoginForm({
           >
             Password
           </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-              <Lock className="w-4 h-4" />
+          <GlassInputWrapper>
+            <div className="relative flex items-center">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Lock className="w-4 h-4" />
+              </div>
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                disabled={isSubmitting}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="w-full pl-10 pr-11 py-3 bg-transparent rounded-2xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none disabled:opacity-50"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700 focus:outline-none cursor-pointer z-10"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+          </GlassInputWrapper>
+        </div>
+
+        <div className="flex items-center justify-between text-xs pt-0.5">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              required
-              disabled={isSubmitting}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              className="w-full pl-10 pr-10 py-2.5 bg-white/70 hover:bg-white/90 focus:bg-white/95 border border-slate-200/80 rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-800 focus:ring-4 focus:ring-emerald-800/10 transition-colors disabled:opacity-50 shadow-2xs"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="rounded border-slate-300 text-emerald-800 focus:ring-emerald-700"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer z-10"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
+            <span className="text-slate-600 font-medium">Keep me signed in</span>
+          </label>
+          <span className="text-slate-400 font-medium">Multi-outlet gateway</span>
         </div>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full mt-2 py-3 px-4 bg-[#143924] hover:bg-[#1B4B2F] active:scale-[0.98] active:bg-[#0F2A1B] text-white font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-sm shadow-emerald-950/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full mt-2 py-3.5 px-4 bg-[#143924] hover:bg-[#1B4B2F] active:scale-[0.98] active:bg-[#0F2A1B] text-white font-semibold rounded-2xl text-sm transition-colors flex items-center justify-center gap-2 shadow-sm shadow-emerald-950/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isSubmitting ? (
             <>
@@ -262,7 +297,7 @@ export default function LoginPage() {
       <LoginVisualLayer />
 
       {/* VC ORGANIC Translucent Botanical Glass Login Card */}
-      <div className="relative z-10 w-full max-w-md lg:max-w-[420px] bg-white/75 backdrop-blur-2xl border border-white/70 rounded-3xl shadow-[0_24px_64px_rgba(18,48,28,0.06)] overflow-hidden">
+      <div className="relative z-10 w-full max-w-md lg:max-w-[430px] bg-white/75 backdrop-blur-2xl border border-white/70 rounded-3xl shadow-[0_24px_64px_rgba(18,48,28,0.06)] overflow-hidden">
         {/* Header Branding with Fixed Geometry (Isolated Memoized Component) */}
         <LoginBrandHeader branding={branding} isLoading={isBrandingLoading} />
 

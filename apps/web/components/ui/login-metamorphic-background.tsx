@@ -362,8 +362,8 @@ export const LoginMetamorphicBackground = React.memo(function LoginMetamorphicBa
       lastRenderTime = now;
 
       const { width, height } = sizeRef.current;
-      const targetWidth = Math.min(Math.floor(width), 800);
-      const targetHeight = Math.min(Math.floor(height), 450);
+      const targetWidth = Math.min(Math.floor(width), 640);
+      const targetHeight = Math.min(Math.floor(height), 360);
 
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
         canvas.width = targetWidth;
