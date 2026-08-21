@@ -1,47 +1,81 @@
-# Phase 23G.3 — Protected Shell State-Transition Forensics & Architectural Resolution
+# Phase 23G.3 - Protected Shell State-Transition Forensics
 
-## 1. Executive Summary
-This document records the state-transition forensics and architectural resolution that established 100% test passing reliability across the **AIAVRO Billing OS** protected application routes and shell components.
+## Actual State Transition
 
----
-
-## 2. Forensic Investigation & Evidence
-
-### Initial Problem
-Under certain route transitions and network query lifecycles, protected pages experienced transient state resets and layout unmounting.
-
-### Root-Cause Analysis
-1. **Provider Scope Duplication**: `StoreScopeProvider` was previously instantiated inside `apps/web/app/(protected)/layout.tsx`. When navigating between protected route boundaries, route segment layout evaluation re-evaluated `StoreScopeProvider` state, causing unnecessary subtree reconciliation.
-2. **Synchronous Hydration Optimization**: Relocating `StoreScopeProvider` to root [`AppProviders.tsx`](file:///Users/avanish/Documents/billing%20system/apps/web/providers/AppProviders.tsx) ensures `StoreScopeContext` is mounted once and maintained continuously across all routes.
-3. **Protected Layout Purity**: [`(protected)/layout.tsx`](file:///Users/avanish/Documents/billing%20system/apps/web/app/%28protected%29/layout.tsx) now renders `AppShell` directly without wrapper redundancy.
-
----
-
-## 3. State Transition Matrix
-
-| Scenario | State Transition | Previous Behavior | Corrected Behavior |
-| :--- | :--- | :--- | :--- |
-| **Cold Session Startup** | `initializing` → `authenticated` | Mismatched SSR DOM | Deterministic initial frame, smooth hydration |
-| **Route Navigation** | `/dashboard` → `/customers` | `StoreScopeProvider` re-instantiated | Root provider persistent, zero DOM detachment |
-| **Store Scope Switch** | `all` → `store-1` | Reconstructed workspace subtree | In-place context update, stable Topbar selector |
-| **Session Sign Out** | `authenticated` → `unauthenticated` | Abrupt DOM unmount | Controlled cleanup via `logout()` with redirect to `/login` |
-
----
-
-## 4. Verification & Quality Gates
+The protected shell risk was an auth invalidation transition caused by protected background work that could run outside an authenticated shell:
 
 ```text
-==================================================
-QUALITY GATES VERIFICATION RESULT
-==================================================
-- Jest Unit Test Suites:  77 / 77 PASS (304 / 304 tests)
-- TypeScript Typecheck:   0 errors (tsc --noEmit PASS)
-- Next.js Production:     21 / 21 static pages generated (next build PASS)
-- Playwright E2E Suites:  69 / 69 PASS (100% across all suites)
-==================================================
+AuthProvider: initializing/unauthenticated
+StoreScopeProvider: mounted globally
+useStoresQuery: requests /api/v1/stores
+apiClient: receives 401 from a non-login endpoint
+apiClient: invokes global session-expired callback
+AuthProvider: user/token cleared and lifecycle = session-expired
+ProtectedLayout: returns null or auth fallback
+AppShell / Sidebar / Topbar / Workspace: detached as a consequence
 ```
 
-### Test Suite Highlights
-- **`authShell.spec.ts`**: 6 / 6 passed (cold load, error alert, session restore on refresh, sign out, mobile navigation drawer, visual screenshots).
-- **`storeScope.spec.ts`**: 6 / 6 passed (switching, cache isolation, cashier lock, tampering fallback, tenant-wide modules, mobile responsiveness).
-- **`dashboard.spec.ts`, `customers.spec.ts`, `suppliers.spec.ts`, `products.spec.ts`, `pos.spec.ts`, `purchases.spec.ts`, `tax.spec.ts`, `users.spec.ts`, `settings.spec.ts`, `rbac.spec.ts`, `roleAccess.spec.ts`, `designSystem.spec.ts`**: 100% PASS.
+The local suite was already reproducing green during this pass, but the source-level transition was real: an unauthenticated or pre-auth store query had authority to synthesize a session-expired state for the whole app.
+
+## Evidence
+
+- `StoreScopeProvider` is mounted from root `AppProviders`, so it exists on `/login`, root redirects, and during auth bootstrap.
+- `StoreScopeProvider` called `useStoresQuery()` unconditionally.
+- `useStoresQuery()` subscribed to store realtime invalidations and fetched `/api/v1/stores` without checking auth state.
+- `apiClient` treated every non-login `401` as an active session expiry, even when no token was attached.
+- `ProtectedLayout` replaces the full protected tree whenever auth is loading or unauthenticated, so the above transition can detach `AppShell`, `Sidebar`, `Topbar`, and `Workspace`.
+- Search found no dynamic `key` on `AppShell`, `Sidebar`, `Topbar`, or `Workspace`; route navigation uses stable component identity. Motion wrappers and pathname keys were not the cause.
+
+## Answers
+
+| Question | Finding |
+| --- | --- |
+| A. Does AuthProvider transition from authenticated back to loading? | No evidence in the local run. The dangerous transition was unauthenticated/pre-auth background `401` to `session-expired`, not authenticated to loading. |
+| B. Does public settings refresh replace the shell? | No. Public settings refresh changes Sidebar branding data only. |
+| C. Does StoreScopeProvider refresh replace the shell? | It could indirectly trigger auth invalidation before the fix because its store query was ungated. It does not replace the shell directly. |
+| D. Does ProtectedLayout return a fallback after auth is resolved? | Only if auth lifecycle is driven back to loading/unauthenticated/session-expired. The fix prevents store bootstrap from causing that. |
+| E. Does any Suspense/loading boundary replace the whole workspace? | No app-level Suspense/loading boundary was found as the cause. |
+| F. Does route navigation recreate Sidebar/Topbar? | No. They are under the protected layout shell with no pathname key. |
+| G. Do motion wrappers or dynamic keys recreate the shell? | No shell-level motion wrapper or dynamic shell key was found. |
+
+## Root Cause
+
+The root cause was not a page-level route issue. It was a shared auth/session boundary bug:
+
+- global store scope was allowed to perform protected store network work before authentication was resolved;
+- the API client allowed any non-login `401` to broadcast session expiry, even if the request had no active token;
+- protected layout correctly responded to that auth state by removing the protected shell.
+
+## Exact Fix
+
+- `apps/web/lib/api/client.ts`
+  - only triggers the session-expired callback on `401` when a token exists and the request is not `skipAuth`.
+- `apps/web/features/stores/hooks.ts`
+  - added an `enabled` option to `useStoresQuery`;
+  - skips store realtime subscriptions when the query is disabled.
+- `apps/web/providers/StoreScopeProvider.tsx`
+  - passes `enabled: isAuthenticated` to `useStoresQuery`.
+
+No login visual files, `LoginMetamorphicBackground`, login branding/performance code, auth API endpoints, or POS `ProductCard` were modified. Temporary instrumentation was not left in source.
+
+## Targeted Results
+
+```text
+npx playwright test tests/e2e/authShell.spec.ts       - 6 passed
+npx playwright test tests/e2e/dashboard.spec.ts       - 4 passed
+npx playwright test tests/e2e/customers.spec.ts       - 2 passed
+npx playwright test tests/e2e/suppliers.spec.ts       - 2 passed
+npx playwright test tests/e2e/storeScope.spec.ts      - 6 passed
+npx playwright test tests/e2e/roleAccess.spec.ts      - 3 passed
+```
+
+## Full Results
+
+```text
+npx playwright test                 - 69 passed
+npm test -w apps/web                - 77 suites passed, 304 tests passed
+npm run typecheck -w apps/web       - PASS, 0 TypeScript errors
+npm run build -w apps/web           - PASS, 21/21 static pages generated
+```
+
+The first build attempt failed inside the sandbox because Turbopack could not spawn/bind its internal worker process. The same command passed with the required local build permission.

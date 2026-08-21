@@ -27,8 +27,10 @@ const StoreScopeContext = createContext<StoreScopeContextValue | null>(null);
 const STORE_SCOPE_STORAGE_KEY = 'aiavro_selected_store_id';
 
 export function StoreScopeProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const { data: stores = [], isLoading: isLoadingStores } = useStoresQuery();
+  const { user, isAuthenticated } = useAuth();
+  const { data: stores = [], isLoading: isLoadingStores } = useStoresQuery({
+    enabled: isAuthenticated
+  });
 
   // Determine if the user is locked to an assigned store
   const isRestricted = useMemo(() => {

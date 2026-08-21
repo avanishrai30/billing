@@ -12,17 +12,21 @@ export const storeQueryKeys = {
   detail: (id: string) => ['store', id] as const
 };
 
-export function useStoresQuery() {
+export function useStoresQuery(options: { enabled?: boolean } = {}) {
   const queryClient = useQueryClient();
   const { subscribe } = useRealtime();
+  const enabled = options.enabled ?? true;
 
   const query = useQuery({
     queryKey: storeQueryKeys.list(),
     queryFn: () => storesApi.getStores(),
+    enabled,
     staleTime: 60 * 1000
   });
 
   useEffect(() => {
+    if (!enabled) return;
+
     const unsubUpdated = subscribe('store_updated', () => {
       queryClient.invalidateQueries({ queryKey: ['stores'] });
     });
@@ -35,7 +39,7 @@ export function useStoresQuery() {
       unsubUpdated();
       unsubDeleted();
     };
-  }, [subscribe, queryClient]);
+  }, [enabled, subscribe, queryClient]);
 
   return query;
 }

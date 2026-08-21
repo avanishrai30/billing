@@ -81,8 +81,9 @@ export async function request<T = any>(endpoint: string, options: RequestOptions
 
     const isLoginEndpoint = endpoint.includes('/auth/login');
 
-    // Handle 401 Unauthorized for active sessions
-    if (res.status === 401 && !isLoginEndpoint) {
+    // Handle 401 Unauthorized for active sessions. Unauthenticated background
+    // requests must not be allowed to synthesize a session-expired transition.
+    if (res.status === 401 && token && !options.skipAuth && !isLoginEndpoint) {
       sessionManager.clearSession();
       if (onSessionExpiredCallback) {
         onSessionExpiredCallback();
