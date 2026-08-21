@@ -1,5 +1,32 @@
 import { test, expect } from '@playwright/test';
 
+const mockDashboardResponse = {
+  success: true,
+  metrics: {
+    totalSales: 10000,
+    netProfit: 2500,
+    totalPurchases: 5000,
+    franchiseEarnings: 0,
+    stockAssetValuationCost: 20000,
+    stockAssetValuationRetail: 35000,
+    totalProducts: 20,
+    ownProducts: 15,
+    externalProducts: 5,
+    lowStockCount: 1,
+    outOfStockCount: 0,
+    categoriesCount: 3,
+    brandsCount: 2,
+    suppliersCount: 2,
+    expiryWarningsCount: 0,
+    invoiceCount: 30,
+    purchaseCount: 5
+  },
+  lowStockWatchlist: [],
+  recentInvoices: [],
+  recentPurchases: [],
+  activeStoreId: 'all'
+};
+
 /**
  * Phase 19C: Login INP / Input Latency & Rendering Performance Suite
  * Validates that typing into username and password inputs does not trigger heavy render commits,
@@ -8,6 +35,17 @@ import { test, expect } from '@playwright/test';
 test.describe('Login Input Latency & Rendering Performance Suite', () => {
   test.beforeEach(async ({ page }) => {
     // Mock public settings to return deterministic tenant branding
+    await page.route('**/api/v1/public/settings', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          title: "VC ORGANIC'S",
+          logo: '/uploads/logos/brand-logo.webp'
+        })
+      });
+    });
+
     await page.route('**/api/v1/settings/public', async (route) => {
       await route.fulfill({
         status: 200,
@@ -64,6 +102,14 @@ test.describe('Login Input Latency & Rendering Performance Suite', () => {
     });
 
     // Mock dashboard metrics to allow successful landing
+    await page.route('**/api/v1/dashboard/metrics*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockDashboardResponse)
+      });
+    });
+
     await page.route('**/api/v1/dashboard/summary*', async (route) => {
       await route.fulfill({
         status: 200,
@@ -75,6 +121,16 @@ test.describe('Login Input Latency & Rendering Performance Suite', () => {
           lowStockCount: 2,
           totalProducts: 48
         })
+      });
+    });
+
+    await page.route('**/api/v1/stores*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'store-1', name: 'Main Store', code: 'ST-01', status: 'active' }
+        ])
       });
     });
   });
