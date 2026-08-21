@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Cold session restoration and verification
+  // Cold session restoration and background verification
   useEffect(() => {
     let isMounted = true;
 
@@ -41,23 +41,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!isMounted) return;
           setToken(storedToken);
           setUser(storedUser);
+          setLifecycle('authenticated');
 
-          // Verify token against backend verification endpoint
+          realtimeManager.connect();
+          if (storedUser.assignedStoreId && storedUser.assignedStoreId !== 'all') {
+            realtimeManager.joinStore(storedUser.assignedStoreId);
+          }
+
+          // Verify token against backend verification endpoint in background
           try {
             const verifyRes = await apiClient.get('/api/v1/auth/verify');
             if (verifyRes && verifyRes.success) {
-              if (isMounted) {
-                setLifecycle('authenticated');
-                realtimeManager.connect();
-                if (storedUser.assignedStoreId && storedUser.assignedStoreId !== 'all') {
-                  realtimeManager.joinStore(storedUser.assignedStoreId);
-                }
+              if (verifyRes.user && isMounted) {
+                setUser(verifyRes.user);
+                sessionManager.setUser(verifyRes.user);
               }
               return;
             }
           } catch (err: any) {
             console.warn('[Auth] Token verification failed:', err.message);
             sessionManager.clearSession();
+            realtimeManager.disconnect();
             if (isMounted) {
               setToken(null);
               setUser(null);
@@ -65,14 +69,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return;
           }
-        }
-
-        if (isMounted) {
-          setLifecycle('unauthenticated');
+        } else {
+          if (isMounted) {
+            setLifecycle('unauthenticated');
+          }
         }
       } catch (err) {
         console.error('[Auth] Error restoring session:', err);
         sessionManager.clearSession();
+        realtimeManager.disconnect();
         if (isMounted) {
           setToken(null);
           setUser(null);
