@@ -4,7 +4,6 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { AppShell } from '../../components/layout/AppShell';
-import { StoreScopeProvider } from '../../providers/StoreScopeProvider';
 
 export default function ProtectedLayout({
   children
@@ -36,10 +35,8 @@ export default function ProtectedLayout({
   }
 
   return (
-    <StoreScopeProvider>
-      <AppShell>
-        {children}
-      </AppShell>
-    </StoreScopeProvider>
+    <AppShell>
+      {children}
+    </AppShell>
   );
 }

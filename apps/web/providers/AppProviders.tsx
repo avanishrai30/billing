@@ -4,6 +4,7 @@ import React from 'react';
 import { QueryProvider } from './QueryProvider';
 import { AuthProvider } from './AuthProvider';
 import { RealtimeProvider } from './RealtimeProvider';
+import { StoreScopeProvider } from './StoreScopeProvider';
 import { ToastProvider } from '../components/ui/Toast';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -11,9 +12,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <QueryProvider>
       <AuthProvider>
         <RealtimeProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <StoreScopeProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </StoreScopeProvider>
         </RealtimeProvider>
       </AuthProvider>
     </QueryProvider>
