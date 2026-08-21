@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const mockUser = {
-  id: 'usr-editorial-1',
+  id: 'usr-smoky-1',
   name: 'Super Admin',
   username: 'admin',
   role: 'SUPER ADMIN',
@@ -37,7 +37,7 @@ const mockDashboardResponse = {
   activeStoreId: 'all'
 };
 
-test.describe('Phase 24 login editorial composition', () => {
+test.describe('Phase 24.2 login smoky composition', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/v1/public/settings', async (route) => {
       await route.fulfill({
@@ -81,7 +81,7 @@ test.describe('Phase 24 login editorial composition', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          token: 'mock-editorial-token',
+          token: 'mock-smoky-token',
           user: mockUser
         })
       });
@@ -131,34 +131,35 @@ test.describe('Phase 24 login editorial composition', () => {
     });
   });
 
-  test('desktop renders botanical split with the editorial glass login surface', async ({ page }) => {
+  test('desktop renders the original smoky background with a centered white login card', async ({
+    page
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
 
-    const shell = page.getByTestId('login-editorial-shell');
-    const visualField = page.getByTestId('login-editorial-visual-field');
-    const panel = page.getByTestId('login-editorial-panel');
+    const shell = page.getByTestId('login-smoky-shell');
+    const card = page.getByTestId('login-smoky-card');
+    const canvas = page.locator('canvas');
 
     await expect(shell).toBeVisible();
-    await expect(visualField).toBeVisible();
-    await expect(panel).toBeVisible();
-    await expect(page.getByTestId('login-metamorphic-background')).toBeVisible();
-    await expect(page.getByTestId('metamorphic-shader-canvas')).toBeVisible();
+    await expect(card).toBeVisible();
+    await expect(canvas).toBeVisible();
     await expect(page.getByRole('heading', { name: "VC ORGANIC'S" })).toBeVisible();
     await expect(page.locator('#username')).toBeVisible();
     await expect(page.locator('#password')).toBeVisible();
     await expect(page.getByRole('button', { name: /show password/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /sign in to terminal/i })).toBeVisible();
 
-    const visualBox = await visualField.boundingBox();
-    const panelBox = await panel.boundingBox();
-    expect(visualBox).not.toBeNull();
-    expect(panelBox).not.toBeNull();
-    expect(panelBox!.x).toBeGreaterThan(visualBox!.x + visualBox!.width);
-    expect(panelBox!.width).toBeGreaterThanOrEqual(420);
+    await expect(page.getByTestId('login-editorial-shell')).toHaveCount(0);
+    await expect(page.getByTestId('login-metamorphic-background')).toHaveCount(0);
 
-    const panelStyles = await panel.evaluate((el) => {
+    const cardBox = await card.boundingBox();
+    expect(cardBox).not.toBeNull();
+    expect(cardBox!.width).toBeGreaterThanOrEqual(420);
+    expect(cardBox!.width).toBeLessThanOrEqual(520);
+
+    const cardStyles = await card.evaluate((el) => {
       const styles = window.getComputedStyle(el);
       const webkitStyles = styles as CSSStyleDeclaration & { webkitBackdropFilter?: string };
       return {
@@ -166,16 +167,14 @@ test.describe('Phase 24 login editorial composition', () => {
         backdropFilter: styles.backdropFilter || webkitStyles.webkitBackdropFilter
       };
     });
-    expect(panelStyles.backgroundColor).toMatch(/rgba|\/\s*0\./);
-    expect(panelStyles.backdropFilter).toContain('blur');
+    expect(cardStyles.backgroundColor).toBe('rgb(255, 255, 255)');
+    expect(['none', '']).toContain(cardStyles.backdropFilter);
 
     const headings = await page.getByRole('heading', { level: 1 }).allTextContents();
     expect(headings).toEqual(["VC ORGANIC'S"]);
   });
 
-  test('mobile stacks botanical visual region before the login form without overflow', async ({
-    page
-  }) => {
+  test('mobile renders the full smoky login form without horizontal overflow', async ({ page }) => {
     for (const viewport of [
       { width: 430, height: 932 },
       { width: 390, height: 844 }
@@ -184,16 +183,14 @@ test.describe('Phase 24 login editorial composition', () => {
       await page.goto('/login');
       await page.waitForLoadState('networkidle');
 
-      const visualBox = await page.getByTestId('login-editorial-visual-field').boundingBox();
-      const panelBox = await page.getByTestId('login-editorial-panel').boundingBox();
-      expect(visualBox).not.toBeNull();
-      expect(panelBox).not.toBeNull();
-      expect(panelBox!.y).toBeGreaterThan(visualBox!.y);
-
+      await expect(page.getByTestId('login-smoky-shell')).toBeVisible();
+      await expect(page.getByTestId('login-smoky-card')).toBeVisible();
+      await expect(page.locator('canvas')).toBeVisible();
       await expect(page.getByRole('heading', { name: "VC ORGANIC'S" })).toBeVisible();
       await expect(page.locator('#username')).toBeVisible();
       await expect(page.locator('#password')).toBeVisible();
       await expect(page.getByRole('button', { name: /sign in to terminal/i })).toBeVisible();
+      await expect(page.getByText('AIAVRO Billing OS • Multi-Outlet Gateway')).toBeVisible();
 
       const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
       const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
@@ -201,7 +198,7 @@ test.describe('Phase 24 login editorial composition', () => {
     }
   });
 
-  test('production username/password submit reaches dashboard and removes login background', async ({
+  test('production username/password submit reaches dashboard and removes login visuals', async ({
     page
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -220,6 +217,22 @@ test.describe('Phase 24 login editorial composition', () => {
     await expect(
       page.getByRole('heading', { name: /business intelligence & operational kpis/i })
     ).toBeVisible();
-    await expect(page.getByTestId('login-metamorphic-background')).toHaveCount(0);
+    await expect(page.getByTestId('login-smoky-shell')).toHaveCount(0);
+    await expect(page.locator('canvas')).toHaveCount(0);
+  });
+
+  test('captures smoky visual baselines at required desktop and mobile sizes', async ({ page }) => {
+    for (const viewport of [
+      { width: 1440, height: 900, name: 'desktop-login-smoky-1440x900.png' },
+      { width: 1280, height: 800, name: 'laptop-login-smoky-1280x800.png' },
+      { width: 430, height: 932, name: 'mobile-login-smoky-430x932.png' },
+      { width: 390, height: 844, name: 'mobile-login-smoky-390x844.png' }
+    ]) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto('/login');
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByTestId('login-smoky-card')).toBeVisible();
+      await page.screenshot({ path: `test-results/${viewport.name}` });
+    }
   });
 });
