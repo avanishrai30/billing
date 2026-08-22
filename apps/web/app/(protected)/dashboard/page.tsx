@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuthorization } from '../../../hooks/useAuthorization';
 import { useDashboardMetrics } from '../../../features/dashboard/hooks';
 import {
   DashboardHeader,
@@ -16,11 +16,11 @@ import { ErrorState, AccessDeniedState } from '../../../components/ui';
 import { useStoreScope } from '../../../providers/StoreScopeProvider';
 
 export default function DashboardPage() {
-  const { user, hasPermission } = useAuth();
-  const canView = hasPermission('dashboard.view');
-  const canViewInventory = hasPermission('inventory.view');
-  const canViewInvoices = hasPermission('invoices.view');
-  const canViewPurchases = hasPermission('purchases.view');
+  const { user, can } = useAuthorization();
+  const canView = can('dashboard.view');
+  const canViewInventory = can('inventory.view');
+  const canViewInvoices = can('invoices.view');
+  const canViewPurchases = can('purchases.view');
   const { activeStoreId } = useStoreScope();
   const storeId = activeStoreId || user?.assignedStoreId || 'all';
 

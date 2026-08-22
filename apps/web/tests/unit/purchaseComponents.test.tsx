@@ -7,9 +7,13 @@ import {
   PurchaseTransportSection,
   PurchaseTotalsSummary,
   PurchaseDetailDrawer,
-  PurchaseVoidDialog
+  PurchaseVoidDialog,
+  PurchaseHistory
 } from '../../features/purchases/components';
+import { usePurchasesQuery } from '../../features/purchases/hooks';
 import type { PurchaseItem, PurchaseTransport, PurchaseDoc } from '../../features/purchases/types';
+
+jest.mock('../../features/purchases/hooks');
 
 describe('Purchase Component Layer & Interactions', () => {
   it('1. PurchaseHeader renders all inputs and handles changes', () => {
@@ -158,5 +162,61 @@ describe('Purchase Component Layer & Interactions', () => {
 
     expect(screen.getAllByRole('dialog')).toHaveLength(2);
     expect(screen.getByText(/stock ledger reversal warning/i)).toBeInTheDocument();
+  });
+
+  it('6. PurchaseHistory hides void action without purchases.void permission', () => {
+    const mockPurchase: PurchaseDoc = {
+      id: 'pur-101',
+      purchaseId: 'PO-2026-001',
+      supplierName: 'Amul Dairy',
+      invoiceNumber: 'AMUL-889',
+      purchaseDate: '2026-08-16',
+      locationId: 'store-1',
+      paymentStatus: 'PAID',
+      items: [],
+      subtotal: 2500,
+      taxAmount: 300,
+      grandTotal: 2800,
+      status: 'RECEIVED',
+      createdAt: '2026-08-16T10:00:00Z'
+    };
+
+    (usePurchasesQuery as jest.Mock).mockReturnValue({
+      data: {
+        purchases: [mockPurchase],
+        pagination: {
+          page: 1,
+          limit: 15,
+          total: 1,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      },
+      isLoading: false,
+      isError: false,
+      refetch: jest.fn()
+    });
+
+    const { rerender } = render(
+      <PurchaseHistory
+        onSelectPurchase={jest.fn()}
+        onRequestVoid={jest.fn()}
+        canVoid={false}
+      />
+    );
+
+    expect(screen.getByLabelText('View details for PO-2026-001')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Void purchase PO-2026-001')).not.toBeInTheDocument();
+
+    rerender(
+      <PurchaseHistory
+        onSelectPurchase={jest.fn()}
+        onRequestVoid={jest.fn()}
+        canVoid={true}
+      />
+    );
+
+    expect(screen.getByLabelText('Void purchase PO-2026-001')).toBeInTheDocument();
   });
 });

@@ -66,7 +66,7 @@ describe('Settings Components Suite', () => {
     render(
       <SettingsHeader
         activeStoreName="Mumbai Flagship"
-        isSuperAdmin={true}
+        canUpdateSettings={true}
         onRefresh={onRefresh}
         isLoading={false}
       />
@@ -75,6 +75,7 @@ describe('Settings Components Suite', () => {
     expect(screen.getByText('Settings & Configuration')).toBeInTheDocument();
     expect(screen.getByText('Live Configuration')).toBeInTheDocument();
     expect(screen.getByText('Mumbai Flagship')).toBeInTheDocument();
+    expect(screen.getByText('Configuration Editing Enabled')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Refresh'));
     expect(onRefresh).toHaveBeenCalledTimes(1);

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Palette, Building2, Sliders } from 'lucide-react';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuthorization } from '../../../hooks/useAuthorization';
 import { useStoreScope } from '../../../providers/StoreScopeProvider';
 import { useStoresQuery } from '../../../features/stores/hooks';
 import { usePortalSettingsQuery } from '../../../features/settings/hooks';
@@ -21,16 +21,15 @@ import { storeQueryKeys } from '../../../features/stores/hooks';
 import { AccessDeniedState } from '../../../components/ui';
 
 export default function SettingsPage() {
-  const { user: currentUser, hasPermission } = useAuth();
-  const canView = hasPermission('settings.view');
+  const { can } = useAuthorization();
+  const canView = can('settings.view');
+  const canUpdateSettings = can('settings.update');
   const { activeStoreId } = useStoreScope();
   const { data: stores = [], refetch: refetchStores, isLoading: isStoresLoading } = useStoresQuery();
   const { refetch: refetchSettings, isLoading: isSettingsLoading } = usePortalSettingsQuery();
 
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<SettingsTabId>('branding');
-
-  const isSuperAdmin = currentUser?.role === 'SUPER ADMIN' || currentUser?.category === 'super admin' || currentUser?.category === 'admin';
 
   const activeStore = stores.find((s) => s.id === activeStoreId) || stores[0];
   const activeStoreName = activeStore ? activeStore.name : 'All Outlets';
@@ -77,7 +76,7 @@ export default function SettingsPage() {
       {/* Header */}
       <SettingsHeader
         activeStoreName={activeStoreName}
-        isSuperAdmin={isSuperAdmin}
+        canUpdateSettings={canUpdateSettings}
         isLoading={isSettingsLoading || isStoresLoading}
         onRefresh={handleRefreshAll}
       />

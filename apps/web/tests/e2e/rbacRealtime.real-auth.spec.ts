@@ -306,6 +306,36 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       await expectBrowserPermission(targetPage, 'inventory.adjust', false);
       await expect(targetPage.getByRole('button', { name: /stock adjustment/i })).toHaveCount(0);
 
+      const surfacePermissions = ['users.view', 'settings.view', 'products.update'];
+      const surfaceGrant = await saveOverrides(adminLogin.token, targetUser!.id, surfacePermissions, []);
+      for (const permission of surfacePermissions) {
+        expect(surfaceGrant.permissions.effectivePermissions).toContain(permission);
+      }
+      await waitForAccessToast(targetPage);
+      await expectBrowserPermission(targetPage, 'users.view', true);
+      await expectBrowserPermission(targetPage, 'settings.view', true);
+      await expectBrowserPermission(targetPage, 'products.update', true);
+      await expect(targetPage.getByRole('link', { name: /^users$/i })).toBeVisible();
+      await expect(targetPage.getByRole('link', { name: /^settings$/i })).toBeVisible();
+      await expectShellStillMounted(targetPage, shellMarker);
+
+      const surfaceDeny = await saveOverrides(adminLogin.token, targetUser!.id, [], surfacePermissions);
+      for (const permission of surfacePermissions) {
+        expect(surfaceDeny.permissions.effectivePermissions).not.toContain(permission);
+      }
+      await waitForAccessToast(targetPage);
+      await expectBrowserPermission(targetPage, 'users.view', false);
+      await expectBrowserPermission(targetPage, 'settings.view', false);
+      await expectBrowserPermission(targetPage, 'products.update', false);
+      await expect(targetPage.getByRole('link', { name: /^users$/i })).toHaveCount(0);
+      await expect(targetPage.getByRole('link', { name: /^settings$/i })).toHaveCount(0);
+      await expectShellStillMounted(targetPage, shellMarker);
+
+      const finalInherited = await saveOverrides(adminLogin.token, targetUser!.id, [], []);
+      for (const permission of surfacePermissions) {
+        expect(finalInherited.permissions.effectivePermissions).not.toContain(permission);
+      }
+
       const targetToken = await targetPage.evaluate(() => localStorage.getItem('aiavro_jwt_token'));
       expect(targetToken).toBeTruthy();
       await expectForbidden('/api/v1/users', targetToken!, editableUserPayload(inherited.user, { category: 'admin', role: 'Admin' }));

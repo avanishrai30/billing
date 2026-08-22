@@ -94,7 +94,32 @@ describe('Sidebar Component & RBAC Navigation Visibility', () => {
     expect(screen.queryByText('Franchise')).not.toBeInTheDocument();
   });
 
-  it('3. Triggers onClose callback when clicking mobile close button or backdrop', () => {
+  it('3. User-specific grant exposes only the granted navigation item', () => {
+    const allowed = ['dashboard.view', 'users.view'];
+    (useAuth as jest.Mock).mockReturnValue({
+      user: {
+        id: 'usr-granted',
+        name: 'Granted Employee',
+        username: 'granted.employee',
+        role: 'Cashier',
+        category: 'employee',
+        assignedStoreId: 'st-1',
+        permissions: allowed,
+        status: 'active'
+      },
+      hasPermission: (perm: string) => allowed.includes(perm),
+      isAuthenticated: true
+    });
+
+    render(<Sidebar isOpen={true} onClose={jest.fn()} />);
+
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Users')).toBeInTheDocument();
+    expect(screen.queryByText('Roles & Access')).not.toBeInTheDocument();
+    expect(screen.queryByText('Settings')).not.toBeInTheDocument();
+  });
+
+  it('4. Triggers onClose callback when clicking mobile close button or backdrop', () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: null,
       hasPermission: () => false,

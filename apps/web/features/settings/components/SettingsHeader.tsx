@@ -4,14 +4,14 @@ import { Button, Badge } from '../../../components/ui';
 
 export interface SettingsHeaderProps {
   activeStoreName: string;
-  isSuperAdmin: boolean;
+  canUpdateSettings: boolean;
   onRefresh?: () => void;
   isLoading?: boolean;
 }
 
 export function SettingsHeader({
   activeStoreName,
-  isSuperAdmin,
+  canUpdateSettings,
   onRefresh,
   isLoading
 }: SettingsHeaderProps) {
@@ -37,7 +37,7 @@ export function SettingsHeader({
               {activeStoreName}
             </span>
             <span className="h-1 w-1 rounded-full bg-slate-300" aria-hidden="true" />
-            <span>{isSuperAdmin ? 'Full Enterprise Administration' : 'Store Scoped Profile'}</span>
+            <span>{canUpdateSettings ? 'Configuration Editing Enabled' : 'Read-Only Configuration Access'}</span>
           </div>
         </div>
       </div>

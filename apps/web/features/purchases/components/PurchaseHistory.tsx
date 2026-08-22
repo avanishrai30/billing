@@ -27,11 +27,13 @@ import type { PurchaseDoc } from '../types';
 export interface PurchaseHistoryProps {
   onSelectPurchase: (purchase: PurchaseDoc) => void;
   onRequestVoid: (purchase: PurchaseDoc) => void;
+  canVoid?: boolean;
 }
 
 export function PurchaseHistory({
   onSelectPurchase,
-  onRequestVoid
+  onRequestVoid,
+  canVoid = false
 }: PurchaseHistoryProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -193,7 +195,7 @@ export function PurchaseHistory({
                             onClick={() => onSelectPurchase(purchase)}
                             icon={<Eye className="w-3.5 h-3.5 text-blue-600" />}
                           />
-                          {!isVoided && (
+                          {canVoid && !isVoided && (
                             <IconButton
                               aria-label={`Void purchase ${poNum}`}
                               variant="ghost"

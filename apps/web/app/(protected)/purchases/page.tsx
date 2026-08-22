@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PlusCircle, History } from 'lucide-react';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuthorization } from '../../../hooks/useAuthorization';
 import {
   useCreatePurchaseMutation,
   useVoidPurchaseMutation,
@@ -34,19 +34,26 @@ import type {
 } from '../../../features/purchases/types';
 
 export default function PurchasesPage() {
-  const { user, hasPermission } = useAuth();
-  const canView = hasPermission('purchases.view');
+  const { user, can, isStoreAuthorized } = useAuthorization();
+  const canView = can('purchases.view');
+  const canCreate = can('purchases.create');
+  const canVoid = can('purchases.void');
   const { success, error: toastError } = useToast();
   const { suppliers, stores, products } = usePurchaseLookups();
 
-  const isSuperAdmin = user?.role === 'SUPER ADMIN';
   const defaultStore =
     user?.assignedStoreId && user.assignedStoreId !== 'all'
       ? user.assignedStoreId
       : stores[0]?.id || 'store-1';
 
   // Active view tab: 'entry' or 'history'
-  const [activeTab, setActiveTab] = useState('entry');
+  const [activeTab, setActiveTab] = useState(canCreate ? 'entry' : 'history');
+
+  useEffect(() => {
+    if (!canCreate && activeTab === 'entry') {
+      setActiveTab('history');
+    }
+  }, [activeTab, canCreate]);
 
   if (!canView) {
     return (
@@ -162,6 +169,11 @@ export default function PurchasesPage() {
   };
 
   const handleCreatePurchase = async () => {
+    if (!canCreate) {
+      toastError('Purchase Creation Restricted', 'Your effective permissions do not authorize creating purchase entries.');
+      return;
+    }
+
     if (!supplierName.trim()) {
       toastError('Supplier Required', 'Please specify the vendor or supplier name.');
       return;
@@ -220,6 +232,10 @@ export default function PurchasesPage() {
 
   const handleConfirmVoid = async () => {
     if (!purchaseToVoid) return;
+    if (!canVoid) {
+      toastError('Void Restricted', 'Your effective permissions do not authorize voiding purchase entries.');
+      return;
+    }
     const targetId = purchaseToVoid.purchaseId || purchaseToVoid.id;
 
     try {
@@ -246,10 +262,12 @@ export default function PurchasesPage() {
       {/* Tabs */}
       <Tabs defaultValue="entry" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="entry" className="gap-1.5">
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>New Purchase Entry</span>
-          </TabsTrigger>
+          {canCreate && (
+            <TabsTrigger value="entry" className="gap-1.5">
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>New Purchase Entry</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="history" className="gap-1.5">
             <History className="w-3.5 h-3.5" />
             <span>Inward Purchase History</span>
@@ -257,57 +275,59 @@ export default function PurchasesPage() {
         </TabsList>
 
         {/* Tab 1: New Entry */}
-        <TabsContent value="entry" className="space-y-6 mt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Inward Header */}
-              <PurchaseHeader
-                supplierName={supplierName}
-                onSupplierChange={(name) => setSupplierName(name)}
-                invoiceNumber={invoiceNumber}
-                onInvoiceNumberChange={setInvoiceNumber}
-                purchaseDate={purchaseDate}
-                onPurchaseDateChange={setPurchaseDate}
-                locationId={locationId}
-                onLocationChange={setLocationId}
-                reference={reference}
-                onReferenceChange={setReference}
-                paymentStatus={paymentStatus}
-                onPaymentStatusChange={setPaymentStatus}
-                notes={notes}
-                onNotesChange={setNotes}
-                suppliers={suppliers}
-                stores={stores}
-                disabledStore={!isSuperAdmin && !!user?.assignedStoreId && user.assignedStoreId !== 'all'}
-              />
+        {canCreate && (
+          <TabsContent value="entry" className="space-y-6 mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              <div className="lg:col-span-2 space-y-6">
+                {/* Inward Header */}
+                <PurchaseHeader
+                  supplierName={supplierName}
+                  onSupplierChange={(name) => setSupplierName(name)}
+                  invoiceNumber={invoiceNumber}
+                  onInvoiceNumberChange={setInvoiceNumber}
+                  purchaseDate={purchaseDate}
+                  onPurchaseDateChange={setPurchaseDate}
+                  locationId={locationId}
+                  onLocationChange={setLocationId}
+                  reference={reference}
+                  onReferenceChange={setReference}
+                  paymentStatus={paymentStatus}
+                  onPaymentStatusChange={setPaymentStatus}
+                  notes={notes}
+                  onNotesChange={setNotes}
+                  suppliers={suppliers}
+                  stores={stores}
+                  disabledStore={!!user?.assignedStoreId && user.assignedStoreId !== 'all' && !isStoreAuthorized('all')}
+                />
 
-              {/* Items Table */}
-              <PurchaseItemsTable
-                items={items}
-                onChange={setItems}
-                availableProducts={products}
-              />
+                {/* Items Table */}
+                <PurchaseItemsTable
+                  items={items}
+                  onChange={setItems}
+                  availableProducts={products}
+                />
 
-              {/* Transport & Freight */}
-              <PurchaseTransportSection
-                transport={transport}
-                onChange={setTransport}
-              />
+                {/* Transport & Freight */}
+                <PurchaseTransportSection
+                  transport={transport}
+                  onChange={setTransport}
+                />
+              </div>
+
+              {/* Sticky Sidebar: Summary & Totals */}
+              <div className="lg:col-span-1">
+                <PurchaseTotalsSummary
+                  totals={totals}
+                  otherCharges={otherCharges}
+                  onOtherChargesChange={setOtherCharges}
+                  onSubmit={handleCreatePurchase}
+                  isLoading={createMutation.isPending}
+                  isValid={supplierName.trim().length > 0 && invoiceNumber.trim().length > 0}
+                />
+              </div>
             </div>
-
-            {/* Sticky Sidebar: Summary & Totals */}
-            <div className="lg:col-span-1">
-              <PurchaseTotalsSummary
-                totals={totals}
-                otherCharges={otherCharges}
-                onOtherChargesChange={setOtherCharges}
-                onSubmit={handleCreatePurchase}
-                isLoading={createMutation.isPending}
-                isValid={supplierName.trim().length > 0 && invoiceNumber.trim().length > 0}
-              />
-            </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
+        )}
 
         {/* Tab 2: History */}
         <TabsContent value="history" className="mt-4">
@@ -320,6 +340,7 @@ export default function PurchasesPage() {
               setPurchaseToVoid(pur);
               setIsVoidOpen(true);
             }}
+            canVoid={canVoid}
           />
         </TabsContent>
       </Tabs>

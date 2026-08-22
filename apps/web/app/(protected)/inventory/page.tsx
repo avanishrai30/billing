@@ -25,7 +25,6 @@ export default function InventoryPage() {
   const { user, hasPermission } = useAuth();
   const { activeStoreId } = useStoreScope();
 
-  const isSuperAdmin = user?.role === 'SUPER ADMIN' || user?.category === 'super admin';
   const assignedStoreId = user?.assignedStoreId && user.assignedStoreId !== 'all'
     ? user.assignedStoreId
     : (activeStoreId || 'all');

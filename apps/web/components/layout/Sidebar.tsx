@@ -23,7 +23,7 @@ import {
   X,
   ShieldCheck
 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthorization } from '../../hooks/useAuthorization';
 import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { normalizePublicAssetUrl } from '../../lib/utils/media';
 
@@ -64,7 +64,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { hasPermission } = useAuth();
+  const { can } = useAuthorization();
   const { data: branding } = usePublicSettings();
   const [logoFailed, setLogoFailed] = useState(false);
 
@@ -74,7 +74,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (!item.permission) return true;
-    return hasPermission(item.permission);
+    return can(item.permission);
   });
 
   return (
