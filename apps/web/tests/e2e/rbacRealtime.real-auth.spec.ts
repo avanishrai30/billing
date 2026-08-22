@@ -131,7 +131,7 @@ async function loginInBrowser(page: Page, username: string, password: string) {
 
   await page.goto('/login');
   await page.getByLabel('Username').fill(username);
-  await page.getByLabel('Password').fill(password);
+  await page.getByRole('textbox', { name: 'Password' }).fill(password);
   await page.getByRole('button', { name: /sign in to terminal/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await socketConnected;
@@ -258,7 +258,7 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       await targetPage.goto('/permissions');
       await expect(targetPage.getByTestId('access-denied-state')).toBeVisible();
       await targetPage.goto('/dashboard');
-      const shellMarker = await markShell(targetPage);
+      let shellMarker = await markShell(targetPage);
 
       await loginInBrowser(adminPage, env.superUsername!, env.superPassword!);
 
@@ -270,6 +270,7 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       await expect(targetPage.getByRole('link', { name: /roles & access/i })).toBeVisible();
       await targetPage.goto('/permissions');
       await expect(targetPage.getByRole('heading', { name: /roles & access/i })).toBeVisible();
+      shellMarker = await markShell(targetPage);
 
       const reverseUser = await changeRoleThroughUsersUi(adminPage, roleChangedUser, 'employee');
       await waitForAccessToast(targetPage);
@@ -278,13 +279,14 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       await expect(targetPage.getByRole('link', { name: /roles & access/i })).toHaveCount(0);
       await targetPage.goto('/permissions');
       await expect(targetPage.getByTestId('access-denied-state')).toBeVisible();
+      await targetPage.goto('/inventory');
+      shellMarker = await markShell(targetPage);
 
       const grant = await saveOverrides(adminLogin.token, reverseUser.id, ['inventory.adjust'], []);
       expect(grant.permissions.permissionGrants).toContain('inventory.adjust');
       expect(grant.permissions.effectivePermissions).toContain('inventory.adjust');
       await waitForAccessToast(targetPage);
       await expectBrowserPermission(targetPage, 'inventory.adjust', true);
-      await targetPage.goto('/inventory');
       await expect(targetPage.getByRole('button', { name: /stock adjustment/i })).toBeVisible();
       await expectShellStillMounted(targetPage, shellMarker);
 
