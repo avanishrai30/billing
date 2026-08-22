@@ -267,18 +267,11 @@ export function BusinessSettings() {
               variant="primary"
               disabled={updateStoreMutation.isPending || isStoresLoading || !isDirty}
               className="px-6 py-2.5 font-semibold"
+              leftIcon={
+                updateStoreMutation.isPending ? <Loader2 className="animate-spin" /> : <Save />
+              }
             >
-              {updateStoreMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving Profile...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Business Profile
-                </>
-              )}
+              {updateStoreMutation.isPending ? 'Saving Profile...' : 'Save Business Profile'}
             </Button>
           </div>
         )}

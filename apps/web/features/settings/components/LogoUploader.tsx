@@ -125,18 +125,15 @@ export function LogoUploader({
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled || uploadMutation.isPending}
+              leftIcon={
+                uploadMutation.isPending ? (
+                  <Loader2 className="animate-spin text-blue-600" />
+                ) : (
+                  <Upload className="text-blue-600" />
+                )
+              }
             >
-              {uploadMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-blue-600" />
-                  Optimizing...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2 text-blue-600" />
-                  Upload Custom Logo
-                </>
-              )}
+              {uploadMutation.isPending ? 'Optimizing...' : 'Upload Custom Logo'}
             </Button>
 
             <Button
@@ -145,8 +142,8 @@ export function LogoUploader({
               size="sm"
               onClick={handleResetToDefault}
               disabled={disabled || uploadMutation.isPending}
+              leftIcon={<RotateCcw />}
             >
-              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
               Reset Default
             </Button>
           </div>

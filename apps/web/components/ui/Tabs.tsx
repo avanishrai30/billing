@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
+import { IconSlot } from './IconSlot';
 
 interface TabsContextValue {
   activeTab: string;
@@ -84,7 +85,7 @@ export function TabsTrigger({
       aria-selected={isActive}
       disabled={disabled}
       onClick={() => context.setActiveTab(value)}
-      className={`relative inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${
+      className={`relative inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium leading-none transition-colors focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${
         isActive ? 'text-blue-700 font-semibold' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
       } ${className}`}
     >
@@ -94,8 +95,12 @@ export function TabsTrigger({
           className="absolute inset-0 bg-white rounded-md shadow-xs -z-10"
         />
       )}
-      {icon && <span className="w-3.5 h-3.5 flex-shrink-0 relative z-10">{icon}</span>}
-      <span className="relative z-10">{children}</span>
+      {icon && (
+        <IconSlot className="relative z-10 h-3.5 w-3.5 [&>svg]:!h-3.5 [&>svg]:!w-3.5">
+          {icon}
+        </IconSlot>
+      )}
+      <span className="relative z-10 inline-flex items-center leading-none">{children}</span>
     </button>
   );
 }

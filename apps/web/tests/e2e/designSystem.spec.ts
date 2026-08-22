@@ -112,4 +112,79 @@ test.describe('Phase 3 Design System & Shared Primitives Visual & Interaction Su
     await expect(page.getByText('History Panel')).toBeVisible();
     await expect(page.getByText('Overview Panel')).not.toBeVisible();
   });
+
+  test('5. Shared button primitive geometry contracts stay stable', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/design-system');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: 'Design System & UI Primitives Gallery' })).toBeVisible();
+
+    const sizes = [
+      { name: 'Small (sm)', height: 32 },
+      { name: 'Medium (md)', height: 36 },
+      { name: 'Large (lg)', height: 42 }
+    ];
+
+    for (const size of sizes) {
+      const button = page.getByRole('button', { name: size.name });
+      const box = await button.boundingBox();
+      expect(Math.round(box!.height)).toBe(size.height);
+
+      const heightResult = await button.evaluate((el) => {
+        const before = el.getBoundingClientRect();
+        const label = el.querySelector('span:last-child') as HTMLElement | null;
+        if (label) {
+          label.style.lineHeight = '32px';
+          label.style.fontSize = '20px';
+        }
+        const after = el.getBoundingClientRect();
+        return { beforeHeight: before.height, afterHeight: after.height };
+      });
+
+      expect(Math.round(heightResult.afterHeight)).toBe(Math.round(heightResult.beforeHeight));
+    }
+
+    const iconTextButton = page.getByRole('button', { name: 'Open Dialog' });
+    const metrics = await iconTextButton.evaluate((el) => {
+      const button = el.getBoundingClientRect();
+      const svg = el.querySelector('svg')!;
+      const label = el.querySelector('span:last-child') as HTMLElement;
+      const iconWrapper = svg.parentElement!;
+      const icon = svg.getBoundingClientRect();
+      const wrapper = iconWrapper.getBoundingClientRect();
+      const text = label.getBoundingClientRect();
+      const wrapperStyles = window.getComputedStyle(iconWrapper);
+      const svgStyles = window.getComputedStyle(svg);
+      const buttonStyles = window.getComputedStyle(el);
+      const labelStyles = window.getComputedStyle(label);
+
+      return {
+        buttonHeight: button.height,
+        iconWidth: icon.width,
+        iconHeight: icon.height,
+        iconCenterDelta: Math.abs(icon.top + icon.height / 2 - (button.top + button.height / 2)),
+        textCenterDelta: Math.abs(text.top + text.height / 2 - (button.top + button.height / 2)),
+        wrapperExtraHeight: wrapper.height - icon.height,
+        flexShrink: wrapperStyles.flexShrink,
+        svgDisplay: svgStyles.display,
+        alignItems: buttonStyles.alignItems,
+        gap: buttonStyles.columnGap,
+        labelLineHeight: labelStyles.lineHeight
+      };
+    });
+
+    expect(Math.round(metrics.buttonHeight)).toBe(32);
+    expect(metrics.iconWidth).toBeGreaterThanOrEqual(14);
+    expect(metrics.iconWidth).toBeLessThanOrEqual(16);
+    expect(metrics.iconHeight).toBeGreaterThanOrEqual(14);
+    expect(metrics.iconHeight).toBeLessThanOrEqual(16);
+    expect(metrics.iconCenterDelta).toBeLessThanOrEqual(1);
+    expect(metrics.textCenterDelta).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.wrapperExtraHeight)).toBeLessThanOrEqual(1);
+    expect(metrics.flexShrink).toBe('0');
+    expect(metrics.svgDisplay).toBe('block');
+    expect(metrics.alignItems).toBe('center');
+    expect(metrics.gap).toBe('6px');
+    expect(metrics.labelLineHeight).toBe('12px');
+  });
 });

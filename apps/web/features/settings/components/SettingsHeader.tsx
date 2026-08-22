@@ -49,8 +49,8 @@ export function SettingsHeader({
             size="sm"
             onClick={onRefresh}
             disabled={isLoading}
+            leftIcon={<RefreshCw className={isLoading ? 'animate-spin' : ''} />}
           >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>

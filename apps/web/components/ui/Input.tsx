@@ -1,6 +1,7 @@
 'use client';
 
 import React, { forwardRef } from 'react';
+import { IconSlot } from './IconSlot';
 
 export type InputSize = 'sm' | 'md' | 'lg';
 
@@ -59,9 +60,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="relative w-full flex items-center">
         {leftIcon && (
-          <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+          <IconSlot className="absolute inset-y-0 left-0 pl-2.5 pointer-events-none text-slate-400 [&>svg]:!h-4 [&>svg]:!w-4">
             {leftIcon}
-          </div>
+          </IconSlot>
         )}
         <input
           ref={ref}
@@ -74,9 +75,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {rightIcon && (
-          <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+          <IconSlot className="absolute inset-y-0 right-0 pr-2.5 pointer-events-none text-slate-400 [&>svg]:!h-4 [&>svg]:!w-4">
             {rightIcon}
-          </div>
+          </IconSlot>
         )}
       </div>
     );

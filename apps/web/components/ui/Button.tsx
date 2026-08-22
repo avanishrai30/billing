@@ -1,6 +1,7 @@
 'use client';
 
 import React, { forwardRef } from 'react';
+import { IconSlot } from './IconSlot';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -31,7 +32,19 @@ const variantStyles: Record<ButtonVariant, string> = {
 const sizeStyles: Record<ButtonSize, string> = {
   sm: 'h-8 px-3 text-xs rounded-lg gap-1.5',
   md: 'h-9 px-3.5 text-xs font-medium rounded-lg gap-2',
-  lg: 'h-[42px] px-4 text-sm font-semibold rounded-lg gap-2.5'
+  lg: 'h-[42px] px-4 text-sm font-semibold rounded-lg gap-2'
+};
+
+const iconSizeStyles: Record<ButtonSize, string> = {
+  sm: '[&>svg]:!h-3.5 [&>svg]:!w-3.5',
+  md: '[&>svg]:!h-4 [&>svg]:!w-4',
+  lg: '[&>svg]:!h-[18px] [&>svg]:!w-[18px]'
+};
+
+const spinnerSizeStyles: Record<ButtonSize, string> = {
+  sm: 'h-3.5 w-3.5',
+  md: 'h-4 w-4',
+  lg: 'h-[18px] w-[18px]'
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -51,7 +64,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyle =
-      'inline-flex items-center justify-center font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none whitespace-nowrap';
+      'inline-flex items-center justify-center font-medium leading-none transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 whitespace-nowrap';
 
     return (
       <button
@@ -63,18 +76,25 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading ? (
           <>
-            <span
-              className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin flex-shrink-0"
-              aria-hidden="true"
-            />
+            <IconSlot aria-hidden="true">
+              <span
+                className={`${spinnerSizeStyles[size]} border-2 border-current border-t-transparent rounded-full animate-spin`}
+              />
+            </IconSlot>
             <span className="sr-only">Loading</span>
           </>
         ) : (
-          leftIcon && <span className="flex-shrink-0 inline-flex items-center justify-center" aria-hidden="true">{leftIcon}</span>
+          leftIcon && (
+            <IconSlot className={iconSizeStyles[size]} aria-hidden="true">
+              {leftIcon}
+            </IconSlot>
+          )
         )}
-        <span>{children}</span>
+        <span className="inline-flex min-w-0 items-center leading-none truncate">{children}</span>
         {!isLoading && rightIcon && (
-          <span className="flex-shrink-0 inline-flex items-center justify-center" aria-hidden="true">{rightIcon}</span>
+          <IconSlot className={iconSizeStyles[size]} aria-hidden="true">
+            {rightIcon}
+          </IconSlot>
         )}
       </button>
     );

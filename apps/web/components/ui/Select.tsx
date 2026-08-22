@@ -3,6 +3,7 @@
 import React, { forwardRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { InputSize } from './Input';
+import { IconSlot } from './IconSlot';
 
 export interface SelectOption {
   value: string | number;
@@ -78,9 +79,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+        <IconSlot className="absolute inset-y-0 right-0 pr-2.5 pointer-events-none text-slate-400 [&>svg]:!h-3.5 [&>svg]:!w-3.5">
           <ChevronDown className="w-3.5 h-3.5" />
-        </div>
+        </IconSlot>
       </div>
     );
   }

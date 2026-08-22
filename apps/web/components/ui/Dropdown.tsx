@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { IconSlot } from './IconSlot';
 
 export interface DropdownItem {
   label: string;
@@ -57,14 +58,18 @@ export function Dropdown({ trigger, items, align = 'right', className = '' }: Dr
                 item.onClick();
                 setIsOpen(false);
               }}
-              className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`w-full px-3.5 py-2 text-left text-xs font-medium leading-none flex items-center gap-2.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                 item.danger
                   ? 'text-rose-700 hover:bg-rose-50'
                   : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950'
               }`}
             >
-              {item.icon && <span className="w-4 h-4 flex-shrink-0">{item.icon}</span>}
-              <span className="truncate">{item.label}</span>
+              {item.icon && (
+                <IconSlot className="h-4 w-4 [&>svg]:!h-4 [&>svg]:!w-4">
+                  {item.icon}
+                </IconSlot>
+              )}
+              <span className="inline-flex min-w-0 items-center leading-none truncate">{item.label}</span>
             </button>
           ))}
         </div>

@@ -41,6 +41,17 @@ test.describe('Root Route Redirect & Application Gateway Suite', () => {
       });
     });
 
+    await page.route('**/uploads/logos/*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          'base64'
+        )
+      });
+    });
+
     // Intercept dashboard metrics
     await page.route('**/api/v1/dashboard/metrics*', async (route) => {
       await route.fulfill({

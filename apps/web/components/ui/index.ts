@@ -1,5 +1,6 @@
 export * from './Button';
 export * from './IconButton';
+export * from './IconSlot';
 export * from './Input';
 export * from './PasswordInput';
 export * from './Textarea';
@@ -29,5 +30,4 @@ export * from './Avatar';
 export * from './Tooltip';
 export * from './smokey-background';
 export { LoginForm } from './login-form';
-
 

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
+import { IconSlot } from './IconSlot';
 
 export interface DialogProps {
   isOpen: boolean;
@@ -84,9 +85,11 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer focus-ring"
+            className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer focus-ring shrink-0 leading-none"
           >
-            <X className="w-5 h-5" />
+            <IconSlot className="[&>svg]:!h-5 [&>svg]:!w-5">
+              <X className="w-5 h-5" />
+            </IconSlot>
           </button>
         </div>
 

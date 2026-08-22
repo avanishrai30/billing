@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { IconSlot } from './IconSlot';
 
 export type BadgeVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
 export type BadgeSize = 'sm' | 'md';
@@ -44,13 +45,13 @@ export function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center font-medium border select-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center font-medium leading-none border select-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       {...props}
     >
       {dot && (
         <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]}`} aria-hidden="true" />
       )}
-      <span>{children}</span>
+      <span className="inline-flex items-center leading-none">{children}</span>
     </span>
   );
 }
@@ -134,11 +135,13 @@ export function Tag({ children, onRemove, className = '', ...props }: TagProps) 
           type="button"
           onClick={onRemove}
           aria-label="Remove tag"
-            className="p-0.5 hover:bg-slate-200 rounded-xs text-slate-500 hover:text-slate-900 cursor-pointer"
+          className="inline-flex items-center justify-center p-0.5 hover:bg-slate-200 rounded-xs text-slate-500 hover:text-slate-900 cursor-pointer leading-none"
         >
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <IconSlot className="[&>svg]:!h-3 [&>svg]:!w-3">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </IconSlot>
         </button>
       )}
     </span>

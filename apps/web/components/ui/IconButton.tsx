@@ -2,6 +2,7 @@
 
 import React, { forwardRef } from 'react';
 import { ButtonVariant, ButtonSize } from './Button';
+import { IconSlot } from './IconSlot';
 
 export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -32,6 +33,18 @@ const sizeStyles: Record<ButtonSize, string> = {
   lg: 'w-[42px] h-[42px] rounded-lg text-sm'
 };
 
+const iconSizeStyles: Record<ButtonSize, string> = {
+  sm: '[&>svg]:!h-3.5 [&>svg]:!w-3.5',
+  md: '[&>svg]:!h-4 [&>svg]:!w-4',
+  lg: '[&>svg]:!h-[18px] [&>svg]:!w-[18px]'
+};
+
+const spinnerSizeStyles: Record<ButtonSize, string> = {
+  sm: 'h-3.5 w-3.5',
+  md: 'h-4 w-4',
+  lg: 'h-[18px] w-[18px]'
+};
+
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   (
     {
@@ -53,16 +66,19 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         type={type}
         aria-label={ariaLabel}
         disabled={disabled || isLoading}
-        className={`inline-flex items-center justify-center font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+        className={`inline-flex items-center justify-center font-medium leading-none transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
         {...props}
       >
         {isLoading ? (
-          <span
-            className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
-            aria-hidden="true"
-          />
+          <IconSlot aria-hidden="true">
+            <span
+              className={`${spinnerSizeStyles[size]} border-2 border-current border-t-transparent rounded-full animate-spin`}
+            />
+          </IconSlot>
         ) : (
-          icon
+          <IconSlot className={iconSizeStyles[size]} aria-hidden="true">
+            {icon}
+          </IconSlot>
         )}
       </button>
     );

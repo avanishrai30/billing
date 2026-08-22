@@ -3,6 +3,7 @@
 import React, { useState, forwardRef } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { InputSize } from './Input';
+import { IconSlot } from './IconSlot';
 
 export interface PasswordInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   hasError?: boolean;
@@ -54,9 +55,11 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           onClick={() => setShowPassword(!showPassword)}
           aria-label={showPassword ? 'Hide password' : 'Show password'}
           disabled={disabled}
-          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none disabled:opacity-50 cursor-pointer"
+          className="absolute inset-y-0 right-0 pr-2.5 inline-flex items-center justify-center text-slate-400 hover:text-slate-600 focus:outline-none disabled:opacity-50 cursor-pointer leading-none"
         >
-          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          <IconSlot className="[&>svg]:!h-4 [&>svg]:!w-4">
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </IconSlot>
         </button>
       </div>
     );

@@ -133,18 +133,11 @@ export function BrandingSettings() {
               variant="primary"
               disabled={updateMutation.isPending || isLoading || !isDirty}
               className="px-6 py-2.5 font-semibold"
+              leftIcon={
+                updateMutation.isPending ? <Loader2 className="animate-spin" /> : <Save />
+              }
             >
-              {updateMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving Branding...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Branding Settings
-                </>
-              )}
+              {updateMutation.isPending ? 'Saving Branding...' : 'Save Branding Settings'}
             </Button>
           </div>
         )}

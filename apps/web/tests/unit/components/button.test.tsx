@@ -43,4 +43,53 @@ describe('UI Primitives: Button & IconButton', () => {
     fireEvent.click(iconBtn);
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
+
+  it('4. Locks shared icon and text alignment contracts', () => {
+    render(
+      <>
+        <Button size="sm" leftIcon={<svg data-testid="upload-icon" />}>
+          Upload
+        </Button>
+        <Button size="md" leftIcon={<svg data-testid="save-icon" />}>
+          Save
+        </Button>
+        <Button size="md" leftIcon={<svg data-testid="refresh-icon" className="h-5 w-5" />}>
+          Refresh
+        </Button>
+        <Button size="lg" rightIcon={<svg data-testid="edit-icon" />}>
+          Edit
+        </Button>
+        <IconButton aria-label="Add" size="md" icon={<svg data-testid="add-icon" />} />
+      </>
+    );
+
+    const upload = screen.getByRole('button', { name: 'Upload' });
+    const save = screen.getByRole('button', { name: 'Save' });
+    const edit = screen.getByRole('button', { name: 'Edit' });
+    const add = screen.getByRole('button', { name: 'Add' });
+
+    expect(upload).toHaveClass('inline-flex', 'items-center', 'justify-center', 'leading-none', 'h-8', 'gap-1.5');
+    expect(save).toHaveClass('h-9', 'gap-2');
+    expect(edit).toHaveClass('h-[42px]', 'gap-2');
+    expect(add).toHaveClass('inline-flex', 'items-center', 'justify-center', 'leading-none', 'w-9', 'h-9');
+
+    const saveIconSlot = screen.getByTestId('save-icon').parentElement;
+    expect(saveIconSlot).toHaveClass(
+      'inline-flex',
+      'items-center',
+      'justify-center',
+      'shrink-0',
+      'leading-none',
+      '[&>svg]:block',
+      '[&>svg]:shrink-0',
+      '[&>svg]:!h-4',
+      '[&>svg]:!w-4'
+    );
+
+    expect(screen.getByTestId('upload-icon').parentElement).toHaveClass('[&>svg]:!h-3.5', '[&>svg]:!w-3.5');
+    expect(screen.getByTestId('edit-icon').parentElement).toHaveClass('[&>svg]:!h-[18px]', '[&>svg]:!w-[18px]');
+    expect(screen.getByTestId('add-icon').parentElement).toHaveClass('[&>svg]:!h-4', '[&>svg]:!w-4');
+
+    expect(save.querySelector('span:last-child')).toHaveClass('inline-flex', 'items-center', 'leading-none');
+  });
 });

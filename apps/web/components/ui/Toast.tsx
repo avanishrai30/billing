@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { IconSlot } from './IconSlot';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -91,7 +92,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 typeStyles[toast.type]
               }`}
             >
-              <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <IconSlot className="mt-0.5 [&>svg]:!h-4 [&>svg]:!w-4">
+                <Icon className="w-4 h-4" />
+              </IconSlot>
               <div className="flex-1 text-left">
                 <h4 className="text-xs font-semibold text-slate-900 leading-tight">{toast.title}</h4>
                 {toast.message && (
@@ -102,9 +105,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => removeToast(toast.id)}
                 aria-label="Dismiss toast notification"
-                className="text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer"
+                className="inline-flex items-center justify-center text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer leading-none"
               >
-                <X className="w-3.5 h-3.5" />
+                <IconSlot className="[&>svg]:!h-3.5 [&>svg]:!w-3.5">
+                  <X className="w-3.5 h-3.5" />
+                </IconSlot>
               </button>
             </div>
           );
