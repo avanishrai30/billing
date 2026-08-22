@@ -44,8 +44,10 @@ import {
   MetricCard,
   LoadingState,
   ErrorState,
+  AccessDeniedState,
   useToast
 } from '../../../components/ui';
+import { useAuth } from '../../../hooks/useAuth';
 import {
   Plus,
   Trash2,
@@ -61,6 +63,7 @@ import {
 } from 'lucide-react';
 
 export default function DesignSystemGalleryPage() {
+  const { hasPermission } = useAuth();
   const toast = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -73,6 +76,16 @@ export default function DesignSystemGalleryPage() {
   const [checked, setChecked] = useState(true);
   const [radioVal, setRadioVal] = useState('opt1');
   const [switchVal, setSwitchVal] = useState(true);
+
+  if (!hasPermission('dashboard.view')) {
+    return (
+      <AccessDeniedState
+        title="Design System Restricted"
+        message="You do not have permission to inspect internal UI system references."
+        requiredPermission="dashboard.view"
+      />
+    );
+  }
 
   return (
     <div className="space-y-10 pb-16">

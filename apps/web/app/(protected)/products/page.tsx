@@ -25,6 +25,7 @@ export default function ProductsPage() {
   const canEdit = hasPermission('products.update');
   const canArchive = hasPermission('products.archive') || hasPermission('products.delete');
   const canImport = hasPermission('products.import') || hasPermission('products.import.preview');
+  const canCommitImport = hasPermission('products.import.commit');
 
   const { triggerHighlight, highlightedIds } = useRealtimeHighlight(1500);
 
@@ -248,6 +249,7 @@ export default function ProductsPage() {
       <ProductImportDialog
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
+        canCommit={canCommitImport}
       />
     </div>
   );

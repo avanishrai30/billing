@@ -86,11 +86,15 @@ async function assertPrivilegeUpdateAllowed(db, existingUser, nextUser, req) {
 
 function emitUserAccessUpdated(userId, changedFields = []) {
   const realtimeService = require('./realtimeService');
+  const updatedAt = new Date().toISOString();
   realtimeService.emitToUser(userId, 'user_access_updated', {
+    targetUserId: userId,
     userId,
     changedFields,
     reason: 'USER_ACCESS_UPDATED',
-    timestamp: new Date().toISOString()
+    authorizationVersion: Date.parse(updatedAt),
+    updatedAt,
+    timestamp: updatedAt
   });
 }
 

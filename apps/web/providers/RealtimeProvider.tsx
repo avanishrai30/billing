@@ -52,7 +52,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     if (!isAuthenticated) return;
 
     const unsubscribeAccess = realtimeManager.subscribe<{ userId?: string }>('user_access_updated', (payload: any) => {
-      const targetUserId = payload?.userId || payload?.data?.userId;
+      const targetUserId = payload?.targetUserId || payload?.userId || payload?.data?.targetUserId || payload?.data?.userId;
       if (!targetUserId || targetUserId === user?.id) {
         refreshSession();
         queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });

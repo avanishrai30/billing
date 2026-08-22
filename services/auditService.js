@@ -176,6 +176,9 @@ const auditService = {
     if (options.entity) {
       query.entity = options.entity;
     }
+    if (options.performedBy) {
+      query.performedBy = options.performedBy;
+    }
     if (options.startDate || options.endDate) {
       query.timestamp = {};
       if (options.startDate) query.timestamp.$gte = options.startDate;

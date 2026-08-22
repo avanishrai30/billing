@@ -50,6 +50,34 @@ let mockMatrix = {
   ]
 };
 
+let mockUsers: Array<{
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  category: 'super admin' | 'admin' | 'employee' | 'auditor';
+  assignedStoreId: string;
+  assignedStores: string[];
+  permissionGrants: string[];
+  permissionDenies: string[];
+  status: string;
+  createdAt: string;
+}> = [
+  {
+    id: 'usr-employee',
+    name: 'Nithin Yadav',
+    username: 'nithin',
+    role: 'Employee',
+    category: 'employee',
+    assignedStoreId: 'store-1',
+    assignedStores: ['store-1'],
+    permissionGrants: [],
+    permissionDenies: [],
+    status: 'active',
+    createdAt: new Date().toISOString()
+  }
+];
+
 test.describe('Phase 13B RBAC Permissions Matrix E2E Suite', () => {
   test.beforeEach(async ({ page }) => {
     mockMatrix = {
@@ -101,6 +129,21 @@ test.describe('Phase 13B RBAC Permissions Matrix E2E Suite', () => {
         'audit.view'
       ]
     };
+    mockUsers = [
+      {
+        id: 'usr-employee',
+        name: 'Nithin Yadav',
+        username: 'nithin',
+        role: 'Employee',
+        category: 'employee',
+        assignedStoreId: 'store-1',
+        assignedStores: ['store-1'],
+        permissionGrants: [],
+        permissionDenies: [],
+        status: 'active',
+        createdAt: new Date().toISOString()
+      }
+    ];
 
     await page.addInitScript(() => {
       localStorage.setItem('aiavro_jwt_token', 'mock-valid-token');
@@ -169,6 +212,69 @@ test.describe('Phase 13B RBAC Permissions Matrix E2E Suite', () => {
 
       route.continue();
     });
+
+    await page.route('**/api/v1/stores*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([{ id: 'store-1', name: 'Mumbai Flagship', code: 'ST-MUM', status: 'active' }])
+      });
+    });
+
+    await page.route('**/api/v1/users/*/effective-permissions', async (route) => {
+      const id = route.request().url().split('/users/')[1].split('/')[0];
+      const user = mockUsers.find((u) => u.id === id)!;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          userId: id,
+          category: user.category,
+          rolePermissions: mockMatrix.employee,
+          permissionGrants: user.permissionGrants,
+          permissionDenies: user.permissionDenies,
+          effectivePermissions: [...mockMatrix.employee, ...user.permissionGrants].filter((p) => !user.permissionDenies.includes(p))
+        })
+      });
+    });
+
+    await page.route('**/api/v1/users/*/permissions', async (route) => {
+      const id = route.request().url().split('/users/')[1].split('/')[0];
+      const body = JSON.parse(route.request().postData() || '{}');
+      const idx = mockUsers.findIndex((u) => u.id === id);
+      mockUsers[idx] = {
+        ...mockUsers[idx],
+        permissionGrants: body.permissionGrants || [],
+        permissionDenies: body.permissionDenies || []
+      };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, user: mockUsers[idx] })
+      });
+    });
+
+    await page.route('**/api/v1/users', async (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockUsers)
+        });
+      }
+      if (route.request().method() === 'POST') {
+        const body = JSON.parse(route.request().postData() || '{}');
+        const idx = mockUsers.findIndex((u) => u.id === body.id);
+        mockUsers[idx] = { ...mockUsers[idx], ...body };
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, user: mockUsers[idx] })
+        });
+      }
+      route.continue();
+    });
   });
 
   test('1. RBAC Permissions Matrix Lifecycle: Inspect Matrix, Switch Role Tabs, Modify Permissions & Persist', async ({
@@ -229,5 +335,41 @@ test.describe('Phase 13B RBAC Permissions Matrix E2E Suite', () => {
     scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
+
+  test('3. User-specific overrides are edited separately from role templates', async ({ page }) => {
+    let roleTemplateSaveCount = 0;
+    let userOverrideSaveCount = 0;
+
+    await page.route('**/api/v1/role-permissions', async (route) => {
+      if (route.request().method() === 'POST') roleTemplateSaveCount++;
+      route.fallback();
+    });
+
+    await page.route('**/api/v1/users/*/permissions', async (route) => {
+      if (route.request().method() === 'POST') userOverrideSaveCount++;
+      route.fallback();
+    });
+
+    await page.goto('/permissions');
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('tab', { name: /users/i }).click();
+    await page.getByRole('button', { name: /nithin yadav/i }).click();
+    const drawer = page.getByRole('dialog');
+    await expect(drawer).toBeVisible();
+
+    await drawer.getByRole('combobox').first().selectOption('admin');
+    await drawer.getByRole('button', { name: /^grant$/i }).first().click();
+    await Promise.all([
+      page.waitForResponse((response) =>
+        response.request().method() === 'POST' &&
+        /\/api\/v1\/users\/[^/]+\/permissions$/.test(new URL(response.url()).pathname)
+      ),
+      drawer.getByRole('button', { name: /save changes/i }).click()
+    ]);
+
+    expect(userOverrideSaveCount).toBe(1);
+    expect(roleTemplateSaveCount).toBe(0);
   });
 });

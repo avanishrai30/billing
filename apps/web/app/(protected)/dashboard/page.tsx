@@ -18,6 +18,9 @@ import { useStoreScope } from '../../../providers/StoreScopeProvider';
 export default function DashboardPage() {
   const { user, hasPermission } = useAuth();
   const canView = hasPermission('dashboard.view');
+  const canViewInventory = hasPermission('inventory.view');
+  const canViewInvoices = hasPermission('invoices.view');
+  const canViewPurchases = hasPermission('purchases.view');
   const { activeStoreId } = useStoreScope();
   const storeId = activeStoreId || user?.assignedStoreId || 'all';
 
@@ -28,7 +31,7 @@ export default function DashboardPage() {
     error,
     refetch,
     isFetching
-  } = useDashboardMetrics(storeId);
+  } = useDashboardMetrics(storeId, { enabled: canView });
 
   if (!canView) {
     return (
@@ -64,13 +67,13 @@ export default function DashboardPage() {
         <>
           <KPIGrid metrics={data.metrics} />
 
-          <SalesSummaryChart metrics={data.metrics} />
+          {canViewInvoices && <SalesSummaryChart metrics={data.metrics} />}
 
-          <LowStockWatchlist items={data.lowStockWatchlist || []} />
+          {canViewInventory && <LowStockWatchlist items={data.lowStockWatchlist || []} />}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <RecentSalesTable invoices={data.recentInvoices || []} />
-            <RecentPurchasesTable purchases={data.recentPurchases || []} />
+            {canViewInvoices && <RecentSalesTable invoices={data.recentInvoices || []} />}
+            {canViewPurchases && <RecentPurchasesTable purchases={data.recentPurchases || []} />}
           </div>
         </>
       )}

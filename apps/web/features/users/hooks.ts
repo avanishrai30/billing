@@ -11,7 +11,8 @@ export const userQueryKeys = {
   list: () => ['users', 'list'] as const,
   presences: () => ['users', 'presences'] as const,
   detail: (id: string) => ['users', 'detail', id] as const,
-  effectivePermissions: (id: string) => ['users', 'effective-permissions', id] as const
+  effectivePermissions: (id: string) => ['users', 'effective-permissions', id] as const,
+  myActivity: () => ['users', 'me', 'activity'] as const
 };
 
 export function useUsersQuery() {
@@ -136,6 +137,33 @@ export function useUpdateProfileMutation() {
       }
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     }
+  });
+}
+
+export function useUploadAvatarMutation() {
+  return useMutation({
+    mutationFn: ({ fileName, base64Data }: { fileName: string; base64Data: string }) =>
+      userApi.uploadAvatar(fileName, base64Data)
+  });
+}
+
+export function useUpdateAvatarMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (avatar: string) => userApi.updateAvatar(avatar),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+      queryClient.invalidateQueries({ queryKey: userQueryKeys.all });
+    }
+  });
+}
+
+export function useMyActivityQuery() {
+  return useQuery({
+    queryKey: userQueryKeys.myActivity(),
+    queryFn: () => userApi.getMyActivity(),
+    staleTime: 60 * 1000
   });
 }
 

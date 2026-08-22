@@ -280,6 +280,16 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     await expect(page.getByText('Vikram Shinde')).toBeVisible();
     await expect(page.getByText('Ramesh Patil')).toBeVisible();
 
+    // Canonical role/category edit: Employee -> Admin must update the visible role assignment.
+    await page.getByLabel('Edit user Ramesh Patil').click();
+    const roleModal = page.getByRole('dialog');
+    await expect(roleModal).toBeVisible();
+    await roleModal.getByLabel('Role Assignment').selectOption('admin');
+    await roleModal.getByRole('button', { name: /save changes/i }).click();
+    await expect(roleModal).not.toBeVisible();
+    const rameshRow = page.getByRole('row').filter({ hasText: 'Ramesh Patil' });
+    await expect(rameshRow.getByText('Admin', { exact: true }).first()).toBeVisible();
+
     // 2. Open User Detail Drawer
     await page.getByLabel('View user details for Vikram Shinde').click();
     const drawer = page.getByRole('dialog');

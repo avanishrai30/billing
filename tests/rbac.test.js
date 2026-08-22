@@ -460,6 +460,65 @@ describe('Stage 10: RBAC, User Access, Audit & Security Hardening', () => {
       expect(deactivateRes.body.error.code).toBe('SELF_DEACTIVATION_FORBIDDEN');
       expect(usersTable.get('usr-super-1').status).toBe('active');
     });
+
+    test('10. User presence list requires users.view permission', async () => {
+      const cashier = usersTable.get('usr-cashier-1');
+      const token = generateToken(cashier);
+
+      const res = await request(app)
+        .get('/api/v1/users/presences')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    test('11. User permission override endpoint validates grant and deny arrays', async () => {
+      const superAdmin = usersTable.get('usr-super-1');
+      const superToken = generateToken(superAdmin);
+
+      const res = await request(app)
+        .post('/api/v1/users/usr-cashier-1/permissions')
+        .set('Authorization', `Bearer ${superToken}`)
+        .send({ permissionGrants: 'users.view', permissionDenies: [] });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    test('12. Own activity endpoint is available without global audit.view', async () => {
+      const cashier = usersTable.get('usr-cashier-1');
+      const token = generateToken(cashier);
+
+      const res = await request(app)
+        .get('/api/v1/users/me/activity')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.auditLogs)).toBe(true);
+    });
+
+    test('13. Avatar setter only accepts uploaded user profile paths', async () => {
+      const cashier = usersTable.get('usr-cashier-1');
+      const token = generateToken(cashier);
+
+      const rejected = await request(app)
+        .post('/api/v1/users/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ avatar: '/uploads/logos/brand-logo.webp' });
+
+      expect(rejected.status).toBe(400);
+      expect(rejected.body.error.code).toBe('INVALID_AVATAR');
+
+      const accepted = await request(app)
+        .post('/api/v1/users/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ avatar: '/uploads/users/cashier.webp' });
+
+      expect(accepted.status).toBe(200);
+      expect(usersTable.get('usr-cashier-1').avatar).toBe('/uploads/users/cashier.webp');
+    });
   });
 
   describe('2. Store-Scope & POS / Purchase Security Tests', () => {

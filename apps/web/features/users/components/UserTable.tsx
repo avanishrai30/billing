@@ -97,14 +97,23 @@ export function UserTable({
               .toUpperCase()
               .slice(0, 2);
 
+            const category = user.category || 'employee';
+            const categoryLabel =
+              category === 'super admin'
+                ? 'Super Admin'
+                : category === 'admin'
+                  ? 'Admin'
+                  : category === 'auditor'
+                    ? 'Auditor'
+                    : 'Employee';
             const categoryVariant =
-              user.category === 'super admin'
+              category === 'super admin'
                 ? 'brand'
-                : user.category === 'admin'
-                ? 'info'
-                : user.category === 'auditor'
-                ? 'warning'
-                : 'neutral';
+                : category === 'admin'
+                  ? 'info'
+                  : category === 'auditor'
+                    ? 'warning'
+                    : 'neutral';
 
             return (
               <TableRow key={user.id}>
@@ -142,10 +151,10 @@ export function UserTable({
                 {/* Role / Category */}
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-xs text-slate-900">{user.role}</span>
+                    <span className="font-semibold text-xs text-slate-900">{categoryLabel}</span>
                     <div className="flex items-center gap-1">
                       <Badge variant={categoryVariant} size="sm">
-                        {user.category?.toUpperCase() || 'EMPLOYEE'}
+                        {user.role || 'Team Member'}
                       </Badge>
                     </div>
                   </div>

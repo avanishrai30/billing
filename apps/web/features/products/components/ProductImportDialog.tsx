@@ -10,12 +10,14 @@ export interface ProductImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
   defaultLocationId?: string;
+  canCommit?: boolean;
 }
 
 export function ProductImportDialog({
   isOpen,
   onClose,
-  defaultLocationId = 'all'
+  defaultLocationId = 'all',
+  canCommit = true
 }: ProductImportDialogProps) {
   const [step, setStep] = useState<'upload' | 'preview' | 'success'>('upload');
   const [parsedRows, setParsedRows] = useState<unknown[]>([]);
@@ -277,9 +279,9 @@ export function ProductImportDialog({
                 size="sm"
                 onClick={handleExecuteCommit}
                 isLoading={commitMutation.isPending}
-                disabled={previewData.validRows === 0}
+                disabled={previewData.validRows === 0 || !canCommit}
               >
-                Commit {previewData.validRows} Valid SKUs
+                {canCommit ? `Commit ${previewData.validRows} Valid SKUs` : 'Commit Restricted'}
               </Button>
             </div>
           </div>

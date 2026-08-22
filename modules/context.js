@@ -86,6 +86,11 @@ const userSchema = z.object({
   status: z.string().trim().optional()
 });
 
+const userPermissionOverrideSchema = z.object({
+  permissionGrants: z.array(z.string().trim().min(1)).default([]),
+  permissionDenies: z.array(z.string().trim().min(1)).default([])
+});
+
 let context = {
   db: null,
   io: null,
@@ -185,6 +190,7 @@ module.exports = {
   schemas: {
     loginSchema,
     productSchema,
-    userSchema
+    userSchema,
+    userPermissionOverrideSchema
   }
 };

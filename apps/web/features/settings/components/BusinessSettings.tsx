@@ -12,7 +12,7 @@ import { LogoUploader } from './LogoUploader';
 
 export function BusinessSettings() {
   const { hasPermission } = useAuth();
-  const canManageStores = hasPermission('stores.manage');
+  const canManageStores = hasPermission('stores.update');
 
   const { activeStoreId } = useStoreScope();
   const { data: stores = [], isLoading: isStoresLoading, refetch } = useStoresQuery();

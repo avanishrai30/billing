@@ -16,9 +16,24 @@ router.get('/', verifyJWT, requirePermission('users.view'), async (req, res) => 
 });
 
 // GET /api/v1/users/presences - Fetch active user presences
-router.get('/presences', verifyJWT, (req, res) => {
+router.get('/presences', verifyJWT, requirePermission('users.view'), (req, res) => {
   const { activePresences } = getContext();
   res.json(Array.from(activePresences.values()));
+});
+
+// GET /api/v1/users/me/activity - Fetch current user's own audit activity
+router.get('/me/activity', verifyJWT, async (req, res) => {
+  try {
+    const auditService = require('../services/auditService');
+    const logs = await auditService.listAuditLogs({
+      limit: parseInt(req.query.limit) || 50,
+      skip: parseInt(req.query.skip) || 0,
+      performedBy: req.user.username
+    });
+    res.json({ success: true, auditLogs: logs });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to fetch user activity" } });
+  }
 });
 
 // GET /api/v1/users/:id/effective-permissions - Inspect computed access for one user
@@ -36,9 +51,9 @@ router.get('/:id/effective-permissions', verifyJWT, requirePermission('users.vie
 });
 
 // POST /api/v1/users/:id/permissions - Save user-specific grant/deny overrides
-router.post('/:id/permissions', verifyJWT, requirePermission('users.update'), async (req, res) => {
+router.post('/:id/permissions', verifyJWT, validateBody(schemas.userPermissionOverrideSchema), requireAnyPermission(['users.update', 'roles.update']), async (req, res) => {
   try {
-    const result = await userService.updatePermissionOverrides(req.params.id, req.body || {}, req);
+    const result = await userService.updatePermissionOverrides(req.params.id, req.validatedBody || {}, req);
     res.json(result);
   } catch (err) {
     res.status(err.statusCode || 500).json({
@@ -105,6 +120,9 @@ router.post('/profile', verifyJWT, async (req, res) => {
 router.post('/avatar', verifyJWT, async (req, res) => {
   const { avatar } = req.body;
   if (!avatar) return res.status(400).json({ success: false, error: { code: "INVALID_AVATAR", message: "Avatar path is required" } });
+  if (typeof avatar !== 'string' || !avatar.startsWith('/uploads/users/')) {
+    return res.status(400).json({ success: false, error: { code: "INVALID_AVATAR", message: "Avatar must be an uploaded user profile image" } });
+  }
 
   try {
     await userService.updateAvatar(req.user.id, avatar, req);

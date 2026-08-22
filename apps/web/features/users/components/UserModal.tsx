@@ -96,6 +96,21 @@ export function UserModal({
     setValue('assignedStores', [val]);
   };
 
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextCategory = e.target.value as UserFormValues['category'];
+    const currentRoleTitle = watch('role');
+    const roleTitleByCategory: Record<UserFormValues['category'], string> = {
+      employee: 'Employee',
+      admin: 'Admin',
+      auditor: 'Auditor',
+      'super admin': 'Super Admin'
+    };
+    setValue('category', nextCategory, { shouldDirty: true });
+    if (!currentRoleTitle || currentRoleTitle === user?.role || ['Employee', 'Admin', 'Auditor', 'Super Admin'].includes(currentRoleTitle)) {
+      setValue('role', roleTitleByCategory[nextCategory], { shouldDirty: true });
+    }
+  };
+
   const handlePermissionOverride = (permissionId: string, mode: 'inherit' | 'grant' | 'deny') => {
     const nextGrants = watchedGrants.filter((id) => id !== permissionId);
     const nextDenies = watchedDenies.filter((id) => id !== permissionId);
@@ -203,19 +218,12 @@ export function UserModal({
             />
           </FormField>
 
-          {/* Role Display Title */}
-          <FormField label="Custom Role Title" required error={errors.role?.message}>
-            <Input
-              placeholder="e.g. Senior Branch Cashier / Store Manager"
-              {...register('role')}
-              className="text-xs"
-            />
-          </FormField>
-
           {/* Canonical Role Category */}
-          <FormField label="Authorization Category" required>
+          <FormField label="Role Assignment" required>
             <Select
-              {...register('category')}
+              aria-label="Role Assignment"
+              value={watchedCategory}
+              onChange={handleCategoryChange}
               options={[
                 { value: 'employee', label: 'Employee / Cashier (Standard Operations)' },
                 { value: 'admin', label: 'Admin (Full Branch Operations & Catalog)' },
@@ -226,9 +234,19 @@ export function UserModal({
             />
           </FormField>
 
+          {/* Role Display Title */}
+          <FormField label="Display Title" required error={errors.role?.message}>
+            <Input
+              placeholder="e.g. Senior Branch Cashier / Store Manager"
+              {...register('role')}
+              className="text-xs"
+            />
+          </FormField>
+
           {/* Store Scope Assignment */}
           <FormField label="Store Scope Assignment">
             <Select
+              aria-label="Store Scope Assignment"
               value={watch('assignedStoreId')}
               onChange={handleStoreChange}
               options={[

@@ -1,5 +1,6 @@
 import { apiClient } from '../../lib/api/client';
 import type { UserDoc, UserEffectivePermissions, UserFormPayload, UserPresenceDoc } from './types';
+import type { AuditLogDoc } from '../audit/types';
 
 export const userApi = {
   /**
@@ -91,6 +92,28 @@ export const userApi = {
    */
   async updateAvatar(avatar: string): Promise<{ success: boolean; avatar: string }> {
     return await apiClient.post<{ success: boolean; avatar: string }>('/api/v1/users/avatar', { avatar });
+  },
+
+  /**
+   * Upload profile avatar media through the shared upload pipeline
+   * POST /api/v1/upload?type=users
+   */
+  async uploadAvatar(fileName: string, base64Data: string): Promise<{ success: boolean; imagePath: string; imageId: string }> {
+    return await apiClient.post<{ success: boolean; imagePath: string; imageId: string }>('/api/v1/upload?type=users', {
+      fileName,
+      base64Data
+    });
+  },
+
+  /**
+   * Fetch current user's own activity without granting global audit access
+   * GET /api/v1/users/me/activity
+   */
+  async getMyActivity(): Promise<AuditLogDoc[]> {
+    const res = await apiClient.get<AuditLogDoc[] | { success: boolean; auditLogs: AuditLogDoc[] }>('/api/v1/users/me/activity?limit=25');
+    if (Array.isArray(res)) return res;
+    if (res && 'auditLogs' in res && Array.isArray(res.auditLogs)) return res.auditLogs;
+    return [];
   },
 
   /**
