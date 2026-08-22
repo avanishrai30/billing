@@ -62,6 +62,85 @@ const mockDashboardResponse = {
   activeStoreId: 'all'
 };
 
+async function expectButtonIconAndLabelOnOneLine(
+  page: import('@playwright/test').Page,
+  name: RegExp
+) {
+  const button = page.getByRole('button', { name }).first();
+  await expect(button).toBeVisible();
+
+  const metrics = await button.evaluate((element) => {
+    const icon = element.querySelector<HTMLElement>('[data-button-icon-slot]');
+    const label = element.querySelector<HTMLElement>('[data-button-label="true"]');
+
+    if (!icon || !label) {
+      return { missingParts: true };
+    }
+
+    const buttonStyle = window.getComputedStyle(element);
+    const labelStyle = window.getComputedStyle(label);
+    const iconRect = icon.getBoundingClientRect();
+    const labelRect = label.getBoundingClientRect();
+
+    return {
+      missingParts: false,
+      display: buttonStyle.display,
+      flexDirection: buttonStyle.flexDirection,
+      flexWrap: buttonStyle.flexWrap,
+      alignItems: buttonStyle.alignItems,
+      whiteSpace: buttonStyle.whiteSpace,
+      labelWhiteSpace: labelStyle.whiteSpace,
+      iconCenterY: iconRect.top + iconRect.height / 2,
+      labelCenterY: labelRect.top + labelRect.height / 2,
+      iconLeft: iconRect.left,
+      iconRight: iconRect.right,
+      labelLeft: labelRect.left,
+      labelTop: labelRect.top,
+      labelBottom: labelRect.bottom,
+      iconTop: iconRect.top,
+      iconBottom: iconRect.bottom
+    };
+  });
+
+  if (metrics.missingParts) {
+    throw new Error(`Button ${name.toString()} is missing its icon slot or label marker`);
+  }
+
+  const {
+    iconCenterY,
+    labelCenterY,
+    iconLeft,
+    labelLeft,
+    labelTop,
+    labelBottom,
+    iconTop,
+    iconBottom
+  } = metrics;
+
+  if (
+    typeof iconCenterY !== 'number' ||
+    typeof labelCenterY !== 'number' ||
+    typeof iconLeft !== 'number' ||
+    typeof labelLeft !== 'number' ||
+    typeof labelTop !== 'number' ||
+    typeof labelBottom !== 'number' ||
+    typeof iconTop !== 'number' ||
+    typeof iconBottom !== 'number'
+  ) {
+    throw new Error(`Button ${name.toString()} did not return complete geometry metrics`);
+  }
+
+  expect(metrics.display ?? '').toContain('flex');
+  expect(metrics.flexDirection).toBe('row');
+  expect(metrics.flexWrap).toBe('nowrap');
+  expect(metrics.alignItems).toBe('center');
+  expect(metrics.whiteSpace).toBe('nowrap');
+  expect(metrics.labelWhiteSpace).toBe('nowrap');
+  expect(Math.abs(iconCenterY - labelCenterY)).toBeLessThanOrEqual(2);
+  expect(labelLeft).toBeGreaterThan(iconLeft);
+  expect(labelTop < iconBottom && iconTop < labelBottom).toBe(true);
+}
+
 test.describe('Phase 16B Settings & Configuration E2E Suite', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
@@ -270,5 +349,37 @@ test.describe('Phase 16B Settings & Configuration E2E Suite', () => {
     scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
+
+  test('4. Settings icon buttons keep icon and label on the same row at runtime', async ({ page }) => {
+    const viewports = [
+      { width: 1440, height: 900 },
+      { width: 834, height: 1112 },
+      { width: 430, height: 932 }
+    ];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await page.goto('/settings');
+      await page.waitForLoadState('networkidle');
+
+      await expect(page.getByRole('heading', { name: 'Settings & Configuration' })).toBeVisible();
+      await expectButtonIconAndLabelOnOneLine(page, /refresh/i);
+      await expectButtonIconAndLabelOnOneLine(page, /upload custom logo/i);
+      await expectButtonIconAndLabelOnOneLine(page, /reset default/i);
+
+      const titleInput = page.locator('input[name="title"]');
+      await titleInput.fill('VC Organics Enterprise Billing');
+      await expectButtonIconAndLabelOnOneLine(page, /save branding settings/i);
+
+      await page.getByRole('button', { name: /store & business profile/i }).click();
+      await expect(page.getByText('Store & Business Billing Profile')).toBeVisible();
+      await expectButtonIconAndLabelOnOneLine(page, /upload custom logo/i);
+      await expectButtonIconAndLabelOnOneLine(page, /reset default/i);
+
+      const storeNameInput = page.locator('input[name="name"]');
+      await storeNameInput.fill('Mumbai Flagship Mega Store');
+      await expectButtonIconAndLabelOnOneLine(page, /save business profile/i);
+    }
   });
 });

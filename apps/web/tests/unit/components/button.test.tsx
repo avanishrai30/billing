@@ -48,10 +48,10 @@ describe('UI Primitives: Button & IconButton', () => {
     render(
       <>
         <Button size="sm" leftIcon={<svg data-testid="upload-icon" />}>
-          Upload
+          Upload Custom Logo
         </Button>
         <Button size="md" leftIcon={<svg data-testid="save-icon" />}>
-          Save
+          Save Branding Settings
         </Button>
         <Button size="md" leftIcon={<svg data-testid="refresh-icon" className="h-5 w-5" />}>
           Refresh
@@ -63,15 +63,34 @@ describe('UI Primitives: Button & IconButton', () => {
       </>
     );
 
-    const upload = screen.getByRole('button', { name: 'Upload' });
-    const save = screen.getByRole('button', { name: 'Save' });
+    const upload = screen.getByRole('button', { name: 'Upload Custom Logo' });
+    const save = screen.getByRole('button', { name: 'Save Branding Settings' });
     const edit = screen.getByRole('button', { name: 'Edit' });
     const add = screen.getByRole('button', { name: 'Add' });
 
-    expect(upload).toHaveClass('inline-flex', 'items-center', 'justify-center', 'leading-none', 'h-8', 'gap-1.5');
+    expect(upload).toHaveClass(
+      'inline-flex',
+      'flex-row',
+      'flex-nowrap',
+      'items-center',
+      'justify-center',
+      'leading-none',
+      'whitespace-nowrap',
+      'h-8',
+      'gap-1.5'
+    );
     expect(save).toHaveClass('h-9', 'gap-2');
     expect(edit).toHaveClass('h-[42px]', 'gap-2');
-    expect(add).toHaveClass('inline-flex', 'items-center', 'justify-center', 'leading-none', 'w-9', 'h-9');
+    expect(add).toHaveClass(
+      'inline-flex',
+      'flex-row',
+      'flex-nowrap',
+      'items-center',
+      'justify-center',
+      'leading-none',
+      'w-9',
+      'h-9'
+    );
 
     const saveIconSlot = screen.getByTestId('save-icon').parentElement;
     expect(saveIconSlot).toHaveClass(
@@ -90,6 +109,13 @@ describe('UI Primitives: Button & IconButton', () => {
     expect(screen.getByTestId('edit-icon').parentElement).toHaveClass('[&>svg]:!h-[18px]', '[&>svg]:!w-[18px]');
     expect(screen.getByTestId('add-icon').parentElement).toHaveClass('[&>svg]:!h-4', '[&>svg]:!w-4');
 
-    expect(save.querySelector('span:last-child')).toHaveClass('inline-flex', 'items-center', 'leading-none');
+    expect(save.querySelector('[data-button-icon-slot="left"]')).toBe(saveIconSlot);
+    expect(save.querySelector('[data-button-label="true"]')).toHaveClass(
+      'inline-flex',
+      'items-center',
+      'leading-none',
+      'truncate'
+    );
+    expect(save.querySelector('[data-button-label="true"]')).toHaveTextContent('Save Branding Settings');
   });
 });

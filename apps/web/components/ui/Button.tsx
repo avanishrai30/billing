@@ -64,7 +64,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyle =
-      'inline-flex items-center justify-center font-medium leading-none transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 whitespace-nowrap';
+      'inline-flex flex-row flex-nowrap items-center justify-center font-medium leading-none transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out focus-ring cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100 whitespace-nowrap';
 
     return (
       <button
@@ -76,7 +76,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading ? (
           <>
-            <IconSlot aria-hidden="true">
+            <IconSlot data-button-icon-slot="loading" aria-hidden="true">
               <span
                 className={`${spinnerSizeStyles[size]} border-2 border-current border-t-transparent rounded-full animate-spin`}
               />
@@ -85,14 +85,16 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           </>
         ) : (
           leftIcon && (
-            <IconSlot className={iconSizeStyles[size]} aria-hidden="true">
+            <IconSlot data-button-icon-slot="left" className={iconSizeStyles[size]} aria-hidden="true">
               {leftIcon}
             </IconSlot>
           )
         )}
-        <span className="inline-flex min-w-0 items-center leading-none truncate">{children}</span>
+        <span data-button-label="true" className="inline-flex min-w-0 items-center leading-none truncate">
+          {children}
+        </span>
         {!isLoading && rightIcon && (
-          <IconSlot className={iconSizeStyles[size]} aria-hidden="true">
+          <IconSlot data-button-icon-slot="right" className={iconSizeStyles[size]} aria-hidden="true">
             {rightIcon}
           </IconSlot>
         )}
