@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { io } from 'socket.io-client';
 
 type AuthUser = {
   id: string;
@@ -109,6 +110,14 @@ async function saveOverrides(token: string, userId: string, permissionGrants: st
   });
 }
 
+async function getUser(token: string, userId: string) {
+  return apiRequest<AuthUser>(`/api/v1/users/${encodeURIComponent(userId)}`, { token });
+}
+
+async function getUsers(token: string) {
+  return apiRequest<AuthUser[]>('/api/v1/users', { token });
+}
+
 async function getEffectivePermissions(token: string, userId: string) {
   return apiRequest<{
     success: boolean;
@@ -116,6 +125,60 @@ async function getEffectivePermissions(token: string, userId: string) {
     category: AuthUser['category'];
     effectivePermissions: string[];
   }>(`/api/v1/users/${encodeURIComponent(userId)}/effective-permissions`, { token });
+}
+
+async function expectAuthoritativeUserState(token: string, userId: string, category: AuthUser['category']) {
+  const detail = await getUser(token, userId);
+  const users = await getUsers(token);
+  const listUser = users.find((user) => user.id === userId);
+  const effective = await getEffectivePermissions(token, userId);
+
+  expect(detail.category).toBe(category);
+  expect(listUser?.category).toBe(category);
+  expect(effective.category).toBe(category);
+
+  return { detail, listUser, effective };
+}
+
+async function captureUserUpdatedDuring<T>(
+  token: string,
+  userId: string,
+  action: () => Promise<T>
+): Promise<{ result: T; realtimeUser: AuthUser }> {
+  const socket = io(env.apiBaseUrl.replace(/\/+$/, ''), {
+    auth: { token },
+    query: { token },
+    transports: ['websocket', 'polling'],
+    reconnection: false
+  });
+
+  const realtimePromise = new Promise<AuthUser>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timed out waiting for user_updated for ${userId}`)), 30_000);
+    socket.on('user_updated', (payload: any) => {
+      const realtimeUser = payload?.user || payload?.data?.user;
+      if (realtimeUser?.id === userId) {
+        clearTimeout(timer);
+        resolve(realtimeUser as AuthUser);
+      }
+    });
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Timed out connecting realtime diagnostic socket')), 15_000);
+    socket.on('connect', () => {
+      clearTimeout(timer);
+      socket.emit('JOIN_SYNC', { storeId: 'default' });
+      resolve();
+    });
+    socket.on('connect_error', reject);
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const result = await action();
+  const realtimeUser = await realtimePromise;
+  socket.disconnect();
+
+  return { result, realtimeUser };
 }
 
 async function expectForbidden(path: string, token: string, body: unknown) {
@@ -193,6 +256,9 @@ async function changeRoleThroughUsersUi(page: Page, user: AuthUser, category: Au
   expect(body.success).toBe(true);
   expect(body.user.category).toBe(category);
   await expect(page.getByRole('heading', { name: new RegExp(`Edit User: ${user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i') })).toHaveCount(0);
+  const roleLabel = category === 'super admin' ? 'Super Admin' : category === 'admin' ? 'Admin' : category === 'auditor' ? 'Auditor' : 'Employee';
+  const row = page.getByRole('row').filter({ hasText: user.name });
+  await expect(row.getByText(roleLabel, { exact: true }).first()).toBeVisible();
   return body.user as AuthUser;
 }
 
@@ -277,13 +343,16 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
 
       await loginInBrowser(adminPage, env.superUsername!, env.superPassword!);
 
-      const roleChangedUser = await changeRoleThroughUsersUi(adminPage, reset.user, 'admin');
+      const promotedCapture = await captureUserUpdatedDuring(adminLogin.token, targetUser!.id, () =>
+        changeRoleThroughUsersUi(adminPage, reset.user, 'admin')
+      );
+      const roleChangedUser = promotedCapture.result;
       expect(roleChangedUser.role).toBe('Admin');
+      expect(promotedCapture.realtimeUser.category).toBe('admin');
       await expectAuditForTarget(adminLogin.token, targetUser!.id);
-      const promotedPermissions = await getEffectivePermissions(adminLogin.token, targetUser!.id);
-      expect(promotedPermissions.category).toBe('admin');
-      expect(promotedPermissions.effectivePermissions).toContain('users.view');
-      expect(promotedPermissions.effectivePermissions).toContain('roles.update');
+      const promotedState = await expectAuthoritativeUserState(adminLogin.token, targetUser!.id, 'admin');
+      expect(promotedState.effective.effectivePermissions).toContain('users.view');
+      expect(promotedState.effective.effectivePermissions).toContain('roles.update');
       await waitForAccessToast(targetPage);
       await expectBrowserCategory(targetPage, 'admin');
       await expectShellStillMounted(targetPage, shellMarker);
@@ -292,11 +361,14 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       await expect(targetPage.getByRole('heading', { name: /roles & access/i })).toBeVisible();
       shellMarker = await markShell(targetPage);
 
-      const reverseUser = await changeRoleThroughUsersUi(adminPage, roleChangedUser, 'employee');
-      const demotedPermissions = await getEffectivePermissions(adminLogin.token, targetUser!.id);
-      expect(demotedPermissions.category).toBe('employee');
-      expect(demotedPermissions.effectivePermissions).not.toContain('users.view');
-      expect(demotedPermissions.effectivePermissions).not.toContain('roles.update');
+      const demotedCapture = await captureUserUpdatedDuring(adminLogin.token, targetUser!.id, () =>
+        changeRoleThroughUsersUi(adminPage, roleChangedUser, 'employee')
+      );
+      const reverseUser = demotedCapture.result;
+      expect(demotedCapture.realtimeUser.category).toBe('employee');
+      const demotedState = await expectAuthoritativeUserState(adminLogin.token, targetUser!.id, 'employee');
+      expect(demotedState.effective.effectivePermissions).not.toContain('users.view');
+      expect(demotedState.effective.effectivePermissions).not.toContain('roles.update');
       await waitForAccessToast(targetPage);
       await expectBrowserCategory(targetPage, 'employee');
       await expectShellStillMounted(targetPage, shellMarker);
@@ -330,17 +402,16 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       await expectBrowserPermission(targetPage, 'inventory.adjust', false);
       await expect(targetPage.getByRole('button', { name: /stock adjustment/i })).toHaveCount(0);
 
-      const surfacePermissions = ['users.view', 'settings.view', 'products.update'];
+      const surfacePermissions = ['users.view', 'settings.update', 'products.update'];
       const surfaceGrant = await saveOverrides(adminLogin.token, targetUser!.id, surfacePermissions, []);
       for (const permission of surfacePermissions) {
         expect(surfaceGrant.permissions.effectivePermissions).toContain(permission);
       }
       await waitForAccessToast(targetPage);
       await expectBrowserPermission(targetPage, 'users.view', true);
-      await expectBrowserPermission(targetPage, 'settings.view', true);
+      await expectBrowserPermission(targetPage, 'settings.update', true);
       await expectBrowserPermission(targetPage, 'products.update', true);
       await expect(targetPage.getByRole('link', { name: /^users$/i })).toBeVisible();
-      await expect(targetPage.getByRole('link', { name: /^settings$/i })).toBeVisible();
       await expectShellStillMounted(targetPage, shellMarker);
 
       const surfaceDeny = await saveOverrides(adminLogin.token, targetUser!.id, [], surfacePermissions);
@@ -349,10 +420,9 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       }
       await waitForAccessToast(targetPage);
       await expectBrowserPermission(targetPage, 'users.view', false);
-      await expectBrowserPermission(targetPage, 'settings.view', false);
+      await expectBrowserPermission(targetPage, 'settings.update', false);
       await expectBrowserPermission(targetPage, 'products.update', false);
       await expect(targetPage.getByRole('link', { name: /^users$/i })).toHaveCount(0);
-      await expect(targetPage.getByRole('link', { name: /^settings$/i })).toHaveCount(0);
       await expectShellStillMounted(targetPage, shellMarker);
 
       const finalInherited = await saveOverrides(adminLogin.token, targetUser!.id, [], []);

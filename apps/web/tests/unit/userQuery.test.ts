@@ -1,5 +1,10 @@
 import { userApi } from '../../features/users/api';
-import { userQueryKeys } from '../../features/users/hooks';
+import {
+  patchUserEffectivePermissionsCache,
+  patchUserListCache,
+  shouldApplyUserPatch,
+  userQueryKeys
+} from '../../features/users/hooks';
 import { apiClient } from '../../lib/api/client';
 
 jest.mock('../../lib/api/client');
@@ -44,5 +49,74 @@ describe('User API & Query Suite', () => {
     const result = await userApi.deactivateUser('usr-2');
     expect(apiClient.post).toHaveBeenCalledWith('/api/v1/users/usr-2/deactivate', {});
     expect(result.success).toBe(true);
+  });
+
+  it('5. applies authoritative saved user into the list cache immediately', () => {
+    const current = [
+      {
+        id: 'usr-2',
+        name: 'Ramesh Patil',
+        username: 'ramesh',
+        role: 'Admin',
+        category: 'employee' as const,
+        status: 'active' as const,
+        createdAt: '2026-08-22T20:00:00.000Z',
+        updatedAt: '2026-08-22T20:00:00.000Z'
+      }
+    ];
+
+    const patched = patchUserListCache(current, {
+      ...current[0],
+      category: 'admin',
+      updatedAt: '2026-08-22T20:01:00.000Z'
+    });
+
+    expect(patched?.[0].category).toBe('admin');
+    expect(patched?.[0].role).toBe('Admin');
+  });
+
+  it('6. rejects older realtime user payloads by updatedAt', () => {
+    expect(
+      shouldApplyUserPatch(
+        { updatedAt: '2026-08-22T20:05:00.000Z', createdAt: '2026-08-22T20:00:00.000Z' },
+        { updatedAt: '2026-08-22T20:04:00.000Z', createdAt: '2026-08-22T20:00:00.000Z' }
+      )
+    ).toBe(false);
+
+    expect(
+      shouldApplyUserPatch(
+        { updatedAt: '2026-08-22T20:05:00.000Z', createdAt: '2026-08-22T20:00:00.000Z' },
+        { updatedAt: '2026-08-22T20:06:00.000Z', createdAt: '2026-08-22T20:00:00.000Z' }
+      )
+    ).toBe(true);
+  });
+
+  it('7. patches effective-permissions category while refetch catches the full template', () => {
+    const patched = patchUserEffectivePermissionsCache(
+      {
+        success: true,
+        userId: 'usr-2',
+        category: 'employee',
+        rolePermissions: ['dashboard.view'],
+        permissionGrants: [],
+        permissionDenies: [],
+        effectivePermissions: ['dashboard.view']
+      },
+      {
+        id: 'usr-2',
+        name: 'Ramesh Patil',
+        username: 'ramesh',
+        role: 'Admin',
+        category: 'admin',
+        permissionGrants: ['users.view'],
+        permissionDenies: [],
+        status: 'active',
+        createdAt: '2026-08-22T20:00:00.000Z',
+        updatedAt: '2026-08-22T20:01:00.000Z'
+      }
+    );
+
+    expect(patched?.category).toBe('admin');
+    expect(patched?.permissionGrants).toContain('users.view');
   });
 });

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi } from './api';
 import { useRealtime } from '../../hooks/useRealtime';
-import type { UserFormPayload } from './types';
+import type { UserDoc, UserEffectivePermissions, UserFormPayload } from './types';
 
 export const userQueryKeys = {
   all: ['users'] as const,
@@ -14,6 +14,59 @@ export const userQueryKeys = {
   effectivePermissions: (id: string) => ['users', 'effective-permissions', id] as const,
   myActivity: () => ['users', 'me', 'activity'] as const
 };
+
+function getUserUpdatedAt(user?: Pick<UserDoc, 'updatedAt' | 'createdAt'> | null) {
+  const raw = user?.updatedAt || user?.createdAt;
+  const parsed = raw ? Date.parse(raw) : NaN;
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function shouldApplyUserPatch(
+  current: Pick<UserDoc, 'updatedAt' | 'createdAt'> | undefined | null,
+  incoming: Pick<UserDoc, 'updatedAt' | 'createdAt'>
+) {
+  const incomingTime = getUserUpdatedAt(incoming);
+  const currentTime = getUserUpdatedAt(current);
+  return incomingTime === 0 || currentTime === 0 || incomingTime >= currentTime;
+}
+
+export function patchUserListCache(current: UserDoc[] | undefined, incoming: UserDoc) {
+  if (!current) return current;
+  let found = false;
+  const next = current.map((user) => {
+    if (user.id !== incoming.id) return user;
+    found = true;
+    return shouldApplyUserPatch(user, incoming) ? { ...user, ...incoming } : user;
+  });
+  return found ? next : [incoming, ...next];
+}
+
+export function patchUserEffectivePermissionsCache(
+  current: UserEffectivePermissions | undefined,
+  incoming: UserDoc
+) {
+  if (!current || current.userId !== incoming.id) return current;
+  return {
+    ...current,
+    category: incoming.category,
+    permissionGrants: incoming.permissionGrants || current.permissionGrants || [],
+    permissionDenies: incoming.permissionDenies || current.permissionDenies || []
+  };
+}
+
+function applyAuthoritativeUserToCache(queryClient: ReturnType<typeof useQueryClient>, incoming?: UserDoc | null) {
+  if (!incoming?.id) return;
+
+  queryClient.setQueryData<UserDoc[]>(userQueryKeys.list(), (current) => patchUserListCache(current, incoming));
+  queryClient.setQueryData<UserDoc>(userQueryKeys.detail(incoming.id), (current) => {
+    if (current && !shouldApplyUserPatch(current, incoming)) return current;
+    return current ? { ...current, ...incoming } : incoming;
+  });
+  queryClient.setQueryData<UserEffectivePermissions>(
+    userQueryKeys.effectivePermissions(incoming.id),
+    (current) => patchUserEffectivePermissionsCache(current, incoming)
+  );
+}
 
 export function useUsersQuery() {
   const queryClient = useQueryClient();
@@ -27,10 +80,17 @@ export function useUsersQuery() {
 
   useEffect(() => {
     const unsub = subscribe('user_updated', (payload: any) => {
+      const incomingUser = payload?.user || payload?.data?.user;
+      if (incomingUser?.id) {
+        applyAuthoritativeUserToCache(queryClient, incomingUser);
+      }
+
       queryClient.invalidateQueries({ queryKey: userQueryKeys.all });
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
-      if (payload?.userId) {
-        queryClient.invalidateQueries({ queryKey: userQueryKeys.detail(payload.userId) });
+      const targetUserId = payload?.userId || payload?.data?.userId || incomingUser?.id;
+      if (targetUserId) {
+        queryClient.invalidateQueries({ queryKey: userQueryKeys.detail(targetUserId) });
+        queryClient.invalidateQueries({ queryKey: userQueryKeys.effectivePermissions(targetUserId) });
       }
     });
 
@@ -75,6 +135,7 @@ export function useSaveUserMutation() {
   return useMutation({
     mutationFn: (payload: UserFormPayload) => userApi.saveUser(payload),
     onSuccess: (data) => {
+      applyAuthoritativeUserToCache(queryClient, data?.user);
       queryClient.invalidateQueries({ queryKey: userQueryKeys.list() });
       if (data?.user?.id) {
         queryClient.invalidateQueries({ queryKey: userQueryKeys.detail(data.user.id) });
@@ -99,6 +160,7 @@ export function useSaveUserPermissionOverridesMutation() {
       permissionDenies: string[];
     }) => userApi.savePermissionOverrides(id, { permissionGrants, permissionDenies }),
     onSuccess: (data) => {
+      applyAuthoritativeUserToCache(queryClient, data?.user);
       queryClient.invalidateQueries({ queryKey: userQueryKeys.list() });
       if (data?.user?.id) {
         queryClient.invalidateQueries({ queryKey: userQueryKeys.detail(data.user.id) });
