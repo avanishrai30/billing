@@ -16,6 +16,15 @@ import type { StoreDoc } from '../../stores/types';
 import { PERMISSION_MODULE_GROUPS } from '../../permissions/components/PermissionMatrix';
 import { useUserEffectivePermissionsQuery } from '../hooks';
 
+const authorizationRoleLabels: Record<UserFormValues['category'], string> = {
+  employee: 'Employee',
+  admin: 'Admin',
+  auditor: 'Auditor',
+  'super admin': 'Super Admin'
+};
+
+const defaultRoleTitles = new Set(Object.values(authorizationRoleLabels));
+
 export interface UserModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -63,6 +72,7 @@ export function UserModal({
   });
 
   const watchedCategory = watch('category');
+  const watchedRole = watch('role');
   const watchedGrants = watch('permissionGrants') || [];
   const watchedDenies = watch('permissionDenies') || [];
   const effectivePermissionsQuery = useUserEffectivePermissionsQuery(user?.id);
@@ -98,16 +108,10 @@ export function UserModal({
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nextCategory = e.target.value as UserFormValues['category'];
-    const currentRoleTitle = watch('role');
-    const roleTitleByCategory: Record<UserFormValues['category'], string> = {
-      employee: 'Employee',
-      admin: 'Admin',
-      auditor: 'Auditor',
-      'super admin': 'Super Admin'
-    };
+    const currentRoleTitle = (watch('role') || '').trim();
     setValue('category', nextCategory, { shouldDirty: true });
-    if (!currentRoleTitle || currentRoleTitle === user?.role || ['Employee', 'Admin', 'Auditor', 'Super Admin'].includes(currentRoleTitle)) {
-      setValue('role', roleTitleByCategory[nextCategory], { shouldDirty: true });
+    if (!currentRoleTitle || defaultRoleTitles.has(currentRoleTitle)) {
+      setValue('role', authorizationRoleLabels[nextCategory], { shouldDirty: true });
     }
   };
 
@@ -149,8 +153,8 @@ export function UserModal({
       title={isEditing ? `Edit User: ${user?.name}` : 'Register New User Account'}
       description={
         isEditing
-          ? 'Update account credentials, role categories, and store scoping privileges.'
-          : 'Create a new team member account with role permissions and store assignments.'
+          ? 'Update account credentials, authorization roles, and store scoping privileges.'
+          : 'Create a new team member account with authorization permissions and store assignments.'
       }
       maxWidth="lg"
       footer={
@@ -219,28 +223,56 @@ export function UserModal({
           </FormField>
 
           {/* Canonical Role Category */}
-          <FormField label="Role Assignment" required>
+          <div className="sm:col-span-2 rounded-md border border-blue-100 bg-blue-50/70 p-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-blue-700">Authorization Role</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950">{authorizationRoleLabels[watchedCategory]}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Job Title</p>
+                <p className="mt-1 text-sm font-medium text-slate-800">{watchedRole || 'Not set'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Effective Access</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950">
+                  {effectivePermissionsQuery.isLoading && isEditing
+                    ? 'Loading...'
+                    : `${effectivePermissions.length || 0} permissions`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Canonical Authorization Role */}
+          <FormField label="Authorization Role" required>
             <Select
-              aria-label="Role Assignment"
+              aria-label="Authorization Role"
               value={watchedCategory}
               onChange={handleCategoryChange}
               options={[
-                { value: 'employee', label: 'Employee / Cashier (Standard Operations)' },
-                { value: 'admin', label: 'Admin (Full Branch Operations & Catalog)' },
-                { value: 'auditor', label: 'Auditor (Read-Only Ledger & Tax Access)' },
-                { value: 'super admin', label: 'Super Admin (Unrestricted System Owner)' }
+                { value: 'employee', label: 'Employee' },
+                { value: 'admin', label: 'Admin' },
+                { value: 'auditor', label: 'Auditor' },
+                { value: 'super admin', label: 'Super Admin' }
               ]}
               className="text-xs"
             />
+            <p className="mt-1 text-[11px] text-slate-500">
+              This controls the user's permissions and application access.
+            </p>
           </FormField>
 
           {/* Role Display Title */}
-          <FormField label="Display Title" required error={errors.role?.message}>
+          <FormField label="Job Title / Display Title" required error={errors.role?.message}>
             <Input
               placeholder="e.g. Senior Branch Cashier / Store Manager"
               {...register('role')}
               className="text-xs"
             />
+            <p className="mt-1 text-[11px] text-slate-500">
+              This is a descriptive job title and does not control permissions.
+            </p>
           </FormField>
 
           {/* Store Scope Assignment */}

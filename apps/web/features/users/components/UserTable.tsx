@@ -80,7 +80,7 @@ export function UserTable({
           <tr>
             <TableHead>User Profile</TableHead>
             <TableHead>Username</TableHead>
-            <TableHead>Role / Category</TableHead>
+            <TableHead>Authorization / Title</TableHead>
             <TableHead>Assigned Store Scope</TableHead>
             <TableHead align="center">Status</TableHead>
             <TableHead align="right">Actions</TableHead>
@@ -148,14 +148,16 @@ export function UserTable({
                   </div>
                 </TableCell>
 
-                {/* Role / Category */}
+                {/* Authorization / Title */}
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold text-xs text-slate-900">{categoryLabel}</span>
+                    <Badge variant={categoryVariant} size="sm">
+                      {categoryLabel}
+                    </Badge>
                     <div className="flex items-center gap-1">
-                      <Badge variant={categoryVariant} size="sm">
+                      <span className="text-[11px] text-slate-500">
                         {user.role || 'Team Member'}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
                 </TableCell>

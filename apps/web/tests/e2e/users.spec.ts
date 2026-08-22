@@ -11,6 +11,9 @@ let mockUsers = [
     category: 'super admin',
     assignedStoreId: 'all',
     assignedStores: ['all'],
+    permissions: [],
+    permissionGrants: [],
+    permissionDenies: [],
     status: 'active',
     tokenVersion: 1,
     createdAt: new Date().toISOString()
@@ -25,6 +28,9 @@ let mockUsers = [
     category: 'admin',
     assignedStoreId: 'store-1',
     assignedStores: ['store-1'],
+    permissions: [],
+    permissionGrants: [],
+    permissionDenies: [],
     status: 'active',
     tokenVersion: 1,
     createdAt: new Date().toISOString()
@@ -39,6 +45,9 @@ let mockUsers = [
     category: 'employee',
     assignedStoreId: 'store-1',
     assignedStores: ['store-1'],
+    permissions: [],
+    permissionGrants: [],
+    permissionDenies: [],
     status: 'active',
     tokenVersion: 1,
     createdAt: new Date().toISOString()
@@ -90,6 +99,9 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
         category: 'super admin',
         assignedStoreId: 'all',
         assignedStores: ['all'],
+        permissions: [],
+        permissionGrants: [],
+        permissionDenies: [],
         status: 'active',
         tokenVersion: 1,
         createdAt: new Date().toISOString()
@@ -104,6 +116,9 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
         category: 'admin',
         assignedStoreId: 'store-1',
         assignedStores: ['store-1'],
+        permissions: [],
+        permissionGrants: [],
+        permissionDenies: [],
         status: 'active',
         tokenVersion: 1,
         createdAt: new Date().toISOString()
@@ -118,6 +133,9 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
         category: 'employee',
         assignedStoreId: 'store-1',
         assignedStores: ['store-1'],
+        permissions: [],
+        permissionGrants: [],
+        permissionDenies: [],
         status: 'active',
         tokenVersion: 1,
         createdAt: new Date().toISOString()
@@ -215,6 +233,34 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
       return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ success: false }) });
     });
 
+    await page.route('**/api/v1/users/*/effective-permissions', async (route) => {
+      const url = new URL(route.request().url());
+      const parts = url.pathname.split('/');
+      const id = parts[parts.length - 2];
+      const user = mockUsers.find((u) => u.id === id);
+      const category = user?.category || 'employee';
+      const effectivePermissions =
+        category === 'admin'
+          ? ['users.view', 'users.update', 'roles.view', 'roles.update', 'settings.update']
+          : category === 'super admin'
+            ? ['*']
+            : ['dashboard.view', 'products.view', 'customers.view'];
+
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          userId: id,
+          category,
+          rolePermissions: effectivePermissions,
+          permissionGrants: user?.permissionGrants || [],
+          permissionDenies: user?.permissionDenies || [],
+          effectivePermissions
+        })
+      });
+    });
+
     await page.route('**/api/v1/users/*', async (route) => {
       const url = new URL(route.request().url());
       const parts = url.pathname.split('/');
@@ -280,15 +326,21 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     await expect(page.getByText('Vikram Shinde')).toBeVisible();
     await expect(page.getByText('Ramesh Patil')).toBeVisible();
 
-    // Canonical role/category edit: Employee -> Admin must update the visible role assignment.
+    // Canonical category edit: Employee -> Admin must update authorization while preserving custom title.
     await page.getByLabel('Edit user Ramesh Patil').click();
     const roleModal = page.getByRole('dialog');
     await expect(roleModal).toBeVisible();
-    await roleModal.getByLabel('Role Assignment').selectOption('admin');
+    await expect(roleModal.getByText('Authorization Role', { exact: true }).first()).toBeVisible();
+    await expect(roleModal.getByText("This controls the user's permissions and application access.")).toBeVisible();
+    await expect(roleModal.getByText(/Job Title \/ Display Title/).first()).toBeVisible();
+    await expect(roleModal.getByText('This is a descriptive job title and does not control permissions.')).toBeVisible();
+    await roleModal.getByLabel('Authorization Role').selectOption('admin');
     await roleModal.getByRole('button', { name: /save changes/i }).click();
     await expect(roleModal).not.toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Authorization role updated to Admin' })).toBeVisible();
     const rameshRow = page.getByRole('row').filter({ hasText: 'Ramesh Patil' });
     await expect(rameshRow.getByText('Admin', { exact: true }).first()).toBeVisible();
+    await expect(rameshRow.getByText('Cashier Staff', { exact: true })).toBeVisible();
 
     // 2. Open User Detail Drawer
     await page.getByLabel('View user details for Vikram Shinde').click();
@@ -311,6 +363,7 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     await modal.locator('input[name="phone"]').fill('9811223344');
     await modal.locator('input[name="password"]').fill('password123');
     await modal.locator('input[name="role"]').fill('Lead Cashier');
+    await expect(modal.getByLabel('Authorization Role')).toHaveValue('employee');
 
     await modal.getByRole('button', { name: /create user account/i }).click();
     await expect(modal).not.toBeVisible();

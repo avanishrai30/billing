@@ -117,8 +117,7 @@ function normalizeCategory(user) {
 function isSuperAdmin(user) {
   if (!user) return false;
   const cat = normalizeCategory(user);
-  const role = (user.role || '').toUpperCase();
-  return cat === 'super admin' || role === 'SUPER ADMIN' || role === 'OWNER';
+  return cat === 'super admin';
 }
 
 function expandPermissionList(permissionList = []) {

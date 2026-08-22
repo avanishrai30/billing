@@ -30,7 +30,7 @@ export function UserHeader({
               User Accounts & Team Management
             </h1>
             <p className="text-xs text-slate-500">
-              Manage user credentials, role categories, store scoping, and account statuses
+              Manage user credentials, authorization roles, store scoping, and account statuses
             </p>
           </div>
         </div>

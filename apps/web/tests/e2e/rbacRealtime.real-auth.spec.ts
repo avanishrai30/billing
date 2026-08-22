@@ -109,6 +109,15 @@ async function saveOverrides(token: string, userId: string, permissionGrants: st
   });
 }
 
+async function getEffectivePermissions(token: string, userId: string) {
+  return apiRequest<{
+    success: boolean;
+    userId: string;
+    category: AuthUser['category'];
+    effectivePermissions: string[];
+  }>(`/api/v1/users/${encodeURIComponent(userId)}/effective-permissions`, { token });
+}
+
 async function expectForbidden(path: string, token: string, body: unknown) {
   const res = await fetch(`${env.apiBaseUrl.replace(/\/+$/, '')}${path}`, {
     method: 'POST',
@@ -172,7 +181,7 @@ async function changeRoleThroughUsersUi(page: Page, user: AuthUser, category: Au
   await expect(page.getByRole('heading', { name: /user accounts/i })).toBeVisible();
   await page.getByLabel(`Edit user ${user.name}`).click();
   await expect(page.getByRole('heading', { name: new RegExp(`Edit User: ${user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i') })).toBeVisible();
-  await page.getByLabel('Role Assignment').selectOption(category);
+  await page.getByLabel('Authorization Role').selectOption(category);
 
   const saveResponse = page.waitForResponse((response) => {
     return response.url().includes('/api/v1/users') && response.request().method() === 'POST' && response.status() === 200;
@@ -239,7 +248,7 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
 
     try {
       const reset = await saveUser(adminLogin.token, targetUser!, {
-        role: 'Employee',
+        role: 'Admin',
         category: 'employee',
         permissionGrants: [],
         permissionDenies: [],
@@ -247,6 +256,12 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       });
       await saveOverrides(adminLogin.token, targetUser!.id, [], []);
       expect(reset.user.category).toBe('employee');
+      expect(reset.user.role).toBe('Admin');
+
+      const displayOnlyPermissions = await getEffectivePermissions(adminLogin.token, targetUser!.id);
+      expect(displayOnlyPermissions.category).toBe('employee');
+      expect(displayOnlyPermissions.effectivePermissions).not.toContain('users.view');
+      expect(displayOnlyPermissions.effectivePermissions).not.toContain('roles.update');
 
       const targetContext = await browser.newContext();
       const adminContext = await browser.newContext();
@@ -263,7 +278,12 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       await loginInBrowser(adminPage, env.superUsername!, env.superPassword!);
 
       const roleChangedUser = await changeRoleThroughUsersUi(adminPage, reset.user, 'admin');
+      expect(roleChangedUser.role).toBe('Admin');
       await expectAuditForTarget(adminLogin.token, targetUser!.id);
+      const promotedPermissions = await getEffectivePermissions(adminLogin.token, targetUser!.id);
+      expect(promotedPermissions.category).toBe('admin');
+      expect(promotedPermissions.effectivePermissions).toContain('users.view');
+      expect(promotedPermissions.effectivePermissions).toContain('roles.update');
       await waitForAccessToast(targetPage);
       await expectBrowserCategory(targetPage, 'admin');
       await expectShellStillMounted(targetPage, shellMarker);
@@ -273,6 +293,10 @@ test.describe('Phase 26.2 Real-Auth RBAC Realtime Authorization Harness', () => 
       shellMarker = await markShell(targetPage);
 
       const reverseUser = await changeRoleThroughUsersUi(adminPage, roleChangedUser, 'employee');
+      const demotedPermissions = await getEffectivePermissions(adminLogin.token, targetUser!.id);
+      expect(demotedPermissions.category).toBe('employee');
+      expect(demotedPermissions.effectivePermissions).not.toContain('users.view');
+      expect(demotedPermissions.effectivePermissions).not.toContain('roles.update');
       await waitForAccessToast(targetPage);
       await expectBrowserCategory(targetPage, 'employee');
       await expectShellStillMounted(targetPage, shellMarker);

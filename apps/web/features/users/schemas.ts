@@ -16,7 +16,7 @@ export const userFormSchema = z.object({
     .min(6, 'Password must be at least 6 characters')
     .optional()
     .or(z.literal('')),
-  role: z.string().min(1, 'Display role title is required').trim(),
+  role: z.string().min(1, 'Job title / display title is required').trim(),
   category: z.enum(['super admin', 'admin', 'employee', 'auditor']).default('employee'),
   assignedStoreId: z.string().trim().default('all'),
   assignedStores: z.array(z.string()).default(['all']),

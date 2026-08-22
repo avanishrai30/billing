@@ -30,7 +30,7 @@ export function UserFilters({
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
       <div className="flex-1 min-w-[200px]">
         <Input
-          placeholder="Search by full name, @username, email, or role title..."
+          placeholder="Search by full name, @username, email, or job title..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           leftIcon={<Search className="h-4 w-4 text-slate-400" />}

@@ -156,7 +156,6 @@ export default function PermissionsPage() {
 
   const handleSaveSelectedUserAccess = async () => {
     if (!selectedUser) return;
-    const displayRole = roleLabels[draftCategory] || selectedUser.role;
 
     await saveUserMutation.mutateAsync({
       id: selectedUser.id,
@@ -164,7 +163,7 @@ export default function PermissionsPage() {
       username: selectedUser.username,
       email: selectedUser.email,
       phone: selectedUser.phone,
-      role: displayRole,
+      role: selectedUser.role,
       category: draftCategory,
       assignedStoreId: draftStoreId,
       assignedStores: [draftStoreId],
@@ -399,18 +398,22 @@ export default function PermissionsPage() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1.5">
-                <span className="text-xs font-semibold text-slate-700">Role</span>
+                <span className="text-xs font-semibold text-slate-700">Authorization Role</span>
                 <Select
+                  aria-label="Authorization Role"
                   value={draftCategory}
                   onChange={(e) => setDraftCategory(e.target.value as UserCategory)}
                   disabled={!canManageUsers}
                   options={[
-                    { value: 'employee', label: 'Employee / Cashier' },
+                    { value: 'employee', label: 'Employee' },
                     { value: 'admin', label: 'Admin' },
                     { value: 'auditor', label: 'Auditor' },
                     { value: 'super admin', label: 'Super Admin' }
                   ]}
                 />
+                <span className="block text-[11px] text-slate-500">
+                  Controls permissions and application access. Job title remains "{selectedUser.role}".
+                </span>
               </label>
               <label className="space-y-1.5">
                 <span className="text-xs font-semibold text-slate-700">Store Scope</span>

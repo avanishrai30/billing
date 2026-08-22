@@ -20,10 +20,18 @@ import {
   type UserFormValues,
   type UserSummaryMetrics
 } from '../../../features/users';
-import { AccessDeniedState } from '../../../components/ui';
+import { AccessDeniedState, useToast } from '../../../components/ui';
+
+const roleLabels: Record<UserCategory, string> = {
+  'super admin': 'Super Admin',
+  admin: 'Admin',
+  employee: 'Employee',
+  auditor: 'Auditor'
+};
 
 export default function UsersPage() {
   const { user: currentUser, hasPermission } = useAuth();
+  const { success } = useToast();
   const canView = hasPermission('users.view');
   const canCreate = hasPermission('users.create') || hasPermission('users.update');
   const canManage = hasPermission('users.update') || hasPermission('users.create');
@@ -131,7 +139,16 @@ export default function UsersPage() {
   };
 
   const handleSaveUser = async (values: UserFormValues) => {
-    await saveMutation.mutateAsync(values);
+    const previousCategory = activeUser?.category;
+    const response = await saveMutation.mutateAsync(values);
+    const savedCategory = response.user.category || values.category || 'employee';
+
+    if (previousCategory && previousCategory !== savedCategory) {
+      success(`Authorization role updated to ${roleLabels[savedCategory]}`);
+      return;
+    }
+
+    success(activeUser ? 'User account updated' : 'User account created');
   };
 
   const handleConfirmDeactivate = async () => {
