@@ -690,5 +690,73 @@ describe('Stage 10: RBAC, User Access, Audit & Security Hardening', () => {
       expect(deniedLog.entity).toBe('security');
       expect(deniedLog.performedBy).toBe('cashier1');
     });
+
+    test('15. Non-super admins cannot grant permissions outside their effective authority', async () => {
+      const admin = usersTable.get('usr-admin-1');
+      const token = generateToken(admin);
+
+      const res = await request(app)
+        .post('/api/v1/users/usr-cashier-1/permissions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ permissionGrants: ['products.delete'], permissionDenies: [] });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERMISSION_GRANT_FORBIDDEN');
+      expect(usersTable.get('usr-cashier-1').permissionGrants || []).not.toContain('products.delete');
+    });
+
+    test('16. Non-super admins cannot save role templates with stale or out-of-bound permissions', async () => {
+      const admin = usersTable.get('usr-admin-1');
+      const token = generateToken(admin);
+
+      const res = await request(app)
+        .post('/api/v1/role-permissions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          permissions: {
+            admin: ['dashboard.view', 'products.delete'],
+            employee: ['invoices.create'],
+            auditor: ['audit.view']
+          }
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('PERMISSION_GRANT_FORBIDDEN');
+      expect(rolePermissionsTable.get('matrix')).toBeUndefined();
+    });
+
+    test('17. Role template updates cannot target the Super Admin bypass template', async () => {
+      const superAdmin = usersTable.get('usr-super-1');
+      const token = generateToken(superAdmin);
+
+      const res = await request(app)
+        .post('/api/v1/role-permissions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          permissions: {
+            admin: ['dashboard.view'],
+            employee: ['invoices.create'],
+            auditor: ['audit.view'],
+            'super admin': ['*']
+          }
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('ROLE_TEMPLATE_FORBIDDEN');
+    });
+
+    test('18. Super Admin can grant canonical permissions to another user', async () => {
+      const superAdmin = usersTable.get('usr-super-1');
+      const token = generateToken(superAdmin);
+
+      const res = await request(app)
+        .post('/api/v1/users/usr-cashier-1/permissions')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ permissionGrants: ['settings.update'], permissionDenies: [] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.permissions.permissionGrants).toContain('settings.update');
+      expect(res.body.permissions.effectivePermissions).toContain('settings.update');
+    });
   });
 });

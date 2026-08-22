@@ -67,6 +67,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     'customers.create',
     'customers.update',
     'suppliers.view',
+    'settings.view',
     'scanner.use'
   ],
   'auditor': [
@@ -135,6 +136,48 @@ function expandPermissionList(permissionList = []) {
 
 function uniquePermissions(permissionList = []) {
   return Array.from(new Set((permissionList || []).filter(Boolean)));
+}
+
+function createAuthorizationError(message, code = 'PERMISSION_GRANT_FORBIDDEN') {
+  const err = new Error(message);
+  err.statusCode = 403;
+  err.code = code;
+  return err;
+}
+
+async function assertCanGrantPermissions(actor, requestedPermissions = []) {
+  if (!actor) {
+    throw createAuthorizationError('Authentication required.', 'UNAUTHORIZED');
+  }
+  if (isSuperAdmin(actor)) return;
+
+  const actorPermissions = await resolveUserPermissions(actor);
+  if (actorPermissions.includes('*')) return;
+
+  const allowed = new Set(actorPermissions);
+  const requested = uniquePermissions(expandPermissionList(requestedPermissions));
+  const forbidden = requested.filter(permission => permission === '*' || !allowed.has(permission));
+
+  if (forbidden.length > 0) {
+    throw createAuthorizationError(
+      `Cannot grant permissions outside actor authority: ${forbidden.join(', ')}`
+    );
+  }
+}
+
+async function assertRoleMatrixUpdateAllowed(actor, matrix = {}) {
+  const allowedRoleKeys = new Set(['admin', 'employee', 'auditor']);
+  const roleKeys = Object.keys(matrix || {});
+  const invalidKeys = roleKeys.filter(key => !allowedRoleKeys.has(String(key).toLowerCase()));
+  if (invalidKeys.length > 0) {
+    throw createAuthorizationError(
+      `Role matrix can only update Admin, Employee, and Auditor templates: ${invalidKeys.join(', ')}`,
+      'ROLE_TEMPLATE_FORBIDDEN'
+    );
+  }
+
+  const requestedPermissions = roleKeys.flatMap(key => Array.isArray(matrix[key]) ? matrix[key] : []);
+  await assertCanGrantPermissions(actor, requestedPermissions);
 }
 
 async function getRolePermissionsForCategory(category) {
@@ -386,6 +429,8 @@ module.exports = {
   LEGACY_MODULE_EXPANSION,
   expandPermissionList,
   uniquePermissions,
+  assertCanGrantPermissions,
+  assertRoleMatrixUpdateAllowed,
   normalizeCategory,
   isSuperAdmin,
   getRolePermissionsForCategory,

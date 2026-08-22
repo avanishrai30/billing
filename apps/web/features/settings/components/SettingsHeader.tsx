@@ -37,7 +37,7 @@ export function SettingsHeader({
               {activeStoreName}
             </span>
             <span className="h-1 w-1 rounded-full bg-slate-300" aria-hidden="true" />
-            <span>{canUpdateSettings ? 'Configuration Editing Enabled' : 'Read-Only Configuration Access'}</span>
+            <span>{canUpdateSettings ? 'Configuration Editing Enabled' : 'View Access Only'}</span>
           </div>
         </div>
       </div>

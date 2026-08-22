@@ -78,7 +78,7 @@ export default function InvoicesPage() {
 
   // Permissions
   const canVoid = hasPermission('invoices.void');
-  const canCreatePOS = hasPermission('invoices.create') || hasPermission('pos.access');
+  const canCreatePOS = hasPermission('invoices.create');
 
   // Store options
   const storeOptions = useMemo(() => {

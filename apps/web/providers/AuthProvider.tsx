@@ -195,13 +195,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (userCat === 'employee' || userRole === 'CASHIER' || userRole === 'STAFF') {
       const defaultCashierPerms = [
         'dashboard.view',
-        'pos.create',
+        'products.view',
+        'inventory.view',
         'invoices.create',
         'invoices.view',
+        'invoices.print',
+        'purchases.view',
+        'purchases.create',
         'customers.view',
-        'products.view',
+        'customers.create',
+        'customers.update',
+        'suppliers.view',
         'settings.view',
-        'preferences.view'
+        'scanner.use'
       ];
       return defaultCashierPerms.includes(permission);
     }

@@ -72,6 +72,7 @@ async function assertPrivilegeUpdateAllowed(db, existingUser, nextUser, req) {
   if (!actorIsSuperAdmin && directGrants.includes('*')) {
     throw createHttpError('Wildcard permissions cannot be granted by this account.', 403, 'WILDCARD_GRANT_FORBIDDEN');
   }
+  await authzService.assertCanGrantPermissions(actor, directGrants);
 
   if (targetWasSuperAdmin && !targetWillBeSuperAdmin) {
     if (isSelf) {

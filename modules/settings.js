@@ -1,6 +1,6 @@
 const express = require('express');
 const { getContext, verifyJWT } = require('./context');
-const { requirePermission } = require('../services/authzService');
+const { DEFAULT_ROLE_PERMISSIONS, requirePermission, assertRoleMatrixUpdateAllowed } = require('../services/authzService');
 const auditService = require('../services/auditService');
 
 const router = express.Router();
@@ -14,9 +14,9 @@ router.get('/role-permissions', verifyJWT, requirePermission('roles.view'), asyn
       res.json(doc.permissions);
     } else {
       const defaults = {
-        admin: ['dashboard', 'billing', 'inventory', 'purchase', 'businesses', 'customers', 'invoices', 'settings', 'auditor', 'permissions', 'scanner', 'verification', 'remote-scanner', 'refunds'],
-        employee: ['billing', 'inventory', 'purchase', 'scanner', 'verification'],
-        auditor: ['invoices', 'auditor']
+        admin: DEFAULT_ROLE_PERMISSIONS.admin,
+        employee: DEFAULT_ROLE_PERMISSIONS.employee,
+        auditor: DEFAULT_ROLE_PERMISSIONS.auditor
       };
       res.json(defaults);
     }
@@ -31,6 +31,7 @@ router.post('/role-permissions', verifyJWT, requirePermission('roles.update'), a
   const permissions = req.body.permissions || req.body;
 
   try {
+    await assertRoleMatrixUpdateAllowed(req.user, permissions);
     await db.collection('role_permissions').updateOne(
       { key: "matrix" },
       { $set: { permissions, updatedAt: new Date().toISOString() } },
@@ -40,7 +41,10 @@ router.post('/role-permissions', verifyJWT, requirePermission('roles.update'), a
     if (io) io.to('sync_global').emit('rbac_updated', permissions);
     res.json({ success: true, message: "Role permissions matrix updated successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to save permissions" } });
+    res.status(err.statusCode || 500).json({
+      success: false,
+      error: { code: err.code || "SERVER_ERROR", message: err.message || "Failed to save permissions" }
+    });
   }
 });
 

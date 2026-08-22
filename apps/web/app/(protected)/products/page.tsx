@@ -23,8 +23,8 @@ export default function ProductsPage() {
   const canView = hasPermission('products.view');
   const canCreate = hasPermission('products.create');
   const canEdit = hasPermission('products.update');
-  const canArchive = hasPermission('products.archive') || hasPermission('products.delete');
-  const canImport = hasPermission('products.import') || hasPermission('products.import.preview');
+  const canArchive = hasPermission('products.archive');
+  const canImport = hasPermission('products.import.preview');
   const canCommitImport = hasPermission('products.import.commit');
 
   const { triggerHighlight, highlightedIds } = useRealtimeHighlight(1500);
