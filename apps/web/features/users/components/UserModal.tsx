@@ -13,6 +13,8 @@ import {
 import { userFormSchema, type UserFormValues } from '../schemas';
 import type { UserDoc } from '../types';
 import type { StoreDoc } from '../../stores/types';
+import { PERMISSION_MODULE_GROUPS } from '../../permissions/components/PermissionMatrix';
+import { useUserEffectivePermissionsQuery } from '../hooks';
 
 export interface UserModalProps {
   isOpen: boolean;
@@ -54,11 +56,18 @@ export function UserModal({
       assignedStoreId: user?.assignedStoreId || 'all',
       assignedStores: user?.assignedStores || ['all'],
       status: user?.status || 'active',
-      permissions: user?.permissions || []
+      permissions: user?.permissions || [],
+      permissionGrants: user?.permissionGrants || [],
+      permissionDenies: user?.permissionDenies || []
     }
   });
 
   const watchedCategory = watch('category');
+  const watchedGrants = watch('permissionGrants') || [];
+  const watchedDenies = watch('permissionDenies') || [];
+  const effectivePermissionsQuery = useUserEffectivePermissionsQuery(user?.id);
+  const rolePermissions = effectivePermissionsQuery.data?.rolePermissions || [];
+  const effectivePermissions = effectivePermissionsQuery.data?.effectivePermissions || [];
 
   React.useLayoutEffect(() => {
     if (isOpen) {
@@ -74,7 +83,9 @@ export function UserModal({
         assignedStoreId: user?.assignedStoreId || 'all',
         assignedStores: user?.assignedStores || ['all'],
         status: user?.status || 'active',
-        permissions: user?.permissions || []
+        permissions: user?.permissions || [],
+        permissionGrants: user?.permissionGrants || [],
+        permissionDenies: user?.permissionDenies || []
       });
     }
   }, [isOpen, user, reset]);
@@ -83,6 +94,27 @@ export function UserModal({
     const val = e.target.value;
     setValue('assignedStoreId', val);
     setValue('assignedStores', [val]);
+  };
+
+  const handlePermissionOverride = (permissionId: string, mode: 'inherit' | 'grant' | 'deny') => {
+    const nextGrants = watchedGrants.filter((id) => id !== permissionId);
+    const nextDenies = watchedDenies.filter((id) => id !== permissionId);
+
+    if (mode === 'grant') {
+      nextGrants.push(permissionId);
+    }
+    if (mode === 'deny') {
+      nextDenies.push(permissionId);
+    }
+
+    setValue('permissionGrants', Array.from(new Set(nextGrants)), { shouldDirty: true });
+    setValue('permissionDenies', Array.from(new Set(nextDenies)), { shouldDirty: true });
+  };
+
+  const getOverrideMode = (permissionId: string) => {
+    if (watchedGrants.includes(permissionId)) return 'grant';
+    if (watchedDenies.includes(permissionId)) return 'deny';
+    return 'inherit';
   };
 
   const handleFormSubmit = async (values: UserFormValues) => {
@@ -224,6 +256,68 @@ export function UserModal({
             />
           </FormField>
         </div>
+
+        <details className="rounded-md border border-gray-200 bg-white">
+          <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-gray-700">
+            Access & Permissions
+            <span className="ml-2 font-normal text-gray-500">
+              Role {rolePermissions.length || 0} · Grants {watchedGrants.length} · Denies {watchedDenies.length} · Effective {effectivePermissions.length || 0}
+            </span>
+          </summary>
+
+          <div className="max-h-[360px] space-y-3 overflow-y-auto border-t border-gray-200 p-3">
+            {PERMISSION_MODULE_GROUPS.map((group) => (
+              <section key={group.id} className="space-y-2">
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-800">{group.title}</h4>
+                  <p className="text-[11px] text-gray-500">{group.description}</p>
+                </div>
+
+                <div className="divide-y divide-gray-100 rounded-md border border-gray-100">
+                  {group.permissions.map((permission) => {
+                    const mode = getOverrideMode(permission.id);
+                    const inherited = rolePermissions.includes(permission.id);
+
+                    return (
+                      <div
+                        key={permission.id}
+                        className="grid grid-cols-1 gap-2 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto]"
+                      >
+                        <div>
+                          <p className="text-xs font-medium text-gray-800">{permission.name}</p>
+                          <p className="text-[11px] text-gray-500">
+                            {inherited ? 'Inherited from role' : 'Not inherited'} · {permission.id}
+                          </p>
+                        </div>
+                        <div className="inline-flex h-8 overflow-hidden rounded-md border border-gray-200 text-[11px]">
+                          {(['inherit', 'grant', 'deny'] as const).map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => handlePermissionOverride(permission.id, option)}
+                              className={[
+                                'px-2 font-medium capitalize transition-colors',
+                                mode === option
+                                  ? option === 'deny'
+                                    ? 'bg-red-50 text-red-700'
+                                    : option === 'grant'
+                                      ? 'bg-green-50 text-green-700'
+                                      : 'bg-gray-100 text-gray-800'
+                                  : 'bg-white text-gray-500 hover:bg-gray-50'
+                              ].join(' ')}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        </details>
       </form>
     </Dialog>
   );

@@ -15,6 +15,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<AuthUser>;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<AuthUser | null>;
   hasPermission: (permission: string) => boolean;
   isStoreAuthorized: (storeId: string) => boolean;
 }
@@ -27,6 +28,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [lifecycle, setLifecycle] = useState<AuthLifecycle>('initializing');
   const router = useRouter();
   const pathname = usePathname();
+
+  const refreshSession = useCallback(async (): Promise<AuthUser | null> => {
+    try {
+      const verifyRes = await apiClient.get<{ success: boolean; user?: AuthUser }>('/api/v1/auth/verify');
+      if (verifyRes && verifyRes.success && verifyRes.user) {
+        setUser(verifyRes.user);
+        sessionManager.setUser(verifyRes.user);
+        return verifyRes.user;
+      }
+    } catch (err: any) {
+      console.warn('[Auth] Session refresh failed:', err.message);
+      if (err.status === 401 || err.status === 403) {
+        sessionManager.clearSession();
+        realtimeManager.disconnect();
+        setToken(null);
+        setUser(null);
+        setLifecycle(err.status === 401 ? 'session-expired' : 'unauthenticated');
+      }
+    }
+    return null;
+  }, []);
 
   // Cold session restoration and background verification
   useEffect(() => {
@@ -50,12 +72,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Verify token against backend verification endpoint in background
           try {
-            const verifyRes = await apiClient.get('/api/v1/auth/verify');
-            if (verifyRes && verifyRes.success) {
-              if (verifyRes.user && isMounted) {
-                setUser(verifyRes.user);
-                sessionManager.setUser(verifyRes.user);
-              }
+            const refreshedUser = await refreshSession();
+            if (refreshedUser) {
               return;
             }
           } catch (err: any) {
@@ -91,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshSession]);
 
   const logout = useCallback(async () => {
     setLifecycle('logging-out');
@@ -226,6 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: lifecycle === 'initializing' || lifecycle === 'authenticating' || lifecycle === 'logging-out',
     login,
     logout,
+    refreshSession,
     hasPermission,
     isStoreAuthorized
   };

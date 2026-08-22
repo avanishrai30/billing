@@ -331,6 +331,137 @@ describe('Stage 10: RBAC, User Access, Audit & Security Hardening', () => {
     });
   });
 
+  describe('1B. Enterprise User Access Persistence Tests', () => {
+    test('6. User category updates persist and refresh active JWT authorization without logout', async () => {
+      const admin = usersTable.get('usr-admin-1');
+      const cashier = usersTable.get('usr-cashier-1');
+      const adminToken = generateToken(admin);
+      const cashierToken = generateToken(cashier);
+
+      const before = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${cashierToken}`);
+      expect(before.status).toBe(403);
+
+      const updateRes = await request(app)
+        .post('/api/v1/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          id: cashier.id,
+          name: cashier.name,
+          username: cashier.username,
+          role: 'Branch Admin',
+          category: 'admin',
+          assignedStoreId: cashier.assignedStoreId,
+          assignedStores: [cashier.assignedStoreId],
+          status: 'active'
+        });
+
+      expect(updateRes.status).toBe(200);
+      expect(usersTable.get('usr-cashier-1').category).toBe('admin');
+
+      const verifyRes = await request(app)
+        .get('/api/v1/auth/verify')
+        .set('Authorization', `Bearer ${cashierToken}`);
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.user.category).toBe('admin');
+      expect(verifyRes.body.user.permissions).toContain('users.view');
+
+      const after = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${cashierToken}`);
+      expect(after.status).toBe(200);
+    });
+
+    test('7. User grant and deny overrides are enforced for existing sessions', async () => {
+      const superAdmin = usersTable.get('usr-super-1');
+      const cashier = usersTable.get('usr-cashier-1');
+      const superToken = generateToken(superAdmin);
+      const cashierToken = generateToken(cashier);
+
+      const grantRes = await request(app)
+        .post('/api/v1/users/usr-cashier-1/permissions')
+        .set('Authorization', `Bearer ${superToken}`)
+        .send({ permissionGrants: ['users.view'], permissionDenies: ['invoices.create'] });
+
+      expect(grantRes.status).toBe(200);
+      expect(grantRes.body.permissions.permissionGrants).toContain('users.view');
+      expect(grantRes.body.permissions.permissionDenies).toContain('invoices.create');
+      expect(grantRes.body.permissions.effectivePermissions).toContain('users.view');
+      expect(grantRes.body.permissions.effectivePermissions).not.toContain('invoices.create');
+
+      const usersRes = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${cashierToken}`);
+      expect(usersRes.status).toBe(200);
+
+      const invoiceRes = await request(app)
+        .post('/api/v1/invoices')
+        .set('Authorization', `Bearer ${cashierToken}`)
+        .send({
+          invoiceNumber: 'INV-DENIED-001',
+          locationId: 'store-blr-1',
+          storeId: 'store-blr-1',
+          items: []
+        });
+      expect(invoiceRes.status).toBe(403);
+    });
+
+    test('8. Non-super admins cannot create or promote Super Admin accounts', async () => {
+      const admin = usersTable.get('usr-admin-1');
+      const cashier = usersTable.get('usr-cashier-1');
+      const adminToken = generateToken(admin);
+
+      const res = await request(app)
+        .post('/api/v1/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          id: cashier.id,
+          name: cashier.name,
+          username: cashier.username,
+          role: 'Super Admin',
+          category: 'super admin',
+          assignedStoreId: 'all',
+          assignedStores: ['all'],
+          status: 'active'
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('SUPER_ADMIN_REQUIRED');
+      expect(usersTable.get('usr-cashier-1').category).toBe('employee');
+    });
+
+    test('9. Super Admin cannot demote or deactivate the final Super Admin account', async () => {
+      const superAdmin = usersTable.get('usr-super-1');
+      const superToken = generateToken(superAdmin);
+
+      const demoteRes = await request(app)
+        .post('/api/v1/users')
+        .set('Authorization', `Bearer ${superToken}`)
+        .send({
+          id: superAdmin.id,
+          name: superAdmin.name,
+          username: superAdmin.username,
+          role: 'Admin',
+          category: 'admin',
+          assignedStoreId: 'all',
+          assignedStores: ['all'],
+          status: 'active'
+        });
+
+      expect(demoteRes.status).toBe(403);
+      expect(demoteRes.body.error.code).toBe('SELF_DEMOTION_FORBIDDEN');
+
+      const deactivateRes = await request(app)
+        .post('/api/v1/users/usr-super-1/deactivate')
+        .set('Authorization', `Bearer ${superToken}`);
+
+      expect(deactivateRes.status).toBe(403);
+      expect(deactivateRes.body.error.code).toBe('SELF_DEACTIVATION_FORBIDDEN');
+      expect(usersTable.get('usr-super-1').status).toBe('active');
+    });
+  });
+
   describe('2. Store-Scope & POS / Purchase Security Tests', () => {
     test('6. Store A user cannot access or void Store B invoice (Store Scoping)', async () => {
       const cashierA = usersTable.get('usr-cashier-1'); // assigned to store-blr-1

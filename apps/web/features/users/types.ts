@@ -12,6 +12,8 @@ export interface UserDoc {
   assignedStoreId?: string;
   assignedStores?: string[];
   permissions?: string[];
+  permissionGrants?: string[];
+  permissionDenies?: string[];
   status: UserStatus;
   tokenVersion?: number;
   avatar?: string;
@@ -31,7 +33,19 @@ export interface UserFormPayload {
   assignedStoreId?: string;
   assignedStores?: string[];
   permissions?: string[];
+  permissionGrants?: string[];
+  permissionDenies?: string[];
   status?: UserStatus;
+}
+
+export interface UserEffectivePermissions {
+  success: boolean;
+  userId: string;
+  category: UserCategory;
+  rolePermissions: string[];
+  permissionGrants: string[];
+  permissionDenies: string[];
+  effectivePermissions: string[];
 }
 
 export interface UserPresenceDoc {

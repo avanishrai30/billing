@@ -77,7 +77,10 @@ const userSchema = z.object({
   phone: z.string().trim().optional().or(z.literal("")),
   password: z.string().min(1).optional(),
   role: z.string().trim().min(1, "Role is required"),
+  category: z.enum(['super admin', 'admin', 'employee', 'auditor']).optional(),
   permissions: z.array(z.string()).optional(),
+  permissionGrants: z.array(z.string()).optional(),
+  permissionDenies: z.array(z.string()).optional(),
   assignedStoreId: z.string().trim().optional(),
   assignedStores: z.array(z.string()).optional(),
   status: z.string().trim().optional()
@@ -130,6 +133,10 @@ function verifyJWT(req, res, next) {
           if (currentVersion !== tokenVersion) {
             return res.status(401).json({ success: false, error: { code: "SESSION_REVOKED", message: "Session has been invalidated. Please log in again." } });
           }
+          const authzService = require('../services/authzService');
+          req.user = authzService.toAuthUser(dbUser, decoded);
+          req.user.permissions = await authzService.resolveUserPermissions(req.user);
+          return next();
         }
       } catch (dbErr) {
         console.warn("[Auth] Token revocation lookup warning (non-fatal):", dbErr.message);

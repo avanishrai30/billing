@@ -24,6 +24,8 @@ export interface AuthUser {
   assignedStoreId: string;
   assignedStores?: string[];
   permissions?: string[];
+  permissionGrants?: string[];
+  permissionDenies?: string[];
   avatar?: string | null;
   status: 'active' | 'suspended' | 'inactive';
 }

@@ -1,5 +1,5 @@
 import { apiClient } from '../../lib/api/client';
-import type { UserDoc, UserFormPayload, UserPresenceDoc } from './types';
+import type { UserDoc, UserEffectivePermissions, UserFormPayload, UserPresenceDoc } from './types';
 
 export const userApi = {
   /**
@@ -35,11 +35,35 @@ export const userApi = {
   },
 
   /**
+   * Fetch computed user access including role permissions and user overrides
+   * GET /api/v1/users/:id/effective-permissions
+   */
+  async getEffectivePermissions(id: string): Promise<UserEffectivePermissions> {
+    return await apiClient.get<UserEffectivePermissions>(
+      `/api/v1/users/${encodeURIComponent(id)}/effective-permissions`
+    );
+  },
+
+  /**
    * Create or update user account (Admin / Super Admin)
    * POST /api/v1/users
    */
   async saveUser(payload: UserFormPayload): Promise<{ success: boolean; user: UserDoc }> {
     return await apiClient.post<{ success: boolean; user: UserDoc }>('/api/v1/users', payload);
+  },
+
+  /**
+   * Save explicit per-user grant/deny permission overrides
+   * POST /api/v1/users/:id/permissions
+   */
+  async savePermissionOverrides(
+    id: string,
+    payload: { permissionGrants: string[]; permissionDenies: string[] }
+  ): Promise<{ success: boolean; user: UserDoc; permissions: UserEffectivePermissions }> {
+    return await apiClient.post<{ success: boolean; user: UserDoc; permissions: UserEffectivePermissions }>(
+      `/api/v1/users/${encodeURIComponent(id)}/permissions`,
+      payload
+    );
   },
 
   /**

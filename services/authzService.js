@@ -120,33 +120,34 @@ function isSuperAdmin(user) {
   return cat === 'super admin' || role === 'SUPER ADMIN' || role === 'OWNER';
 }
 
-/**
- * Resolves effective permissions list for a user
- */
-async function resolveUserPermissions(user) {
-  if (!user) return [];
-  if (isSuperAdmin(user)) return ['*'];
+function expandPermissionList(permissionList = []) {
+  const expanded = new Set();
+  permissionList.forEach(item => {
+    if (!item) return;
+    if (LEGACY_MODULE_EXPANSION[item]) {
+      LEGACY_MODULE_EXPANSION[item].forEach(p => expanded.add(p));
+    } else {
+      expanded.add(item);
+    }
+  });
+  return Array.from(expanded);
+}
 
-  const category = normalizeCategory(user);
+function uniquePermissions(permissionList = []) {
+  return Array.from(new Set((permissionList || []).filter(Boolean)));
+}
+
+async function getRolePermissionsForCategory(category) {
   let basePermissions = DEFAULT_ROLE_PERMISSIONS[category] || DEFAULT_ROLE_PERMISSIONS.employee;
 
-  // Check if custom matrix is in database
   try {
     const { db } = getContext();
     if (db) {
       const doc = await db.collection('role_permissions').findOne({ key: 'matrix' });
       if (doc && doc.permissions && doc.permissions[category]) {
-        const storedList = doc.permissions[category];
-        const expanded = new Set();
-        storedList.forEach(item => {
-          if (LEGACY_MODULE_EXPANSION[item]) {
-            LEGACY_MODULE_EXPANSION[item].forEach(p => expanded.add(p));
-          } else {
-            expanded.add(item);
-          }
-        });
-        if (expanded.size > 0) {
-          basePermissions = Array.from(expanded);
+        const expanded = expandPermissionList(doc.permissions[category]);
+        if (expanded.length > 0) {
+          basePermissions = expanded;
         }
       }
     }
@@ -154,20 +155,76 @@ async function resolveUserPermissions(user) {
     console.warn('[AuthZ] Failed to load role_permissions matrix, using defaults:', err.message);
   }
 
-  // Merge any direct user permissions
-  if (Array.isArray(user.permissions) && user.permissions.length > 0) {
-    const merged = new Set(basePermissions);
-    user.permissions.forEach(p => {
-      if (LEGACY_MODULE_EXPANSION[p]) {
-        LEGACY_MODULE_EXPANSION[p].forEach(exp => merged.add(exp));
-      } else {
-        merged.add(p);
-      }
-    });
-    return Array.from(merged);
+  return uniquePermissions(basePermissions);
+}
+
+async function resolveUserPermissionDetails(user) {
+  if (!user) {
+    return {
+      category: 'employee',
+      rolePermissions: [],
+      permissionGrants: [],
+      permissionDenies: [],
+      effectivePermissions: []
+    };
   }
 
-  return basePermissions;
+  if (isSuperAdmin(user)) {
+    return {
+      category: 'super admin',
+      rolePermissions: ['*'],
+      permissionGrants: [],
+      permissionDenies: [],
+      effectivePermissions: ['*']
+    };
+  }
+
+  const category = normalizeCategory(user);
+  const rolePermissions = await getRolePermissionsForCategory(category);
+  const permissionGrants = uniquePermissions([
+    ...expandPermissionList(user.permissions || []),
+    ...expandPermissionList(user.permissionGrants || [])
+  ]);
+  const permissionDenies = uniquePermissions(expandPermissionList(user.permissionDenies || []));
+  const denied = new Set(permissionDenies);
+  const effectivePermissions = uniquePermissions([...rolePermissions, ...permissionGrants])
+    .filter(permission => !denied.has(permission));
+
+  return {
+    category,
+    rolePermissions,
+    permissionGrants,
+    permissionDenies,
+    effectivePermissions
+  };
+}
+
+function toAuthUser(dbUser, tokenUser = {}) {
+  return {
+    id: dbUser.id,
+    name: dbUser.name,
+    username: dbUser.username,
+    email: dbUser.email,
+    phone: dbUser.phone,
+    role: dbUser.role || tokenUser.role || 'Employee',
+    category: dbUser.category || tokenUser.category || normalizeCategory(dbUser),
+    assignedStoreId: dbUser.assignedStoreId || tokenUser.assignedStoreId || 'all',
+    assignedStores: dbUser.assignedStores || tokenUser.assignedStores || ['all'],
+    permissionGrants: dbUser.permissionGrants || [],
+    permissionDenies: dbUser.permissionDenies || [],
+    permissions: dbUser.permissions || [],
+    avatar: dbUser.avatar || '',
+    status: dbUser.status || 'active',
+    tokenVersion: dbUser.tokenVersion || tokenUser.tokenVersion || 1
+  };
+}
+
+/**
+ * Resolves effective permissions list for a user
+ */
+async function resolveUserPermissions(user) {
+  const details = await resolveUserPermissionDetails(user);
+  return details.effectivePermissions;
 }
 
 /**
@@ -327,9 +384,14 @@ function getStoreScopeFilter(user, fieldNames = ['locationId', 'storeId']) {
 module.exports = {
   DEFAULT_ROLE_PERMISSIONS,
   LEGACY_MODULE_EXPANSION,
+  expandPermissionList,
+  uniquePermissions,
   normalizeCategory,
   isSuperAdmin,
+  getRolePermissionsForCategory,
+  resolveUserPermissionDetails,
   resolveUserPermissions,
+  toAuthUser,
   checkPermission,
   requirePermission,
   requireAnyPermission,

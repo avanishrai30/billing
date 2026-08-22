@@ -9,6 +9,31 @@ class RealtimeSocketManager {
   private socket: Socket | null = null;
   private joinedRooms: Set<string> = new Set();
   private eventListeners: Map<string, Set<RealtimeEventHandler>> = new Map();
+  private socketForwarders: Map<string, (data: RealtimeEnvelope<any>) => void> = new Map();
+
+  private attachForwarder(eventName: string): void {
+    if (!this.socket || this.socketForwarders.has(eventName)) return;
+    const forwarder = (data: RealtimeEnvelope<any>) => {
+      const handlers = this.eventListeners.get(eventName);
+      if (handlers) {
+        handlers.forEach(h => {
+          try {
+            h(data);
+          } catch (e) {
+            console.error(`[Realtime] Handler error for event '${eventName}':`, e);
+          }
+        });
+      }
+    };
+    this.socketForwarders.set(eventName, forwarder);
+    this.socket.on(eventName, forwarder);
+  }
+
+  private attachRegisteredForwarders(): void {
+    this.eventListeners.forEach((_handlers, eventName) => {
+      this.attachForwarder(eventName);
+    });
+  }
 
   /**
    * Connects to the Socket.IO server with JWT auth handshake.
@@ -45,6 +70,7 @@ class RealtimeSocketManager {
 
     this.socket.on('connect', () => {
       console.log('[Realtime] Connected to backend gateway. Socket ID:', this.socket?.id);
+      this.attachRegisteredForwarders();
       // Re-join active rooms on reconnect
       this.joinedRooms.forEach(room => {
         if (room.startsWith('store_')) {
@@ -86,6 +112,7 @@ class RealtimeSocketManager {
       this.socket.disconnect();
       this.socket = null;
     }
+    this.socketForwarders.clear();
     this.joinedRooms.clear();
     this.eventListeners.clear();
   }
@@ -132,22 +159,7 @@ class RealtimeSocketManager {
   public subscribe<T = any>(eventName: string, handler: RealtimeEventHandler<T>): () => void {
     if (!this.eventListeners.has(eventName)) {
       this.eventListeners.set(eventName, new Set());
-
-      // Attach low-level socket listener once for this event type
-      if (this.socket) {
-        this.socket.on(eventName, (data: RealtimeEnvelope<T>) => {
-          const handlers = this.eventListeners.get(eventName);
-          if (handlers) {
-            handlers.forEach(h => {
-              try {
-                h(data);
-              } catch (e) {
-                console.error(`[Realtime] Handler error for event '${eventName}':`, e);
-              }
-            });
-          }
-        });
-      }
+      this.attachForwarder(eventName);
     }
 
     const handlers = this.eventListeners.get(eventName)!;
@@ -158,9 +170,11 @@ class RealtimeSocketManager {
       handlers.delete(handler as RealtimeEventHandler);
       if (handlers.size === 0) {
         this.eventListeners.delete(eventName);
-        if (this.socket) {
-          this.socket.off(eventName);
+        const forwarder = this.socketForwarders.get(eventName);
+        if (this.socket && forwarder) {
+          this.socket.off(eventName, forwarder);
         }
+        this.socketForwarders.delete(eventName);
       }
     };
   }

@@ -21,6 +21,33 @@ router.get('/presences', verifyJWT, (req, res) => {
   res.json(Array.from(activePresences.values()));
 });
 
+// GET /api/v1/users/:id/effective-permissions - Inspect computed access for one user
+router.get('/:id/effective-permissions', verifyJWT, requirePermission('users.view'), async (req, res) => {
+  try {
+    const permissions = await userService.getEffectivePermissions(req.params.id);
+    if (!permissions) return res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
+    res.json({ success: true, ...permissions });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      error: { code: err.code || "SERVER_ERROR", message: err.message || "Failed to fetch effective permissions" }
+    });
+  }
+});
+
+// POST /api/v1/users/:id/permissions - Save user-specific grant/deny overrides
+router.post('/:id/permissions', verifyJWT, requirePermission('users.update'), async (req, res) => {
+  try {
+    const result = await userService.updatePermissionOverrides(req.params.id, req.body || {}, req);
+    res.json(result);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      error: { code: err.code || "SERVER_ERROR", message: err.message || "Failed to update user permissions" }
+    });
+  }
+});
+
 // GET /api/v1/users/:id - Fetch single user
 router.get('/:id', verifyJWT, requirePermission('users.view'), async (req, res) => {
   try {
@@ -39,8 +66,13 @@ router.post('/', verifyJWT, validateBody(schemas.userSchema), requireAnyPermissi
     const userDoc = await userService.saveUser(userData, req);
     res.json({ success: true, user: userDoc });
   } catch (err) {
-    console.error("[Users] Error saving user:", err);
-    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Server error saving user" } });
+    if (!err.statusCode || err.statusCode >= 500) {
+      console.error("[Users] Error saving user:", err);
+    }
+    res.status(err.statusCode || 500).json({
+      success: false,
+      error: { code: err.code || "SERVER_ERROR", message: err.message || "Server error saving user" }
+    });
   }
 });
 
@@ -51,7 +83,10 @@ router.post('/:id/deactivate', verifyJWT, requirePermission('users.deactivate'),
     if (!deactivated) return res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
     res.json({ success: true, message: "User account deactivated successfully", user: deactivated });
   } catch (err) {
-    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to deactivate user" } });
+    res.status(err.statusCode || 500).json({
+      success: false,
+      error: { code: err.code || "SERVER_ERROR", message: err.message || "Failed to deactivate user" }
+    });
   }
 });
 

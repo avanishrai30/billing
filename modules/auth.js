@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const userService = require('../services/userService');
 const auditService = require('../services/auditService');
+const authzService = require('../services/authzService');
 
 const router = express.Router();
 
@@ -90,19 +91,13 @@ router.post('/login', validateBody(schemas.loginSchema), async (req, res) => {
 
     await auditService.writeAuditLog('LOGIN_SUCCESS', 'auth', user.id, null, { username: user.username }, req);
 
+    const authUser = authzService.toAuthUser(user, { tokenVersion });
+    authUser.permissions = await authzService.resolveUserPermissions(authUser);
+
     res.json({
       success: true,
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        username: user.username,
-        role: user.role,
-        category: user.category || 'employee',
-        assignedStoreId: user.assignedStoreId || 'all',
-        assignedStores: user.assignedStores || ['all'],
-        avatar: user.avatar || ''
-      }
+      user: authUser
     });
   } catch (err) {
     console.error("Login failed:", err);

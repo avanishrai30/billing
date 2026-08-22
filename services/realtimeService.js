@@ -46,6 +46,21 @@ function emitGlobal(eventName, payload) {
 }
 
 /**
+ * Emits an event to every active socket for a specific user.
+ */
+function emitToUser(userId, eventName, payload) {
+  if (!ioInstance || !userId || !userSockets.has(userId)) return;
+  for (const socketId of userSockets.get(userId)) {
+    const sock = ioInstance.sockets && ioInstance.sockets.sockets
+      ? ioInstance.sockets.sockets.get(socketId)
+      : null;
+    if (sock) {
+      sock.emit(eventName, payload);
+    }
+  }
+}
+
+/**
  * Register active socket for user
  */
 function registerUserSocket(userId, socket) {
@@ -97,6 +112,7 @@ module.exports = {
   createEventEnvelope,
   emitToStore,
   emitGlobal,
+  emitToUser,
   registerUserSocket,
   unregisterUserSocket,
   revokeUserSockets,

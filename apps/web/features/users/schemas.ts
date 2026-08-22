@@ -21,6 +21,8 @@ export const userFormSchema = z.object({
   assignedStoreId: z.string().trim().default('all'),
   assignedStores: z.array(z.string()).default(['all']),
   permissions: z.array(z.string()).default([]),
+  permissionGrants: z.array(z.string()).default([]),
+  permissionDenies: z.array(z.string()).default([]),
   status: z.enum(['active', 'suspended', 'inactive']).default('active')
 });
 
