@@ -5,6 +5,7 @@ import { act, render, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RealtimeProvider } from '../../providers/RealtimeProvider';
 import { useAuth } from '../../providers/AuthProvider';
+import { ToastProvider } from '../../components/ui/Toast';
 
 jest.mock('../../providers/AuthProvider', () => ({
   useAuth: jest.fn()
@@ -71,7 +72,11 @@ describe('Realtime Socket Gateway & Listener Management', () => {
       React.createElement(
         QueryClientProvider,
         { client: queryClient },
-        React.createElement(RealtimeProvider, null, React.createElement('div', null, 'Realtime child'))
+        React.createElement(
+          ToastProvider,
+          null,
+          React.createElement(RealtimeProvider, null, React.createElement('div', null, 'Realtime child'))
+        )
       )
     );
 

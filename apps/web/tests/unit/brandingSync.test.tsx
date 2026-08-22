@@ -5,6 +5,7 @@ import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { QueryProvider } from '../../providers/QueryProvider';
 import { RealtimeProvider } from '../../providers/RealtimeProvider';
 import { AuthProvider } from '../../providers/AuthProvider';
+import { ToastProvider } from '../../components/ui/Toast';
 import { publicApi } from '../../lib/api/publicSettings';
 import { realtimeManager } from '../../lib/realtime/socket';
 
@@ -18,7 +19,9 @@ describe('Dynamic Branding & Socket.IO Realtime Cache Sync', () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryProvider>
         <AuthProvider>
-          <RealtimeProvider>{children}</RealtimeProvider>
+          <ToastProvider>
+            <RealtimeProvider>{children}</RealtimeProvider>
+          </ToastProvider>
         </AuthProvider>
       </QueryProvider>
     );

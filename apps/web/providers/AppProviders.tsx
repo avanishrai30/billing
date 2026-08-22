@@ -11,13 +11,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryProvider>
       <AuthProvider>
-        <RealtimeProvider>
-          <StoreScopeProvider>
-            <ToastProvider>
+        <ToastProvider>
+          <RealtimeProvider>
+            <StoreScopeProvider>
               {children}
-            </ToastProvider>
-          </StoreScopeProvider>
-        </RealtimeProvider>
+            </StoreScopeProvider>
+          </RealtimeProvider>
+        </ToastProvider>
       </AuthProvider>
     </QueryProvider>
   );

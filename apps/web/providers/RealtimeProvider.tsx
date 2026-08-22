@@ -5,6 +5,7 @@ import { Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { realtimeManager, type RealtimeEventHandler } from '../lib/realtime/socket';
 import { useAuth } from './AuthProvider';
+import { useToast } from '../components/ui/Toast';
 
 interface RealtimeContextValue {
   socket: Socket | null;
@@ -18,6 +19,7 @@ const RealtimeContext = createContext<RealtimeContextValue | null>(null);
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, refreshSession, logout } = useAuth();
+  const { info } = useToast();
   const queryClient = useQueryClient();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -57,6 +59,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         refreshSession();
         queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
         queryClient.invalidateQueries({ queryKey: ['users'] });
+        info('Your access permissions were updated', 'The workspace has refreshed your available actions.');
       }
     });
 
@@ -82,7 +85,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       unsubscribeRbac();
       unsubscribeRevoked();
     };
-  }, [isAuthenticated, user?.id, refreshSession, logout, queryClient]);
+  }, [isAuthenticated, user?.id, refreshSession, logout, queryClient, info]);
 
   const subscribe = useCallback(<T = any>(eventName: string, handler: RealtimeEventHandler<T>) => {
     return realtimeManager.subscribe<T>(eventName, handler);
