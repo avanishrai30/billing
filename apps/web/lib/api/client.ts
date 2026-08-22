@@ -32,6 +32,29 @@ export function registerSessionExpiredCallback(cb: () => void): void {
   onSessionExpiredCallback = cb;
 }
 
+async function confirmSessionExpired(baseUrl: string, token: string): Promise<boolean> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const verifyRes = await fetch(`${baseUrl}/api/v1/auth/verify`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        'X-Request-ID': `req-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+      },
+      signal: controller.signal
+    });
+
+    return verifyRes.status === 401;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Central Typed HTTP Transport Client
  */
@@ -84,9 +107,15 @@ export async function request<T = any>(endpoint: string, options: RequestOptions
     // Handle 401 Unauthorized for active sessions. Unauthenticated background
     // requests must not be allowed to synthesize a session-expired transition.
     if (res.status === 401 && token && !options.skipAuth && !isLoginEndpoint) {
-      sessionManager.clearSession();
-      if (onSessionExpiredCallback) {
-        onSessionExpiredCallback();
+      const isVerifyEndpoint = endpoint.includes('/auth/verify');
+      const isLogoutEndpoint = endpoint.includes('/auth/logout');
+      const isSessionExpired = isVerifyEndpoint || isLogoutEndpoint || await confirmSessionExpired(baseUrl, token);
+
+      if (isSessionExpired) {
+        sessionManager.clearSession();
+        if (onSessionExpiredCallback) {
+          onSessionExpiredCallback();
+        }
       }
     }
 
