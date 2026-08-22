@@ -78,6 +78,9 @@ export function UserModal({
   const effectivePermissionsQuery = useUserEffectivePermissionsQuery(user?.id);
   const rolePermissions = effectivePermissionsQuery.data?.rolePermissions || [];
   const effectivePermissions = effectivePermissionsQuery.data?.effectivePermissions || [];
+  const userSyncKey = user?.id
+    ? `${user.id}:${user.updatedAt || user.createdAt || 'unversioned'}`
+    : 'new';
 
   React.useLayoutEffect(() => {
     if (isOpen) {
@@ -98,7 +101,7 @@ export function UserModal({
         permissionDenies: user?.permissionDenies || []
       });
     }
-  }, [isOpen, user, reset]);
+  }, [isOpen, userSyncKey, reset]);
 
   const handleStoreChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;

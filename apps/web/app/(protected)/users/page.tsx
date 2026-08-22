@@ -53,7 +53,7 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeactivateOpen, setIsDeactivateOpen] = useState(false);
-  const [activeUser, setActiveUser] = useState<UserDoc | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Summary Metrics
   const metrics: UserSummaryMetrics = useMemo(() => {
@@ -107,6 +107,11 @@ export default function UsersPage() {
     });
   }, [users, search, categoryFilter, statusFilter]);
 
+  const selectedUser = useMemo(() => {
+    if (!selectedUserId) return null;
+    return users.find((u) => u.id === selectedUserId) || null;
+  }, [users, selectedUserId]);
+
   if (!canView) {
     return (
       <AccessDeniedState
@@ -119,43 +124,44 @@ export default function UsersPage() {
 
   // Handlers
   const handleOpenAddUser = () => {
-    setActiveUser(null);
+    setSelectedUserId(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEditUser = (user: UserDoc) => {
-    setActiveUser(user);
+    setSelectedUserId(user.id);
     setIsModalOpen(true);
   };
 
   const handleOpenDetail = (user: UserDoc) => {
-    setActiveUser(user);
+    setSelectedUserId(user.id);
     setIsDetailOpen(true);
   };
 
   const handleOpenDeactivate = (user: UserDoc) => {
-    setActiveUser(user);
+    setSelectedUserId(user.id);
     setIsDeactivateOpen(true);
   };
 
   const handleSaveUser = async (values: UserFormValues) => {
-    const previousCategory = activeUser?.category;
+    const previousCategory = selectedUser?.category;
     const response = await saveMutation.mutateAsync(values);
     const savedCategory = response.user.category || values.category || 'employee';
+    setSelectedUserId(response.user.id);
 
     if (previousCategory && previousCategory !== savedCategory) {
       success(`Authorization role updated to ${roleLabels[savedCategory]}`);
       return;
     }
 
-    success(activeUser ? 'User account updated' : 'User account created');
+    success(selectedUser ? 'User account updated' : 'User account created');
   };
 
   const handleConfirmDeactivate = async () => {
-    if (activeUser?.id) {
-      await deactivateMutation.mutateAsync(activeUser.id);
+    if (selectedUser?.id) {
+      await deactivateMutation.mutateAsync(selectedUser.id);
       setIsDeactivateOpen(false);
-      setActiveUser(null);
+      setSelectedUserId(null);
     }
   };
 
@@ -207,7 +213,7 @@ export default function UsersPage() {
       <UserModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        user={activeUser}
+        user={selectedUser}
         stores={stores}
         onSubmit={handleSaveUser}
         isLoading={saveMutation.isPending}
@@ -217,7 +223,7 @@ export default function UsersPage() {
       <UserDetailDrawer
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        user={activeUser}
+        user={selectedUser}
         stores={stores}
         canManage={canManage}
         onEdit={(u) => {
@@ -234,7 +240,7 @@ export default function UsersPage() {
       <UserDeactivateDialog
         isOpen={isDeactivateOpen}
         onClose={() => setIsDeactivateOpen(false)}
-        user={activeUser}
+        user={selectedUser}
         onConfirm={handleConfirmDeactivate}
         isLoading={deactivateMutation.isPending}
       />

@@ -1,14 +1,30 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   UserHeader,
   UserSummaryCards,
   UserTable,
+  UserModal,
   UserDeactivateDialog
 } from '../../features/users/components';
 import type { UserDoc } from '../../features/users/types';
 import type { StoreDoc } from '../../features/stores/types';
+
+jest.mock('../../features/users/api', () => ({
+  userApi: {
+    getEffectivePermissions: jest.fn().mockResolvedValue({
+      success: true,
+      userId: 'usr-1',
+      category: 'employee',
+      rolePermissions: ['dashboard.view'],
+      permissionGrants: [],
+      permissionDenies: [],
+      effectivePermissions: ['dashboard.view']
+    })
+  }
+}));
 
 describe('User UI Components Suite', () => {
   const mockUser: UserDoc = {
@@ -123,5 +139,55 @@ describe('User UI Components Suite', () => {
 
     fireEvent.click(screen.getByText('Confirm Suspension'));
     expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('5. UserModal resets open form state when authoritative selected user version changes', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false }
+      }
+    });
+    const employeeUser: UserDoc = {
+      ...mockUser,
+      role: 'Admin',
+      category: 'employee',
+      updatedAt: '2026-08-22T20:00:00.000Z'
+    };
+    const adminUser: UserDoc = {
+      ...employeeUser,
+      category: 'admin',
+      updatedAt: '2026-08-22T20:01:00.000Z'
+    };
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+
+    const { container, rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <UserModal
+          isOpen={true}
+          onClose={jest.fn()}
+          user={employeeUser}
+          stores={[mockStore]}
+          onSubmit={onSubmit}
+        />
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByLabelText('Authorization Role')).toHaveValue('employee');
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <UserModal
+          isOpen={true}
+          onClose={jest.fn()}
+          user={adminUser}
+          stores={[mockStore]}
+          onSubmit={onSubmit}
+        />
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByLabelText('Authorization Role')).toHaveValue('admin');
+    expect(container.querySelector('input[name="role"]')).toHaveValue('Admin');
   });
 });
