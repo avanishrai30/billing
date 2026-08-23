@@ -148,8 +148,7 @@ export interface ProductBatchDoc {
 export type BarcodeLabelTemplate =
   | 'standard_shelf' // 50mm x 30mm standard retail shelf tag
   | 'sticker_38x25'   // 38mm x 25mm barcode sticker
-  | 'compact_tag'     // 25mm x 15mm compact price tag
-  | 'qr_dual';        // 50mm x 40mm dual 1D Barcode + 2D QR
+  | 'compact_tag';    // 25mm x 15mm compact price tag
 
 export interface PrintBarcodeConfig {
   productId: string;

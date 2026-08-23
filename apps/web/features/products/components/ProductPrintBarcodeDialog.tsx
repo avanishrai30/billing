@@ -3,15 +3,14 @@
 import React, { useState, useMemo } from 'react';
 import {
   Printer,
-  Barcode,
+  Barcode as BarcodeIcon,
   Layers,
   Calendar,
-  CheckCircle2,
   AlertCircle,
   Plus,
   Tag,
-  Store,
-  Sparkles
+  Sparkles,
+  Check
 } from 'lucide-react';
 import {
   Dialog,
@@ -22,7 +21,12 @@ import {
   useToast
 } from '../../../components/ui';
 import { generateBarcodeSvg } from '../../../lib/utils/barcode';
-import { useProductBatchesQuery, useCreateProductBatchMutation } from '../hooks';
+import {
+  useProductBatchesQuery,
+  useCreateProductBatchMutation,
+  useGenerateBarcodeMutation,
+  useSaveProductMutation
+} from '../hooks';
 import type { ProductDoc, ProductBatchDoc, BarcodeLabelTemplate } from '../types';
 
 export interface ProductPrintBarcodeDialogProps {
@@ -40,6 +44,8 @@ export function ProductPrintBarcodeDialog({
 
   const { data: batches = [], isLoading: isLoadingBatches } = useProductBatchesQuery(product?.id);
   const createBatchMutation = useCreateProductBatchMutation();
+  const generateBarcodeMutation = useGenerateBarcodeMutation();
+  const saveProductMutation = useSaveProductMutation();
 
   // Print Configuration State
   const [selectedBatchId, setSelectedBatchId] = useState<string>('none');
@@ -63,14 +69,52 @@ export function ProductPrintBarcodeDialog({
     }
   }, [batches, selectedBatchId]);
 
-  const activeBarcode = useMemo(() => {
-    return product?.barcode || product?.sku || 'AIA000000';
+  // Explicit barcode check — DO NOT silently treat SKU as barcode
+  const assignedBarcode = useMemo(() => {
+    return (product?.barcode || '').trim();
   }, [product]);
+
+  const hasAssignedBarcode = Boolean(assignedBarcode);
 
   const selectedBatch = useMemo<ProductBatchDoc | null>(() => {
     if (selectedBatchId === 'none') return null;
     return batches.find((b) => b.id === selectedBatchId) || null;
   }, [batches, selectedBatchId]);
+
+  // Explicit action to generate and assign AIA Barcode
+  const handleAssignBarcode = async () => {
+    if (!product) return;
+    try {
+      const res = await generateBarcodeMutation.mutateAsync();
+      if (res && res.barcode) {
+        await saveProductMutation.mutateAsync({
+          ...product,
+          barcode: res.barcode,
+          gst: product.gst ?? 0,
+          unit: product.unit || 'unit',
+          sellingMode: product.sellingMode || 'packaged',
+          type: product.type || 'OWN',
+          status: product.status || 'active',
+          reorderLevel: product.reorderLevel ?? 0,
+          maxStock: product.maxStock ?? 100,
+          barcodes: (product.barcodes || []).map(b => ({
+            barcode: b.barcode,
+            type: (b.type || 'ALTERNATE') as 'PRIMARY' | 'ALTERNATE' | 'VARIANT',
+            active: b.active !== false,
+            variantId: b.variantId,
+            variantName: b.variantName
+          })),
+          variants: (product.variants || []).map(v => ({
+            ...v,
+            status: v.status || 'active'
+          }))
+        });
+        success('Barcode Assigned', `Assigned ${res.barcode} to ${product.name}`);
+      }
+    } catch (err: any) {
+      toastError('Failed to Assign Barcode', err?.message || 'Server error generating barcode.');
+    }
+  };
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,8 +149,13 @@ export function ProductPrintBarcodeDialog({
   const handlePrint = () => {
     if (!product) return;
 
+    if (!hasAssignedBarcode) {
+      toastError('No Barcode Assigned', 'Please assign a barcode to this product before printing scannable labels.');
+      return;
+    }
+
     const labelCount = Math.min(Math.max(1, quantity), 100);
-    const barcodeSvgStr = generateBarcodeSvg(activeBarcode, {
+    const barcodeSvgStr = generateBarcodeSvg(assignedBarcode, {
       width: template === 'compact_tag' ? 1.1 : 1.4,
       height: template === 'compact_tag' ? 28 : 36,
       includeText: true,
@@ -246,12 +295,14 @@ export function ProductPrintBarcodeDialog({
 
   if (!product) return null;
 
-  const livePreviewSvg = generateBarcodeSvg(activeBarcode, {
-    width: template === 'compact_tag' ? 1.2 : 1.5,
-    height: template === 'compact_tag' ? 30 : 42,
-    includeText: true,
-    fontSize: 11
-  });
+  const livePreviewSvg = hasAssignedBarcode
+    ? generateBarcodeSvg(assignedBarcode, {
+        width: template === 'compact_tag' ? 1.2 : 1.5,
+        height: template === 'compact_tag' ? 30 : 42,
+        includeText: true,
+        fontSize: 11
+      })
+    : '';
 
   const batchOptions = [
     { value: 'none', label: '🏷️ Master Product Barcode (No Expiry)' },
@@ -261,11 +312,11 @@ export function ProductPrintBarcodeDialog({
     }))
   ];
 
+  // Strictly 3 verified templates (no fake dual barcode)
   const templateOptions = [
     { value: 'standard_shelf', label: 'Standard Shelf Tag (50 × 30 mm)' },
     { value: 'sticker_38x25', label: 'Product Sticker (38 × 25 mm)' },
-    { value: 'compact_tag', label: 'Compact Tag (25 × 15 mm)' },
-    { value: 'qr_dual', label: 'Dual Barcode Tag (50 × 40 mm)' }
+    { value: 'compact_tag', label: 'Compact Tag (25 × 15 mm)' }
   ];
 
   const footerContent = (
@@ -276,6 +327,7 @@ export function ProductPrintBarcodeDialog({
       <Button
         variant="primary"
         onClick={handlePrint}
+        disabled={!hasAssignedBarcode}
         leftIcon={<Printer className="w-4 h-4" />}
       >
         Print {quantity} Label{quantity > 1 ? 's' : ''}
@@ -305,12 +357,31 @@ export function ProductPrintBarcodeDialog({
             </div>
             <div className="flex items-center gap-3 text-xs text-slate-600 font-mono">
               <span>SKU: <strong className="text-slate-800">{product.sku}</strong></span>
-              <span>Barcode: <strong className="text-slate-800">{product.barcode || product.sku}</strong></span>
+              {hasAssignedBarcode ? (
+                <span>Barcode: <strong className="text-slate-800">{assignedBarcode}</strong></span>
+              ) : (
+                <span className="text-amber-700 font-sans font-medium">⚠️ No barcode assigned</span>
+              )}
             </div>
             <div className="text-xs font-semibold text-emerald-700">
               Unit Price: ₹{(product.sellingPrice || product.price || 0).toFixed(2)}
               {product.sellingMode === 'loose' ? ` / ${product.unit || 'kg'}` : ''}
             </div>
+
+            {!hasAssignedBarcode && (
+              <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                <span className="text-[11px] text-slate-600">Product requires an assigned barcode to print.</span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleAssignBarcode}
+                  isLoading={generateBarcodeMutation.isPending || saveProductMutation.isPending}
+                  leftIcon={<Sparkles className="w-3.5 h-3.5 text-blue-600" />}
+                >
+                  Generate AIA Code
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Batch / Lot Selector */}
@@ -463,47 +534,63 @@ export function ProductPrintBarcodeDialog({
           <div>
             <div className="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-800">
               <span className="font-semibold uppercase tracking-wider text-[10px]">Live Print Preview</span>
-              <span className="font-mono text-[10px] text-blue-400">Code128 Vector</span>
+              <span className="font-mono text-[10px] text-blue-400">Code128 Auto</span>
             </div>
 
             {/* Rendered Label Simulator */}
-            <div className="mt-4 bg-white text-slate-900 rounded-xl p-4 shadow-md flex flex-col items-center text-center space-y-2 select-none border border-slate-200">
-              {showBrand && (
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                  {product.brand || "VC ORGANIC'S"}
-                </span>
-              )}
-              <div className="font-bold text-xs text-slate-900 truncate max-w-[200px]">
-                {product.name}
-              </div>
-              <div className="text-[10px] font-mono text-slate-600">
-                SKU: {product.sku}
-              </div>
+            <div className="mt-4 bg-white text-slate-900 rounded-xl p-4 shadow-md flex flex-col items-center text-center space-y-2 select-none border border-slate-200 min-h-[160px] justify-center">
+              {hasAssignedBarcode ? (
+                <>
+                  {showBrand && (
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                      {product.brand || "VC ORGANIC'S"}
+                    </span>
+                  )}
+                  <div className="font-bold text-xs text-slate-900 truncate max-w-[200px]">
+                    {product.name}
+                  </div>
+                  <div className="text-[10px] font-mono text-slate-600">
+                    SKU: {product.sku}
+                  </div>
 
-              {/* SVG Barcode Output */}
-              <div
-                className="w-full flex justify-center py-1"
-                dangerouslySetInnerHTML={{ __html: livePreviewSvg }}
-              />
+                  {/* SVG Barcode Output */}
+                  <div
+                    className="w-full flex justify-center py-1"
+                    dangerouslySetInnerHTML={{ __html: livePreviewSvg }}
+                  />
 
-              {showPrice && (
-                <div className="text-sm font-extrabold text-slate-950 font-mono">
-                  ₹{(product.sellingPrice || product.price || 0).toFixed(2)}
-                  {product.sellingMode === 'loose' ? ` / ${product.unit || 'kg'}` : ''}
-                </div>
-              )}
+                  {showPrice && (
+                    <div className="text-sm font-extrabold text-slate-950 font-mono">
+                      ₹{(product.sellingPrice || product.price || 0).toFixed(2)}
+                      {product.sellingMode === 'loose' ? ` / ${product.unit || 'kg'}` : ''}
+                    </div>
+                  )}
 
-              {showLotExpiry && selectedBatch && (
-                <div className="text-[10px] font-semibold text-slate-600 bg-slate-100 rounded-md px-2 py-0.5 w-full">
-                  {selectedBatch.lotNumber && `Lot: ${selectedBatch.lotNumber}`}
-                  {selectedBatch.expiryDate && ` • EXP: ${selectedBatch.expiryDate}`}
+                  {showLotExpiry && selectedBatch && (
+                    <div className="text-[10px] font-semibold text-slate-600 bg-slate-100 rounded-md px-2 py-0.5 w-full">
+                      {selectedBatch.lotNumber && `Lot: ${selectedBatch.lotNumber}`}
+                      {selectedBatch.expiryDate && ` • EXP: ${selectedBatch.expiryDate}`}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="p-4 text-center space-y-2">
+                  <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
+                  <div className="text-xs font-bold text-slate-800">No Barcode Assigned</div>
+                  <div className="text-[11px] text-slate-500">
+                    Generate an AIA barcode or edit the product master to assign a GTIN/EAN code.
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-800 text-center text-[11px] text-slate-400">
-            Print job generates <strong className="text-white">{quantity}</strong> physical sticker label(s).
+            {hasAssignedBarcode ? (
+              <>Print job generates <strong className="text-white">{quantity}</strong> physical sticker label(s).</>
+            ) : (
+              <span className="text-amber-400">Assign a barcode to enable printing.</span>
+            )}
           </div>
         </div>
       </div>

@@ -9,7 +9,7 @@ jest.mock('../../lib/api/client', () => ({
   }
 }));
 
-describe('Product Batches & Barcode API Suite', () => {
+describe('Product Batches & Barcode Hardening Suite (Phase 30.1)', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -37,15 +37,15 @@ describe('Product Batches & Barcode API Suite', () => {
     expect(res).toEqual(mockBatches);
   });
 
-  it('2. Atomically requests candidate AIA barcode sequence from server', async () => {
-    (apiClient.get as jest.Mock).mockResolvedValueOnce({
+  it('2. Atomically requests candidate AIA barcode sequence via POST', async () => {
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
       success: true,
       barcode: 'AIA000105'
     });
 
     const res = await productsApi.generateAIavroBarcode();
 
-    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/products/generate-barcode');
+    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/products/barcodes', {});
     expect(res.barcode).toBe('AIA000105');
   });
 
@@ -80,5 +80,38 @@ describe('Product Batches & Barcode API Suite', () => {
       })
     );
     expect(res.batch.lotNumber).toBe('LOT-2026-09');
+  });
+
+  it('4. Rejects duplicate barcode save with explicit conflict error', async () => {
+    (apiClient.post as jest.Mock).mockRejectedValueOnce({
+      status: 409,
+      message: 'Barcode already belongs to another product.'
+    });
+
+    await expect(
+      productsApi.saveProduct({
+        id: 'prd-new',
+        name: 'Duplicate Item',
+        sku: 'SKU-DUP-1',
+        barcode: '8901234567890',
+        category: 'Pantry',
+        sellingPrice: 100,
+        purchasePrice: 60,
+        gst: 5,
+        unit: 'bottle',
+        reorderLevel: 10,
+        maxStock: 100,
+        sellingMode: 'packaged' as const,
+        type: 'OWN' as const,
+        status: 'active' as const,
+        barcodes: [],
+        variants: []
+      })
+    ).rejects.toEqual(
+      expect.objectContaining({
+        status: 409,
+        message: 'Barcode already belongs to another product.'
+      })
+    );
   });
 });

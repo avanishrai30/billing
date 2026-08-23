@@ -32,7 +32,7 @@ const mockProducts = [
     id: 'prd-102',
     name: 'Organic Desi Khand Sugar',
     sku: 'SUGAR-KHAND-1K',
-    barcode: 'AIA000042',
+    barcode: null, // No barcode assigned initially
     category: 'Pantry',
     brand: 'VC Organic',
     supplier: 'Organic Mills',
@@ -64,7 +64,7 @@ const mockBatches = [
   }
 ];
 
-test.describe('Product Barcode Master & Batch Label Printing', () => {
+test.describe('Product Barcode Hardening & Label Printing (Phase 30.1)', () => {
   test.beforeEach(async ({ page }) => {
     // Inject mock authenticated session
     await page.addInitScript(() => {
@@ -164,20 +164,27 @@ test.describe('Product Barcode Master & Batch Label Printing', () => {
             body: JSON.stringify(mockProducts[0])
           });
         }
-      } else {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true })
-        });
+      } else if (method === 'POST') {
+        if (path.includes('/barcodes')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true, barcode: 'AIA000043' })
+          });
+        } else {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true, product: mockProducts[0] })
+          });
+        }
       }
     });
 
     await page.goto('/products');
   });
 
-  test('1. Opens Print Barcode Dialog with product details and batches', async ({ page }) => {
-    // Locate the first product row's print barcode button
+  test('1. Opens Print Barcode Dialog with verified product details and live Code128 preview', async ({ page }) => {
     const printBtn = page.locator('button[aria-label="Print barcode for A2 Gir Cow Cultured Ghee 500ml"]');
     await expect(printBtn).toBeVisible({ timeout: 10000 });
     await printBtn.click();
@@ -186,16 +193,17 @@ test.describe('Product Barcode Master & Batch Label Printing', () => {
     const dialogTitle = page.getByText('Print Product Barcode & Batch Labels');
     await expect(dialogTitle).toBeVisible();
 
-    // Verify product summary rendered
+    // Verify product summary
     await expect(page.getByText('A2 Gir Cow Cultured Ghee 500ml').first()).toBeVisible();
     await expect(page.getByText('SKU: GHEE-A2-500').first()).toBeVisible();
+    await expect(page.getByText('Barcode: 8901234567890')).toBeVisible();
 
     // Verify live SVG Code128 barcode is rendered in preview
     const barcodeSvgText = page.locator('text=8901234567890');
     await expect(barcodeSvgText.first()).toBeVisible();
   });
 
-  test('2. Displays batch lot and expiry on selected inventory batch', async ({ page }) => {
+  test('2. Displays batch lot and expiry strictly from selected inventory batch', async ({ page }) => {
     const printBtn = page.locator('button[aria-label="Print barcode for A2 Gir Cow Cultured Ghee 500ml"]');
     await expect(printBtn).toBeVisible({ timeout: 10000 });
     await printBtn.click();
@@ -204,21 +212,21 @@ test.describe('Product Barcode Master & Batch Label Printing', () => {
     await expect(page.getByText('Lot: LOT-2026-08 • EXP: 2027-08-31')).toBeVisible();
   });
 
-  test('3. Handles product with no batch gracefully without printing fake expiry', async ({ page }) => {
+  test('3. Does NOT silently treat SKU as barcode when product has no barcode assigned', async ({ page }) => {
     const printBtn = page.locator('button[aria-label="Print barcode for Organic Desi Khand Sugar"]');
     await expect(printBtn).toBeVisible({ timeout: 10000 });
     await printBtn.click();
 
-    // Verify fallback notice appears
-    await expect(page.getByText('No inventory batch available for expiry labeling')).toBeVisible();
+    // Verify warning status: "No barcode assigned"
+    await expect(page.getByText('No barcode assigned').first()).toBeVisible();
+    await expect(page.getByText('Product requires an assigned barcode to print')).toBeVisible();
 
-    // Verify live SVG barcode is rendered with AIA sequence barcode
-    const barcodeSvgText = page.locator('text=AIA000042');
-    await expect(barcodeSvgText.first()).toBeVisible();
+    // Verify explicit "Generate AIA Code" button is provided
+    const generateBtn = page.getByRole('button', { name: 'Generate AIA Code' });
+    await expect(generateBtn).toBeVisible();
   });
 
   test('4. Print Barcode action available inside Product Detail Drawer', async ({ page }) => {
-    // Open product inspect drawer
     const inspectBtn = page.locator('button[aria-label="Inspect A2 Gir Cow Cultured Ghee 500ml"]');
     await expect(inspectBtn).toBeVisible({ timeout: 10000 });
     await inspectBtn.click();

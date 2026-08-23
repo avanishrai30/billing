@@ -13,7 +13,7 @@
 const EXPECTED_INDEXES = {
   products: [
     { keys: { sku: 1 }, options: { unique: true, sparse: true, name: "sku_1_sparse" } },
-    { keys: { barcode: 1 }, options: { sparse: true, name: "barcode_1_sparse" } },
+    { keys: { barcode: 1 }, options: { unique: true, sparse: true, name: "barcode_1_sparse" } },
     { keys: { name: "text", category: "text", brand: "text" }, options: { name: "products_text_search", weights: { name: 1, category: 1, brand: 1 } } }
   ],
   product_barcodes: [

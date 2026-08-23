@@ -123,6 +123,10 @@ export const productsApi = {
    * Atomically generate next unique AIA product barcode.
    */
   async generateAIavroBarcode(): Promise<{ success: boolean; barcode: string }> {
-    return apiClient.get<{ success: boolean; barcode: string }>('/api/v1/products/generate-barcode');
+    try {
+      return await apiClient.post<{ success: boolean; barcode: string }>('/api/v1/products/barcodes', {});
+    } catch {
+      return await apiClient.get<{ success: boolean; barcode: string }>('/api/v1/products/generate-barcode');
+    }
   }
 };

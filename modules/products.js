@@ -237,10 +237,13 @@ router.get('/by-barcode/:barcode', verifyJWT, requirePermission('products.view')
   }
 });
 
-// GET /api/v1/products/generate-barcode - Atomically generate next unique AIA barcode
-router.get('/generate-barcode', verifyJWT, requirePermission('products.create'), async (req, res) => {
-  const { db } = getContext();
-  try {
+/**
+ * Helper to generate next unique AIA barcode sequence atomically via MongoDB counters
+ */
+async function generateNextAIABarcodeAtomic(db) {
+  // Initialize sequence counter if not present
+  const existingCounter = await db.collection('counters').findOne({ _id: 'product_barcode_sequence' });
+  if (!existingCounter) {
     const products = await db.collection('products').find({ barcode: { $regex: /^AIA\d+$/i } }, { projection: { barcode: 1 } }).toArray();
     const barcodeMappings = await db.collection('product_barcodes').find({ barcode: { $regex: /^AIA\d+$/i } }, { projection: { barcode: 1 } }).toArray();
 
@@ -258,34 +261,79 @@ router.get('/generate-barcode', verifyJWT, requirePermission('products.create'),
     products.forEach(p => checkNum(p.barcode));
     barcodeMappings.forEach(b => checkNum(b.barcode));
 
-    let candidate = '';
-    let isUnique = false;
-    let attempts = 0;
+    await db.collection('counters').updateOne(
+      { _id: 'product_barcode_sequence' },
+      { $setOnInsert: { seq: maxNum, updatedAt: new Date().toISOString() } },
+      { upsert: true }
+    );
+  }
 
-    while (!isUnique && attempts < 100) {
-      maxNum++;
-      attempts++;
-      candidate = 'AIA' + String(maxNum).padStart(6, '0');
+  let candidate = '';
+  let isUnique = false;
+  let attempts = 0;
 
-      const existingProd = await db.collection('products').findOne({
-        $or: [{ barcode: candidate }, { sku: candidate }],
-        isArchived: { $ne: true }
-      });
-      const existingMapping = await db.collection('product_barcodes').findOne({
-        barcode: candidate,
-        active: true
-      });
+  while (!isUnique && attempts < 50) {
+    attempts++;
+    const res = await db.collection('counters').findOneAndUpdate(
+      { _id: 'product_barcode_sequence' },
+      { $inc: { seq: 1 }, $set: { updatedAt: new Date().toISOString() } },
+      { returnDocument: 'after', upsert: true }
+    );
 
-      if (!existingProd && !existingMapping) {
-        isUnique = true;
-      }
+    const doc = res ? (res.value || res) : null;
+    const seqNum = doc && typeof doc.seq === 'number' ? doc.seq : (Date.now() % 1000000);
+    candidate = 'AIA' + String(seqNum).padStart(6, '0');
+
+    const conflictProd = await db.collection('products').findOne({
+      $or: [{ barcode: candidate }, { sku: candidate }],
+      isArchived: { $ne: true }
+    });
+    const conflictMapping = await db.collection('product_barcodes').findOne({
+      barcode: candidate,
+      active: true
+    });
+
+    if (!conflictProd && !conflictMapping) {
+      isUnique = true;
     }
+  }
 
-    if (!isUnique) {
-      candidate = `AIA${Date.now().toString().slice(-6)}`;
-    }
+  if (!isUnique) {
+    candidate = `AIA${Date.now().toString().slice(-6)}`;
+  }
 
-    res.json({ success: true, barcode: candidate });
+  return candidate;
+}
+
+// POST /api/v1/products/barcodes - Atomically generate & reserve next unique AIA barcode
+router.post('/barcodes', verifyJWT, requirePermission('products.create'), async (req, res) => {
+  const { db } = getContext();
+  try {
+    const barcode = await generateNextAIABarcodeAtomic(db);
+    res.json({ success: true, barcode });
+  } catch (err) {
+    console.error("Failed to generate unique barcode:", err);
+    res.status(500).json({ success: false, message: "Server error generating unique barcode" });
+  }
+});
+
+// POST & GET /api/v1/products/generate-barcode - Compatibility endpoints for barcode generation
+router.post('/generate-barcode', verifyJWT, requirePermission('products.create'), async (req, res) => {
+  const { db } = getContext();
+  try {
+    const barcode = await generateNextAIABarcodeAtomic(db);
+    res.json({ success: true, barcode });
+  } catch (err) {
+    console.error("Failed to generate unique barcode:", err);
+    res.status(500).json({ success: false, message: "Server error generating unique barcode" });
+  }
+});
+
+router.get('/generate-barcode', verifyJWT, requirePermission('products.create'), async (req, res) => {
+  const { db } = getContext();
+  try {
+    const barcode = await generateNextAIABarcodeAtomic(db);
+    res.json({ success: true, barcode });
   } catch (err) {
     console.error("Failed to generate unique barcode:", err);
     res.status(500).json({ success: false, message: "Server error generating unique barcode" });
@@ -460,7 +508,7 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
         return res.status(409).json({
           success: false,
           code: "PRODUCT_BARCODE_ALREADY_EXISTS",
-          message: `Primary barcode '${primaryBarcode}' already belongs to product '${conflictProduct.name}'`
+          message: "Barcode already belongs to another product."
         });
       }
 
@@ -473,7 +521,7 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
         return res.status(409).json({
           success: false,
           code: "PRODUCT_BARCODE_ALREADY_EXISTS",
-          message: `Barcode '${primaryBarcode}' is already registered as an alternate/variant barcode for another product`
+          message: "Barcode already belongs to another product."
         });
       }
     }
@@ -492,7 +540,7 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
             return res.status(409).json({
               success: false,
               code: "PRODUCT_BARCODE_ALREADY_EXISTS",
-              message: `Variant barcode '${bCode}' is already registered to another active product`
+              message: "Barcode already belongs to another product."
             });
           }
         }
@@ -566,6 +614,14 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
     }
     res.json({ success: true, product: productDoc });
   } catch (err) {
+    if (err && (err.code === 11000 || String(err.message).includes('E11000'))) {
+      const isBarcode = String(err.message).includes('barcode');
+      return res.status(409).json({
+        success: false,
+        code: isBarcode ? "PRODUCT_BARCODE_ALREADY_EXISTS" : "PRODUCT_SKU_ALREADY_EXISTS",
+        message: isBarcode ? "Barcode already belongs to another product." : "Product SKU is already registered."
+      });
+    }
     console.error("Failed to save product:", err);
     res.status(500).json({ success: false, message: "Server error saving product" });
   }

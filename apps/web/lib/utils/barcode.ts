@@ -1,6 +1,6 @@
 /**
  * Standard Code 128 Barcode Generator (Pure TypeScript / SVG)
- * Symbology: Code 128 Auto (Subset B & C)
+ * Symbology: Code 128 Auto (Automatic Subset B & Subset C Optimization)
  * Compliant with ISO/IEC 15417
  */
 
@@ -18,12 +18,14 @@ const CODE128_PATTERNS: string[] = [
   "112412", "122114", "122411", "142112", "142211", "241211", "221114", "413111", "241112", "134111", // 70-79
   "111242", "121142", "121241", "114212", "124112", "124211", "411212", "421112", "421211", "212141", // 80-89
   "214121", "412121", "111143", "111341", "131141", "114113", "114311", "411113", "411311", "113141", // 90-99
-  "114131", "311141", "411131", "211412", "211214", "211232", "2331112"                               // 100-106 (104=StartB, 105=StartC, 106=Stop)
+  "114131", "311141", "411131", "211412", "211214", "211232", "2331112"                               // 100-106
 ];
 
-const START_CODE_B = 104;
-const START_CODE_C = 105;
-const STOP_CODE = 106;
+export const CODE_SWITCH_TO_C = 99;
+export const CODE_SWITCH_TO_B = 100;
+export const START_CODE_B = 104;
+export const START_CODE_C = 105;
+export const STOP_CODE = 106;
 
 export interface BarcodeRenderOptions {
   width?: number;         // width of single module bar (default: 1.5px)
@@ -36,24 +38,78 @@ export interface BarcodeRenderOptions {
 }
 
 /**
- * Encode an ASCII string into Code 128 symbols (Subset B)
+ * Count consecutive numeric digits starting at index `pos`
+ */
+function countConsecutiveDigits(str: string, pos: number): number {
+  let count = 0;
+  for (let i = pos; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    if (ch >= 48 && ch <= 57) { // '0'-'9'
+      count++;
+    } else {
+      break;
+    }
+  }
+  return count;
+}
+
+/**
+ * Encode an ASCII string into Code 128 symbols with automatic Subset B / Subset C switching.
  */
 export function encodeCode128(text: string): number[] {
-  const clean = text.trim();
+  const clean = (text || '').trim();
   if (!clean) return [];
 
-  const symbols: number[] = [START_CODE_B];
-  let checkSum = START_CODE_B;
+  let pos = 0;
+  let currentSubset: 'B' | 'C' = 'B';
+  const symbols: number[] = [];
 
-  for (let i = 0; i < clean.length; i++) {
-    const code = clean.charCodeAt(i);
-    // ASCII 32-126 mapped to Code 128 value (code - 32)
-    const val = code >= 32 && code <= 126 ? code - 32 : 0;
-    symbols.push(val);
-    checkSum += val * (i + 1);
+  // Determine starting subset: if starts with 4 or more digits, use Subset C
+  const initialDigits = countConsecutiveDigits(clean, 0);
+  if (initialDigits >= 4) {
+    currentSubset = 'C';
+    symbols.push(START_CODE_C);
+  } else {
+    currentSubset = 'B';
+    symbols.push(START_CODE_B);
   }
 
+  while (pos < clean.length) {
+    if (currentSubset === 'C') {
+      const remainingDigits = countConsecutiveDigits(clean, pos);
+      if (remainingDigits >= 2) {
+        // Encode pair of 2 digits as a single Subset C symbol
+        const pair = clean.slice(pos, pos + 2);
+        symbols.push(parseInt(pair, 10));
+        pos += 2;
+      } else {
+        // Switch to Subset B for single digit or non-digit
+        currentSubset = 'B';
+        symbols.push(CODE_SWITCH_TO_B);
+      }
+    } else {
+      // In Subset B: check if a long numeric sequence (4+ digits) warrants switching to Subset C
+      const nextDigits = countConsecutiveDigits(clean, pos);
+      if (nextDigits >= 4) {
+        currentSubset = 'C';
+        symbols.push(CODE_SWITCH_TO_C);
+      } else {
+        const charCode = clean.charCodeAt(pos);
+        // ASCII 32 to 126
+        const val = charCode >= 32 && charCode <= 126 ? charCode - 32 : 0;
+        symbols.push(val);
+        pos++;
+      }
+    }
+  }
+
+  // Calculate Checksum: (start_symbol + sum(i * value_i)) % 103
+  let checkSum = symbols[0];
+  for (let i = 1; i < symbols.length; i++) {
+    checkSum += symbols[i] * i;
+  }
   const checkDigit = checkSum % 103;
+
   symbols.push(checkDigit);
   symbols.push(STOP_CODE);
 
@@ -100,7 +156,11 @@ export function generateBarcodeSvg(
     backgroundColor = 'transparent'
   } = options;
 
-  const displayVal = (value || '000000').trim();
+  const displayVal = (value || '').trim();
+  if (!displayVal) {
+    return '';
+  }
+
   const symbols = encodeCode128(displayVal);
   const modules = symbolsToModules(symbols);
 
@@ -114,7 +174,6 @@ export function generateBarcodeSvg(
 
   for (let i = 0; i < modules.length; i++) {
     if (modules[i] === 1) {
-      // Find contiguous bar run for optimized SVG rects
       let runLength = 1;
       while (i + 1 < modules.length && modules[i + 1] === 1) {
         runLength++;
