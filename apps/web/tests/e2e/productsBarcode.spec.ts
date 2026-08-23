@@ -88,7 +88,7 @@ const mockBatches = [
   }
 ];
 
-test.describe('Product Multi-Source Barcodes & Label Printing (Phase 30.2)', () => {
+test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3)', () => {
   test.beforeEach(async ({ page }) => {
     // Inject mock authenticated session
     await page.addInitScript(() => {
@@ -208,24 +208,41 @@ test.describe('Product Multi-Source Barcodes & Label Printing (Phase 30.2)', () 
     await page.goto('/products');
   });
 
-  test('1. Opens Print Barcode Dialog with external manufacturer barcode and source badge', async ({ page }) => {
+  test('1. Opens Print Barcode Labels Studio with templates, quantity stepper & live simulator', async ({ page }) => {
     const printBtn = page.locator('button[aria-label="Print barcode for A2 Gir Cow Cultured Ghee 500ml"]');
     await expect(printBtn).toBeVisible({ timeout: 10000 });
     await printBtn.click();
 
-    // Verify dialog opens
-    const dialogTitle = page.getByText('Print Product Barcode & Batch Labels');
-    await expect(dialogTitle).toBeVisible();
+    // Verify dialog header
+    await expect(page.getByText('Print Barcode Labels')).toBeVisible();
+    await expect(page.getByText('A2 Gir Cow Cultured Ghee 500ml • SKU: GHEE-A2-500')).toBeVisible();
 
-    // Verify product summary with Manufacturer badge
-    await expect(page.getByText('A2 Gir Cow Cultured Ghee 500ml').first()).toBeVisible();
-    await expect(page.getByText('SKU: GHEE-A2-500').first()).toBeVisible();
-    await expect(page.getByText('Barcode: 8901234567890')).toBeVisible();
+    // Verify product summary & Manufacturer badge
     await expect(page.getByText('🏢 Manufacturer').first()).toBeVisible();
+    await expect(page.getByText('Barcode: 8901234567890')).toBeVisible();
 
-    // Verify live SVG Code128 barcode is rendered in preview
-    const barcodeSvgText = page.locator('text=8901234567890');
-    await expect(barcodeSvgText.first()).toBeVisible();
+    // Verify 3 Template Cards exist
+    await expect(page.getByText('Standard Shelf Tag').first()).toBeVisible();
+    await expect(page.getByText('Product Sticker').first()).toBeVisible();
+    await expect(page.getByText('Compact Tag').first()).toBeVisible();
+
+    // Click Product Sticker template card
+    await page.getByText('Product Sticker').first().click();
+    await expect(page.getByText('38 × 25 mm').first()).toBeVisible();
+
+    // Quantity Stepper: increase to 5
+    const plusBtn = page.getByRole('button', { name: 'Increase label quantity' });
+    await plusBtn.click();
+    await plusBtn.click(); // from 3 to 5
+
+    // Verify button updates dynamically
+    const printActionBtn = page.getByRole('button', { name: 'Print 5 Labels' });
+    await expect(printActionBtn).toBeVisible();
+
+    // Verify Live Simulator renders barcode SVG and lot metadata
+    const liveSim = page.getByText('Live Print Simulator');
+    await expect(liveSim).toBeVisible();
+    await expect(page.getByText('8901234567890').first()).toBeVisible();
   });
 
   test('2. Displays AIAVRO generated barcode source badge for own product', async ({ page }) => {
@@ -235,20 +252,25 @@ test.describe('Product Multi-Source Barcodes & Label Printing (Phase 30.2)', () 
 
     await expect(page.getByText('Barcode: AIA000042')).toBeVisible();
     await expect(page.getByText('⚡ AIAVRO').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Print 3 Labels' })).toBeVisible();
   });
 
-  test('3. Third-party product without barcode does NOT silently use SKU and offers AIA generation', async ({ page }) => {
+  test('3. Third-party product without barcode displays clean empty state and offers AIA generation', async ({ page }) => {
     const printBtn = page.locator('button[aria-label="Print barcode for Third Party Organic Desi Khand"]');
     await expect(printBtn).toBeVisible({ timeout: 10000 });
     await printBtn.click();
 
     // Verify warning status: "No barcode assigned"
     await expect(page.getByText('No barcode assigned').first()).toBeVisible();
-    await expect(page.getByText('Product requires an assigned barcode to print')).toBeVisible();
+    await expect(page.getByText('Assign an external code or generate an AIA sequence to preview.')).toBeVisible();
 
     // Verify explicit "Generate AIA Code" button is provided
     const generateBtn = page.getByRole('button', { name: 'Generate AIA Code' });
     await expect(generateBtn).toBeVisible();
+
+    // Print button should be disabled when unassigned
+    const printActionBtn = page.getByRole('button', { name: /Print \d+ Label/ });
+    await expect(printActionBtn).toBeDisabled();
   });
 
   test('4. Product Detail Drawer displays primary barcode and source badge', async ({ page }) => {
@@ -278,5 +300,40 @@ test.describe('Product Multi-Source Barcodes & Label Printing (Phase 30.2)', () 
     await expect(page.getByText('Confirm Barcode Replacement')).toBeVisible();
     await expect(page.getByText('You are replacing the existing registered barcode')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Confirm & Replace Barcode' })).toBeVisible();
+  });
+
+  test('6. Visual QA & Responsive Verification across desktop, tablet and mobile viewports', async ({ page }) => {
+    const viewports = [
+      { name: '1440x900', width: 1440, height: 900 },
+      { name: '1280x800', width: 1280, height: 800 },
+      { name: '1024x768', width: 1024, height: 768 },
+      { name: '768x1024', width: 768, height: 1024 },
+      { name: '430x932', width: 430, height: 932 },
+      { name: '390x844', width: 390, height: 844 }
+    ];
+
+    const printBtn = page.locator('button[aria-label="Print barcode for A2 Gir Cow Cultured Ghee 500ml"]');
+    await expect(printBtn).toBeVisible({ timeout: 10000 });
+    await printBtn.click();
+
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.waitForTimeout(300);
+
+      // Verify modal is visible
+      await expect(page.getByText('Print Barcode Labels')).toBeVisible();
+
+      // Check no horizontal document scroll
+      const hasHorizontalScroll = await page.evaluate(() => {
+        return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+      });
+      expect(hasHorizontalScroll).toBe(false);
+
+      // Save Visual QA artifact screenshot
+      await page.screenshot({
+        path: `/Users/avanish/.gemini/antigravity/brain/bdb89543-3c62-42bd-8677-4a1129f88c3e/barcode-print-studio-${vp.name}.png`,
+        fullPage: false
+      });
+    }
   });
 });
