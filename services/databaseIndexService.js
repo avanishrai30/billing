@@ -20,6 +20,11 @@ const EXPECTED_INDEXES = {
     { keys: { barcode: 1 }, options: { name: "barcode_1" } },
     { keys: { productId: 1 }, options: { name: "productId_1" } }
   ],
+  product_batches: [
+    { keys: { productId: 1, lotNumber: 1 }, options: { name: "productId_1_lotNumber_1" } },
+    { keys: { expiryDate: 1 }, options: { name: "expiryDate_1" } },
+    { keys: { status: 1 }, options: { name: "status_1" } }
+  ],
   inventory: [
     { keys: { productId: 1, locationId: 1 }, options: { name: "productId_1_locationId_1" } },
     { keys: { locationId: 1 }, options: { name: "locationId_1" } }

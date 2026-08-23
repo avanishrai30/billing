@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Barcode, Plus, Trash2 } from 'lucide-react';
+import { Barcode, Plus, Trash2, Sparkles } from 'lucide-react';
 import { Input, Select, Button, Badge } from '../../../components/ui';
+import { useGenerateBarcodeMutation } from '../hooks';
 import type { ProductBarcodeEntry, BarcodeType } from '../types';
 
 export interface ProductBarcodeManagerProps {
@@ -20,6 +21,19 @@ export function ProductBarcodeManager({
   onChangeBarcodes,
   disabled = false
 }: ProductBarcodeManagerProps) {
+  const generateBarcodeMutation = useGenerateBarcodeMutation();
+
+  const handleGenerateAIABarcode = async () => {
+    try {
+      const res = await generateBarcodeMutation.mutateAsync();
+      if (res?.barcode) {
+        onPrimaryBarcodeChange(res.barcode);
+      }
+    } catch (e) {
+      console.error('Failed to generate barcode', e);
+    }
+  };
+
   const handleAddBarcode = () => {
     onChangeBarcodes([
       ...barcodes,
@@ -71,9 +85,21 @@ export function ProductBarcodeManager({
 
       {/* Primary Barcode Input */}
       <div>
-        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-          Primary Product Barcode (EAN/UPC)
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-[11px] font-semibold text-slate-700">
+            Primary Product Barcode (EAN/UPC/AIA)
+          </label>
+          <button
+            type="button"
+            onClick={handleGenerateAIABarcode}
+            disabled={disabled || generateBarcodeMutation.isPending}
+            className="text-[11px] text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
+            title="Generate standard AIA sequence barcode"
+          >
+            <Sparkles className="w-3 h-3" />
+            Generate AIA Code
+          </button>
+        </div>
         <div className="relative">
           <Input
             placeholder="Scan or enter primary GTIN/EAN/UPC code..."

@@ -124,3 +124,41 @@ export interface BulkImportCommitResult {
     errors?: Array<{ row: number; error: string }>;
   };
 }
+
+export interface ProductBatchDoc {
+  id: string;
+  batchId?: string;
+  productId: string;
+  lotNumber: string;
+  manufactureDate?: string;
+  expiryDate?: string;
+  receivedQuantity?: number;
+  remainingQuantity?: number;
+  unitCost?: number;
+  sellingPrice?: number;
+  storeId?: string;
+  notes?: string;
+  status: 'active' | 'exhausted' | 'expired' | 'archived';
+  isOpeningBatch?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
+
+export type BarcodeLabelTemplate =
+  | 'standard_shelf' // 50mm x 30mm standard retail shelf tag
+  | 'sticker_38x25'   // 38mm x 25mm barcode sticker
+  | 'compact_tag'     // 25mm x 15mm compact price tag
+  | 'qr_dual';        // 50mm x 40mm dual 1D Barcode + 2D QR
+
+export interface PrintBarcodeConfig {
+  productId: string;
+  batchId?: string | null;
+  lotNumber?: string;
+  expiryDate?: string;
+  quantity: number;
+  template: BarcodeLabelTemplate;
+  showPrice: boolean;
+  showLotExpiry: boolean;
+  showBrand: boolean;
+}

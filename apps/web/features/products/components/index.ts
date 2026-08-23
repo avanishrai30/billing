@@ -8,3 +8,4 @@ export * from './ProductArchiveDialog';
 export * from './ProductImportDialog';
 export * from './ProductBarcodeManager';
 export * from './ProductImageUploader';
+export * from './ProductPrintBarcodeDialog';

@@ -9,7 +9,8 @@ export const PRODUCT_KEYS = {
   all: ['products'] as const,
   list: (filters?: Partial<ProductFilterState>) => ['products', 'list', filters] as const,
   detail: (id: string) => ['products', 'detail', id] as const,
-  barcode: (code: string) => ['products', 'barcode', code] as const
+  barcode: (code: string) => ['products', 'barcode', code] as const,
+  batches: (id: string) => ['products', 'batches', id] as const
 };
 
 /**
@@ -114,5 +115,57 @@ export function useBulkImportCommitMutation() {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }
+  });
+}
+
+/**
+ * Query hook to fetch all inventory batches/lots for a product.
+ */
+export function useProductBatchesQuery(productId?: string) {
+  return useQuery({
+    queryKey: PRODUCT_KEYS.batches(productId || ''),
+    queryFn: () => productsApi.getProductBatches(productId!),
+    enabled: !!productId
+  });
+}
+
+/**
+ * Mutation hook to create a new inventory batch/lot for a product.
+ */
+export function useCreateProductBatchMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      productId,
+      payload
+    }: {
+      productId: string;
+      payload: {
+        lotNumber: string;
+        manufactureDate?: string;
+        expiryDate?: string;
+        receivedQuantity?: number;
+        remainingQuantity?: number;
+        unitCost?: number;
+        sellingPrice?: number;
+        storeId?: string;
+        notes?: string;
+      };
+    }) => productsApi.createProductBatch(productId, payload),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: PRODUCT_KEYS.batches(variables.productId) });
+      queryClient.invalidateQueries({ queryKey: PRODUCT_KEYS.detail(variables.productId) });
+      queryClient.invalidateQueries({ queryKey: PRODUCT_KEYS.all });
+    }
+  });
+}
+
+/**
+ * Mutation hook to generate the next unique AIA product barcode.
+ */
+export function useGenerateBarcodeMutation() {
+  return useMutation({
+    mutationFn: () => productsApi.generateAIavroBarcode()
   });
 }

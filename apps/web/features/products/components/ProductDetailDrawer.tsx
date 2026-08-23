@@ -12,7 +12,8 @@ import {
   Layers,
   Edit,
   Trash2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Printer
 } from 'lucide-react';
 import { Drawer, Badge, Button, StatusBadge } from '../../../components/ui';
 import { normalizePublicAssetUrl } from '../../../lib/utils/media';
@@ -25,6 +26,7 @@ export interface ProductDetailDrawerProps {
   product?: ProductDoc | null;
   onEdit?: (product: ProductDoc) => void;
   onArchive?: (product: ProductDoc) => void;
+  onPrintBarcode?: (product: ProductDoc) => void;
   canEdit?: boolean;
   canArchive?: boolean;
 }
@@ -35,6 +37,7 @@ export function ProductDetailDrawer({
   product,
   onEdit,
   onArchive,
+  onPrintBarcode,
   canEdit = false,
   canArchive = false
 }: ProductDetailDrawerProps) {
@@ -142,10 +145,23 @@ export function ProductDetailDrawer({
 
         {/* 3. Barcodes & Scanner Identifiers */}
         <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
-          <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
-            <Barcode className="w-4 h-4 text-blue-600" />
-            Registered Barcode Mappings
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
+              <Barcode className="w-4 h-4 text-blue-600" />
+              Registered Barcode Mappings
+            </h4>
+            {onPrintBarcode && (
+              <button
+                type="button"
+                onClick={() => onPrintBarcode(product)}
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold inline-flex items-center gap-1 cursor-pointer bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg px-2.5 py-1 transition-colors"
+                title="Print Barcode & Batch Labels"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print Labels
+              </button>
+            )}
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg text-xs shadow-xs">

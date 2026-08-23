@@ -2,6 +2,7 @@ import { apiClient } from '../../lib/api/client';
 import type {
   ProductDoc,
   ProductFilterState,
+  ProductBatchDoc,
   BulkImportPreviewResult,
   BulkImportCommitResult
 } from './types';
@@ -83,5 +84,45 @@ export const productsApi = {
       fileName,
       base64Data
     });
+  },
+
+  /**
+   * Fetch all inventory batches and lots for a product.
+   */
+  async getProductBatches(productId: string): Promise<ProductBatchDoc[]> {
+    const res = await apiClient.get<{ success: boolean; batches: ProductBatchDoc[] }>(
+      `/api/v1/products/${encodeURIComponent(productId)}/batches`
+    );
+    return res?.batches || [];
+  },
+
+  /**
+   * Register a new inventory batch/lot for a product.
+   */
+  async createProductBatch(
+    productId: string,
+    payload: {
+      lotNumber: string;
+      manufactureDate?: string;
+      expiryDate?: string;
+      receivedQuantity?: number;
+      remainingQuantity?: number;
+      unitCost?: number;
+      sellingPrice?: number;
+      storeId?: string;
+      notes?: string;
+    }
+  ): Promise<{ success: boolean; batch: ProductBatchDoc }> {
+    return apiClient.post<{ success: boolean; batch: ProductBatchDoc }>(
+      `/api/v1/products/${encodeURIComponent(productId)}/batches`,
+      payload
+    );
+  },
+
+  /**
+   * Atomically generate next unique AIA product barcode.
+   */
+  async generateAIavroBarcode(): Promise<{ success: boolean; barcode: string }> {
+    return apiClient.get<{ success: boolean; barcode: string }>('/api/v1/products/generate-barcode');
   }
 };

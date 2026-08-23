@@ -8,7 +8,8 @@ import {
   Edit,
   Trash2,
   Image as ImageIcon,
-  Sparkles
+  Sparkles,
+  Printer
 } from 'lucide-react';
 import {
   Table,
@@ -36,6 +37,7 @@ export interface ProductTableProps {
   onInspect: (product: ProductDoc) => void;
   onEdit: (product: ProductDoc) => void;
   onArchive: (product: ProductDoc) => void;
+  onPrintBarcode?: (product: ProductDoc) => void;
 }
 
 export function ProductTable({
@@ -46,7 +48,8 @@ export function ProductTable({
   highlightedIds = new Set(),
   onInspect,
   onEdit,
-  onArchive
+  onArchive,
+  onPrintBarcode
 }: ProductTableProps) {
   if (isLoading) {
     return (
@@ -212,6 +215,18 @@ export function ProductTable({
                   {/* Actions */}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {onPrintBarcode && (
+                        <button
+                          type="button"
+                          onClick={() => onPrintBarcode(p)}
+                          aria-label={`Print barcode for ${p.name}`}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                          title="Print Barcode & Batch Labels"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => onInspect(p)}

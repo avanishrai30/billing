@@ -12,7 +12,8 @@ import {
   ProductModal,
   ProductDetailDrawer,
   ProductArchiveDialog,
-  ProductImportDialog
+  ProductImportDialog,
+  ProductPrintBarcodeDialog
 } from '../../../features/products/components';
 import { calculateProductSummaryMetrics } from '../../../features/products/calculations';
 import { AccessDeniedState, ErrorState } from '../../../components/ui';
@@ -50,6 +51,9 @@ export default function ProductsPage() {
   const [archivingProduct, setArchivingProduct] = useState<ProductDoc | null>(null);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const [isPrintBarcodeOpen, setIsPrintBarcodeOpen] = useState(false);
+  const [printingProduct, setPrintingProduct] = useState<ProductDoc | null>(null);
 
   // Queries with realtime highlight callback
   const { data: products = [], isLoading, isError, error, refetch } = useProductsQuery(
@@ -168,6 +172,11 @@ export default function ProductsPage() {
     setIsArchiveOpen(true);
   };
 
+  const handleOpenPrintBarcode = (prod: ProductDoc) => {
+    setPrintingProduct(prod);
+    setIsPrintBarcodeOpen(true);
+  };
+
   if (!canView) {
     return (
       <AccessDeniedState
@@ -218,6 +227,7 @@ export default function ProductsPage() {
           onInspect={handleOpenInspect}
           onEdit={handleOpenEdit}
           onArchive={handleOpenArchive}
+          onPrintBarcode={handleOpenPrintBarcode}
         />
       )}
 
@@ -236,6 +246,7 @@ export default function ProductsPage() {
         product={inspectingProduct}
         onEdit={handleOpenEdit}
         onArchive={handleOpenArchive}
+        onPrintBarcode={handleOpenPrintBarcode}
         canEdit={canEdit}
         canArchive={canArchive}
       />
@@ -250,6 +261,12 @@ export default function ProductsPage() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         canCommit={canCommitImport}
+      />
+
+      <ProductPrintBarcodeDialog
+        isOpen={isPrintBarcodeOpen}
+        onClose={() => setIsPrintBarcodeOpen(false)}
+        product={printingProduct}
       />
     </div>
   );

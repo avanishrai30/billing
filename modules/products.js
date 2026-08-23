@@ -237,6 +237,173 @@ router.get('/by-barcode/:barcode', verifyJWT, requirePermission('products.view')
   }
 });
 
+// GET /api/v1/products/generate-barcode - Atomically generate next unique AIA barcode
+router.get('/generate-barcode', verifyJWT, requirePermission('products.create'), async (req, res) => {
+  const { db } = getContext();
+  try {
+    const products = await db.collection('products').find({ barcode: { $regex: /^AIA\d+$/i } }, { projection: { barcode: 1 } }).toArray();
+    const barcodeMappings = await db.collection('product_barcodes').find({ barcode: { $regex: /^AIA\d+$/i } }, { projection: { barcode: 1 } }).toArray();
+
+    let maxNum = 0;
+    const checkNum = (code) => {
+      if (typeof code === 'string' && code.toUpperCase().startsWith('AIA')) {
+        const numPart = code.substring(3);
+        if (/^\d+$/.test(numPart)) {
+          const val = parseInt(numPart, 10);
+          if (val > maxNum) maxNum = val;
+        }
+      }
+    };
+
+    products.forEach(p => checkNum(p.barcode));
+    barcodeMappings.forEach(b => checkNum(b.barcode));
+
+    let candidate = '';
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 100) {
+      maxNum++;
+      attempts++;
+      candidate = 'AIA' + String(maxNum).padStart(6, '0');
+
+      const existingProd = await db.collection('products').findOne({
+        $or: [{ barcode: candidate }, { sku: candidate }],
+        isArchived: { $ne: true }
+      });
+      const existingMapping = await db.collection('product_barcodes').findOne({
+        barcode: candidate,
+        active: true
+      });
+
+      if (!existingProd && !existingMapping) {
+        isUnique = true;
+      }
+    }
+
+    if (!isUnique) {
+      candidate = `AIA${Date.now().toString().slice(-6)}`;
+    }
+
+    res.json({ success: true, barcode: candidate });
+  } catch (err) {
+    console.error("Failed to generate unique barcode:", err);
+    res.status(500).json({ success: false, message: "Server error generating unique barcode" });
+  }
+});
+
+// GET /api/v1/products/:id/batches - Fetch batches & lots for a product
+router.get('/:id/batches', verifyJWT, requirePermission('products.view'), async (req, res) => {
+  const { db } = getContext();
+  const productId = req.params.id;
+
+  try {
+    const product = await db.collection('products').findOne({
+      $or: [{ id: productId }, { sku: productId }],
+      isArchived: { $ne: true }
+    });
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    const batches = await db.collection('product_batches')
+      .find({
+        productId: product.id,
+        status: { $ne: 'archived' }
+      })
+      .sort({ expiryDate: 1, createdAt: -1 })
+      .toArray();
+
+    // If no explicit batches recorded, synthesize opening stock batch if product has doe/dom
+    if (batches.length === 0 && (product.doe || product.dom || product.lotNumber)) {
+      batches.push({
+        id: `batch-opening-${product.id}`,
+        batchId: `batch-opening-${product.id}`,
+        productId: product.id,
+        lotNumber: product.lotNumber || 'LOT-OPENING',
+        manufactureDate: product.dom || undefined,
+        expiryDate: product.doe || undefined,
+        receivedQuantity: product.stock || 0,
+        remainingQuantity: product.stock || 0,
+        unitCost: product.costPrice || product.purchasePrice || product.cost || 0,
+        sellingPrice: product.sellingPrice || product.price || 0,
+        status: 'active',
+        isOpeningBatch: true,
+        createdAt: product.createdAt || new Date().toISOString()
+      });
+    }
+
+    res.json({ success: true, batches, productId: product.id });
+  } catch (err) {
+    console.error("Failed to fetch product batches:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch product batches" });
+  }
+});
+
+// POST /api/v1/products/:id/batches - Create / record a new batch for a product
+router.post('/:id/batches', verifyJWT, requirePermission('products.update'), async (req, res) => {
+  const { db } = getContext();
+  const productId = req.params.id;
+  const {
+    lotNumber,
+    manufactureDate,
+    expiryDate,
+    receivedQuantity = 0,
+    remainingQuantity,
+    unitCost,
+    sellingPrice,
+    storeId,
+    notes
+  } = req.body;
+
+  if (!lotNumber || !String(lotNumber).trim()) {
+    return res.status(400).json({ success: false, message: "Lot/Batch number is required" });
+  }
+
+  try {
+    const product = await db.collection('products').findOne({
+      $or: [{ id: productId }, { sku: productId }],
+      isArchived: { $ne: true }
+    });
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    const cleanLot = String(lotNumber).trim();
+    const batchId = `bat-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const now = new Date().toISOString();
+
+    const batchDoc = {
+      id: batchId,
+      batchId,
+      productId: product.id,
+      lotNumber: cleanLot,
+      manufactureDate: manufactureDate || null,
+      expiryDate: expiryDate || null,
+      receivedQuantity: parseFloat(receivedQuantity) || 0,
+      remainingQuantity: remainingQuantity !== undefined ? parseFloat(remainingQuantity) : (parseFloat(receivedQuantity) || 0),
+      unitCost: unitCost !== undefined ? parseFloat(unitCost) : (product.purchasePrice || 0),
+      sellingPrice: sellingPrice !== undefined ? parseFloat(sellingPrice) : (product.sellingPrice || 0),
+      storeId: storeId || 'all',
+      notes: notes || '',
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+      createdBy: req.user ? req.user.username : 'system'
+    };
+
+    await db.collection('product_batches').insertOne(batchDoc);
+    await auditService.writeAuditLog('batch_created', 'inventory', batchId, null, batchDoc, req);
+
+    res.json({ success: true, batch: batchDoc });
+  } catch (err) {
+    console.error("Failed to create product batch:", err);
+    res.status(500).json({ success: false, message: "Failed to create product batch" });
+  }
+});
+
 // GET /api/v1/products/:id - Fetch single product master record
 router.get('/:id', verifyJWT, requirePermission('products.view'), async (req, res) => {
   const { db } = getContext();
