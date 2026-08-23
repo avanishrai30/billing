@@ -7,7 +7,7 @@
 const { MongoClient } = require('mongodb');
 
 async function runBarcodeVerification() {
-  const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/vc_organic_billing_prod';
+  const uri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/vc_organic';
   console.log(`Connecting to MongoDB at ${uri}...`);
   const client = new MongoClient(uri);
 
