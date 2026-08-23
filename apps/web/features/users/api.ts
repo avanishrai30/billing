@@ -87,11 +87,11 @@ export const userApi = {
   },
 
   /**
-   * Update self avatar path
+   * Update self avatar path (or null to remove avatar)
    * POST /api/v1/users/avatar
    */
-  async updateAvatar(avatar: string): Promise<{ success: boolean; avatar: string }> {
-    return await apiClient.post<{ success: boolean; avatar: string }>('/api/v1/users/avatar', { avatar });
+  async updateAvatar(avatar: string | null): Promise<{ success: boolean; avatar: string | null; user?: UserDoc }> {
+    return await apiClient.post<{ success: boolean; avatar: string | null; user?: UserDoc }>('/api/v1/users/avatar', { avatar });
   },
 
   /**

@@ -370,12 +370,13 @@ const userService = {
    */
   async updateAvatar(userId, avatarPath, req) {
     const { db, io } = getContext();
+    const finalAvatar = avatarPath || null;
     await db.collection('users').updateOne(
       { id: userId },
-      { $set: { avatar: avatarPath, updatedAt: new Date().toISOString() } }
+      { $set: { avatar: finalAvatar, updatedAt: new Date().toISOString() } }
     );
     const updated = await this.getUserById(userId);
-    await auditService.writeAuditLog('user_updated', 'user', userId, null, { avatar: avatarPath }, req);
+    await auditService.writeAuditLog('user_updated', 'user', userId, null, { avatar: finalAvatar }, req);
     if (io) {
       io.to('sync_global').emit('user_updated', { user: updated });
     }

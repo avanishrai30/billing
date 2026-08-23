@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { User } from 'lucide-react';
 
-export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg';
+export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 export interface AvatarProps {
   src?: string | null;
@@ -37,6 +37,18 @@ const sizeStyles: Record<AvatarSize, { container: string; icon: string; text: st
     icon: 'w-6 h-6',
     text: 'text-base',
     dot: 'w-3 h-3'
+  },
+  xl: {
+    container: 'w-16 h-16',
+    icon: 'w-8 h-8',
+    text: 'text-lg',
+    dot: 'w-3.5 h-3.5'
+  },
+  '2xl': {
+    container: 'w-24 h-24',
+    icon: 'w-12 h-12',
+    text: 'text-2xl',
+    dot: 'w-4 h-4'
   }
 };
 
@@ -55,6 +67,10 @@ export function Avatar({
 }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
   const sz = sizeStyles[size];
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [src]);
 
   const getInitials = (n?: string) => {
     if (!n) return '';

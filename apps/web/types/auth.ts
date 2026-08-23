@@ -28,6 +28,8 @@ export interface AuthUser {
   permissionDenies?: string[];
   avatar?: string | null;
   status: 'active' | 'suspended' | 'inactive';
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface LoginCredentials {

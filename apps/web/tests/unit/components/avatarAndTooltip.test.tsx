@@ -14,7 +14,19 @@ describe('UI Primitives: Avatar & Tooltip', () => {
     expect(screen.getByText('AD')).toBeInTheDocument();
   });
 
-  it('3. Renders Tooltip on hover/focus', () => {
+  it('3. Renders Avatar with image and falls back to initials on error', () => {
+    const { rerender } = render(<Avatar name="Rajesh Sharma" src="https://example.com/broken-avatar.png" size="2xl" />);
+    const img = screen.getByRole('img');
+    expect(img).toBeInTheDocument();
+
+    fireEvent.error(img);
+    expect(screen.getByText('RS')).toBeInTheDocument();
+
+    rerender(<Avatar name="Rajesh Sharma" src="https://example.com/new-avatar.png" size="2xl" />);
+    expect(screen.getByRole('img')).toBeInTheDocument();
+  });
+
+  it('4. Renders Tooltip on hover/focus', () => {
     render(
       <Tooltip content="Quick stock inspect">
         <button type="button">Inspect Stock</button>

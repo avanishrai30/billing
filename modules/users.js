@@ -119,14 +119,21 @@ router.post('/profile', verifyJWT, async (req, res) => {
 // POST /api/v1/users/avatar - Update own avatar path
 router.post('/avatar', verifyJWT, async (req, res) => {
   const { avatar } = req.body;
-  if (!avatar) return res.status(400).json({ success: false, error: { code: "INVALID_AVATAR", message: "Avatar path is required" } });
+  if (avatar === null || avatar === '') {
+    try {
+      const updated = await userService.updateAvatar(req.user.id, null, req);
+      return res.json({ success: true, avatar: null, user: updated });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to reset avatar" } });
+    }
+  }
   if (typeof avatar !== 'string' || !avatar.startsWith('/uploads/users/')) {
     return res.status(400).json({ success: false, error: { code: "INVALID_AVATAR", message: "Avatar must be an uploaded user profile image" } });
   }
 
   try {
-    await userService.updateAvatar(req.user.id, avatar, req);
-    res.json({ success: true, avatar });
+    const updated = await userService.updateAvatar(req.user.id, avatar, req);
+    res.json({ success: true, avatar, user: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to update avatar" } });
   }

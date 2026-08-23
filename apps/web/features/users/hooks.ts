@@ -193,6 +193,9 @@ export function useUpdateProfileMutation() {
     mutationFn: (payload: { name: string; email?: string; phone?: string }) =>
       userApi.updateProfile(payload),
     onSuccess: (data) => {
+      if (data?.user) {
+        applyAuthoritativeUserToCache(queryClient, data.user);
+      }
       queryClient.invalidateQueries({ queryKey: userQueryKeys.all });
       if (data?.user?.id) {
         queryClient.invalidateQueries({ queryKey: userQueryKeys.detail(data.user.id) });
@@ -213,8 +216,11 @@ export function useUpdateAvatarMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (avatar: string) => userApi.updateAvatar(avatar),
-    onSuccess: () => {
+    mutationFn: (avatar: string | null) => userApi.updateAvatar(avatar),
+    onSuccess: (data) => {
+      if (data?.user) {
+        applyAuthoritativeUserToCache(queryClient, data.user);
+      }
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       queryClient.invalidateQueries({ queryKey: userQueryKeys.all });
     }

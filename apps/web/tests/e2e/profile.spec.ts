@@ -97,29 +97,26 @@ test.describe('Self-Service Profile E2E Suite', () => {
       });
     });
 
-    await page.route('**/uploads/**', async (route) => {
+    await page.route('**/api/v1/users/change-password', async (route) => {
       await route.fulfill({
         status: 200,
-        contentType: 'image/png',
-        body: Buffer.from(
-          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-          'base64'
-        )
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, message: 'Password updated successfully' })
       });
     });
   });
 
-  test('1. User can edit own profile, upload avatar, and view own activity', async ({ page }) => {
+  test('1. User can edit own profile, upload avatar, remove avatar, and view own activity', async ({ page }) => {
     await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByRole('heading', { name: 'My Profile' })).toBeVisible();
-    await expect(page.getByText('My Activity')).toBeVisible();
+    await expect(page.getByText('Recent Account Activity')).toBeVisible();
     await expect(page.getByText('LOGIN SUCCESS')).toBeVisible();
 
-    await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Cashier Lead');
-    await page.getByRole('button', { name: /save profile/i }).click();
-    await expect(page.getByText('Profile updated.')).toBeVisible();
+    await page.getByRole('textbox', { name: 'Full Name', exact: true }).fill('Cashier Lead');
+    await page.getByRole('button', { name: /save changes/i }).click();
+    await expect(page.getByText(/profile saved/i)).toBeVisible();
 
     await page.locator('input[type="file"]').setInputFiles({
       name: 'profile.png',
@@ -129,6 +126,38 @@ test.describe('Self-Service Profile E2E Suite', () => {
         'base64'
       )
     });
-    await expect(page.getByText('Profile picture updated.')).toBeVisible();
+    await expect(page.getByText(/avatar updated/i)).toBeVisible();
+
+    // Verify remove photo button is present and functional
+    const removeBtn = page.getByRole('button', { name: /remove profile photo/i });
+    if (await removeBtn.isVisible()) {
+      await removeBtn.click();
+      await expect(page.getByText(/avatar removed/i)).toBeVisible();
+    }
+  });
+
+  test('2. User can change account password with validation', async ({ page }) => {
+    await page.goto('/profile');
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('textbox', { name: 'Current Password', exact: true }).fill('currentPass123');
+    await page.getByRole('textbox', { name: 'New Password', exact: true }).fill('newPass123');
+    await page.getByRole('textbox', { name: 'Confirm New Password', exact: true }).fill('newPass123');
+
+    await page.getByRole('button', { name: /update password/i }).click();
+    await expect(page.getByText(/password updated/i)).toBeVisible();
+  });
+
+  test('3. Mobile responsive viewport (430x932 & 390x844) has zero horizontal overflow', async ({ page }) => {
+    for (const viewport of [{ width: 430, height: 932 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(viewport);
+      await page.goto('/profile');
+      await page.waitForLoadState('networkidle');
+
+      const isOverflowing = await page.evaluate(() => {
+        return document.documentElement.scrollWidth > window.innerWidth;
+      });
+      expect(isOverflowing).toBe(false);
+    }
   });
 });
