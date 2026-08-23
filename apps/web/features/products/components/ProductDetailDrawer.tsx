@@ -169,9 +169,25 @@ export function ProductDetailDrawer({
                 <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                   PRIMARY
                 </span>
-                <span className="font-mono text-slate-900">
+                <span className="font-mono text-slate-900 font-medium">
                   {product.barcode || 'No primary barcode assigned'}
                 </span>
+                {product.barcode && (
+                  <Badge
+                    variant={
+                      product.barcodeSource === 'AIAVRO'
+                        ? 'brand'
+                        : product.barcodeSource === 'EXTERNAL'
+                        ? 'info'
+                        : 'neutral'
+                    }
+                    size="sm"
+                  >
+                    {product.barcodeSource === 'EXTERNAL' && '🏢 Manufacturer'}
+                    {product.barcodeSource === 'AIAVRO' && '⚡ AIAVRO'}
+                    {(!product.barcodeSource || product.barcodeSource === 'MANUAL') && '✍️ Manual'}
+                  </Badge>
+                )}
               </div>
               <span className="text-slate-500 text-[11px]">Primary Retail Unit</span>
             </div>

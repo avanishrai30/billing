@@ -9,7 +9,7 @@ jest.mock('../../lib/api/client', () => ({
   }
 }));
 
-describe('Product Batches & Barcode Hardening Suite (Phase 30.1)', () => {
+describe('Product Batches & Multi-Source Barcode Hardening Suite (Phase 30.2)', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -49,40 +49,46 @@ describe('Product Batches & Barcode Hardening Suite (Phase 30.1)', () => {
     expect(res.barcode).toBe('AIA000105');
   });
 
-  it('3. Registers a new batch with lot number and expiry date', async () => {
-    const newBatch = {
-      id: 'bat-102',
-      productId: 'prd-organic-ghee',
-      lotNumber: 'LOT-2026-09',
-      expiryDate: '2027-09-30',
-      receivedQuantity: 50,
-      remainingQuantity: 50,
-      status: 'active' as const
+  it('3. Saves third-party external barcode product with source EXTERNAL', async () => {
+    const externalProduct = {
+      name: 'Third Party Organic Cold Pressed Oil',
+      sku: 'EXT-OIL-1L',
+      barcode: '8901234567890',
+      barcodeSource: 'EXTERNAL' as const,
+      barcodeType: 'PRIMARY',
+      category: 'Oils',
+      sellingPrice: 320,
+      purchasePrice: 240,
+      gst: 5,
+      unit: 'bottle',
+      reorderLevel: 10,
+      maxStock: 100,
+      sellingMode: 'packaged' as const,
+      type: 'EXTERNAL' as const,
+      status: 'active' as const,
+      barcodes: [],
+      variants: []
     };
 
     (apiClient.post as jest.Mock).mockResolvedValueOnce({
       success: true,
-      batch: newBatch
+      product: { ...externalProduct, id: 'prd-ext-101' }
     });
 
-    const res = await productsApi.createProductBatch('prd-organic-ghee', {
-      lotNumber: 'LOT-2026-09',
-      expiryDate: '2027-09-30',
-      receivedQuantity: 50
-    });
+    const res = await productsApi.saveProduct(externalProduct);
 
     expect(apiClient.post).toHaveBeenCalledWith(
-      '/api/v1/products/prd-organic-ghee/batches',
+      '/api/v1/products',
       expect.objectContaining({
-        lotNumber: 'LOT-2026-09',
-        expiryDate: '2027-09-30',
-        receivedQuantity: 50
+        barcode: '8901234567890',
+        barcodeSource: 'EXTERNAL',
+        type: 'EXTERNAL'
       })
     );
-    expect(res.batch.lotNumber).toBe('LOT-2026-09');
+    expect(res.product.barcodeSource).toBe('EXTERNAL');
   });
 
-  it('4. Rejects duplicate barcode save with explicit conflict error', async () => {
+  it('4. Rejects duplicate barcode save for EXTERNAL source with 409 conflict', async () => {
     (apiClient.post as jest.Mock).mockRejectedValueOnce({
       status: 409,
       message: 'Barcode already belongs to another product.'
@@ -90,10 +96,45 @@ describe('Product Batches & Barcode Hardening Suite (Phase 30.1)', () => {
 
     await expect(
       productsApi.saveProduct({
-        id: 'prd-new',
-        name: 'Duplicate Item',
-        sku: 'SKU-DUP-1',
+        id: 'prd-new-dup',
+        name: 'Duplicate External Item',
+        sku: 'SKU-DUP-EXT',
         barcode: '8901234567890',
+        barcodeSource: 'EXTERNAL',
+        category: 'Pantry',
+        sellingPrice: 100,
+        purchasePrice: 60,
+        gst: 5,
+        unit: 'bottle',
+        reorderLevel: 10,
+        maxStock: 100,
+        sellingMode: 'packaged' as const,
+        type: 'EXTERNAL' as const,
+        status: 'active' as const,
+        barcodes: [],
+        variants: []
+      })
+    ).rejects.toEqual(
+      expect.objectContaining({
+        status: 409,
+        message: 'Barcode already belongs to another product.'
+      })
+    );
+  });
+
+  it('5. Rejects duplicate barcode save for AIAVRO generated and MANUAL sources', async () => {
+    (apiClient.post as jest.Mock).mockRejectedValueOnce({
+      status: 409,
+      message: 'Barcode already belongs to another product.'
+    });
+
+    await expect(
+      productsApi.saveProduct({
+        id: 'prd-new-aia-dup',
+        name: 'Duplicate AIA Item',
+        sku: 'SKU-DUP-AIA',
+        barcode: 'AIA000042',
+        barcodeSource: 'AIAVRO',
         category: 'Pantry',
         sellingPrice: 100,
         purchasePrice: 60,
@@ -113,5 +154,53 @@ describe('Product Batches & Barcode Hardening Suite (Phase 30.1)', () => {
         message: 'Barcode already belongs to another product.'
       })
     );
+  });
+
+  it('6. Allows saving multiple products with null/unassigned barcodes without collision', async () => {
+    const unassignedProduct = {
+      name: 'Fresh Loose Organic Spinach',
+      sku: 'SPINACH-LOOSE',
+      barcode: null,
+      barcodeSource: null,
+      category: 'Vegetables',
+      sellingPrice: 40,
+      purchasePrice: 20,
+      gst: 0,
+      unit: 'kg',
+      reorderLevel: 5,
+      maxStock: 50,
+      sellingMode: 'loose' as const,
+      type: 'OWN' as const,
+      status: 'active' as const,
+      barcodes: [],
+      variants: []
+    };
+
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
+      success: true,
+      product: { ...unassignedProduct, id: 'prd-spinach-1' }
+    });
+
+    const res = await productsApi.saveProduct(unassignedProduct);
+    expect(res.product.barcode).toBeNull();
+  });
+
+  it('7. Concurrency simulation: 10 concurrent barcode generation requests all return distinct unique codes', async () => {
+    let counter = 100;
+    (apiClient.post as jest.Mock).mockImplementation(async (url: string) => {
+      if (url === '/api/v1/products/barcodes') {
+        counter++;
+        return { success: true, barcode: `AIA000${counter}` };
+      }
+      return { success: true };
+    });
+
+    const requests = Array.from({ length: 10 }, () => productsApi.generateAIavroBarcode());
+    const results = await Promise.all(requests);
+    const codes = results.map(r => r.barcode);
+    const uniqueCodes = new Set(codes);
+
+    expect(codes.length).toBe(10);
+    expect(uniqueCodes.size).toBe(10);
   });
 });

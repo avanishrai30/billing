@@ -1,8 +1,11 @@
 import { z } from 'zod';
 
+export const barcodeSourceSchema = z.enum(['AIAVRO', 'EXTERNAL', 'MANUAL']);
+
 export const barcodeMappingSchema = z.object({
   barcode: z.string().trim().min(1, 'Barcode string is required'),
   type: z.enum(['PRIMARY', 'ALTERNATE', 'VARIANT']).default('ALTERNATE'),
+  source: barcodeSourceSchema.default('MANUAL'),
   variantId: z.string().trim().optional(),
   variantName: z.string().trim().optional(),
   active: z.boolean().default(true)
@@ -25,6 +28,8 @@ export const productFormSchema = z.object({
   name: z.string().trim().min(1, 'Product name is required'),
   sku: z.string().trim().min(1, 'SKU code is required'),
   barcode: z.string().trim().optional().nullable(),
+  barcodeSource: barcodeSourceSchema.optional().nullable(),
+  barcodeType: z.string().trim().optional().nullable(),
   categoryId: z.string().trim().optional(),
   category: z.string().trim().optional(),
   brandId: z.string().trim().optional(),

@@ -2,10 +2,12 @@ export type ProductSellingMode = 'packaged' | 'loose' | 'weight_based';
 export type ProductType = 'OWN' | 'EXTERNAL';
 export type ProductStatus = 'active' | 'inactive' | 'archived';
 export type BarcodeType = 'PRIMARY' | 'ALTERNATE' | 'VARIANT';
+export type BarcodeSource = 'AIAVRO' | 'EXTERNAL' | 'MANUAL';
 
 export interface ProductBarcodeEntry {
   barcode: string;
   type?: BarcodeType;
+  source?: BarcodeSource;
   variantId?: string;
   variantName?: string;
   active?: boolean;
@@ -28,6 +30,8 @@ export interface ProductDoc {
   name: string;
   sku: string;
   barcode?: string | null;
+  barcodeSource?: BarcodeSource | null;
+  barcodeType?: BarcodeType | string;
   categoryId?: string;
   category?: string;
   brandId?: string;

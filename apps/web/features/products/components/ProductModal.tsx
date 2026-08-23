@@ -4,12 +4,13 @@ import React, { useLayoutEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, Input, Select, Button, FormField, Textarea } from '../../../components/ui';
+import { AlertTriangle } from 'lucide-react';
 import { productFormSchema, type ProductFormValues } from '../schemas';
 import { useSaveProductMutation } from '../hooks';
 import { ProductImageUploader } from './ProductImageUploader';
 import { ProductBarcodeManager } from './ProductBarcodeManager';
 import { calculateProductMargin } from '../calculations';
-import type { ProductDoc } from '../types';
+import type { ProductDoc, BarcodeSource } from '../types';
 
 export interface ProductModalProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ export function ProductModal({
   const isEditing = !!product?.id;
   const saveMutation = useSaveProductMutation();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showBarcodeConfirm, setShowBarcodeConfirm] = useState(false);
+  const [pendingValues, setPendingValues] = useState<ProductFormValues | null>(null);
 
   const {
     register,
@@ -47,6 +50,8 @@ export function ProductModal({
       name: '',
       sku: '',
       barcode: '',
+      barcodeSource: null,
+      barcodeType: 'PRIMARY',
       category: '',
       brand: 'VC Organic',
       supplier: '',
@@ -77,12 +82,16 @@ export function ProductModal({
   useLayoutEffect(() => {
     if (isOpen) {
       setServerError(null);
+      setShowBarcodeConfirm(false);
+      setPendingValues(null);
       if (product) {
         reset({
           id: product.id,
           name: product.name || '',
           sku: product.sku || '',
           barcode: product.barcode || '',
+          barcodeSource: product.barcodeSource || null,
+          barcodeType: product.barcodeType || 'PRIMARY',
           category: product.category || '',
           brand: product.brand || 'VC Organic',
           supplier: product.supplier || '',
@@ -110,6 +119,8 @@ export function ProductModal({
           name: '',
           sku: `SKU-${Date.now().toString().slice(-6)}`,
           barcode: '',
+          barcodeSource: null,
+          barcodeType: 'PRIMARY',
           category: categories[0] || 'General',
           brand: 'VC Organic',
           supplier: suppliers[0] || '',
@@ -135,7 +146,7 @@ export function ProductModal({
     }
   }, [isOpen, product, reset, categories, suppliers]);
 
-  const onSubmit = async (values: ProductFormValues) => {
+  const performSave = async (values: ProductFormValues) => {
     setServerError(null);
     try {
       const payload: ProductFormValues = {
@@ -143,11 +154,27 @@ export function ProductModal({
         id: product?.id || values.id || undefined
       };
       await saveMutation.mutateAsync(payload);
+      setShowBarcodeConfirm(false);
+      setPendingValues(null);
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save product SKU.';
       setServerError(msg);
     }
+  };
+
+  const onSubmit = async (values: ProductFormValues) => {
+    const existingBarcode = (product?.barcode || '').trim();
+    const newBarcode = (values.barcode || '').trim();
+
+    // Barcode Change Protection: prompt confirmation if existing barcode is being replaced
+    if (isEditing && existingBarcode && newBarcode !== existingBarcode && !showBarcodeConfirm) {
+      setPendingValues(values);
+      setShowBarcodeConfirm(true);
+      return;
+    }
+
+    await performSave(values);
   };
 
   const gstOptions = [
@@ -420,7 +447,7 @@ export function ProductModal({
           </div>
         </div>
 
-        {/* 4. Barcodes */}
+        {/* 4. Barcodes & Source */}
         <Controller
           name="barcodes"
           control={control}
@@ -428,12 +455,52 @@ export function ProductModal({
             <ProductBarcodeManager
               primaryBarcode={watch('barcode')}
               onPrimaryBarcodeChange={(val) => setValue('barcode', val)}
+              barcodeSource={watch('barcodeSource')}
+              onBarcodeSourceChange={(val) => setValue('barcodeSource', val)}
+              productType={watch('type')}
               barcodes={field.value || []}
               onChangeBarcodes={field.onChange}
               disabled={isSubmitting}
             />
           )}
         />
+
+        {/* Barcode Change Protection Warning Alert */}
+        {showBarcodeConfirm && pendingValues && (
+          <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              Confirm Barcode Replacement
+            </div>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              You are replacing the existing registered barcode for <strong>{product?.name}</strong>.
+              Changing an assigned barcode affects active POS scanner lookups and invalidates printed physical labels.
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-white p-2.5 rounded border border-amber-200">
+              <div>Previous: <strong className="text-slate-700">{product?.barcode}</strong></div>
+              <div>New: <strong className="text-blue-700">{pendingValues.barcode || '(None)'}</strong></div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowBarcodeConfirm(false)}
+              >
+                Keep Previous Barcode
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => performSave(pendingValues)}
+                isLoading={saveMutation.isPending}
+              >
+                Confirm & Replace Barcode
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* 5. Image & Description */}
         <div className="space-y-4">

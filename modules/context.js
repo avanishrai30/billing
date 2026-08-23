@@ -33,6 +33,8 @@ const productSchema = z.object({
   name: z.string().trim().min(1, "Product name is required"),
   sku: z.string().trim().min(1, "SKU is required"),
   barcode: z.string().trim().optional(),
+  barcodeSource: z.enum(['AIAVRO', 'EXTERNAL', 'MANUAL']).optional().nullable(),
+  barcodeType: z.string().trim().optional().nullable(),
   categoryId: z.string().trim().optional(),
   category: z.string().trim().optional(),
   brandId: z.string().trim().optional(),

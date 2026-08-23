@@ -100,6 +100,7 @@ export function ProductPrintBarcodeDialog({
           barcodes: (product.barcodes || []).map(b => ({
             barcode: b.barcode,
             type: (b.type || 'ALTERNATE') as 'PRIMARY' | 'ALTERNATE' | 'VARIANT',
+            source: (b.source || 'MANUAL') as 'EXTERNAL' | 'AIAVRO' | 'MANUAL',
             active: b.active !== false,
             variantId: b.variantId,
             variantName: b.variantName
@@ -355,10 +356,26 @@ export function ProductPrintBarcodeDialog({
                 {product.sellingMode === 'loose' ? '⚖️ Loose Item' : '📦 Packaged'}
               </Badge>
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-600 font-mono">
+            <div className="flex items-center gap-3 text-xs text-slate-600 font-mono flex-wrap">
               <span>SKU: <strong className="text-slate-800">{product.sku}</strong></span>
               {hasAssignedBarcode ? (
-                <span>Barcode: <strong className="text-slate-800">{assignedBarcode}</strong></span>
+                <div className="flex items-center gap-1.5">
+                  <span>Barcode: <strong className="text-slate-800">{assignedBarcode}</strong></span>
+                  <Badge
+                    variant={
+                      product.barcodeSource === 'AIAVRO'
+                        ? 'brand'
+                        : product.barcodeSource === 'EXTERNAL'
+                        ? 'info'
+                        : 'neutral'
+                    }
+                    size="sm"
+                  >
+                    {product.barcodeSource === 'EXTERNAL' && '🏢 Manufacturer'}
+                    {product.barcodeSource === 'AIAVRO' && '⚡ AIAVRO'}
+                    {(!product.barcodeSource || product.barcodeSource === 'MANUAL') && '✍️ Manual'}
+                  </Badge>
+                </div>
               ) : (
                 <span className="text-amber-700 font-sans font-medium">⚠️ No barcode assigned</span>
               )}

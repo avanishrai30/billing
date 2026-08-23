@@ -551,6 +551,20 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
     const sellingPrice = productData.sellingPrice !== undefined ? productData.sellingPrice : (productData.price || 0);
     const purchasePrice = productData.purchasePrice !== undefined ? productData.purchasePrice : (productData.costPrice !== undefined ? productData.costPrice : (productData.cost || 0));
 
+    // Barcode Source Resolution
+    let resolvedSource = null;
+    if (primaryBarcode) {
+      if (productData.barcodeSource && ['AIAVRO', 'EXTERNAL', 'MANUAL'].includes(productData.barcodeSource)) {
+        resolvedSource = productData.barcodeSource;
+      } else if (primaryBarcode.toUpperCase().startsWith('AIA')) {
+        resolvedSource = 'AIAVRO';
+      } else if ((productData.type || 'OWN').toUpperCase() === 'EXTERNAL') {
+        resolvedSource = 'EXTERNAL';
+      } else {
+        resolvedSource = 'MANUAL';
+      }
+    }
+
     const productDoc = {
       ...productData,
       id: productId,
@@ -563,6 +577,8 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       type: (productData.type || 'OWN').toUpperCase(),
       sellingMode: productData.sellingMode || 'packaged',
       status: productData.status || 'active',
+      barcodeSource: resolvedSource,
+      barcodeType: productData.barcodeType || 'PRIMARY',
       isArchived: false,
       updatedAt: new Date().toISOString()
     };
@@ -571,6 +587,7 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       productDoc.barcode = primaryBarcode;
     } else {
       delete productDoc.barcode;
+      delete productDoc.barcodeSource;
     }
 
     let finalPrimaryBarcode = primaryBarcode;
@@ -587,10 +604,12 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
         if (existingProduct && existingProduct.barcode) {
           // Preserve existing valid barcode when incoming barcode is blank/null
           productDoc.barcode = existingProduct.barcode;
+          productDoc.barcodeSource = existingProduct.barcodeSource || (existingProduct.barcode.toUpperCase().startsWith('AIA') ? 'AIAVRO' : 'MANUAL');
           updatePayload.$set.barcode = existingProduct.barcode;
+          updatePayload.$set.barcodeSource = productDoc.barcodeSource;
           finalPrimaryBarcode = existingProduct.barcode;
         } else {
-          updatePayload.$unset = { barcode: "" };
+          updatePayload.$unset = { barcode: "", barcodeSource: "" };
         }
       }
 
