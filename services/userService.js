@@ -85,15 +85,17 @@ async function assertPrivilegeUpdateAllowed(db, existingUser, nextUser, req) {
   }
 }
 
-function emitUserAccessUpdated(userId, changedFields = []) {
+function emitUserAccessUpdated(userId, changedFields = [], userDoc = null) {
   const realtimeService = require('./realtimeService');
-  const updatedAt = new Date().toISOString();
+  const updatedAt = userDoc?.updatedAt || new Date().toISOString();
   realtimeService.emitToUser(userId, 'user_access_updated', {
     targetUserId: userId,
     userId,
+    category: userDoc?.category,
+    role: userDoc?.role,
     changedFields,
     reason: 'USER_ACCESS_UPDATED',
-    authorizationVersion: Date.parse(updatedAt),
+    authorizationVersion: Date.parse(updatedAt) || Date.now(),
     updatedAt,
     timestamp: updatedAt
   });
@@ -234,7 +236,7 @@ const userService = {
       io.to('sync_global').emit('user_updated', { user: userDoc });
     }
     if (!passwordHash && (!existingUser || accessFieldChanged(existingUser, userDoc))) {
-      emitUserAccessUpdated(userId, ACCESS_FIELDS.filter(field => JSON.stringify(existingUser?.[field] || null) !== JSON.stringify(userDoc[field] || null)));
+      emitUserAccessUpdated(userId, ACCESS_FIELDS.filter(field => JSON.stringify(existingUser?.[field] || null) !== JSON.stringify(userDoc[field] || null)), userDoc);
     }
 
     return userDoc;
@@ -295,7 +297,7 @@ const userService = {
     if (io) {
       io.to('sync_global').emit('user_updated', { user: updated });
     }
-    emitUserAccessUpdated(userId, ['permissionGrants', 'permissionDenies']);
+    emitUserAccessUpdated(userId, ['permissionGrants', 'permissionDenies'], updated);
 
     return {
       success: true,

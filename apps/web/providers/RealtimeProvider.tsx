@@ -32,7 +32,12 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       if (activeSocket) {
         setIsConnected(activeSocket.connected);
 
-        const handleConnect = () => setIsConnected(true);
+        const handleConnect = () => {
+          setIsConnected(true);
+          refreshSession();
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+        };
         const handleDisconnect = () => setIsConnected(false);
 
         activeSocket.on('connect', handleConnect);

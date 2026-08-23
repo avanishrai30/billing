@@ -128,6 +128,13 @@ io.on('connection', (socket) => {
     console.log(`[Socket Authenticated] User '${username}' registered with active socket ${socket.id}`);
   }
 
+  // Automatic idempotent global sync room membership for all authenticated sockets
+  if (!socket.joinedRooms.has('sync_global')) {
+    socket.join('sync_global');
+    socket.joinedRooms.add('sync_global');
+    console.log(`[Socket Room Joined] Socket ${socket.id} (user: ${username}) joined room 'sync_global'`);
+  }
+
   socket.on('JOIN_SESSION', (data) => {
     if (data && data.sessionId) {
       if (!socket.joinedRooms.has(data.sessionId)) {

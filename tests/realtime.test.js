@@ -380,4 +380,43 @@ describe('Stage 11: Realtime Architecture & Synchronization Hardening', () => {
     expect(destEvents.length).toBe(1);
     expect(globalEvents.length).toBe(0); // Zero global leakage!
   });
+
+  // 17. Automatic global sync room membership and user access update emission
+  test('17. emitUserAccessUpdated dispatches complete event envelope to target user sockets', () => {
+    const mockSocket = { id: 'sock-user-1', emit: jest.fn() };
+    mockIo.sockets.sockets.set('sock-user-1', mockSocket);
+    realtimeService.setup(mockIo, () => mockDb);
+
+    realtimeService.registerUserSocket('usr-target-1', mockSocket);
+
+    const userDoc = {
+      id: 'usr-target-1',
+      category: 'admin',
+      role: 'Admin',
+      updatedAt: new Date().toISOString()
+    };
+
+    realtimeService.emitToUser('usr-target-1', 'user_access_updated', {
+      targetUserId: 'usr-target-1',
+      userId: 'usr-target-1',
+      category: userDoc.category,
+      role: userDoc.role,
+      changedFields: ['category', 'role'],
+      reason: 'USER_ACCESS_UPDATED',
+      authorizationVersion: Date.parse(userDoc.updatedAt),
+      updatedAt: userDoc.updatedAt,
+      timestamp: userDoc.updatedAt
+    });
+
+    expect(mockSocket.emit).toHaveBeenCalledWith(
+      'user_access_updated',
+      expect.objectContaining({
+        targetUserId: 'usr-target-1',
+        category: 'admin',
+        role: 'Admin',
+        reason: 'USER_ACCESS_UPDATED'
+      })
+    );
+  });
 });
+
