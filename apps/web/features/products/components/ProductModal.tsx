@@ -65,6 +65,7 @@ export function ProductModal({
       type: 'OWN',
       dom: '',
       doe: '',
+      defaultExpiryDate: '',
       status: 'active',
       description: '',
       image: '',
@@ -428,32 +429,14 @@ export function ProductModal({
             </FormField>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Reorder Alert Threshold" error={errors.reorderLevel?.message}>
-              <Input
-                type="number"
-                {...register('reorderLevel', { valueAsNumber: true })}
-                placeholder="5"
-                className="font-mono"
-              />
-            </FormField>
-
-            <FormField label="Target Max Capacity" error={errors.maxStock?.message}>
-              <Input
-                type="number"
-                {...register('maxStock', { valueAsNumber: true })}
-                placeholder="100"
-                className="font-mono"
-              />
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <FormField
               label="Default Expiry Date (Optional)"
+              htmlFor="product-default-expiry"
               error={errors.defaultExpiryDate?.message}
             >
               <Input
+                id="product-default-expiry"
                 type="date"
                 {...register('defaultExpiryDate')}
                 placeholder="YYYY-MM-DD"
@@ -464,13 +447,30 @@ export function ProductModal({
             </FormField>
 
             <FormField
-              label="Date of Manufacture (Optional)"
-              error={errors.dom?.message}
+              label="Reorder Alert Threshold"
+              htmlFor="product-reorder-level"
+              error={errors.reorderLevel?.message}
             >
               <Input
-                type="date"
-                {...register('dom')}
-                placeholder="YYYY-MM-DD"
+                id="product-reorder-level"
+                type="number"
+                {...register('reorderLevel', { valueAsNumber: true })}
+                placeholder="5"
+                className="font-mono"
+              />
+            </FormField>
+
+            <FormField
+              label="Target Max Capacity"
+              htmlFor="product-max-stock"
+              error={errors.maxStock?.message}
+            >
+              <Input
+                id="product-max-stock"
+                type="number"
+                {...register('maxStock', { valueAsNumber: true })}
+                placeholder="100"
+                className="font-mono"
               />
             </FormField>
           </div>

@@ -323,10 +323,21 @@ test.describe('Phase 20 Product Master Catalog Migration E2E Suite', () => {
     await expect(createModal).toBeVisible();
     await expect(createModal.getByRole('heading', { name: 'Register New Product SKU' })).toBeVisible();
 
+    // Verify Default Expiry Date (Optional) field is present
+    await expect(createModal.getByText('Default Expiry Date (Optional)')).toBeVisible();
+    await expect(createModal.getByText('Default expiry for this SKU. Batch expiry overrides this value.')).toBeVisible();
+
     await createModal.getByPlaceholder(/e\.g\. a2 desi cow cultured ghee/i).fill('Organic A2 Paneer 250g');
     await createModal.getByPlaceholder(/e\.g\. ghee-a2-500m/i).fill('PAN-A2-250');
     await createModal.locator('#product-purchase-price').fill('110');
     await createModal.locator('#product-selling-price').fill('160');
+    await createModal.locator('#product-default-expiry').fill('2026-11-30');
+
+    // Take screenshot of Create Product Modal showing Default Expiry Date field
+    await page.screenshot({
+      path: '/Users/avanish/.gemini/antigravity/brain/bdb89543-3c62-42bd-8677-4a1129f88c3e/create-product-modal-expiry.png',
+      fullPage: false
+    });
 
     // Submit Create Form
     await createModal.getByRole('button', { name: 'Create Product SKU' }).click();
@@ -343,9 +354,13 @@ test.describe('Phase 20 Product Master Catalog Migration E2E Suite', () => {
     await expect(editModal).toBeVisible();
     await expect(editModal.getByRole('heading', { name: /edit product master: organic a2 paneer 250g/i })).toBeVisible();
 
-    // Update Selling Price
+    // Verify Default Expiry Date preloaded
+    await expect(editModal.locator('#product-default-expiry')).toHaveValue('2026-11-30');
+
+    // Update Selling Price and Expiry
     const priceInput = editModal.locator('#product-selling-price');
     await priceInput.fill('175');
+    await editModal.locator('#product-default-expiry').fill('2026-12-15');
     await editModal.getByRole('button', { name: 'Save Product Changes' }).click();
     await page.waitForLoadState('networkidle');
     await expect(editModal).not.toBeVisible();
