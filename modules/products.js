@@ -565,6 +565,8 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       }
     }
 
+    const defaultExpiryDate = (productData.defaultExpiryDate || productData.doe || '').trim() || null;
+
     const productDoc = {
       ...productData,
       id: productId,
@@ -583,6 +585,14 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       updatedAt: new Date().toISOString()
     };
 
+    if (defaultExpiryDate) {
+      productDoc.defaultExpiryDate = defaultExpiryDate;
+      productDoc.doe = defaultExpiryDate;
+    } else {
+      delete productDoc.defaultExpiryDate;
+      delete productDoc.doe;
+    }
+
     if (primaryBarcode) {
       productDoc.barcode = primaryBarcode;
     } else {
@@ -600,6 +610,10 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
       const existingProduct = await db.collection('products').findOne({ id: productId });
       const updatePayload = { $set: productDoc };
 
+      if (!defaultExpiryDate) {
+        updatePayload.$unset = { ...updatePayload.$unset, defaultExpiryDate: "", doe: "" };
+      }
+
       if (!primaryBarcode) {
         if (existingProduct && existingProduct.barcode) {
           // Preserve existing valid barcode when incoming barcode is blank/null
@@ -609,7 +623,7 @@ router.post('/', verifyJWT, validateBody(schemas.productSchema), async (req, res
           updatePayload.$set.barcodeSource = productDoc.barcodeSource;
           finalPrimaryBarcode = existingProduct.barcode;
         } else {
-          updatePayload.$unset = { barcode: "", barcodeSource: "" };
+          updatePayload.$unset = { ...updatePayload.$unset, barcode: "", barcodeSource: "" };
         }
       }
 

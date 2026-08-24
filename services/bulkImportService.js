@@ -70,7 +70,7 @@ const HEADER_ALIASES = {
     'dom', 'mfgdate', 'manufacturingdate', 'mfg', 'dateofmfg', 'mfg_date'
   ],
   doe: [
-    'doe', 'expiry', 'expdate', 'expirydate', 'useby', 'exp_date'
+    'doe', 'expiry', 'expdate', 'expirydate', 'useby', 'exp_date', 'defaultexpirydate', 'default_expiry_date', 'productexpiry', 'product_expiry'
   ],
   imageUrl: [
     'imageurl', 'image', 'imagepath', 'productimage', 'picture', 'photo', 'image_url'
@@ -833,7 +833,8 @@ async function commitImport(db, io, importId, validatedRows = [], options = {}, 
         reorderLevel: row.reorderLevel || 10,
         maxStock: row.maxStock || 100,
         dom: row.dom || '',
-        doe: row.doe || '',
+        doe: row.doe || row.defaultExpiryDate || '',
+        defaultExpiryDate: row.defaultExpiryDate || row.doe || null,
         image: row.imageUrl || '/uploads/system/default-product.webp',
         description: row.description || '',
         sellingMode: row.sellingMode || 'packaged',

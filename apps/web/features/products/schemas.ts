@@ -46,6 +46,7 @@ export const productFormSchema = z.object({
   type: z.enum(['OWN', 'EXTERNAL']).default('OWN'),
   dom: z.string().trim().optional(),
   doe: z.string().trim().optional(),
+  defaultExpiryDate: z.string().trim().optional().nullable(),
   emoji: z.string().trim().optional(),
   status: z.enum(['active', 'inactive', 'archived']).default('active'),
   description: z.string().trim().optional(),

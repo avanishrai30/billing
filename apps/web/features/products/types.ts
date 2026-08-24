@@ -50,7 +50,8 @@ export interface ProductDoc {
   sellingMode?: ProductSellingMode;
   type?: ProductType;
   dom?: string;         // YYYY-MM-DD
-  doe?: string;         // YYYY-MM-DD
+  doe?: string;         // YYYY-MM-DD (legacy alias)
+  defaultExpiryDate?: string | null; // YYYY-MM-DD (SKU-level default expiry)
   emoji?: string;
   status?: ProductStatus;
   isArchived?: boolean;

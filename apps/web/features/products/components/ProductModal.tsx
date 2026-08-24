@@ -105,6 +105,7 @@ export function ProductModal({
           type: (product.type || 'OWN').toUpperCase() as 'OWN' | 'EXTERNAL',
           dom: product.dom || '',
           doe: product.doe || '',
+          defaultExpiryDate: product.defaultExpiryDate || product.doe || '',
           status: product.status || 'active',
           description: product.description || '',
           image: product.image || '',
@@ -134,6 +135,7 @@ export function ProductModal({
           type: 'OWN',
           dom: '',
           doe: '',
+          defaultExpiryDate: '',
           status: 'active',
           description: '',
           image: '',
@@ -442,6 +444,33 @@ export function ProductModal({
                 {...register('maxStock', { valueAsNumber: true })}
                 placeholder="100"
                 className="font-mono"
+              />
+            </FormField>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <FormField
+              label="Default Expiry Date (Optional)"
+              error={errors.defaultExpiryDate?.message}
+            >
+              <Input
+                type="date"
+                {...register('defaultExpiryDate')}
+                placeholder="YYYY-MM-DD"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Default expiry for this SKU. Batch expiry overrides this value.
+              </p>
+            </FormField>
+
+            <FormField
+              label="Date of Manufacture (Optional)"
+              error={errors.dom?.message}
+            >
+              <Input
+                type="date"
+                {...register('dom')}
+                placeholder="YYYY-MM-DD"
               />
             </FormField>
           </div>

@@ -57,6 +57,7 @@ const productSchema = z.object({
   type: z.string().trim().default('OWN'),
   dom: z.string().trim().optional(),
   doe: z.string().trim().optional(),
+  defaultExpiryDate: z.string().trim().optional().nullable(),
   emoji: z.string().trim().optional(),
   status: z.string().trim().default('active'),
   description: z.string().trim().optional(),

@@ -143,7 +143,38 @@ export function ProductDetailDrawer({
           </div>
         </div>
 
-        {/* 3. Barcodes & Scanner Identifiers */}
+        {/* 3. SKU Expiry & Lifecycle Dates */}
+        {(product.defaultExpiryDate || product.doe || product.dom) && (
+          <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+            <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-amber-600" />
+              SKU Lifecycle & Expiry
+            </h4>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              {(product.defaultExpiryDate || product.doe) && (
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-xs">
+                  <span className="text-[10px] text-slate-500 block font-medium">Default Expiry</span>
+                  <span className="text-xs font-semibold font-mono text-slate-900">
+                    {product.defaultExpiryDate || product.doe}
+                  </span>
+                </div>
+              )}
+              {product.dom && (
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-xs">
+                  <span className="text-[10px] text-slate-500 block font-medium">Date of Mfg</span>
+                  <span className="text-xs font-semibold font-mono text-slate-700">
+                    {product.dom}
+                  </span>
+                </div>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500">
+              * Default SKU expiry date. Individual inventory batches override this on batch labels.
+            </p>
+          </div>
+        )}
+
+        {/* 4. Barcodes & Scanner Identifiers */}
         <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-2">

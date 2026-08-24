@@ -99,12 +99,19 @@ export function ProductPrintBarcodeDialog({
   const [newMfgDate, setNewMfgDate] = useState('');
   const [newBatchQuantity, setNewBatchQuantity] = useState<number>(10);
 
-  // Set default selected batch when batches load
+  // Initialize default selected batch when product or batches load
+  const hasInitializedBatch = React.useRef(false);
   React.useEffect(() => {
-    if (batches.length > 0 && selectedBatchId === 'none') {
-      setSelectedBatchId(batches[0].id || 'none');
+    if (isOpen) {
+      if (!hasInitializedBatch.current && batches.length > 0) {
+        setSelectedBatchId(batches[0].id || 'none');
+        hasInitializedBatch.current = true;
+      }
+    } else {
+      hasInitializedBatch.current = false;
+      setSelectedBatchId('none');
     }
-  }, [batches, selectedBatchId]);
+  }, [isOpen, batches]);
 
   // Explicit barcode check — DO NOT silently treat SKU as barcode
   const assignedBarcode = useMemo(() => {
@@ -113,14 +120,34 @@ export function ProductPrintBarcodeDialog({
 
   const hasAssignedBarcode = Boolean(assignedBarcode);
 
+  const productDefaultExpiry = useMemo(() => {
+    return (product?.defaultExpiryDate || product?.doe || '').trim();
+  }, [product]);
+
   const selectedBatch = useMemo<ProductBatchDoc | null>(() => {
     if (selectedBatchId === 'none') return null;
     return batches.find((b) => b.id === selectedBatchId) || null;
   }, [batches, selectedBatchId]);
 
+  const isBatchSelected = Boolean(selectedBatch);
+
+  const effectiveExpiry = useMemo(() => {
+    if (isBatchSelected) {
+      return (selectedBatch?.expiryDate || '').trim();
+    }
+    return productDefaultExpiry;
+  }, [isBatchSelected, selectedBatch, productDefaultExpiry]);
+
   const currentTemplateMeta = useMemo(() => {
     return TEMPLATES.find((t) => t.id === template) || TEMPLATES[0];
   }, [template]);
+
+  const handleOpenAddBatch = () => {
+    setIsAddingBatch(true);
+    setNewExpiryDate(productDefaultExpiry);
+    setNewLotNumber('');
+    setNewMfgDate(product?.dom || '');
+  };
 
   // Explicit action to generate and assign AIA Barcode
   const handleAssignBarcode = async () => {
@@ -139,6 +166,7 @@ export function ProductPrintBarcodeDialog({
           status: product.status || 'active',
           reorderLevel: product.reorderLevel ?? 0,
           maxStock: product.maxStock ?? 100,
+          defaultExpiryDate: product.defaultExpiryDate || product.doe || undefined,
           barcodes: (product.barcodes || []).map(b => ({
             barcode: b.barcode,
             type: (b.type || 'ALTERNATE') as 'PRIMARY' | 'ALTERNATE' | 'VARIANT',
@@ -206,7 +234,12 @@ export function ProductPrintBarcodeDialog({
     });
 
     const lotText = selectedBatch?.lotNumber ? `Lot: ${selectedBatch.lotNumber}` : '';
-    const expText = selectedBatch?.expiryDate ? `EXP: ${selectedBatch.expiryDate}` : '';
+    const expText = effectiveExpiry ? `EXP: ${effectiveExpiry}` : '';
+    const metaParts = [];
+    if (selectedBatch?.lotNumber) metaParts.push(lotText);
+    if (effectiveExpiry) metaParts.push(expText);
+    const metaText = metaParts.join(' • ');
+
     const priceText = showPrice
       ? `₹${(product.sellingPrice || product.price || 0).toFixed(2)}${product.sellingMode === 'loose' ? ` / ${product.unit || 'kg'}` : ''}`
       : '';
@@ -222,7 +255,7 @@ export function ProductPrintBarcodeDialog({
           <div class="label-barcode">${barcodeSvgStr}</div>
           <div class="label-footer">
             ${priceText ? `<div class="label-price">${priceText}</div>` : ''}
-            ${showLotExpiry && (lotText || expText) ? `<div class="label-meta">${[lotText, expText].filter(Boolean).join(' • ')}</div>` : ''}
+            ${showLotExpiry && metaText ? `<div class="label-meta">${metaText}</div>` : ''}
           </div>
         </div>
       `;
@@ -341,11 +374,13 @@ export function ProductPrintBarcodeDialog({
     const parts = [
       currentTemplateMeta.name,
       currentTemplateMeta.dimensions,
-      selectedBatch ? `Batch ${selectedBatch.lotNumber}` : 'Master Barcode',
+      selectedBatch
+        ? `Batch ${selectedBatch.lotNumber}`
+        : (productDefaultExpiry ? `Default EXP ${productDefaultExpiry}` : 'Master Barcode'),
       `${quantity} Label${quantity > 1 ? 's' : ''}`
     ];
     return parts.join(' • ');
-  }, [currentTemplateMeta, selectedBatch, quantity]);
+  }, [currentTemplateMeta, selectedBatch, productDefaultExpiry, quantity]);
 
   if (!product) return null;
 
@@ -359,7 +394,12 @@ export function ProductPrintBarcodeDialog({
     : '';
 
   const batchOptions = [
-    { value: 'none', label: '🏷️ Master Product Barcode (No Expiry)' },
+    {
+      value: 'none',
+      label: productDefaultExpiry
+        ? `🏷️ Master Barcode (Default EXP: ${productDefaultExpiry})`
+        : '🏷️ Master Product Barcode (No Expiry)'
+    },
     ...batches.map((b) => ({
       value: b.id,
       label: `📦 Lot: ${b.lotNumber} | EXP: ${b.expiryDate || 'No Expiry'} (${b.remainingQuantity || 0} left)`
@@ -510,7 +550,13 @@ export function ProductPrintBarcodeDialog({
               </label>
               <button
                 type="button"
-                onClick={() => setIsAddingBatch(!isAddingBatch)}
+                onClick={() => {
+                  if (isAddingBatch) {
+                    setIsAddingBatch(false);
+                  } else {
+                    handleOpenAddBatch();
+                  }
+                }}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
@@ -525,20 +571,36 @@ export function ProductPrintBarcodeDialog({
               disabled={isLoadingBatches}
             />
 
-            {/* Selected Batch Summary Card */}
-            {selectedBatch && (
-              <div className="bg-slate-100/70 border border-slate-200 rounded-lg px-3 py-2 text-xs flex items-center justify-between text-slate-700">
-                <span>Lot: <strong className="text-slate-900 font-mono">{selectedBatch.lotNumber}</strong></span>
-                <span>EXP: <strong className="text-slate-900 font-mono">{selectedBatch.expiryDate || 'N/A'}</strong></span>
-                <span>Available: <strong className="text-emerald-700 font-mono">{selectedBatch.remainingQuantity ?? 0} units</strong></span>
+            {/* Selected Batch Summary Card or SKU Default Expiry Card */}
+            {selectedBatch ? (
+              <div className="bg-slate-100/70 border border-slate-200 rounded-lg px-3 py-2 text-xs flex flex-col gap-1 text-slate-700">
+                <div className="flex items-center justify-between">
+                  <span>Lot: <strong className="text-slate-900 font-mono">{selectedBatch.lotNumber}</strong></span>
+                  <span className="flex items-center gap-1.5">
+                    <Badge variant="brand" size="sm">📦 BATCH EXPIRY</Badge>
+                    <strong className="text-slate-900 font-mono">{selectedBatch.expiryDate || 'No Expiry'}</strong>
+                  </span>
+                  <span>Available: <strong className="text-emerald-700 font-mono">{selectedBatch.remainingQuantity ?? 0} units</strong></span>
+                </div>
+                {productDefaultExpiry && selectedBatch.expiryDate && productDefaultExpiry !== selectedBatch.expiryDate && (
+                  <div className="text-[10px] text-slate-500 italic">
+                    * Overriding SKU default expiry ({productDefaultExpiry})
+                  </div>
+                )}
               </div>
-            )}
-
-            {batches.length === 0 && !isAddingBatch && (
+            ) : productDefaultExpiry ? (
+              <div className="bg-blue-50/60 border border-blue-200 rounded-lg px-3 py-2 text-xs flex items-center justify-between text-blue-900">
+                <span className="flex items-center gap-1.5">
+                  <Badge variant="neutral" size="sm">🏷️ SKU DEFAULT</Badge>
+                  <span>Default Expiry: <strong className="font-mono">{productDefaultExpiry}</strong></span>
+                </span>
+                <span className="text-[11px] text-blue-700 font-medium">Master Barcode</span>
+              </div>
+            ) : (
               <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-800">
                 <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <span>
-                  No inventory batch recorded. Printing master product barcode without expiry date.
+                  No inventory batch or SKU default expiry recorded. Printing master barcode without expiry date.
                 </span>
               </div>
             )}
@@ -666,18 +728,18 @@ export function ProductPrintBarcodeDialog({
                 <button
                   type="button"
                   onClick={() => setShowLotExpiry(!showLotExpiry)}
-                  disabled={!selectedBatch}
+                  disabled={!selectedBatch && !productDefaultExpiry}
                   className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-colors cursor-pointer flex items-center gap-1 ${
-                    !selectedBatch
+                    !selectedBatch && !productDefaultExpiry
                       ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
                       : showLotExpiry
                       ? 'border-blue-300 bg-blue-50 text-blue-800'
                       : 'border-slate-200 bg-white text-slate-500'
                   }`}
-                  title={!selectedBatch ? 'Select an inventory batch to enable lot/expiry' : ''}
+                  title={!selectedBatch && !productDefaultExpiry ? 'No batch or product expiry configured' : ''}
                 >
-                  {showLotExpiry && selectedBatch && <Check className="w-3 h-3 text-blue-600" />}
-                  Lot & Expiry
+                  {showLotExpiry && (selectedBatch || productDefaultExpiry) && <Check className="w-3 h-3 text-blue-600" />}
+                  {selectedBatch ? 'Lot & Expiry' : 'Product Expiry'}
                 </button>
               </div>
             </div>
@@ -730,10 +792,14 @@ export function ProductPrintBarcodeDialog({
                       </div>
                     )}
 
-                    {showLotExpiry && selectedBatch && (
-                      <div className="text-[10px] font-semibold text-slate-600 bg-slate-100 rounded-md px-2 py-0.5 w-full">
-                        {selectedBatch.lotNumber && `Lot: ${selectedBatch.lotNumber}`}
-                        {selectedBatch.expiryDate && ` • EXP: ${selectedBatch.expiryDate}`}
+                    {showLotExpiry && (selectedBatch || productDefaultExpiry) && (
+                      <div className="text-[10px] font-semibold text-slate-600 bg-slate-100 rounded-md px-2 py-0.5 w-full flex items-center justify-center gap-1 flex-wrap">
+                        {selectedBatch?.lotNumber && <span>Lot: {selectedBatch.lotNumber}</span>}
+                        {selectedBatch?.lotNumber && effectiveExpiry && <span>•</span>}
+                        {effectiveExpiry && <span>EXP: {effectiveExpiry}</span>}
+                        {!selectedBatch && productDefaultExpiry && (
+                          <span className="text-[9px] text-blue-600 font-normal ml-0.5">(SKU Default)</span>
+                        )}
                       </div>
                     )}
                   </>

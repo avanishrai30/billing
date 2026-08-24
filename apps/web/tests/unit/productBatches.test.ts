@@ -203,4 +203,101 @@ describe('Product Batches & Multi-Source Barcode Hardening Suite (Phase 30.2)', 
     expect(codes.length).toBe(10);
     expect(uniqueCodes.size).toBe(10);
   });
+
+  it('8. Saves product with optional SKU defaultExpiryDate', async () => {
+    const productWithExpiry = {
+      name: 'Amul Taaza Homogenised Toned Milk 1L',
+      sku: 'AMUL-MILK-1L',
+      barcode: '8901234567890',
+      barcodeSource: 'EXTERNAL' as const,
+      defaultExpiryDate: '2026-08-25',
+      category: 'Dairy',
+      sellingPrice: 72,
+      purchasePrice: 60,
+      gst: 5,
+      unit: 'ltr',
+      reorderLevel: 20,
+      maxStock: 200,
+      sellingMode: 'packaged' as const,
+      type: 'EXTERNAL' as const,
+      status: 'active' as const,
+      barcodes: [],
+      variants: []
+    };
+
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
+      success: true,
+      product: { ...productWithExpiry, id: 'prd-amul-milk' }
+    });
+
+    const res = await productsApi.saveProduct(productWithExpiry);
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/api/v1/products',
+      expect.objectContaining({
+        defaultExpiryDate: '2026-08-25'
+      })
+    );
+    expect(res.product.defaultExpiryDate).toBe('2026-08-25');
+  });
+
+  it('9. Creates batch with independent expiryDate without mutating product defaultExpiryDate', async () => {
+    const batchPayload = {
+      lotNumber: 'LOT-2026-AUG-28',
+      expiryDate: '2026-08-28',
+      receivedQuantity: 50,
+      remainingQuantity: 50
+    };
+
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
+      success: true,
+      batch: {
+        id: 'bat-501',
+        productId: 'prd-amul-milk',
+        ...batchPayload,
+        status: 'active'
+      }
+    });
+
+    const res = await productsApi.createProductBatch('prd-amul-milk', batchPayload);
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/api/v1/products/prd-amul-milk/batches',
+      batchPayload
+    );
+    expect(res.batch.expiryDate).toBe('2026-08-28');
+  });
+
+  it('10. Allows third-party and loose items to have defaultExpiryDate', async () => {
+    const looseHoney = {
+      name: 'Organic Multiflora Raw Honey (Loose)',
+      sku: 'HONEY-RAW-KG',
+      barcode: '8909876543210',
+      barcodeSource: 'EXTERNAL' as const,
+      defaultExpiryDate: '2027-08-30',
+      category: 'Sweeteners',
+      sellingPrice: 650,
+      purchasePrice: 450,
+      gst: 5,
+      unit: 'kg',
+      sellingMode: 'loose' as const,
+      type: 'EXTERNAL' as const,
+      status: 'active' as const,
+      reorderLevel: 5,
+      maxStock: 50,
+      barcodes: [],
+      variants: []
+    };
+
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
+      success: true,
+      product: { ...looseHoney, id: 'prd-honey-loose' }
+    });
+
+    const res = await productsApi.saveProduct(looseHoney);
+    expect(res.product.defaultExpiryDate).toBe('2027-08-30');
+    expect(res.product.sellingMode).toBe('loose');
+    expect(res.product.type).toBe('EXTERNAL');
+  });
 });
+

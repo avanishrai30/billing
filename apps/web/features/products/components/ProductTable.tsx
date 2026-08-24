@@ -167,6 +167,12 @@ export function ProductTable({
                       ) : (
                         <span className="text-[10px] text-slate-400 italic">No Barcode</span>
                       )}
+                      {(p.defaultExpiryDate || p.doe) && (
+                        <div className="text-[10px] text-slate-500 font-sans flex items-center gap-1">
+                          <span className="text-slate-400">EXP:</span>
+                          <span className="font-mono text-slate-700">{p.defaultExpiryDate || p.doe}</span>
+                        </div>
+                      )}
                     </div>
                   </TableCell>
 

@@ -13,6 +13,7 @@ const mockProducts = [
     purchasePrice: 420,
     sellingPrice: 650,
     gst: 12,
+    defaultExpiryDate: '2026-08-25',
     unit: 'bottle',
     sellingMode: 'packaged',
     type: 'OWN',
@@ -336,4 +337,41 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
       });
     }
   });
+
+  test('7. SKU Default Expiry, Batch Override & Label Simulator Expiry Resolution (Phase 31)', async ({ page }) => {
+    const printBtn = page.locator('button[aria-label="Print barcode for A2 Gir Cow Cultured Ghee 500ml"]');
+    await expect(printBtn).toBeVisible({ timeout: 10000 });
+    await printBtn.click();
+
+    // Verify dialog opened
+    await expect(page.getByText('Print Barcode Labels')).toBeVisible();
+
+    // When selecting master product barcode (no batch)
+    const batchSelect = page.locator('select').filter({ hasText: /Master Barcode|Lot:/ });
+    await batchSelect.selectOption('none');
+
+    // Verify SKU DEFAULT badge is visible with 2026-08-25
+    await expect(page.getByText('🏷️ SKU DEFAULT')).toBeVisible();
+    await expect(page.getByText('Default Expiry: 2026-08-25')).toBeVisible();
+
+    // Verify Live Print Simulator shows SKU Default
+    await expect(page.getByText('EXP: 2026-08-25', { exact: true })).toBeVisible();
+    await expect(page.getByText('(SKU Default)')).toBeVisible();
+
+    // Now select batch bat-201
+    await batchSelect.selectOption('bat-201');
+
+    // Verify BATCH EXPIRY badge is visible
+    await expect(page.getByText('📦 BATCH EXPIRY')).toBeVisible();
+    await expect(page.locator('.bg-slate-100\\/70').getByText('2027-08-31')).toBeVisible();
+
+    // Verify batch override note
+    await expect(page.getByText('* Overriding SKU default expiry (2026-08-25)')).toBeVisible();
+
+    // Verify Live Print Simulator shows Batch Expiry and Lot
+    const simulator = page.locator('.select-none');
+    await expect(simulator.getByText('Lot: LOT-2026-08')).toBeVisible();
+    await expect(simulator.getByText('EXP: 2027-08-31')).toBeVisible();
+  });
 });
+

@@ -84,4 +84,32 @@ describe('Product Schema Validation Suite (Phase 30.2)', () => {
     const emptyBarcode = { barcode: '' };
     expect(barcodeMappingSchema.safeParse(emptyBarcode).success).toBe(false);
   });
+
+  it('5. Validates optional defaultExpiryDate string or null in product form schema', () => {
+    const validWithExpiry = {
+      name: 'Organic A2 Paneer 200g',
+      sku: 'PANEER-A2-200',
+      defaultExpiryDate: '2026-08-25',
+      purchasePrice: 90,
+      sellingPrice: 120
+    };
+    const res = productFormSchema.safeParse(validWithExpiry);
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.defaultExpiryDate).toBe('2026-08-25');
+    }
+
+    const validWithNullExpiry = {
+      name: 'Organic Desi Rice 5kg',
+      sku: 'RICE-5KG',
+      defaultExpiryDate: null,
+      purchasePrice: 200,
+      sellingPrice: 300
+    };
+    const resNull = productFormSchema.safeParse(validWithNullExpiry);
+    expect(resNull.success).toBe(true);
+    if (resNull.success) {
+      expect(resNull.data.defaultExpiryDate).toBeNull();
+    }
+  });
 });
