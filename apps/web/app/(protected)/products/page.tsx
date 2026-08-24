@@ -187,8 +187,23 @@ export default function ProductsPage() {
     );
   }
 
+  const currentEditingProduct = useMemo(() => {
+    if (!editingProduct?.id) return editingProduct;
+    return products.find((p) => p.id === editingProduct.id) || editingProduct;
+  }, [products, editingProduct]);
+
+  const currentInspectingProduct = useMemo(() => {
+    if (!inspectingProduct?.id) return inspectingProduct;
+    return products.find((p) => p.id === inspectingProduct.id) || inspectingProduct;
+  }, [products, inspectingProduct]);
+
+  const currentPrintingProduct = useMemo(() => {
+    if (!printingProduct?.id) return printingProduct;
+    return products.find((p) => p.id === printingProduct.id) || printingProduct;
+  }, [products, printingProduct]);
+
   return (
-    <div className="space-y-4 pb-10">
+    <div className="space-y-6">
       <ProductHeader
         canCreate={canCreate}
         canImport={canImport}
@@ -234,7 +249,7 @@ export default function ProductsPage() {
       <ProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        product={editingProduct}
+        product={currentEditingProduct}
         categories={categories}
         brands={brands}
         suppliers={suppliers}
@@ -243,7 +258,7 @@ export default function ProductsPage() {
       <ProductDetailDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        product={inspectingProduct}
+        product={currentInspectingProduct}
         onEdit={handleOpenEdit}
         onArchive={handleOpenArchive}
         onPrintBarcode={handleOpenPrintBarcode}
@@ -266,7 +281,7 @@ export default function ProductsPage() {
       <ProductPrintBarcodeDialog
         isOpen={isPrintBarcodeOpen}
         onClose={() => setIsPrintBarcodeOpen(false)}
-        product={printingProduct}
+        product={currentPrintingProduct}
       />
     </div>
   );

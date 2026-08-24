@@ -51,11 +51,12 @@ export function useProductsQuery(
 /**
  * Query hook for single product details.
  */
-export function useProductDetailQuery(id?: string) {
+export function useProductDetailQuery(id?: string, initialData?: ProductDoc | null) {
   return useQuery<ProductDoc, Error>({
     queryKey: PRODUCT_KEYS.detail(id || ''),
     queryFn: () => productsApi.getProductById(id!),
-    enabled: !!id
+    enabled: !!id,
+    initialData: initialData || undefined
   });
 }
 
@@ -67,8 +68,21 @@ export function useSaveProductMutation() {
 
   return useMutation({
     mutationFn: (payload: ProductFormValues) => productsApi.saveProduct(payload),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: PRODUCT_KEYS.all });
+      if (res?.product?.id) {
+        queryClient.setQueryData(PRODUCT_KEYS.detail(res.product.id), res.product);
+        queryClient.setQueriesData<ProductDoc[]>({ queryKey: PRODUCT_KEYS.all }, (old) => {
+          if (!Array.isArray(old)) return old;
+          const index = old.findIndex((p) => p.id === res.product.id);
+          if (index === -1) {
+            return [res.product, ...old];
+          }
+          const next = [...old];
+          next[index] = { ...next[index], ...res.product };
+          return next;
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }

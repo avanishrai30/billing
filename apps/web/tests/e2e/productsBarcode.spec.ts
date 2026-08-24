@@ -151,6 +151,8 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
       });
     });
 
+    let currentProducts = JSON.parse(JSON.stringify(mockProducts));
+
     // Mock products endpoints
     await page.route(/\/api\/v1\/products/, async (route) => {
       const url = new URL(route.request().url());
@@ -162,7 +164,7 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
-            body: JSON.stringify(mockProducts)
+            body: JSON.stringify(currentProducts)
           });
         } else if (path.includes('/prd-101/batches')) {
           await route.fulfill({
@@ -170,7 +172,7 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
             contentType: 'application/json',
             body: JSON.stringify({ success: true, batches: mockBatches })
           });
-        } else if (path.includes('/prd-102/batches')) {
+        } else if (path.includes('/batches')) {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -183,11 +185,21 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
             body: JSON.stringify({ success: true, barcode: 'AIA000043' })
           });
         } else {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify(mockProducts[0])
-          });
+          const id = path.split('/api/v1/products/')[1];
+          const prod = currentProducts.find((p: any) => p.id === id);
+          if (prod) {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify(prod)
+            });
+          } else {
+            await route.fulfill({
+              status: 404,
+              contentType: 'application/json',
+              body: JSON.stringify({ message: 'Product not found' })
+            });
+          }
         }
       } else if (method === 'POST') {
         if (path.includes('/barcodes')) {
@@ -197,11 +209,23 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
             body: JSON.stringify({ success: true, barcode: 'AIA000043' })
           });
         } else {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ success: true, product: mockProducts[0] })
-          });
+          const body = JSON.parse(route.request().postData() || '{}');
+          if (body.id) {
+            currentProducts = currentProducts.map((p: any) => (p.id === body.id ? { ...p, ...body } : p));
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ success: true, product: body })
+            });
+          } else {
+            const newProd = { ...body, id: `prd-${Date.now()}` };
+            currentProducts.push(newProd);
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ success: true, product: newProd })
+            });
+          }
         }
       }
     });
@@ -352,11 +376,23 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
 
     // Verify SKU DEFAULT badge is visible with 2026-08-25
     await expect(page.getByText('🏷️ SKU DEFAULT')).toBeVisible();
-    await expect(page.getByText('Default Expiry: 2026-08-25')).toBeVisible();
+    await expect(page.getByText('Current: 2026-08-25')).toBeVisible();
 
     // Verify Live Print Simulator shows SKU Default
     await expect(page.getByText('EXP: 2026-08-25', { exact: true })).toBeVisible();
     await expect(page.getByText('(SKU Default)')).toBeVisible();
+
+    // Edit SKU Expiry directly in Barcode Studio
+    const expiryInput = page.locator('input[type="date"]').filter({ hasText: '' }).first();
+    await expiryInput.fill('2026-09-30');
+    const saveExpiryBtn = page.getByRole('button', { name: 'Save Expiry' });
+    await expect(saveExpiryBtn).toBeEnabled();
+    await saveExpiryBtn.click();
+
+    // Verify toast notification and updated display
+    await expect(page.getByText('Product Expiry Saved')).toBeVisible();
+    await expect(page.getByText('Current: 2026-09-30')).toBeVisible();
+    await expect(page.getByText('EXP: 2026-09-30', { exact: true })).toBeVisible();
 
     // Now select batch bat-201
     await batchSelect.selectOption('bat-201');
@@ -365,8 +401,8 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     await expect(page.getByText('📦 BATCH EXPIRY')).toBeVisible();
     await expect(page.locator('.bg-slate-100\\/70').getByText('2027-08-31')).toBeVisible();
 
-    // Verify batch override note
-    await expect(page.getByText('* Overriding SKU default expiry (2026-08-25)')).toBeVisible();
+    // Verify batch override note shows new SKU default
+    await expect(page.getByText('* Overriding SKU default expiry (2026-09-30)')).toBeVisible();
 
     // Verify Live Print Simulator shows Batch Expiry and Lot
     const simulator = page.locator('.select-none');

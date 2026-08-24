@@ -299,5 +299,70 @@ describe('Product Batches & Multi-Source Barcode Hardening Suite (Phase 30.2)', 
     expect(res.product.sellingMode).toBe('loose');
     expect(res.product.type).toBe('EXTERNAL');
   });
+
+  it('11. Clears SKU defaultExpiryDate on save when unset or null', async () => {
+    const clearExpiryProduct = {
+      id: 'prd-amul-milk',
+      name: 'Amul Taaza Homogenised Toned Milk 1L',
+      sku: 'AMUL-MILK-1L',
+      barcode: '8901234567890',
+      barcodeSource: 'EXTERNAL' as const,
+      defaultExpiryDate: undefined,
+      category: 'Dairy',
+      sellingPrice: 72,
+      purchasePrice: 60,
+      gst: 5,
+      unit: 'ltr',
+      sellingMode: 'packaged' as const,
+      type: 'EXTERNAL' as const,
+      status: 'active' as const,
+      reorderLevel: 10,
+      maxStock: 100,
+      barcodes: [],
+      variants: []
+    };
+
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
+      success: true,
+      product: { ...clearExpiryProduct, defaultExpiryDate: null }
+    });
+
+    const res = await productsApi.saveProduct(clearExpiryProduct);
+    expect(res.product.defaultExpiryDate).toBeNull();
+  });
+
+  it('12. Direct Barcode Studio update: updates product defaultExpiryDate and returns updated document', async () => {
+    const updatedProduct = {
+      id: 'prd-salt-101',
+      name: 'Himalayan Rock Salt 1kg',
+      sku: 'SALT-1K',
+      barcode: 'AIA000101',
+      defaultExpiryDate: '2028-01-01',
+      category: 'Pantry',
+      sellingPrice: 70,
+      purchasePrice: 35,
+      gst: 0,
+      unit: 'pack',
+      sellingMode: 'packaged' as const,
+      type: 'OWN' as const,
+      status: 'active' as const,
+      reorderLevel: 20,
+      maxStock: 300,
+      barcodes: [],
+      variants: []
+    };
+
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
+      success: true,
+      product: updatedProduct
+    });
+
+    const res = await productsApi.saveProduct(updatedProduct);
+    expect(res.product.defaultExpiryDate).toBe('2028-01-01');
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/api/v1/products',
+      expect.objectContaining({ defaultExpiryDate: '2028-01-01' })
+    );
+  });
 });
 

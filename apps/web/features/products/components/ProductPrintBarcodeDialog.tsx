@@ -28,6 +28,7 @@ import {
 import { generateBarcodeSvg } from '../../../lib/utils/barcode';
 import {
   useProductBatchesQuery,
+  useProductDetailQuery,
   useCreateProductBatchMutation,
   useGenerateBarcodeMutation,
   useSaveProductMutation
@@ -75,9 +76,12 @@ const TEMPLATES: TemplateMeta[] = [
 export function ProductPrintBarcodeDialog({
   isOpen,
   onClose,
-  product
+  product: initialProduct
 }: ProductPrintBarcodeDialogProps) {
   const { success, error: toastError } = useToast();
+
+  const { data: authoritativeProduct } = useProductDetailQuery(initialProduct?.id, initialProduct);
+  const product = authoritativeProduct || initialProduct;
 
   const { data: batches = [], isLoading: isLoadingBatches } = useProductBatchesQuery(product?.id);
   const createBatchMutation = useCreateProductBatchMutation();
@@ -91,6 +95,15 @@ export function ProductPrintBarcodeDialog({
   const [showPrice, setShowPrice] = useState<boolean>(true);
   const [showLotExpiry, setShowLotExpiry] = useState<boolean>(true);
   const [showBrand, setShowBrand] = useState<boolean>(true);
+
+  // Direct SKU Expiry Edit state
+  const [skuExpiryInput, setSkuExpiryInput] = useState<string>('');
+
+  React.useEffect(() => {
+    if (product) {
+      setSkuExpiryInput(product.defaultExpiryDate || product.doe || '');
+    }
+  }, [product, isOpen]);
 
   // Quick Add Batch state
   const [isAddingBatch, setIsAddingBatch] = useState(false);
@@ -135,8 +148,8 @@ export function ProductPrintBarcodeDialog({
     if (isBatchSelected) {
       return (selectedBatch?.expiryDate || '').trim();
     }
-    return productDefaultExpiry;
-  }, [isBatchSelected, selectedBatch, productDefaultExpiry]);
+    return (skuExpiryInput.trim() || productDefaultExpiry);
+  }, [isBatchSelected, selectedBatch, skuExpiryInput, productDefaultExpiry]);
 
   const currentTemplateMeta = useMemo(() => {
     return TEMPLATES.find((t) => t.id === template) || TEMPLATES[0];
@@ -144,9 +157,52 @@ export function ProductPrintBarcodeDialog({
 
   const handleOpenAddBatch = () => {
     setIsAddingBatch(true);
-    setNewExpiryDate(productDefaultExpiry);
+    setNewExpiryDate(skuExpiryInput.trim() || productDefaultExpiry);
     setNewLotNumber('');
     setNewMfgDate(product?.dom || '');
+  };
+
+  const handleSaveSkuExpiry = async () => {
+    if (!product?.id) return;
+    const cleanDate = skuExpiryInput.trim() || undefined;
+
+    try {
+      await saveProductMutation.mutateAsync({
+        ...product,
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        sellingPrice: product.sellingPrice ?? product.price ?? 0,
+        purchasePrice: product.purchasePrice ?? product.cost ?? 0,
+        gst: product.gst ?? 0,
+        unit: product.unit || 'pc',
+        sellingMode: product.sellingMode || 'packaged',
+        type: product.type || 'OWN',
+        status: product.status || 'active',
+        reorderLevel: product.reorderLevel ?? 5,
+        maxStock: product.maxStock ?? 100,
+        defaultExpiryDate: cleanDate,
+        barcodes: (product.barcodes || []).map((b) => ({
+          barcode: b.barcode,
+          type: (b.type || 'ALTERNATE') as 'PRIMARY' | 'ALTERNATE' | 'VARIANT',
+          source: (b.source || 'MANUAL') as 'EXTERNAL' | 'AIAVRO' | 'MANUAL',
+          active: b.active !== false,
+          variantId: b.variantId,
+          variantName: b.variantName
+        })),
+        variants: (product.variants || []).map((v) => ({
+          ...v,
+          status: v.status || 'active'
+        }))
+      });
+      if (cleanDate) {
+        success('Product Expiry Saved', `Updated SKU default expiry to ${cleanDate} for ${product.name}`);
+      } else {
+        success('Product Expiry Cleared', `Removed SKU default expiry for ${product.name}`);
+      }
+    } catch (err: any) {
+      toastError('Failed to Save Expiry', err?.message || 'Server error updating product expiry.');
+    }
   };
 
   // Explicit action to generate and assign AIA Barcode
@@ -571,7 +627,7 @@ export function ProductPrintBarcodeDialog({
               disabled={isLoadingBatches}
             />
 
-            {/* Selected Batch Summary Card or SKU Default Expiry Card */}
+            {/* Selected Batch Summary Card or Editable SKU Default Expiry Card */}
             {selectedBatch ? (
               <div className="bg-slate-100/70 border border-slate-200 rounded-lg px-3 py-2 text-xs flex flex-col gap-1 text-slate-700">
                 <div className="flex items-center justify-between">
@@ -588,20 +644,53 @@ export function ProductPrintBarcodeDialog({
                   </div>
                 )}
               </div>
-            ) : productDefaultExpiry ? (
-              <div className="bg-blue-50/60 border border-blue-200 rounded-lg px-3 py-2 text-xs flex items-center justify-between text-blue-900">
-                <span className="flex items-center gap-1.5">
-                  <Badge variant="neutral" size="sm">🏷️ SKU DEFAULT</Badge>
-                  <span>Default Expiry: <strong className="font-mono">{productDefaultExpiry}</strong></span>
-                </span>
-                <span className="text-[11px] text-blue-700 font-medium">Master Barcode</span>
-              </div>
             ) : (
-              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-800">
-                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                <span>
-                  No inventory batch or SKU default expiry recorded. Printing master barcode without expiry date.
-                </span>
+              <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="neutral" size="sm">🏷️ SKU DEFAULT</Badge>
+                    <span className="font-semibold text-blue-950">Product Expiry</span>
+                  </div>
+                  {productDefaultExpiry ? (
+                    <span className="text-[11px] font-mono font-medium text-blue-700">Current: {productDefaultExpiry}</span>
+                  ) : (
+                    <span className="text-[11px] text-slate-400 italic">No SKU default expiry configured</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={skuExpiryInput}
+                    onChange={(e) => setSkuExpiryInput(e.target.value)}
+                    className="text-xs bg-white flex-1"
+                    placeholder="YYYY-MM-DD"
+                  />
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSaveSkuExpiry}
+                    isLoading={saveProductMutation.isPending}
+                    disabled={skuExpiryInput === productDefaultExpiry}
+                  >
+                    Save Expiry
+                  </Button>
+                  {skuExpiryInput && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSkuExpiryInput('')}
+                      title="Clear date"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Default expiry for this SKU. Updating will persist directly to the product catalog and sync active labels.
+                </p>
               </div>
             )}
           </div>
