@@ -1,7 +1,8 @@
+const crypto = require('crypto');
 const { getContext } = require('../modules/context');
 const auditService = require('./auditService');
 const inventoryService = require('./inventoryService');
-const { isSuperAdmin } = require('./authzService');
+const authzService = require('./authzService');
 
 /**
  * Super Admin Data Cleanup & Maintenance Service
@@ -50,11 +51,35 @@ function resolveDateRange(datePreset, customStart, customEnd) {
   };
 }
 
+/**
+ * Computes deterministic cryptographic state fingerprint for staleness detection
+ */
+function computeStateFingerprint(records = []) {
+  const normalized = records.map(r => ({
+    id: r.id || r.invoiceNumber || r.purchaseId || (r._id ? String(r._id) : ''),
+    status: r.status || '',
+    isArchived: !!r.isArchived,
+    quantity: r.quantity !== undefined ? parseFloat(r.quantity) : null,
+    remainingQuantity: r.remainingQuantity !== undefined ? parseFloat(r.remainingQuantity) : null,
+    updatedAt: r.updatedAt || r.createdAt || '',
+    itemCount: Array.isArray(r.items) ? r.items.length : 0
+  })).sort((a, b) => (a.id > b.id ? 1 : a.id < b.id ? -1 : 0));
+
+  return crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
+}
+
 const adminCleanupService = {
   /**
    * 1. Get high-level domain summary stats for Dashboard cards
    */
-  async getDomainSummary() {
+  async getDomainSummary(user) {
+    if (user && !authzService.isSuperAdmin(user)) {
+      const err = new Error("Forbidden: Super Admin authorization required.");
+      err.code = "FORBIDDEN";
+      err.statusCode = 403;
+      throw err;
+    }
+
     const { db } = getContext();
 
     // Invoices summary
@@ -120,7 +145,14 @@ const adminCleanupService = {
   /**
    * 2. Query domain records with server-side filtering
    */
-  async queryDomainRecords(domain, filters = {}, pagination = {}) {
+  async queryDomainRecords(domain, filters = {}, pagination = {}, user) {
+    if (user && !authzService.isSuperAdmin(user)) {
+      const err = new Error("Forbidden: Super Admin authorization required.");
+      err.code = "FORBIDDEN";
+      err.statusCode = 403;
+      throw err;
+    }
+
     const { db } = getContext();
     const page = Math.max(1, parseInt(pagination.page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(pagination.limit) || 25));
@@ -337,18 +369,22 @@ const adminCleanupService = {
   },
 
   /**
-   * 3. Preview Dry-run Cleanup Operation with Deep Dependency & Safety Analysis
+   * 3. Preview Dry-run Cleanup Operation with Deep Dependency & Safety Analysis & Fingerprinting
    */
   async previewCleanup(domain, action, targetIds = [], filters = {}, user) {
-    const { db } = getContext();
-    if (!isSuperAdmin(user)) {
-      throw new Error("Super Admin authorization required for cleanup preview");
+    if (!authzService.isSuperAdmin(user)) {
+      const err = new Error("Super Admin authorization required for cleanup preview");
+      err.code = "FORBIDDEN";
+      err.statusCode = 403;
+      throw err;
     }
+
+    const { db } = getContext();
 
     // Resolve target IDs: either explicit IDs or all IDs matching filters
     let recordIds = [...targetIds];
     if (filters.selectAllFiltered && recordIds.length === 0) {
-      const queryRes = await this.queryDomainRecords(domain, filters, { page: 1, limit: 1000 });
+      const queryRes = await this.queryDomainRecords(domain, filters, { page: 1, limit: 1000 }, user);
       recordIds = queryRes.records.map(r => r.id);
     }
 
@@ -365,7 +401,8 @@ const adminCleanupService = {
         eligibleRecords: [],
         blockedRecords: [],
         warnings: ["No records matched selection."],
-        previewToken: null
+        previewToken: null,
+        stateFingerprint: null
       };
     }
 
@@ -374,14 +411,15 @@ const adminCleanupService = {
     const warnings = [];
     let stockReversalUnits = 0;
     let financialImpact = 0;
+    let fetchedRawRecords = [];
 
     // --- DOMAIN: INVOICES ---
     if (domain === 'invoices') {
-      const invoices = await db.collection('invoices').find({
+      fetchedRawRecords = await db.collection('invoices').find({
         $or: [{ id: { $in: recordIds } }, { invoiceNumber: { $in: recordIds } }]
       }).toArray();
 
-      for (const inv of invoices) {
+      for (const inv of fetchedRawRecords) {
         const invId = inv.invoiceNumber || inv.id;
         const total = inv.grandTotal !== undefined ? inv.grandTotal : (inv.total || 0);
 
@@ -435,11 +473,11 @@ const adminCleanupService = {
 
     // --- DOMAIN: PURCHASES ---
     else if (domain === 'purchases') {
-      const purchases = await db.collection('purchases').find({
+      fetchedRawRecords = await db.collection('purchases').find({
         $or: [{ id: { $in: recordIds } }, { purchaseId: { $in: recordIds } }]
       }).toArray();
 
-      for (const pur of purchases) {
+      for (const pur of fetchedRawRecords) {
         const purId = pur.purchaseId || pur.id;
         const total = pur.grandTotal !== undefined ? pur.grandTotal : (pur.totalAmount || 0);
 
@@ -514,11 +552,11 @@ const adminCleanupService = {
 
     // --- DOMAIN: PRODUCTS ---
     else if (domain === 'products') {
-      const products = await db.collection('products').find({
+      fetchedRawRecords = await db.collection('products').find({
         $or: [{ id: { $in: recordIds } }, { sku: { $in: recordIds } }]
       }).toArray();
 
-      for (const prod of products) {
+      for (const prod of fetchedRawRecords) {
         const prodId = prod.id;
 
         if (action === 'archive') {
@@ -585,11 +623,11 @@ const adminCleanupService = {
 
     // --- DOMAIN: INVENTORY ---
     else if (domain === 'inventory') {
-      const inventoryDocs = await db.collection('inventory').find({
+      fetchedRawRecords = await db.collection('inventory').find({
         $or: [{ id: { $in: recordIds } }, { productId: { $in: recordIds } }]
       }).toArray();
 
-      for (const inv of inventoryDocs) {
+      for (const inv of fetchedRawRecords) {
         const invId = inv.id || String(inv._id) || `${inv.productId}_${inv.locationId}`;
         const currentQty = parseFloat(inv.quantity) || 0;
 
@@ -627,7 +665,24 @@ const adminCleanupService = {
       }
     }
 
+    const stateFingerprint = computeStateFingerprint(fetchedRawRecords);
     const previewToken = `prev-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
+
+    // Store preview record for staleness and double-execution guards
+    await db.collection('cleanup_previews').insertOne({
+      previewToken,
+      domain,
+      action,
+      recordIds,
+      stateFingerprint,
+      eligibleCount: eligibleRecords.length,
+      blockedCount: blockedRecords.length,
+      stockReversalUnits,
+      financialImpact,
+      reversible: action !== 'purge',
+      executed: false,
+      createdAt: new Date().toISOString()
+    });
 
     return {
       domain,
@@ -641,25 +696,85 @@ const adminCleanupService = {
       eligibleRecords,
       blockedRecords,
       warnings,
-      previewToken
+      previewToken,
+      stateFingerprint
     };
   },
 
   /**
-   * 4. Execute Administrative Cleanup Operation
+   * 4. Execute Administrative Cleanup Operation with Stale-Preview and Double-Execution Guard
    */
   async executeCleanup({ domain, action, targetIds = [], filters = {}, previewToken, confirmCode, user, req }) {
-    const { db, io } = getContext();
-    if (!isSuperAdmin(user)) {
-      throw new Error("Super Admin authorization required for cleanup execution");
+    if (!authzService.isSuperAdmin(user)) {
+      const err = new Error("Super Admin authorization required for cleanup execution");
+      err.code = "FORBIDDEN";
+      err.statusCode = 403;
+      throw err;
     }
+
+    const { db, io } = getContext();
+
+    if (!previewToken) {
+      const err = new Error("Preview token is required before executing cleanup.");
+      err.code = "PREVIEW_REQUIRED";
+      throw err;
+    }
+
+    // Step A: Validate Preview Token & Double-Execution Guard
+    const previewDoc = await db.collection('cleanup_previews').findOne({ previewToken });
+    if (!previewDoc) {
+      const err = new Error("Preview token is invalid or expired. Please generate a fresh preview.");
+      err.code = "INVALID_PREVIEW";
+      throw err;
+    }
+
+    if (previewDoc.executed) {
+      const err = new Error("This cleanup operation has already been executed. Duplicate execution rejected.");
+      err.code = "DUPLICATE_EXECUTION";
+      throw err;
+    }
+
+    // Step B: Stale Preview Check — inspect current state of targeted records
+    let currentRawRecords = [];
+    const targetQueryIds = previewDoc.recordIds || targetIds;
+
+    if (domain === 'invoices') {
+      currentRawRecords = await db.collection('invoices').find({
+        $or: [{ id: { $in: targetQueryIds } }, { invoiceNumber: { $in: targetQueryIds } }]
+      }).toArray();
+    } else if (domain === 'purchases') {
+      currentRawRecords = await db.collection('purchases').find({
+        $or: [{ id: { $in: targetQueryIds } }, { purchaseId: { $in: targetQueryIds } }]
+      }).toArray();
+    } else if (domain === 'products') {
+      currentRawRecords = await db.collection('products').find({
+        $or: [{ id: { $in: targetQueryIds } }, { sku: { $in: targetQueryIds } }]
+      }).toArray();
+    } else if (domain === 'inventory') {
+      currentRawRecords = await db.collection('inventory').find({
+        $or: [{ id: { $in: targetQueryIds } }, { productId: { $in: targetQueryIds } }]
+      }).toArray();
+    }
+
+    const currentStateFingerprint = computeStateFingerprint(currentRawRecords);
+    if (currentStateFingerprint !== previewDoc.stateFingerprint) {
+      const err = new Error("Target records have changed since preview was generated. STALE PREVIEW / RE-PREVIEW REQUIRED.");
+      err.code = "STALE_PREVIEW";
+      throw err;
+    }
+
+    // Mark preview token as executed atomically
+    await db.collection('cleanup_previews').updateOne(
+      { previewToken },
+      { $set: { executed: true, executedAt: new Date().toISOString(), executedBy: user.username || user.name } }
+    );
 
     const operationId = `op-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
     const now = new Date().toISOString();
     const actorUsername = user.username || user.name || 'superadmin';
 
-    // Step A: Re-run dry-run preview to guarantee freshness and prevent stale browser selection
-    const preview = await this.previewCleanup(domain, action, targetIds, filters, user);
+    // Step C: Run preview evaluation to get exact current eligible records
+    const preview = await this.previewCleanup(domain, action, targetQueryIds, filters, user);
     if (preview.eligibleCount === 0) {
       throw new Error("No eligible records found to execute cleanup on.");
     }
@@ -672,7 +787,7 @@ const adminCleanupService = {
       }
     }
 
-    // Step B: Record initial operation state in cleanup_operations collection
+    // Step D: Record initial operation state in cleanup_operations collection
     const operationDoc = {
       operationId,
       domain,
@@ -710,7 +825,6 @@ const adminCleanupService = {
           });
           if (!inv) continue;
 
-          // Snapshot pre-state for manifest
           recoveryManifest.push({
             collection: 'invoices',
             id: inv.id || inv.invoiceNumber,
@@ -851,7 +965,6 @@ const adminCleanupService = {
               io.to('sync_global').emit('product_updated', envelope);
             }
           } else if (action === 'purge') {
-            // Delete product doc and unbind secondary barcodes
             await db.collection('products').deleteOne({ _id: prod._id });
             await db.collection('product_barcodes').deleteMany({ productId: prod.id });
             processedIds.push(item.id);
@@ -965,7 +1078,14 @@ const adminCleanupService = {
   /**
    * 5. Get Operation Status & Details
    */
-  async getOperation(operationId) {
+  async getOperation(operationId, user) {
+    if (user && !authzService.isSuperAdmin(user)) {
+      const err = new Error("Forbidden: Super Admin authorization required.");
+      err.code = "FORBIDDEN";
+      err.statusCode = 403;
+      throw err;
+    }
+
     const { db } = getContext();
     const op = await db.collection('cleanup_operations').findOne({ operationId });
     if (!op) throw new Error("Operation not found");
@@ -975,7 +1095,14 @@ const adminCleanupService = {
   /**
    * 6. List Historical Operations
    */
-  async listOperations(limit = 20, skip = 0) {
+  async listOperations(limit = 20, skip = 0, user) {
+    if (user && !authzService.isSuperAdmin(user)) {
+      const err = new Error("Forbidden: Super Admin authorization required.");
+      err.code = "FORBIDDEN";
+      err.statusCode = 403;
+      throw err;
+    }
+
     const { db } = getContext();
     const l = Math.min(100, Math.max(1, parseInt(limit) || 20));
     const s = Math.max(0, parseInt(skip) || 0);
@@ -1000,11 +1127,14 @@ const adminCleanupService = {
    * 7. Rollback Reversible Operation
    */
   async rollbackOperation(operationId, user, req) {
-    const { db, io } = getContext();
-    if (!isSuperAdmin(user)) {
-      throw new Error("Super Admin authorization required for operation rollback");
+    if (!authzService.isSuperAdmin(user)) {
+      const err = new Error("Super Admin authorization required for operation rollback");
+      err.code = "FORBIDDEN";
+      err.statusCode = 403;
+      throw err;
     }
 
+    const { db, io } = getContext();
     const op = await db.collection('cleanup_operations').findOne({ operationId });
     if (!op) throw new Error("Operation not found");
     if (!op.reversible) throw new Error("This operation is non-reversible (hard purge).");

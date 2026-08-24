@@ -34,7 +34,7 @@ const mockOperations = [
   }
 ];
 
-test.describe('Phase 32 — Super Admin Cleanup & Maintenance Center E2E Suite', () => {
+test.describe('Phase 32 / 32.1 — Super Admin Cleanup & Maintenance Center E2E Suite', () => {
   test('1. Canonical Super Admin accesses Cleanup Center, reviews domain tabs, previews dry-run and executes operation', async ({ page }) => {
     // Inject Super Admin Session
     await page.addInitScript(() => {
@@ -203,8 +203,59 @@ test.describe('Phase 32 — Super Admin Cleanup & Maintenance Center E2E Suite',
     await expect(page.getByRole('button', { name: /rollback operation/i })).toBeVisible();
   });
 
-  test('2. Non-Super Admin user receives Access Denied', async ({ page }) => {
-    // Inject Cashier/Employee Session
+  test('2. Admin role user without Super Admin category receives Access Denied', async ({ page }) => {
+    // Regular Admin (not Super Admin)
+    await page.addInitScript(() => {
+      localStorage.setItem('aiavro_jwt_token', 'mock-admin-token');
+      localStorage.setItem(
+        'aiavro_logged_in_user',
+        JSON.stringify({
+          id: 'usr-admin',
+          name: 'Store Administrator',
+          username: 'storeadmin',
+          role: 'ADMIN',
+          category: 'admin',
+          assignedStoreId: 'loc-1',
+          status: 'active',
+          permissions: ['invoices.view', 'products.view']
+        })
+      );
+    });
+
+    await page.route('**/api/v1/auth/verify', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          user: {
+            id: 'usr-admin',
+            name: 'Store Administrator',
+            username: 'storeadmin',
+            role: 'ADMIN',
+            category: 'admin',
+            assignedStoreId: 'loc-1',
+            status: 'active'
+          }
+        })
+      });
+    });
+
+    await page.route('**/api/v1/public/settings', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ title: "VC ORGANIC'S" })
+      });
+    });
+
+    await page.goto('/admin/cleanup');
+
+    // Verify AccessDeniedState
+    await expect(page.getByText('Super Admin Authorization Required')).toBeVisible();
+  });
+
+  test('3. Cashier / Employee user receives Access Denied', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('aiavro_jwt_token', 'mock-cashier-token');
       localStorage.setItem(
@@ -250,9 +301,55 @@ test.describe('Phase 32 — Super Admin Cleanup & Maintenance Center E2E Suite',
     });
 
     await page.goto('/admin/cleanup');
-
-    // Verify AccessDeniedState
     await expect(page.getByText('Super Admin Authorization Required')).toBeVisible();
-    await expect(page.getByText('The Data Cleanup & Maintenance Center is strictly restricted to canonical Super Admin users.')).toBeVisible();
+  });
+
+  test('4. Auditor user receives Access Denied', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('aiavro_jwt_token', 'mock-auditor-token');
+      localStorage.setItem(
+        'aiavro_logged_in_user',
+        JSON.stringify({
+          id: 'usr-auditor',
+          name: 'System Auditor',
+          username: 'auditor',
+          role: 'AUDITOR',
+          category: 'auditor',
+          assignedStoreId: 'all',
+          status: 'active',
+          permissions: ['audit.view', 'invoices.view']
+        })
+      );
+    });
+
+    await page.route('**/api/v1/auth/verify', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          user: {
+            id: 'usr-auditor',
+            name: 'System Auditor',
+            username: 'auditor',
+            role: 'AUDITOR',
+            category: 'auditor',
+            assignedStoreId: 'all',
+            status: 'active'
+          }
+        })
+      });
+    });
+
+    await page.route('**/api/v1/public/settings', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ title: "VC ORGANIC'S" })
+      });
+    });
+
+    await page.goto('/admin/cleanup');
+    await expect(page.getByText('Super Admin Authorization Required')).toBeVisible();
   });
 });

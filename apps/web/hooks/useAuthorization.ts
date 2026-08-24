@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAuth } from './useAuth';
 
 export function useAuthorization() {
   const auth = useAuth();
-  const { hasPermission } = auth;
+  const { hasPermission, user } = auth;
 
   const can = useCallback((permission: string): boolean => {
     return hasPermission(permission);
@@ -19,10 +19,18 @@ export function useAuthorization() {
     return permissions.every((permission) => hasPermission(permission));
   }, [hasPermission]);
 
+  const isSuperAdmin = useMemo((): boolean => {
+    if (!user) return false;
+    const cat = (user.category || '').toLowerCase().trim();
+    const role = (user.role || '').toUpperCase().trim();
+    return cat === 'super admin' || cat === 'owner' || role === 'SUPER ADMIN' || role === 'OWNER';
+  }, [user]);
+
   return {
     ...auth,
     can,
     canAny,
-    canAll
+    canAll,
+    isSuperAdmin
   };
 }

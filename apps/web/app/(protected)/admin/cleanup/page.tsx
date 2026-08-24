@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useAuth } from '../../../../hooks/useAuth';
+import { useAuthorization } from '../../../../hooks/useAuthorization';
 import { AccessDeniedState, ErrorState, useToast } from '../../../../components/ui';
 import {
   CleanupHeader,
@@ -26,15 +26,8 @@ import type {
 } from '../../../../features/adminCleanup/types';
 
 export default function AdminCleanupPage() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin: isUserSuperAdmin } = useAuthorization();
   const { success, error: toastError, info } = useToast();
-
-  const isUserSuperAdmin = useMemo(() => {
-    if (!user) return false;
-    const cat = (user.category || '').toLowerCase().trim();
-    const role = (user.role || '').toUpperCase().trim();
-    return cat === 'super admin' || cat === 'owner' || role === 'SUPER ADMIN' || role === 'OWNER';
-  }, [user]);
 
   // Selected Domain & Active Tab
   const [selectedDomain, setSelectedDomain] = useState<CleanupDomain>('invoices');

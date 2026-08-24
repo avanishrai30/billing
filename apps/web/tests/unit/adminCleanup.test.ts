@@ -9,7 +9,7 @@ jest.mock('../../lib/api/client', () => ({
   }
 }));
 
-describe('Phase 32 Super Admin Cleanup & Maintenance API & Business Rules', () => {
+describe('Phase 32 / 32.1 Super Admin Cleanup & Maintenance API & Business Rules', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -118,7 +118,27 @@ describe('Phase 32 Super Admin Cleanup & Maintenance API & Business Rules', () =
     expect(res.result.processedCount).toBe(5);
   });
 
-  it('5. Lists historical cleanup operations and rolls back reversible run', async () => {
+  it('5. Handles Stale Preview error when target records change before execution', async () => {
+    (apiClient.post as jest.Mock).mockRejectedValueOnce(
+      new Error('Target records have changed since preview was generated. STALE PREVIEW / RE-PREVIEW REQUIRED.')
+    );
+
+    await expect(
+      adminCleanupApi.executeCleanup('invoices', 'void', ['inv-1'], 'stale-token-123')
+    ).rejects.toThrow('STALE PREVIEW / RE-PREVIEW REQUIRED');
+  });
+
+  it('6. Handles Duplicate Execution error when attempting to re-execute an already executed preview', async () => {
+    (apiClient.post as jest.Mock).mockRejectedValueOnce(
+      new Error('This cleanup operation has already been executed. Duplicate execution rejected.')
+    );
+
+    await expect(
+      adminCleanupApi.executeCleanup('invoices', 'void', ['inv-1'], 'executed-token-123')
+    ).rejects.toThrow('Duplicate execution rejected');
+  });
+
+  it('7. Lists historical cleanup operations and rolls back reversible run', async () => {
     const mockOps = [
       {
         operationId: 'op-999',

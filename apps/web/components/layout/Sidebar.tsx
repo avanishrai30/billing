@@ -68,15 +68,9 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { can } = useAuthorization();
-  const { user } = useAuth();
+  const { can, isSuperAdmin } = useAuthorization();
   const { data: branding } = usePublicSettings();
   const [logoFailed, setLogoFailed] = useState(false);
-
-  const isSuperAdmin =
-    user?.category?.toLowerCase() === 'super admin' ||
-    user?.category?.toLowerCase() === 'owner' ||
-    user?.role?.toUpperCase() === 'SUPER ADMIN';
 
   const brandTitle = branding?.title || 'AIAVRO Billing OS';
   const brandLogoUrl = normalizePublicAssetUrl(branding?.logo);
