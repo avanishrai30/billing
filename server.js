@@ -63,6 +63,7 @@ const auditRouter = require('./modules/audit');
 const settingsRouter = require('./modules/settings');
 const systemRouter = require('./modules/system');
 const dashboardRouter = require('./modules/dashboard');
+const adminCleanupRouter = require('./modules/adminCleanup');
 
 const realtimeService = require('./services/realtimeService');
 const databaseIndexService = require('./services/databaseIndexService');
@@ -340,6 +341,7 @@ async function initDB() {
     app.use('/api/v1', franchiseRouter); // mounts /franchises and /franchise-supply-orders
     app.use('/api/v1', settingsRouter); // mounts /role-permissions and /settings
     app.use('/api/v1', systemRouter);   // mounts /server-info
+    app.use('/api/v1/admin/cleanup', adminCleanupRouter);
     app.use('/api/v1/scan', scannerRouter);
     app.use('/api/v1/upload', uploadRouter);
 

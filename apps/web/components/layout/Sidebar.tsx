@@ -21,9 +21,11 @@ import {
   Settings,
   Palette,
   X,
-  ShieldCheck
+  ShieldCheck,
+  Eraser
 } from 'lucide-react';
 import { useAuthorization } from '../../hooks/useAuthorization';
+import { useAuth } from '../../hooks/useAuth';
 import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { normalizePublicAssetUrl } from '../../lib/utils/media';
 
@@ -32,6 +34,7 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   permission?: string;
+  superAdminOnly?: boolean;
   group: 'Operate' | 'Trade' | 'Network' | 'Control';
 }
 
@@ -51,6 +54,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Users', href: '/users', icon: ShieldCheck, permission: 'users.view', group: 'Control' },
   { label: 'Roles & Access', href: '/permissions', icon: ShieldAlert, permission: 'roles.view', group: 'Control' },
   { label: 'Audit Trail', href: '/audit', icon: History, permission: 'audit.view', group: 'Control' },
+  { label: 'Cleanup & Maint.', href: '/admin/cleanup', icon: Eraser, superAdminOnly: true, group: 'Control' },
   { label: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view', group: 'Control' },
   { label: 'Design System', href: '/design-system', icon: Palette, permission: 'dashboard.view', group: 'Control' }
 ];
@@ -65,14 +69,21 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { can } = useAuthorization();
+  const { user } = useAuth();
   const { data: branding } = usePublicSettings();
   const [logoFailed, setLogoFailed] = useState(false);
+
+  const isSuperAdmin =
+    user?.category?.toLowerCase() === 'super admin' ||
+    user?.category?.toLowerCase() === 'owner' ||
+    user?.role?.toUpperCase() === 'SUPER ADMIN';
 
   const brandTitle = branding?.title || 'AIAVRO Billing OS';
   const brandLogoUrl = normalizePublicAssetUrl(branding?.logo);
   const showLogoImage = !!brandLogoUrl && !logoFailed;
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.superAdminOnly && !isSuperAdmin) return false;
     if (!item.permission) return true;
     return can(item.permission);
   });
