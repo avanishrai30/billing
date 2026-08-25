@@ -6,21 +6,110 @@ import type { RequestOptions } from '../../types/api';
 /**
  * Resolves the backend API base URL with strict environment support.
  */
-export function getApiBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
+type ApiEnvironment = Record<string, string | undefined>;
+
+type ApiResolverInput = {
+  env?: ApiEnvironment;
+  hostname?: string;
+  protocol?: string;
+};
+
+const STAGING_FRONTEND_HOST_PARTS = ['staging', 'billing', 'vcorganics', 'com'];
+const PRODUCTION_FRONTEND_HOST_PARTS = ['billing', 'vcorganics', 'com'];
+
+function stagingFrontendHost(): string {
+  return STAGING_FRONTEND_HOST_PARTS.join('.');
+}
+
+function stagingApiBaseUrl(hostname = stagingFrontendHost()): string {
+  const hostParts = hostname.split('.');
+  const domainParts = hostParts[0] === 'staging' ? hostParts.slice(2) : hostParts.slice(1);
+  return `https://api-staging.${domainParts.join('.')}`;
+}
+
+function productionFrontendHost(): string {
+  return PRODUCTION_FRONTEND_HOST_PARTS.join('.');
+}
+
+function productionApiBaseUrl(hostname = productionFrontendHost()): string {
+  return `https://${hostname.replace(/^billing\./, 'api.')}`;
+}
+
+function normalizeApiBaseUrl(url: string): string {
+  return url.replace(/\/+$/, '');
+}
+
+function getExplicitEnvironment(env: ApiEnvironment): string {
+  return (
+    env.NEXT_PUBLIC_APP_ENV ||
+    env.NEXT_PUBLIC_DEPLOY_ENV ||
+    env.NEXT_PUBLIC_ENVIRONMENT ||
+    env.APP_ENV ||
+    env.DEPLOY_ENV ||
+    env.VERCEL_ENV ||
+    ''
+  ).toLowerCase();
+}
+
+function getConfiguredApiBaseUrl(env?: ApiEnvironment): string | undefined {
+  if (env) {
+    return env.NEXT_PUBLIC_API_BASE_URL || env.NEXT_PUBLIC_API_URL;
+  }
+  return process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
+}
+
+function getConfiguredEnvironment(env?: ApiEnvironment): string {
+  if (env) {
+    return getExplicitEnvironment(env);
+  }
+  return getExplicitEnvironment({
+    NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+    NEXT_PUBLIC_DEPLOY_ENV: process.env.NEXT_PUBLIC_DEPLOY_ENV,
+    NEXT_PUBLIC_ENVIRONMENT: process.env.NEXT_PUBLIC_ENVIRONMENT,
+    APP_ENV: process.env.APP_ENV,
+    DEPLOY_ENV: process.env.DEPLOY_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV
+  });
+}
+
+function isLocalHost(hostname?: string, protocol?: string): boolean {
+  return hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '' ||
+    protocol === 'file:';
+}
+
+function resolveHostnameApiBaseUrl(hostname?: string, protocol?: string): string | null {
+  if (isLocalHost(hostname, protocol)) return 'http://localhost:8181';
+  if (hostname === stagingFrontendHost()) return stagingApiBaseUrl(hostname);
+  if (hostname === productionFrontendHost()) return productionApiBaseUrl(hostname);
+  return null;
+}
+
+export function resolveApiBaseUrl(input: ApiResolverInput = {}): string {
+  const envUrl = getConfiguredApiBaseUrl(input.env);
   if (envUrl) {
-    return envUrl.replace(/\/+$/, '');
+    return normalizeApiBaseUrl(envUrl);
   }
 
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    const isLocalDev = host === 'localhost' || host === '127.0.0.1' || host === '' || window.location.protocol === 'file:';
-    if (isLocalDev) {
-      return 'http://localhost:8181';
-    }
+  const explicitEnv = getConfiguredEnvironment(input.env);
+  if (explicitEnv === 'staging') return stagingApiBaseUrl();
+  if (explicitEnv === 'production') return productionApiBaseUrl();
+
+  const hostname = input.hostname || (typeof window !== 'undefined' ? window.location.hostname : undefined);
+  const protocol = input.protocol || (typeof window !== 'undefined' ? window.location.protocol : undefined);
+  const hostnameUrl = resolveHostnameApiBaseUrl(hostname, protocol);
+  if (hostnameUrl) {
+    return hostnameUrl;
   }
 
-  return 'https://api.vcorganics.com';
+  throw new Error(
+    'Missing API environment configuration. Set NEXT_PUBLIC_API_BASE_URL for this deployment, or set an explicit NEXT_PUBLIC_APP_ENV/NEXT_PUBLIC_DEPLOY_ENV value.'
+  );
+}
+
+export function getApiBaseUrl(): string {
+  return resolveApiBaseUrl();
 }
 
 /**

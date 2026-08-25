@@ -1,4 +1,4 @@
-import { apiClient } from '../../lib/api/client';
+import { apiClient, getApiBaseUrl } from '../../lib/api/client';
 import type {
   Invoice,
   InvoicesResponse,
@@ -61,7 +61,7 @@ export const invoicesApi = {
    * GET /api/v1/invoices/:invoiceNumber/pdf
    */
   getPdfUrl(invoiceNumber: string): string {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.vcorganics.com';
+    const baseUrl = getApiBaseUrl();
     return `${baseUrl}/api/v1/invoices/${encodeURIComponent(invoiceNumber)}/pdf`;
   }
 };
