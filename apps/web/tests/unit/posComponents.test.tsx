@@ -43,7 +43,7 @@ describe('POS Component Layer & Interaction Unit Suite', () => {
     expect(handleAdd).toHaveBeenCalledWith(sampleProduct);
   });
 
-  it('1b. ProductCard keeps long titles, large prices, and Add action in stable columns', () => {
+  it('1b. ProductCard renders unclipped [ + Add ] button with min-width and wraps title cleanly', () => {
     const longProduct: POSProduct = {
       ...sampleProduct,
       id: 'prod-long-price',
@@ -61,11 +61,37 @@ describe('POS Component Layer & Interaction Unit Suite', () => {
       />
     );
 
-    expect(screen.getByText(longProduct.name)).toHaveClass('line-clamp-3', 'min-h-[3rem]');
+    expect(screen.getByText(longProduct.name)).toHaveClass('line-clamp-2');
     expect(screen.getByText(/₹12,000.00/)).toHaveClass('whitespace-nowrap');
 
     const addBtn = screen.getByRole('button', { name: /add organic a2 gir cow cultured ghee premium 1 litre jar to cart/i });
-    expect(addBtn).toHaveClass('w-[66px]', 'h-8', 'shrink-0', 'justify-center');
+    expect(addBtn).toHaveClass('min-w-[88px]', 'whitespace-nowrap', 'shrink-0');
+  });
+
+  it('1c. ProductCard replaces Add with interactive quantity stepper when cartQuantity > 0', () => {
+    const handleIncrement = jest.fn();
+    const handleDecrement = jest.fn();
+
+    render(
+      <ProductCard
+        product={sampleProduct}
+        onAddToCart={jest.fn()}
+        onIncrement={handleIncrement}
+        onDecrement={handleDecrement}
+        cartQuantity={2}
+      />
+    );
+
+    expect(screen.getByText('2 in cart')).toBeInTheDocument();
+    expect(screen.getByText('2', { selector: 'span' })).toBeInTheDocument();
+
+    const incBtn = screen.getByRole('button', { name: /increase quantity of organic cow ghee 500ml/i });
+    fireEvent.click(incBtn);
+    expect(handleIncrement).toHaveBeenCalledWith(sampleProduct.id);
+
+    const decBtn = screen.getByRole('button', { name: /decrease quantity of organic cow ghee 500ml/i });
+    fireEvent.click(decBtn);
+    expect(handleDecrement).toHaveBeenCalledWith(sampleProduct.id);
   });
 
   it('2. CategoryBar renders all categories and handles selection', () => {

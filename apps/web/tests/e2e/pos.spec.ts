@@ -232,11 +232,13 @@ test.describe('Phase 6 POS Terminal Migration E2E Suite', () => {
     // Verify Cart item added
     const cartPanel = page.getByTestId('pos-cart-panel');
     await expect(cartPanel.getByText('A2 Pure Cow Ghee 1L')).toBeVisible();
-    await expect(page.getByTestId('product-card-prod-101').getByText('1 in cart')).toBeVisible();
+    const gheeCard = page.getByTestId('product-card-prod-101');
+    await expect(gheeCard.getByText('1 in cart')).toBeVisible();
 
-    // Add same product again to verify quantity increments to 2
-    await addGheeBtn.click();
-    await expect(page.getByTestId('product-card-prod-101').getByText('2 in cart')).toBeVisible();
+    // Add same product again using card stepper to verify quantity increments to 2
+    const incGheeBtn = gheeCard.getByRole('button', { name: /increase quantity/i });
+    await incGheeBtn.click();
+    await expect(gheeCard.getByText('2 in cart')).toBeVisible();
 
     // Add another product (Paneer)
     const addPaneerBtn = page.getByRole('button', { name: /add farm fresh paneer 500g to cart/i });
@@ -321,5 +323,78 @@ test.describe('Phase 6 POS Terminal Migration E2E Suite', () => {
     // Close Drawer
     await page.getByLabel('Close drawer').click();
     await expect(cartDrawer).not.toBeVisible();
+  });
+
+  test('3. Large Catalog (100+ items) Split-Scroll: Independent Catalog Scroll, Sticky Search, and Fixed Cart Checkout Panel', async ({
+    page
+  }) => {
+    // Generate 120 mock products
+    const largeProductList = Array.from({ length: 120 }, (_, idx) => ({
+      id: `prod-bulk-${idx + 1}`,
+      name: `Catalog Item #${idx + 1} Organic Special Grain`,
+      sku: `SKU-BULK-${1000 + idx}`,
+      barcode: `89090000${1000 + idx}`,
+      price: 45 + (idx % 10) * 5,
+      sellingPrice: 45 + (idx % 10) * 5,
+      cost: 30,
+      category: idx % 3 === 0 ? 'Grains' : idx % 3 === 1 ? 'Spices' : 'Oils',
+      unit: 'pack',
+      gst: 5,
+      stock: 50,
+      status: 'active'
+    }));
+
+    await page.route('**/api/v1/products*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(largeProductList)
+      });
+    });
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/pos');
+    await page.waitForLoadState('networkidle');
+
+    // 1. Verify First and Far Down items exist
+    await expect(page.getByText('Catalog Item #1 Organic Special Grain')).toBeVisible();
+
+    // 2. Add Item #1 to Cart
+    const firstCard = page.getByTestId('product-card-prod-bulk-1');
+    const addBtn = firstCard.getByRole('button', { name: /add catalog item #1 organic special grain to cart/i });
+    await addBtn.click();
+
+    // Verify stepper appears on card with quantity 1
+    await expect(firstCard.getByText('1 in cart')).toBeVisible();
+
+    // Increment via stepper
+    await firstCard.getByRole('button', { name: /increase quantity/i }).click();
+    await expect(firstCard.getByText('2 in cart')).toBeVisible();
+
+    // Decrement via stepper back to 1
+    await firstCard.getByRole('button', { name: /decrease quantity/i }).click();
+    await expect(firstCard.getByText('1 in cart')).toBeVisible();
+
+    // 3. Scroll catalog area down to Item #50
+    const catalogItem50 = page.getByText('Catalog Item #50 Organic Special Grain');
+    await catalogItem50.scrollIntoViewIfNeeded();
+    await expect(catalogItem50).toBeVisible();
+
+    // 4. Verify Search & Category Bar remains visible (sticky) while scrolled
+    const searchInput = page.getByPlaceholder(/search by product name, sku, or scan barcode/i);
+    await expect(searchInput).toBeVisible();
+    const allTab = page.getByRole('tab', { name: 'All Products' });
+    await expect(allTab).toBeVisible();
+
+    // 5. Verify Right Cart Panel and Pay & Settle button remain fully visible (sticky/fixed)
+    const cartPanel = page.getByTestId('pos-cart-panel');
+    await expect(cartPanel).toBeVisible();
+    const payBtn = page.getByRole('button', { name: /pay & settle/i });
+    await expect(payBtn).toBeVisible();
+
+    // 6. Test search filter while scrolled
+    await searchInput.fill('Item #100');
+    await expect(page.getByText('Catalog Item #100 Organic Special Grain')).toBeVisible();
+    await expect(catalogItem50).not.toBeVisible();
   });
 });

@@ -143,7 +143,7 @@ export default function POSTerminalPage() {
           productId: product.id,
           name: product.name,
           sku: product.sku,
-          unit: product.unit || 'unit',
+          unit: product.unit || 'pack',
           price,
           cost,
           gst,
@@ -159,8 +159,17 @@ export default function POSTerminalPage() {
   }, []);
 
   const handleIncrementQuantity = useCallback((productId: string) => {
-    setCartItems((prev) =>
-      prev.map((item) => {
+    setCartItems((prev) => {
+      const existing = prev.find((i) => i.productId === productId);
+      if (!existing) {
+        const prod = products.find((p) => p.id === productId);
+        if (prod) {
+          handleAddToCart(prod);
+        }
+        return prev;
+      }
+
+      return prev.map((item) => {
         if (item.productId !== productId) return item;
         const newQty = item.quantity + 1;
         const calc = calculatePOSLine({
@@ -171,9 +180,9 @@ export default function POSTerminalPage() {
           discountAmount: item.discountAmount
         });
         return { ...item, quantity: newQty, ...calc };
-      })
-    );
-  }, []);
+      });
+    });
+  }, [products, handleAddToCart]);
 
   const handleDecrementQuantity = useCallback((productId: string) => {
     setCartItems((prev) => {
@@ -195,7 +204,7 @@ export default function POSTerminalPage() {
           discountAmount: item.discountAmount
         });
         return { ...item, quantity: newQty, ...calc };
-      })
+      });
     });
   }, []);
 
@@ -327,45 +336,59 @@ export default function POSTerminalPage() {
   };
 
   return (
-    <div className="space-y-3.5 pb-8">
+    <div className="flex flex-col h-full space-y-3.5 pb-4 min-w-0">
       <BarcodeInput onBarcodeScanned={handleBarcodeScanned} />
 
-      <POSHeader
-        storeName={storeName}
-        cashierName={user?.name || user?.username || 'Cashier'}
-        itemCount={cartItems.length}
-        onOpenMobileCart={() => setIsMobileCartOpen(true)}
-      />
+      {/* POS Terminal Header */}
+      <div className="shrink-0">
+        <POSHeader
+          storeName={storeName}
+          cashierName={user?.name || user?.username || 'Cashier'}
+          itemCount={cartItems.length}
+          onOpenMobileCart={() => setIsMobileCartOpen(true)}
+        />
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        <div className="lg:col-span-7 xl:col-span-8 space-y-3.5">
-          <ProductSearch
-            value={searchQuery}
-            onChange={setSearchQuery}
-            onBarcodeEnter={handleBarcodeScanned}
-          />
+      {/* Split Layout: Independent Left Catalog Scroll + Fixed Right Cart Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_480px] gap-4 sm:gap-5 items-start flex-1 min-h-0">
+        {/* Left Product Catalog Section with Sticky Controls */}
+        <div className="flex flex-col min-w-0 h-full overflow-hidden">
+          {/* Sticky Search & Category Bar */}
+          <div className="sticky top-0 z-10 bg-[var(--bg-canvas)] pt-0.5 pb-3 space-y-2.5 shrink-0">
+            <ProductSearch
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onBarcodeEnter={handleBarcodeScanned}
+            />
 
-          <CategoryBar
-            categories={availableCategories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-          />
+            <CategoryBar
+              categories={availableCategories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
+          </div>
 
-          <ProductGrid
-            products={filteredProducts}
-            cartItems={cartItems}
-            isLoading={isLoadingProducts}
-            onAddToCart={handleAddToCart}
-            searchQuery={searchQuery}
-            categoryFilter={selectedCategory}
-            onClearFilters={() => {
-              setSearchQuery('');
-              setSelectedCategory('ALL');
-            }}
-          />
+          {/* Independently Scrollable Product Grid */}
+          <div className="flex-1 overflow-y-auto pr-1 pb-8 min-h-0">
+            <ProductGrid
+              products={filteredProducts}
+              cartItems={cartItems}
+              isLoading={isLoadingProducts}
+              onAddToCart={handleAddToCart}
+              onIncrement={handleIncrementQuantity}
+              onDecrement={handleDecrementQuantity}
+              searchQuery={searchQuery}
+              categoryFilter={selectedCategory}
+              onClearFilters={() => {
+                setSearchQuery('');
+                setSelectedCategory('ALL');
+              }}
+            />
+          </div>
         </div>
 
-        <div className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-[88px] h-[calc(100vh-100px)]">
+        {/* Right Fixed / Sticky Cart Checkout Panel (Desktop) */}
+        <div className="hidden lg:block h-[calc(100vh-148px)] sticky top-[76px]">
           <Cart
             items={cartItems}
             totals={totals}

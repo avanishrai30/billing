@@ -11,6 +11,8 @@ export interface ProductGridProps {
   cartItems: POSCartItem[];
   isLoading: boolean;
   onAddToCart: (product: POSProduct) => void;
+  onIncrement?: (productId: string) => void;
+  onDecrement?: (productId: string) => void;
   searchQuery?: string;
   categoryFilter?: string;
   onClearFilters?: () => void;
@@ -21,6 +23,8 @@ export function ProductGrid({
   cartItems,
   isLoading,
   onAddToCart,
+  onIncrement,
+  onDecrement,
   searchQuery = '',
   categoryFilter = 'ALL',
   onClearFilters
@@ -31,14 +35,14 @@ export function ProductGrid({
         {Array.from({ length: 10 }).map((_, idx) => (
           <div
             key={idx}
-            className="bg-white border border-slate-200 rounded-lg p-3.5 space-y-3 shadow-[0_8px_24px_rgba(15,23,42,0.035)]"
+            className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5 shadow-[0_4px_16px_rgba(15,23,42,0.03)]"
           >
-            <Skeleton variant="rectangular" className="w-full h-28 rounded-xl" />
+            <Skeleton variant="rectangular" className="w-full h-26 rounded-lg" />
             <Skeleton variant="text" className="w-1/2 h-3" />
             <Skeleton variant="text" className="w-full h-4" />
             <div className="flex justify-between items-center pt-2">
               <Skeleton variant="text" className="w-16 h-5" />
-              <Skeleton variant="rectangular" className="w-14 h-7 rounded-xl" />
+              <Skeleton variant="rectangular" className="w-22 h-8 rounded-lg" />
             </div>
           </div>
         ))}
@@ -77,6 +81,8 @@ export function ProductGrid({
           product={prod}
           cartQuantity={cartQtyMap.get(prod.id) || 0}
           onAddToCart={onAddToCart}
+          onIncrement={onIncrement}
+          onDecrement={onDecrement}
         />
       ))}
     </div>
