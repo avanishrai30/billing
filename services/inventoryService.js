@@ -681,13 +681,19 @@ const inventoryService = {
   },
 
   /**
-   * Comprehensive Multi-Store Inventory Command Center Aggregator (Phase 33)
+   * Product-centric Multi-Store Inventory Command Center Aggregator (Phase 35)
    */
   async getInventoryCommandCenter(user) {
     const { db } = getContext();
+    const authzService = require('./authzService');
+    const isRestrictedStoreUser = !authzService.isSuperAdmin(user) && user?.assignedStoreId && user.assignedStoreId !== 'all';
+    const restrictedStoreId = isRestrictedStoreUser ? user.assignedStoreId : null;
 
     // 1. Fetch stores
-    const rawStores = await db.collection('stores').find({ status: { $ne: 'inactive' } }).sort({ name: 1 }).toArray();
+    const storeFilter = restrictedStoreId
+      ? { id: restrictedStoreId, status: { $ne: 'inactive' } }
+      : { status: { $ne: 'inactive' } };
+    const rawStores = await db.collection('stores').find(storeFilter).sort({ name: 1 }).toArray();
 
     // Normalize stores with a designated Central Warehouse
     let stores = rawStores.map(s => ({
@@ -697,7 +703,7 @@ const inventoryService = {
       isWarehouse: !!s.isWarehouse || s.id === 'central-warehouse' || s.name.toLowerCase().includes('central') || s.name.toLowerCase().includes('warehouse')
     }));
 
-    if (!stores.some(s => s.isWarehouse)) {
+    if (!restrictedStoreId && !stores.some(s => s.isWarehouse)) {
       if (stores.length > 0) {
         stores[0].isWarehouse = true;
       } else {
@@ -707,21 +713,31 @@ const inventoryService = {
       }
     }
 
-    // 2. Fetch Product Masters. Archived products still exist and must not be
-    // classified as orphan inventory.
+    // 2. Fetch Product Masters. Active products form the base display model,
+    // while archived products still prevent legacy balances from being treated
+    // as orphan inventory.
     const products = await db.collection('products').find({}).toArray();
-    const activeProducts = products.filter(p => p.isArchived !== true);
+    const activeProducts = products.filter(p => p.isArchived !== true && p.status !== 'archived' && p.status !== 'inactive');
     const productMap = new Map();
     products.forEach(p => productMap.set(p.id, p));
 
-    // 3. Fetch all inventory records
-    const inventoryRecords = await db.collection('inventory').find({}).toArray();
+    // 3. Fetch inventory records. Store-scoped users only receive their store's
+    // balances; zero-stock rows for every active product are synthesized in
+    // memory below without writing inventory documents.
+    const inventoryFilter = restrictedStoreId
+      ? { $or: [{ locationId: restrictedStoreId }, { storeId: restrictedStoreId }] }
+      : {};
+    const inventoryRecords = await db.collection('inventory').find(inventoryFilter).toArray();
 
     // 4. Fetch all active product batches
-    const rawBatches = await db.collection('product_batches').find({
+    const batchFilter = {
       status: { $ne: 'archived' },
       remainingQuantity: { $gt: 0 }
-    }).sort({ expiryDate: 1 }).toArray();
+    };
+    if (restrictedStoreId) {
+      batchFilter.$or = [{ locationId: restrictedStoreId }, { storeId: restrictedStoreId }];
+    }
+    const rawBatches = await db.collection('product_batches').find(batchFilter).sort({ expiryDate: 1 }).toArray();
 
     const batchesByProduct = new Map();
     rawBatches.forEach(b => {
@@ -750,11 +766,12 @@ const inventoryService = {
     const allProductIds = Array.from(new Set([
       ...activeProducts.map(p => p.id),
       ...inventoryRecords.map(r => r.productId)
-    ]));
+    ].filter(Boolean)));
 
     let networkStockTotal = 0;
     let centralStockTotal = 0;
     let storeStockTotal = 0;
+    let stockedProducts = 0;
     let lowStockCount = 0;
     let outOfStockCount = 0;
     let totalValuation = 0;
@@ -822,6 +839,9 @@ const inventoryService = {
       networkStockTotal += networkQuantity;
       centralStockTotal += centralQty;
       storeStockTotal += storeQty;
+      if (!isOrphan && networkQuantity > 0) {
+        stockedProducts++;
+      }
 
       const unitCost = Number(prod?.purchasePrice ?? prod?.cost ?? 0);
       const sellingPrice = Number(prod?.sellingPrice ?? prod?.price ?? 0);
@@ -869,6 +889,8 @@ const inventoryService = {
       networkBalances,
       summary: {
         totalProducts: activeProducts.length,
+        catalogProducts: activeProducts.length,
+        stockedProducts,
         networkStock: Math.round(networkStockTotal * 100) / 100,
         centralStock: Math.round(centralStockTotal * 100) / 100,
         storeStock: Math.round(storeStockTotal * 100) / 100,

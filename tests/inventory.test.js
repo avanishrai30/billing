@@ -115,6 +115,30 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     });
   }
 
+  async function seedStores() {
+    await mockDb.collection('stores').insertOne({
+      id: 'central-warehouse',
+      name: 'Central Warehouse',
+      code: 'WH-01',
+      status: 'active',
+      isWarehouse: true
+    });
+    await mockDb.collection('stores').insertOne({
+      id: 'store-1',
+      name: 'Store 1',
+      code: 'ST-1',
+      status: 'active',
+      isWarehouse: false
+    });
+    await mockDb.collection('stores').insertOne({
+      id: 'store-2',
+      name: 'Store 2',
+      code: 'ST-2',
+      status: 'active',
+      isWarehouse: false
+    });
+  }
+
   test('1. Concurrency Test: 10 simultaneous sales of stock = 10 must leave stock = 0 with no lost updates', async () => {
     const productId = 'prod-concurrency-1';
     await seedProduct(productId);
@@ -233,5 +257,163 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     await expect(
       inventoryService.adjustStock('prod-missing-master', testLocation, 5, 'OPENING', 'init', 'test-runner')
     ).rejects.toMatchObject({ code: 'PRODUCT_MASTER_NOT_FOUND', statusCode: 409 });
+  });
+
+  test('6. Command Center shows active Product Master SKUs even when inventory is absent', async () => {
+    await seedStores();
+    await mockDb.collection('products').insertOne({
+      id: 'prod-zero-stock',
+      name: 'Aloe Shampoo',
+      sku: 'SKU-ALOE',
+      barcode: '890000000001',
+      brand: 'VC Organics',
+      category: 'Personal Care',
+      unit: 'bottle',
+      reorderLevel: 5,
+      purchasePrice: 80,
+      sellingPrice: 140,
+      isArchived: false,
+      status: 'active'
+    });
+
+    const data = await inventoryService.getInventoryCommandCenter({
+      category: 'super admin',
+      assignedStoreId: 'all'
+    });
+
+    const item = data.networkBalances.find(row => row.productId === 'prod-zero-stock');
+    expect(item).toBeDefined();
+    expect(item.isOrphan).toBe(false);
+    expect(item.productName).toBe('Aloe Shampoo');
+    expect(item.sku).toBe('SKU-ALOE');
+    expect(item.networkQuantity).toBe(0);
+    expect(item.networkReserved).toBe(0);
+    expect(item.networkAvailable).toBe(0);
+    expect(item.locationBreakdown).toEqual(expect.arrayContaining([
+      expect.objectContaining({ locationId: 'central-warehouse', quantity: 0, available: 0 }),
+      expect.objectContaining({ locationId: 'store-1', quantity: 0, available: 0 }),
+      expect.objectContaining({ locationId: 'store-2', quantity: 0, available: 0 })
+    ]));
+    expect(data.summary).toMatchObject({
+      totalProducts: 1,
+      catalogProducts: 1,
+      stockedProducts: 0,
+      networkStock: 0,
+      centralStock: 0,
+      storeStock: 0,
+      outOfStockCount: 1
+    });
+  });
+
+  test('7. Command Center overlays central and store inventory into network totals', async () => {
+    await seedStores();
+    await seedProduct('prod-network-total');
+    await inventoryService.adjustStock('prod-network-total', 'central-warehouse', 100, 'OPENING', 'central', 'test-runner');
+    await inventoryService.adjustStock('prod-network-total', 'store-1', 20, 'OPENING', 'store-1', 'test-runner');
+    await inventoryService.adjustStock('prod-network-total', 'store-2', 10, 'OPENING', 'store-2', 'test-runner');
+
+    const data = await inventoryService.getInventoryCommandCenter({
+      category: 'super admin',
+      assignedStoreId: 'all'
+    });
+    const item = data.networkBalances.find(row => row.productId === 'prod-network-total');
+
+    expect(item.networkQuantity).toBe(130);
+    expect(item.locationBreakdown).toEqual(expect.arrayContaining([
+      expect.objectContaining({ locationId: 'central-warehouse', quantity: 100 }),
+      expect.objectContaining({ locationId: 'store-1', quantity: 20 }),
+      expect.objectContaining({ locationId: 'store-2', quantity: 10 })
+    ]));
+    expect(data.summary).toMatchObject({
+      catalogProducts: 1,
+      stockedProducts: 1,
+      networkStock: 130,
+      centralStock: 100,
+      storeStock: 30
+    });
+  });
+
+  test('8. Command Center keeps orphan inventory separate from valid zero-stock products', async () => {
+    await seedStores();
+    await seedProduct('prod-valid-zero');
+    await mockDb.collection('inventory').insertOne({
+      id: 'inv-orphan',
+      productId: 'prod-missing-command-center',
+      locationId: 'store-1',
+      storeId: 'store-1',
+      quantity: 17,
+      reservedQuantity: 0,
+      reorderLevel: 10
+    });
+
+    const data = await inventoryService.getInventoryCommandCenter({
+      category: 'super admin',
+      assignedStoreId: 'all'
+    });
+    const valid = data.networkBalances.find(row => row.productId === 'prod-valid-zero');
+    const orphan = data.networkBalances.find(row => row.productId === 'prod-missing-command-center');
+
+    expect(valid.isOrphan).toBe(false);
+    expect(valid.networkQuantity).toBe(0);
+    expect(orphan.isOrphan).toBe(true);
+    expect(orphan.productName).toBe('Product Master Missing');
+    expect(orphan.category).toBe('Missing Master');
+  });
+
+  test('9. Command Center restricts store-scoped users to their assigned store data', async () => {
+    await seedStores();
+    await seedProduct('prod-restricted-scope');
+    await inventoryService.adjustStock('prod-restricted-scope', 'central-warehouse', 100, 'OPENING', 'central', 'test-runner');
+    await inventoryService.adjustStock('prod-restricted-scope', 'store-1', 20, 'OPENING', 'store-1', 'test-runner');
+    await inventoryService.adjustStock('prod-restricted-scope', 'store-2', 10, 'OPENING', 'store-2', 'test-runner');
+
+    const data = await inventoryService.getInventoryCommandCenter({
+      category: 'employee',
+      assignedStoreId: 'store-1',
+      assignedStores: ['store-1']
+    });
+    const item = data.networkBalances.find(row => row.productId === 'prod-restricted-scope');
+
+    expect(data.stores).toEqual([expect.objectContaining({ id: 'store-1' })]);
+    expect(item.locationBreakdown).toEqual([
+      expect.objectContaining({ locationId: 'store-1', quantity: 20 })
+    ]);
+    expect(item.networkQuantity).toBe(20);
+    expect(data.summary).toMatchObject({
+      networkStock: 20,
+      centralStock: 0,
+      storeStock: 20
+    });
+  });
+
+  test('10. Command Center transfer view keeps network total constant', async () => {
+    await seedStores();
+    await seedProduct('prod-transfer-command-center');
+    await inventoryService.adjustStock('prod-transfer-command-center', 'central-warehouse', 100, 'OPENING', 'central', 'test-runner');
+
+    const before = await inventoryService.getInventoryCommandCenter({
+      category: 'super admin',
+      assignedStoreId: 'all'
+    });
+    await inventoryService.transferStock(
+      'prod-transfer-command-center',
+      'central-warehouse',
+      'store-1',
+      30,
+      'admin',
+      'Store replenishment'
+    );
+    const after = await inventoryService.getInventoryCommandCenter({
+      category: 'super admin',
+      assignedStoreId: 'all'
+    });
+    const item = after.networkBalances.find(row => row.productId === 'prod-transfer-command-center');
+
+    expect(before.summary.networkStock).toBe(100);
+    expect(after.summary.networkStock).toBe(100);
+    expect(item.locationBreakdown).toEqual(expect.arrayContaining([
+      expect.objectContaining({ locationId: 'central-warehouse', quantity: 70 }),
+      expect.objectContaining({ locationId: 'store-1', quantity: 30 })
+    ]));
   });
 });

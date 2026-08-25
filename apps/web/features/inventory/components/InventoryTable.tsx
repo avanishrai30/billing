@@ -43,6 +43,8 @@ export interface InventoryTableProps {
   onTransferItem: (item: NetworkInventoryItem) => void;
   onClearFilters?: () => void;
   isFiltered?: boolean;
+  catalogProducts?: number;
+  stockedProducts?: number;
 }
 
 export function InventoryTable({
@@ -56,7 +58,9 @@ export function InventoryTable({
   onAdjustItem,
   onTransferItem,
   onClearFilters,
-  isFiltered = false
+  isFiltered = false,
+  catalogProducts = 0,
+  stockedProducts = 0
 }: InventoryTableProps) {
   if (isLoading) {
     return (
@@ -74,14 +78,17 @@ export function InventoryTable({
   }
 
   if (items.length === 0) {
+    const hasCatalogProducts = catalogProducts > 0 && !isFiltered;
     return (
       <EmptyState
         icon={<PackageOpen className="w-8 h-8 text-slate-400" />}
-        title={isFiltered ? 'No Matching Stock Records' : 'No Inventory Balances'}
+        title={isFiltered ? 'No Matching Stock Records' : (hasCatalogProducts ? `${catalogProducts.toLocaleString('en-IN')} products in catalog` : 'No Catalog Products')}
         description={
           isFiltered
             ? 'No inventory items match your selected search or filter criteria. Try resetting filters.'
-            : 'No stock recorded for this location. Stock inwarded via Purchases or Transfers will appear here.'
+            : hasCatalogProducts
+              ? `${stockedProducts.toLocaleString('en-IN')} products currently stocked. Products are visible here from Product Master. Stock quantities appear after Purchases, Opening Stock, Stock Adjustments, or Transfers are recorded.`
+              : 'No active Product Master SKUs are available for this inventory view.'
         }
         actionLabel={isFiltered ? 'Reset Filters' : undefined}
         onAction={isFiltered ? onClearFilters : undefined}

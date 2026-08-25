@@ -26,6 +26,8 @@ describe('Phase 33 Multi-Store Inventory Command Center Component Suite', () => 
 
   const sampleSummary: CommandCenterSummary = {
     totalProducts: 10,
+    catalogProducts: 10,
+    stockedProducts: 3,
     networkStock: 135,
     centralStock: 100,
     storeStock: 35,
@@ -121,9 +123,11 @@ describe('Phase 33 Multi-Store Inventory Command Center Component Suite', () => 
     expect(handleAdjust).toHaveBeenCalledTimes(1);
   });
 
-  it('2. InventorySummaryCards renders Network Stock, Central Stock, Store Stock, Low Stock, and Expiring Soon', () => {
+  it('2. InventorySummaryCards renders catalog, stocked, network, central, store, low, and expiring metrics', () => {
     render(<InventorySummaryCards summary={sampleSummary} isLoading={false} />);
 
+    expect(screen.getByText('Catalog Products')).toBeInTheDocument();
+    expect(screen.getByText('3 currently stocked')).toBeInTheDocument();
     expect(screen.getByText('Network Stock')).toBeInTheDocument();
     expect(screen.getByText('135')).toBeInTheDocument();
     expect(screen.getByText('Central Stock')).toBeInTheDocument();

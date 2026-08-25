@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Layers, Warehouse, Store, AlertTriangle, Clock, IndianRupee } from 'lucide-react';
+import { Layers, Warehouse, Store, AlertTriangle, Clock, PackageCheck } from 'lucide-react';
 import { Skeleton } from '../../../components/ui';
 import type { CommandCenterSummary } from '../types';
 
@@ -13,8 +13,8 @@ export interface InventorySummaryCardsProps {
 export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {Array.from({ length: 5 }).map((_, idx) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {Array.from({ length: 6 }).map((_, idx) => (
           <div
             key={idx}
             className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]"
@@ -34,13 +34,24 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
   const centralStock = summary?.centralStock ?? 0;
   const storeStock = summary?.storeStock ?? 0;
   const lowStock = summary?.lowStockCount ?? 0;
+  const outOfStock = summary?.outOfStockCount ?? 0;
   const expiringSoon = summary?.expiringSoonCount ?? 0;
+  const catalogProducts = summary?.catalogProducts ?? summary?.totalProducts ?? 0;
+  const stockedProducts = summary?.stockedProducts ?? 0;
 
   const cards = [
     {
+      label: 'Catalog Products',
+      value: catalogProducts.toLocaleString('en-IN'),
+      subtext: `${stockedProducts.toLocaleString('en-IN')} currently stocked`,
+      icon: PackageCheck,
+      color: 'text-emerald-700',
+      bg: 'bg-emerald-50 border-emerald-200'
+    },
+    {
       label: 'Network Stock',
       value: networkStock.toLocaleString('en-IN', { maximumFractionDigits: 2 }),
-      subtext: `${summary?.totalProducts ?? 0} active products`,
+      subtext: `${stockedProducts.toLocaleString('en-IN')} stocked products`,
       icon: Layers,
       color: 'text-slate-900',
       bg: 'bg-slate-100 border-slate-200'
@@ -64,7 +75,7 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
     {
       label: 'Low Stock',
       value: lowStock.toString(),
-      subtext: 'At or below reorder level',
+      subtext: `${outOfStock.toLocaleString('en-IN')} out of stock`,
       icon: AlertTriangle,
       color: lowStock > 0 ? 'text-rose-700' : 'text-slate-500',
       bg: lowStock > 0 ? 'bg-rose-50 border-rose-200' : 'bg-slate-50 border-slate-200'
@@ -80,7 +91,7 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {cards.map((c) => {
         const Icon = c.icon;
         return (

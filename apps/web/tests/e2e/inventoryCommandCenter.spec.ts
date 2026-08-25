@@ -43,14 +43,41 @@ const mockCommandCenterData = {
         }
       ]
     }
+    ,
+    {
+      productId: 'prod-aloe-zero',
+      productName: 'Aloe Shampoo',
+      sku: 'SKU-ALOE',
+      barcode: '890000000001',
+      brand: 'VC Organics',
+      category: 'Personal Care',
+      unit: 'bottle',
+      cost: 80,
+      price: 140,
+      reorderLevel: 5,
+      isOrphan: false,
+      defaultExpiryDate: null,
+      networkQuantity: 0,
+      networkReserved: 0,
+      networkAvailable: 0,
+      locationBreakdown: [
+        { locationId: 'central-warehouse', locationName: 'Central Warehouse', isWarehouse: true, quantity: 0, reservedQuantity: 0, available: 0 },
+        { locationId: 'store-1', locationName: 'Store 1 — Indiranagar', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 },
+        { locationId: 'store-2', locationName: 'Store 2 — Koramangala', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 },
+        { locationId: 'store-3', locationName: 'Store 3 — Whitefield', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 }
+      ],
+      batches: []
+    }
   ],
   summary: {
-    totalProducts: 1,
+    totalProducts: 2,
+    catalogProducts: 2,
+    stockedProducts: 1,
     networkStock: 135,
     centralStock: 100,
     storeStock: 35,
     lowStockCount: 0,
-    outOfStockCount: 0,
+    outOfStockCount: 1,
     expiringSoonCount: 0,
     totalValuation: 60750
   }
@@ -132,6 +159,8 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
     await expect(page.getByRole('button', { name: /store 3/i })).toBeVisible();
 
     // 2. Verify Summary Cards
+    await expect(page.getByText('Catalog Products')).toBeVisible();
+    await expect(page.getByText('1 currently stocked')).toBeVisible();
     await expect(page.getByText('Network Stock')).toBeVisible();
     await expect(page.getByText('135').first()).toBeVisible();
     await expect(page.getByText('Central Stock')).toBeVisible();
@@ -144,6 +173,9 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
     await expect(page.getByText('AIA000002', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('1 litre jar')).toBeVisible();
     await expect(page.getByText('LOT-2026-001')).toBeVisible();
+    await expect(page.getByText('Aloe Shampoo')).toBeVisible();
+    await expect(page.getByText('SKU-ALOE')).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Aloe Shampoo' }).getByText('Out of Stock')).toBeVisible();
 
     // 4. Switch to Store 1 Tab
     await page.getByRole('button', { name: /store 1/i }).click();
@@ -361,5 +393,203 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
     await expect(page.getByRole('button', { name: /store 1/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /network consolidated/i })).not.toBeVisible();
     await expect(page.getByRole('button', { name: /store 2/i })).not.toBeVisible();
+  });
+
+  test('4. Zero-stock Product Master becomes stocked after adjustment and preserves network total after transfer', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('aiavro_jwt_token', 'mock-valid-superadmin-token');
+      localStorage.setItem(
+        'aiavro_logged_in_user',
+        JSON.stringify({
+          id: 'usr-superadmin',
+          name: 'Super Administrator',
+          username: 'superadmin',
+          role: 'SUPER ADMIN',
+          category: 'super admin',
+          assignedStoreId: 'all',
+          status: 'active',
+          permissions: ['*']
+        })
+      );
+    });
+
+    const currentStockData = {
+      success: true,
+      stores: mockStores,
+      networkBalances: [
+        {
+          productId: 'prod-aloe-zero',
+          productName: 'Aloe Shampoo',
+          sku: 'SKU-ALOE',
+          barcode: '890000000001',
+          brand: 'VC Organics',
+          category: 'Personal Care',
+          unit: 'bottle',
+          cost: 80,
+          price: 140,
+          reorderLevel: 5,
+          isOrphan: false,
+          defaultExpiryDate: null,
+          networkQuantity: 0,
+          networkReserved: 0,
+          networkAvailable: 0,
+          locationBreakdown: [
+            { locationId: 'central-warehouse', locationName: 'Central Warehouse', isWarehouse: true, quantity: 0, reservedQuantity: 0, available: 0 },
+            { locationId: 'store-1', locationName: 'Store 1 — Indiranagar', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 },
+            { locationId: 'store-2', locationName: 'Store 2 — Koramangala', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 },
+            { locationId: 'store-3', locationName: 'Store 3 — Whitefield', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 }
+          ],
+          batches: []
+        }
+      ],
+      summary: {
+        totalProducts: 1,
+        catalogProducts: 1,
+        stockedProducts: 0,
+        networkStock: 0,
+        centralStock: 0,
+        storeStock: 0,
+        lowStockCount: 0,
+        outOfStockCount: 1,
+        expiringSoonCount: 0,
+        totalValuation: 0
+      }
+    };
+
+    await page.route('**/api/v1/auth/verify', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          user: {
+            id: 'usr-superadmin',
+            name: 'Super Administrator',
+            username: 'superadmin',
+            role: 'SUPER ADMIN',
+            category: 'super admin',
+            assignedStoreId: 'all',
+            status: 'active',
+            permissions: ['*']
+          }
+        })
+      });
+    });
+
+    await page.route('**/api/v1/public/settings', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ title: "VC ORGANIC'S" })
+      });
+    });
+
+    await page.route('**/api/v1/inventory/command-center', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(currentStockData)
+      });
+    });
+
+    await page.route('**/api/v1/inventory/logs*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [], pagination: { limit: 15, nextCursor: null } })
+      });
+    });
+
+    await page.route('**/api/v1/inventory/adjust', async (route) => {
+      const body = JSON.parse(route.request().postData() || '{}');
+      expect(body.productId).toBe('prod-aloe-zero');
+      expect(body.locationId).toBe('central-warehouse');
+      expect(Number(body.quantity)).toBe(100);
+
+      const item = currentStockData.networkBalances[0];
+      item.networkQuantity = 100;
+      item.networkAvailable = 100;
+      item.locationBreakdown[0].quantity = 100;
+      item.locationBreakdown[0].available = 100;
+      currentStockData.summary.stockedProducts = 1;
+      currentStockData.summary.networkStock = 100;
+      currentStockData.summary.centralStock = 100;
+      currentStockData.summary.outOfStockCount = 0;
+      currentStockData.summary.totalValuation = 8000;
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, productId: body.productId, locationId: body.locationId, quantity: 100 })
+      });
+    });
+
+    await page.route('**/api/v1/inventory/transfer', async (route) => {
+      const body = JSON.parse(route.request().postData() || '{}');
+      expect(body.productId).toBe('prod-aloe-zero');
+      expect(body.fromLocationId).toBe('central-warehouse');
+      expect(body.toLocationId).toBe('store-1');
+      expect(Number(body.quantity)).toBe(30);
+
+      const item = currentStockData.networkBalances[0];
+      item.locationBreakdown[0].quantity = 70;
+      item.locationBreakdown[0].available = 70;
+      item.locationBreakdown[1].quantity = 30;
+      item.locationBreakdown[1].available = 30;
+      item.networkQuantity = 100;
+      item.networkAvailable = 100;
+      currentStockData.summary.networkStock = 100;
+      currentStockData.summary.centralStock = 70;
+      currentStockData.summary.storeStock = 30;
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          message: 'Stock transfer completed successfully',
+          referenceId: 'tf-phase35',
+          transfer: {
+            success: true,
+            referenceId: 'tf-phase35',
+            fromBefore: 100,
+            fromAfter: 70,
+            toBefore: 0,
+            toAfter: 30
+          }
+        })
+      });
+    });
+
+    await page.goto('/inventory');
+
+    await expect(page.getByText('Aloe Shampoo')).toBeVisible();
+    await expect(page.getByText('0 currently stocked')).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Aloe Shampoo' }).getByText('Out of Stock')).toBeVisible();
+
+    await page.getByRole('button', { name: /stock adjustment/i }).click();
+    const adjustModal = page.getByRole('dialog');
+    await expect(adjustModal.getByText('Stock Level Adjustment')).toBeVisible();
+    await adjustModal.locator('input[type="number"]').fill('100');
+    await adjustModal.getByPlaceholder(/physical count reconciliation/i).fill('Opening stock receipt');
+    await adjustModal.getByRole('button', { name: /confirm adjustment/i }).click();
+    await expect(adjustModal).not.toBeVisible();
+
+    await expect(page.getByText('1 currently stocked')).toBeVisible();
+    await expect(page.getByText('100').first()).toBeVisible();
+
+    await page.locator('button').filter({ hasText: 'Transfer Stock' }).click();
+    const transferModal = page.getByRole('dialog');
+    await expect(transferModal.getByText('Inter-Store Stock Transfer')).toBeVisible();
+    await transferModal.locator('input[type="number"]').fill('30');
+    await transferModal.getByRole('button', { name: /confirm transfer/i }).click();
+    await expect(transferModal).not.toBeVisible();
+
+    await page.getByRole('button', { name: /central warehouse/i }).click();
+    await expect(page.getByText('70').first()).toBeVisible();
+    await page.getByRole('button', { name: /store 1/i }).click();
+    await expect(page.getByText('30').first()).toBeVisible();
+    await page.getByRole('button', { name: /network consolidated/i }).click();
+    await expect(page.getByText('100').first()).toBeVisible();
   });
 });

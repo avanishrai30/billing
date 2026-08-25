@@ -228,6 +228,8 @@ export default function InventoryPage() {
         onTransferItem={handleOpenTransfer}
         onClearFilters={handleClearFilters}
         isFiltered={isFiltered}
+        catalogProducts={summary?.catalogProducts ?? summary?.totalProducts ?? 0}
+        stockedProducts={summary?.stockedProducts ?? 0}
       />
 
       {/* Detail & Multi-Location Stock Drawer */}

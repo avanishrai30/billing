@@ -55,6 +55,8 @@ export interface NetworkInventoryItem {
 
 export interface CommandCenterSummary {
   totalProducts: number;
+  catalogProducts?: number;
+  stockedProducts?: number;
   networkStock: number;
   centralStock: number;
   storeStock: number;
