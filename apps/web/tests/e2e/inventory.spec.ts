@@ -47,6 +47,7 @@ const mockProducts = [
     sellingPrice: 650,
     cost: 450,
     purchasePrice: 450,
+    brand: 'VC Organic',
     category: 'Dairy',
     unit: 'tin',
     reorderLevel: 10,
@@ -61,6 +62,7 @@ const mockProducts = [
     sellingPrice: 220,
     cost: 160,
     purchasePrice: 160,
+    brand: 'VC Organic',
     category: 'Dairy',
     unit: 'pack',
     reorderLevel: 10,
@@ -75,6 +77,7 @@ const mockProducts = [
     sellingPrice: 180,
     cost: 110,
     purchasePrice: 110,
+    brand: 'VC Organic',
     category: 'Bakery',
     unit: 'loaf',
     reorderLevel: 5,
@@ -112,12 +115,22 @@ let mockBalances = [
     reservedQuantity: 0,
     reorderLevel: 5,
     updatedAt: new Date().toISOString()
+  },
+  {
+    _id: 'inv-orphan',
+    productId: 'prod-missing-999',
+    locationId: 'store-2',
+    storeId: 'store-2',
+    quantity: 12,
+    reservedQuantity: 0,
+    reorderLevel: 10,
+    updatedAt: new Date().toISOString()
   }
 ];
 
 const mockStores = [
-  { id: 'store-1', name: 'VC Flagship Outlet' },
-  { id: 'store-2', name: 'Bandra West Store' }
+  { id: 'store-1', name: 'VC Flagship Outlet', code: 'VCF', isWarehouse: true },
+  { id: 'store-2', name: 'Bandra West Store', code: 'BWS', isWarehouse: false }
 ];
 
 const mockLogs = [
@@ -157,6 +170,74 @@ const mockLogs = [
   }
 ];
 
+function buildCommandCenterData() {
+  const productsById = new Map(mockProducts.map((product) => [product.id, product]));
+  const networkBalances = Array.from(
+    new Set([...mockProducts.map((product) => product.id), ...mockBalances.map((balance) => balance.productId)])
+  ).map((productId) => {
+    const product = productsById.get(productId);
+    const balances = mockBalances.filter((balance) => balance.productId === productId);
+    const isOrphan = !product;
+    const locationBreakdown = mockStores.map((store) => {
+      const balance = balances.find((item) => item.locationId === store.id || item.storeId === store.id);
+      const quantity = Number(balance?.quantity || 0);
+      const reservedQuantity = Number(balance?.reservedQuantity || 0);
+      return {
+        locationId: store.id,
+        locationName: store.name,
+        isWarehouse: !!store.isWarehouse,
+        quantity,
+        reservedQuantity,
+        available: Math.max(0, quantity - reservedQuantity)
+      };
+    });
+    const networkQuantity = locationBreakdown.reduce((sum, location) => sum + location.quantity, 0);
+    const networkReserved = locationBreakdown.reduce((sum, location) => sum + location.reservedQuantity, 0);
+
+    return {
+      productId,
+      productName: product?.name || 'Product Master Missing',
+      sku: product?.sku || '',
+      barcode: product?.barcode || '',
+      brand: product?.brand || '',
+      category: product?.category || (isOrphan ? 'Missing Master' : 'General'),
+      unit: product?.unit || 'units',
+      cost: product?.cost || product?.purchasePrice || 0,
+      price: product?.price || product?.sellingPrice || 0,
+      reorderLevel: product?.reorderLevel || 10,
+      isOrphan,
+      defaultExpiryDate: null,
+      networkQuantity,
+      networkReserved,
+      networkAvailable: Math.max(0, networkQuantity - networkReserved),
+      locationBreakdown,
+      batches: []
+    };
+  });
+
+  const totalStock = networkBalances.reduce((sum, item) => sum + item.networkQuantity, 0);
+  const centralStock = networkBalances.reduce((sum, item) => {
+    const central = item.locationBreakdown.find((location) => location.isWarehouse);
+    return sum + (central?.quantity || 0);
+  }, 0);
+
+  return {
+    success: true,
+    stores: mockStores,
+    networkBalances,
+    summary: {
+      totalProducts: mockProducts.length,
+      networkStock: totalStock,
+      centralStock,
+      storeStock: totalStock - centralStock,
+      lowStockCount: 1,
+      outOfStockCount: 1,
+      expiringSoonCount: 0,
+      totalValuation: 85400
+    }
+  };
+}
+
 test.describe('Phase 7B Inventory & Stock Management E2E Suite', () => {
   test.beforeEach(async ({ page }) => {
     // Reset mock state
@@ -189,6 +270,16 @@ test.describe('Phase 7B Inventory & Stock Management E2E Suite', () => {
         quantity: 0,
         reservedQuantity: 0,
         reorderLevel: 5,
+        updatedAt: new Date().toISOString()
+      },
+      {
+        _id: 'inv-orphan',
+        productId: 'prod-missing-999',
+        locationId: 'store-2',
+        storeId: 'store-2',
+        quantity: 12,
+        reservedQuantity: 0,
+        reorderLevel: 10,
         updatedAt: new Date().toISOString()
       }
     ];
@@ -269,6 +360,14 @@ test.describe('Phase 7B Inventory & Stock Management E2E Suite', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ success: true, summary: mockSummary })
+      });
+    });
+
+    await page.route('**/api/v1/inventory/command-center', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(buildCommandCenterData())
       });
     });
 
@@ -356,9 +455,9 @@ test.describe('Phase 7B Inventory & Stock Management E2E Suite', () => {
     await page.getByRole('link', { name: 'Inventory' }).click();
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Inventory & Stock Management' })).toBeVisible();
-    await expect(page.getByText('Total Units in Stock')).toBeVisible();
-    await expect(page.getByText('1,450.5')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inventory Command Center' })).toBeVisible();
+    await expect(page.getByText('Network Stock')).toBeVisible();
+    await expect(page.getByText('61')).toBeVisible();
 
     // 3. Search Product
     const searchInput = page.getByPlaceholder(/search by product name, sku, or barcode/i);
@@ -378,17 +477,21 @@ test.describe('Phase 7B Inventory & Stock Management E2E Suite', () => {
     await page.getByRole('button', { name: 'All Items' }).click();
     await expect(page.getByText('A2 Pure Cow Ghee 1L')).toBeVisible();
 
+    await page.getByRole('button', { name: 'Orphan Inventory' }).click();
+    await expect(page.getByText('Product Master Missing').first()).toBeVisible();
+    await expect(page.getByText('ORPHAN INVENTORY').first()).toBeVisible();
+    await expect(page.getByText('A2 Pure Cow Ghee 1L')).not.toBeVisible();
+
+    await page.getByRole('button', { name: 'All Items' }).click();
+
     // 5. Open Movement History Ledger Drawer
-    const historyBtn = page.getByRole('button', {
-      name: /view movement history for a2 pure cow ghee 1l/i
-    });
-    await historyBtn.click();
+    await page.getByText('A2 Pure Cow Ghee 1L').click();
 
     const ledgerDrawer = page.getByRole('dialog');
     await expect(ledgerDrawer).toBeVisible();
-    await expect(ledgerDrawer.getByText(/inventory movement ledger/i)).toBeVisible();
-    await expect(ledgerDrawer.getByText('Purchase In', { exact: true })).toBeVisible();
-    await expect(ledgerDrawer.getByText('POS Sale', { exact: true })).toBeVisible();
+    await expect(ledgerDrawer.getByText(/stock by location breakdown/i)).toBeVisible();
+    await expect(ledgerDrawer.getByText('PURCHASE', { exact: true })).toBeVisible();
+    await expect(ledgerDrawer.getByText('SALE', { exact: true })).toBeVisible();
 
     // Capture visual baseline of Desktop Inventory with Drawer (1440x900)
     await page.screenshot({ path: 'test-results/desktop-inventory.png', fullPage: true });
@@ -398,9 +501,7 @@ test.describe('Phase 7B Inventory & Stock Management E2E Suite', () => {
     await expect(ledgerDrawer).not.toBeVisible();
 
     // 6. Stock Level Adjustment
-    const adjustBtn = page.getByRole('button', {
-      name: /adjust stock for a2 pure cow ghee 1l/i
-    });
+    const adjustBtn = page.getByRole('button', { name: 'Adjust Stock' }).first();
     await adjustBtn.click();
 
     const adjustModal = page.getByRole('dialog');
@@ -417,19 +518,17 @@ test.describe('Phase 7B Inventory & Stock Management E2E Suite', () => {
     await expect(adjustModal).not.toBeVisible();
 
     // 7. Inter-Store Transfer
-    const transferBtn = page.getByRole('button', {
-      name: /transfer stock for a2 pure cow ghee 1l/i
-    });
+    const transferBtn = page.getByRole('button', { name: 'Transfer Stock' }).first();
     await transferBtn.click();
 
     const transferModal = page.getByRole('dialog');
     await expect(transferModal).toBeVisible();
     await expect(transferModal.getByText(/inter-store stock transfer/i)).toBeVisible();
 
-    const transferQtyInput = transferModal.getByPlaceholder('0.00');
+    const transferQtyInput = transferModal.getByRole('spinbutton');
     await transferQtyInput.fill('10');
 
-    await transferModal.getByRole('button', { name: /execute transfer/i }).click();
+    await transferModal.getByRole('button', { name: /confirm transfer/i }).click();
     await expect(transferModal).not.toBeVisible();
 
     // 8. Cross-Module Isolation: Navigate back to Dashboard and verify integrity
@@ -447,7 +546,7 @@ test.describe('Phase 7B Inventory & Stock Management E2E Suite', () => {
     await page.goto('/inventory');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Inventory & Stock Management' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Inventory Command Center' })).toBeVisible();
 
     // Verify Zero Horizontal Overflow
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);

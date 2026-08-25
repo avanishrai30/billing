@@ -49,7 +49,8 @@ export function CleanupFilterBar({
     inventory: [
       { value: 'all', label: 'All Stock Levels' },
       { value: 'zero', label: 'Zero / Depleted Stock (0)' },
-      { value: 'positive', label: 'Positive Stock (> 0)' }
+      { value: 'positive', label: 'Positive Stock (> 0)' },
+      { value: 'orphan', label: 'Orphan Inventory' }
     ]
   };
 

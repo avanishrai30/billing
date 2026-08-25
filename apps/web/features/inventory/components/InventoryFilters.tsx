@@ -33,7 +33,8 @@ export function InventoryFilters({
     { id: 'HEALTHY', label: 'In Stock' },
     { id: 'LOW_STOCK', label: 'Low Stock' },
     { id: 'OUT_OF_STOCK', label: 'Out of Stock' },
-    { id: 'EXPIRING_SOON', label: 'Expiring Soon' }
+    { id: 'EXPIRING_SOON', label: 'Expiring Soon' },
+    { id: 'ORPHAN', label: 'Orphan Inventory' }
   ];
 
   return (

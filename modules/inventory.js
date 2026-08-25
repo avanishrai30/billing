@@ -171,9 +171,10 @@ router.post('/adjust', verifyJWT, requirePermission('inventory.adjust'), require
     });
   } catch (err) {
     console.error("Inventory adjustment error:", err);
-    res.status(500).json({
+    const statusCode = err.statusCode || (err.code === 'PRODUCT_MASTER_NOT_FOUND' ? 409 : 500);
+    res.status(statusCode).json({
       success: false,
-      error: { code: "ADJUSTMENT_FAILED", message: err.message || "Server error adjusting inventory" },
+      error: { code: err.code || "ADJUSTMENT_FAILED", message: err.message || "Server error adjusting inventory" },
       requestId
     });
   }
@@ -272,7 +273,9 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
     });
   } catch (err) {
     console.error("Stock transfer error:", err);
-    const statusCode = err.code === 'INSUFFICIENT_STOCK' || err.code === 'INSUFFICIENT_BATCH_STOCK' ? 400 : 500;
+    const statusCode = err.code === 'PRODUCT_MASTER_NOT_FOUND'
+      ? 409
+      : err.code === 'INSUFFICIENT_STOCK' || err.code === 'INSUFFICIENT_BATCH_STOCK' ? 400 : 500;
     res.status(statusCode).json({
       success: false,
       error: {

@@ -105,8 +105,18 @@ describe('Purchase, Transfer, and POS Transaction Integration (Stage 08)', () =>
     setupContext(mockDb, null, 'test-secret', '/tmp', {}, new Map());
   });
 
+  async function seedProduct(id) {
+    await mockDb.collection('products').insertOne({
+      id,
+      name: `Product ${id}`,
+      sku: `SKU-${id}`,
+      isArchived: false
+    });
+  }
+
   test('1. Simultaneous Sales Concurrency: 20 sales of stock = 10 results in 10 successes and stock = 0', async () => {
     const prodId = 'prod-conc-pos-1';
+    await seedProduct(prodId);
     await inventoryService.adjustStock(prodId, storeA, 10, 'OPENING', 'init', 'tester');
 
     const salePromises = Array.from({ length: 20 }).map((_, i) =>
@@ -131,6 +141,7 @@ describe('Purchase, Transfer, and POS Transaction Integration (Stage 08)', () =>
 
   test('2. Concurrent Sale and Store Transfer: Never double-deducts or causes negative stock', async () => {
     const prodId = 'prod-conc-tf-1';
+    await seedProduct(prodId);
     await inventoryService.adjustStock(prodId, storeA, 10, 'OPENING', 'init', 'tester');
 
     const op1 = inventoryService.consumeStockBatch(
@@ -163,6 +174,7 @@ describe('Purchase, Transfer, and POS Transaction Integration (Stage 08)', () =>
   test('3. Duplicate Invoice Retry (Idempotency): Does not deduct stock twice', async () => {
     const prodId = 'prod-idemp-pos-1';
     const txId = 'TX-INV-UNIQUE-101';
+    await seedProduct(prodId);
     await inventoryService.adjustStock(prodId, storeA, 15, 'OPENING', 'init', 'tester');
 
     // First checkout
@@ -196,6 +208,7 @@ describe('Purchase, Transfer, and POS Transaction Integration (Stage 08)', () =>
   test('4. Duplicate Purchase Retry (Idempotency): Does not increment stock twice', async () => {
     const prodId = 'prod-idemp-pur-1';
     const purTxId = 'PUR-TX-UNIQUE-202';
+    await seedProduct(prodId);
     await inventoryService.adjustStock(prodId, storeA, 0, 'OPENING', 'init', 'tester');
 
     // First purchase entry
@@ -229,6 +242,7 @@ describe('Purchase, Transfer, and POS Transaction Integration (Stage 08)', () =>
   test('5. Double Invoice Void Prevention: Does not revert inventory twice', async () => {
     const prodId = 'prod-void-pos-1';
     const invNum = 'INV-VOID-TEST-303';
+    await seedProduct(prodId);
     await inventoryService.adjustStock(prodId, storeA, 20, 'OPENING', 'init', 'tester');
 
     // Sale of 5 units

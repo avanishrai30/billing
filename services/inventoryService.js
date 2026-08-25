@@ -1,6 +1,27 @@
 const { getContext } = require('../modules/context');
 const auditService = require('./auditService');
 
+async function assertProductMasterExists(productId) {
+  if (!productId) {
+    const err = new Error("Product Master is required for inventory movement.");
+    err.code = 'PRODUCT_MASTER_NOT_FOUND';
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const { db } = getContext();
+  const product = await db.collection('products').findOne({ id: productId });
+  if (!product) {
+    const err = new Error(`Product Master not found for product '${productId}'. Inventory balances cannot be created or changed for missing products.`);
+    err.code = 'PRODUCT_MASTER_NOT_FOUND';
+    err.statusCode = 409;
+    err.productId = productId;
+    throw err;
+  }
+
+  return product;
+}
+
 /**
  * Authoritative Inventory Domain Service (ERP V3 - Stage 07 & Phase 33 Multi-Store Command Center)
  * Owns collections: 'inventory', 'inventory_ledger', 'product_batches'
@@ -34,6 +55,8 @@ const inventoryService = {
     if (delta === 0) {
       throw new Error("Inventory quantity delta cannot be zero");
     }
+
+    await assertProductMasterExists(productId);
 
     // 1. If decreasing stock and negative not allowed, enforce atomic guard: quantity >= abs(delta)
     if (delta < 0 && !allowNegative) {
@@ -684,8 +707,10 @@ const inventoryService = {
       }
     }
 
-    // 2. Fetch all non-archived products
-    const products = await db.collection('products').find({ isArchived: { $ne: true } }).toArray();
+    // 2. Fetch Product Masters. Archived products still exist and must not be
+    // classified as orphan inventory.
+    const products = await db.collection('products').find({}).toArray();
+    const activeProducts = products.filter(p => p.isArchived !== true);
     const productMap = new Map();
     products.forEach(p => productMap.set(p.id, p));
 
@@ -723,7 +748,7 @@ const inventoryService = {
     });
 
     const allProductIds = Array.from(new Set([
-      ...products.map(p => p.id),
+      ...activeProducts.map(p => p.id),
       ...inventoryRecords.map(r => r.productId)
     ]));
 
@@ -812,7 +837,7 @@ const inventoryService = {
 
       networkBalances.push({
         productId: prodId,
-        productName: prod?.name || (isOrphan ? `Orphan Item (${prodId})` : prodId),
+        productName: prod?.name || (isOrphan ? 'Product Master Missing' : prodId),
         sku: prod?.sku || '',
         barcode: prod?.barcode || '',
         brand: prod?.brand || '',
@@ -843,7 +868,7 @@ const inventoryService = {
       stores,
       networkBalances,
       summary: {
-        totalProducts: products.length,
+        totalProducts: activeProducts.length,
         networkStock: Math.round(networkStockTotal * 100) / 100,
         centralStock: Math.round(centralStockTotal * 100) / 100,
         storeStock: Math.round(storeStockTotal * 100) / 100,
@@ -1006,5 +1031,7 @@ const inventoryService = {
     return await this.revertStockBatch(items, storeId, type, referenceType, referenceId, performedBy);
   }
 };
+
+inventoryService.assertProductMasterExists = assertProductMasterExists;
 
 module.exports = inventoryService;

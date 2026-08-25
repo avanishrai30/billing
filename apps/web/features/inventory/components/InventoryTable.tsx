@@ -135,6 +135,7 @@ export function InventoryTable({
             const displayStatus: StockStatus = hasExpiringBatch && baseStatus !== 'OUT_OF_STOCK'
               ? 'EXPIRING_SOON'
               : baseStatus;
+            const identityLabel = item.isOrphan ? 'Product Master Missing' : item.productName;
 
             return (
               <TableRow
@@ -147,7 +148,7 @@ export function InventoryTable({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900 text-xs truncate max-w-[200px]" title={item.productName}>
-                        {item.productName}
+                        {identityLabel}
                       </span>
                       {item.isOrphan && (
                         <Badge variant="danger" size="sm">
@@ -156,9 +157,15 @@ export function InventoryTable({
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                      <span className="font-mono">{item.sku || 'No SKU'}</span>
-                      {item.barcode && <span className="font-mono">• {item.barcode}</span>}
-                      {item.category && <span>/ {item.category}</span>}
+                      {item.isOrphan ? (
+                        <span className="font-semibold text-red-700">Product Master Missing</span>
+                      ) : (
+                        <>
+                          <span className="font-mono">{item.sku || 'No SKU'}</span>
+                          {item.barcode && <span className="font-mono">• {item.barcode}</span>}
+                          {item.category && <span>/ {item.category}</span>}
+                        </>
+                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -254,7 +261,11 @@ export function InventoryTable({
 
                 {/* Status */}
                 <TableCell align="center">
-                  {displayStatus === 'OUT_OF_STOCK' ? (
+                  {item.isOrphan ? (
+                    <Badge variant="danger" size="sm" dot>
+                      Orphan Inventory
+                    </Badge>
+                  ) : displayStatus === 'OUT_OF_STOCK' ? (
                     <Badge variant="danger" size="sm" dot>
                       Out of Stock
                     </Badge>

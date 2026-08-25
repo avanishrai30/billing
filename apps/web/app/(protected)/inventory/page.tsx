@@ -105,12 +105,20 @@ export default function InventoryPage() {
 
       // 2. Status Filter
       if (statusFilter !== 'ALL') {
+        if (statusFilter === 'ORPHAN') {
+          if (!item.isOrphan) return false;
+        } else if (item.isOrphan) {
+          return false;
+        }
+
         const baseStatus = deriveStockStatus(onHand, item.reorderLevel);
         const hasExpiringBatch = item.batches.some(
           (b) => b.expiryDate && b.expiryDate <= thirtyDaysIso && b.remainingQuantity > 0
         );
 
-        if (statusFilter === 'EXPIRING_SOON') {
+        if (statusFilter === 'ORPHAN') {
+          return true;
+        } else if (statusFilter === 'EXPIRING_SOON') {
           if (!hasExpiringBatch) return false;
         } else if (baseStatus !== statusFilter) {
           return false;
@@ -128,7 +136,8 @@ export default function InventoryPage() {
         const matchName = (item.productName || '').toLowerCase().includes(q);
         const matchSku = (item.sku || '').toLowerCase().includes(q);
         const matchBarcode = (item.barcode || '').toLowerCase().includes(q);
-        return matchName || matchSku || matchBarcode;
+        const matchOrphan = item.isOrphan && 'orphan inventory product master missing'.includes(q);
+        return matchName || matchSku || matchBarcode || matchOrphan;
       }
 
       return true;

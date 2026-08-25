@@ -37,6 +37,7 @@ export function CleanupPreviewModal({
   if (!isOpen || !preview) return null;
 
   const isPurge = preview.action === 'purge';
+  const orphanImpact = preview.orphanInventoryImpact;
   const expectedConfirmCode = `PURGE ${preview.eligibleCount} RECORDS`;
   const isConfirmValid = !isPurge || typedConfirm.trim().toUpperCase() === expectedConfirmCode;
 
@@ -131,6 +132,48 @@ export function CleanupPreviewModal({
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {orphanImpact && (
+          <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 space-y-3">
+            <div className="flex items-center gap-2 font-bold text-amber-950">
+              <ShieldAlert className="w-4 h-4 text-amber-700" />
+              <span>Orphan Inventory Cleanup Impact</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/70 border border-amber-200 rounded-lg p-3">
+                <span className="text-[11px] text-amber-800 font-medium block">Orphan Records</span>
+                <span className="text-lg font-bold font-mono text-amber-950">{orphanImpact.recordCount}</span>
+              </div>
+              <div className="bg-white/70 border border-amber-200 rounded-lg p-3">
+                <span className="text-[11px] text-amber-800 font-medium block">Total Units</span>
+                <span className="text-lg font-bold font-mono text-amber-950">{orphanImpact.totalQuantity}</span>
+              </div>
+            </div>
+            {orphanImpact.locations.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[11px] font-bold text-amber-900">Affected Locations</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {orphanImpact.locations.map((loc) => (
+                    <div key={loc.locationId} className="flex items-center justify-between rounded-md bg-white/70 border border-amber-200 px-2 py-1 text-[11px]">
+                      <span className="font-semibold text-amber-950">{loc.locationId}</span>
+                      <span className="font-mono font-bold text-amber-900">{loc.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {orphanImpact.ledgerReferences.length > 0 && (
+              <div className="text-[11px] text-amber-800">
+                Inventory ledger references present: <strong>{orphanImpact.ledgerReferences.length}</strong>
+              </div>
+            )}
+            {orphanImpact.batchReferences.length > 0 && (
+              <div className="text-[11px] text-red-700">
+                Active batch references blocked: <strong>{orphanImpact.batchReferences.length}</strong>
+              </div>
+            )}
           </div>
         )}
 

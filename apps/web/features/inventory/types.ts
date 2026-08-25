@@ -13,7 +13,7 @@ export type MovementType =
   | 'DAMAGE'
   | 'CLEANUP_RESET';
 
-export type StockStatus = 'HEALTHY' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'EXPIRING_SOON';
+export type StockStatus = 'HEALTHY' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'EXPIRING_SOON' | 'ORPHAN';
 
 export interface LocationStockBreakdown {
   locationId: string;

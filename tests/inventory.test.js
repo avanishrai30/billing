@@ -106,8 +106,18 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     setupContext(mockDb, null, 'test-secret', '/tmp', {}, new Map());
   });
 
+  async function seedProduct(id) {
+    await mockDb.collection('products').insertOne({
+      id,
+      name: `Product ${id}`,
+      sku: `SKU-${id}`,
+      isArchived: false
+    });
+  }
+
   test('1. Concurrency Test: 10 simultaneous sales of stock = 10 must leave stock = 0 with no lost updates', async () => {
     const productId = 'prod-concurrency-1';
+    await seedProduct(productId);
     // Initialize stock = 10
     await inventoryService.adjustStock(productId, testLocation, 10, 'OPENING', 'init', 'test-runner');
 
@@ -144,6 +154,9 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     const prodA = 'prod-basket-A';
     const prodB = 'prod-basket-B';
     const prodC = 'prod-basket-C';
+    await seedProduct(prodA);
+    await seedProduct(prodB);
+    await seedProduct(prodC);
 
     // Seed stock: A=10, B=10, C=2
     await inventoryService.adjustStock(prodA, testLocation, 10, 'OPENING', 'init', 'test-runner');
@@ -173,6 +186,7 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
 
   test('3. Inter-Store Transfer: Atomic stock movement and dual ledger records', async () => {
     const prodId = 'prod-transfer-1';
+    await seedProduct(prodId);
     await inventoryService.adjustStock(prodId, testLocation, 25, 'OPENING', 'init', 'test-runner');
 
     const transferResult = await inventoryService.transferStock(
@@ -197,6 +211,7 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
 
   test('4. Stock Availability Check', async () => {
     const prodId = 'prod-avail-1';
+    await seedProduct(prodId);
     await inventoryService.adjustStock(prodId, testLocation, 5, 'OPENING', 'init', 'test-runner');
 
     const checkPass = await inventoryService.checkStockAvailability(
@@ -212,5 +227,11 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     expect(checkFail.available).toBe(false);
     expect(checkFail.errors.length).toBe(1);
     expect(checkFail.errors[0].available).toBe(5);
+  });
+
+  test('5. New orphan inventory creation is rejected when Product Master is missing', async () => {
+    await expect(
+      inventoryService.adjustStock('prod-missing-master', testLocation, 5, 'OPENING', 'init', 'test-runner')
+    ).rejects.toMatchObject({ code: 'PRODUCT_MASTER_NOT_FOUND', statusCode: 409 });
   });
 });

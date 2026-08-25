@@ -68,6 +68,69 @@ function computeStateFingerprint(records = []) {
   return crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex');
 }
 
+function getInventoryRecordId(inv = {}) {
+  return inv.id || `${inv.productId || 'missing'}__${inv.locationId || inv.storeId || 'all'}`;
+}
+
+function getInventoryLocationId(inv = {}) {
+  return inv.locationId || inv.storeId || 'all';
+}
+
+function getInventoryQuantity(inv = {}) {
+  return parseFloat(inv.quantity) || 0;
+}
+
+function isActiveDocument(doc = {}) {
+  return doc.isArchived !== true && doc.status !== 'VOIDED' && doc.status !== 'voided' && doc.status !== 'archived';
+}
+
+async function findInventoryRecordsByIds(db, recordIds = []) {
+  const targetIds = new Set(recordIds);
+  if (targetIds.size === 0) return [];
+
+  const candidateProductIds = Array.from(targetIds)
+    .map(id => String(id).includes('__') ? String(id).split('__')[0] : id);
+
+  const mongoFilter = candidateProductIds.length > 0
+    ? { $or: [{ id: { $in: Array.from(targetIds) } }, { productId: { $in: candidateProductIds } }] }
+    : { id: { $in: Array.from(targetIds) } };
+
+  const candidates = await db.collection('inventory').find(mongoFilter).toArray();
+  return candidates.filter(inv => targetIds.has(getInventoryRecordId(inv)) || targetIds.has(inv.id) || targetIds.has(inv.productId));
+}
+
+async function getOrphanInventoryDependencyReport(db, inv) {
+  const productId = inv.productId;
+  const locationId = getInventoryLocationId(inv);
+
+  const batches = await db.collection('product_batches').find({
+    productId,
+    status: { $ne: 'archived' },
+    remainingQuantity: { $gt: 0 }
+  }).toArray();
+
+  const invoices = await db.collection('invoices').find({
+    'items.productId': productId,
+    $or: [{ locationId }, { storeId: locationId }, { locationId: { $exists: false } }]
+  }).toArray();
+
+  const purchases = await db.collection('purchases').find({
+    'items.productId': productId,
+    $or: [{ locationId }, { storeId: locationId }, { locationId: { $exists: false } }]
+  }).toArray();
+
+  const ledgerRefs = await db.collection('inventory_ledger').find({ productId }).toArray();
+  const activeInvoices = invoices.filter(isActiveDocument);
+  const activePurchases = purchases.filter(isActiveDocument);
+
+  return {
+    batches,
+    activeInvoices,
+    activePurchases,
+    ledgerRefs
+  };
+}
+
 const adminCleanupService = {
   /**
    * 1. Get high-level domain summary stats for Dashboard cards
@@ -102,6 +165,13 @@ const adminCleanupService = {
     // Inventory summary
     const totalInventoryRecords = await db.collection('inventory').countDocuments({});
     const zeroStockRecords = await db.collection('inventory').countDocuments({ quantity: { $lte: 0 } });
+    const inventoryRecords = await db.collection('inventory').find({}).toArray();
+    const inventoryProductIds = Array.from(new Set(inventoryRecords.map(inv => inv.productId).filter(Boolean)));
+    const existingProducts = inventoryProductIds.length > 0
+      ? await db.collection('products').find({ id: { $in: inventoryProductIds } }).toArray()
+      : [];
+    const existingProductIds = new Set(existingProducts.map(p => p.id));
+    const orphanInventory = inventoryRecords.filter(inv => inv.productId && !existingProductIds.has(inv.productId));
     const totalLedgerEntries = await db.collection('inventory_ledger').countDocuments({});
 
     // Last cleanup operation
@@ -136,7 +206,9 @@ const adminCleanupService = {
         totalRecords: totalInventoryRecords,
         zeroStock: zeroStockRecords,
         totalLedgerEntries,
-        potentialCleanup: zeroStockRecords
+        orphanRecords: orphanInventory.length,
+        orphanQuantity: orphanInventory.reduce((sum, inv) => sum + getInventoryQuantity(inv), 0),
+        potentialCleanup: orphanInventory.length
       },
       lastOperation: lastOp[0] || null
     };
@@ -333,12 +405,9 @@ const adminCleanupService = {
         ];
       }
 
-      const total = await db.collection('inventory').countDocuments(mongoFilter);
-      const records = await db.collection('inventory')
+      let records = await db.collection('inventory')
         .find(mongoFilter)
         .sort({ productId: 1, locationId: 1 })
-        .skip(skip)
-        .limit(limit)
         .toArray();
 
       // Enrich with Product Name & SKU if missing
@@ -349,14 +418,20 @@ const adminCleanupService = {
         prods.forEach(p => productMap.set(p.id, p));
       }
 
+      records = records.filter(inv => filters.stockStatus !== 'orphan' || !productMap.has(inv.productId));
+      const total = records.length;
+      const pagedRecords = records.slice(skip, skip + limit);
+
       return {
-        records: records.map(inv => {
+        records: pagedRecords.map(inv => {
           const prod = productMap.get(inv.productId);
+          const isOrphan = !prod;
           return {
             ...inv,
-            id: inv.id || (inv._id ? String(inv._id) : `${inv.productId}_${inv.locationId || inv.storeId}`),
-            productName: inv.productName || prod?.name || inv.productId,
-            sku: inv.sku || prod?.sku || 'N/A',
+            id: getInventoryRecordId(inv),
+            productName: prod?.name || (isOrphan ? 'Product Master Missing' : inv.productName || inv.productId),
+            sku: prod?.sku || (isOrphan ? '' : inv.sku || 'N/A'),
+            isOrphan,
             currentQuantity: parseFloat(inv.quantity) || 0,
             locationId: inv.locationId || inv.storeId || 'all'
           };
@@ -412,6 +487,7 @@ const adminCleanupService = {
     let stockReversalUnits = 0;
     let financialImpact = 0;
     let fetchedRawRecords = [];
+    let orphanInventoryImpact = null;
 
     // --- DOMAIN: INVOICES ---
     if (domain === 'invoices') {
@@ -623,45 +699,98 @@ const adminCleanupService = {
 
     // --- DOMAIN: INVENTORY ---
     else if (domain === 'inventory') {
-      fetchedRawRecords = await db.collection('inventory').find({
-        $or: [{ id: { $in: recordIds } }, { productId: { $in: recordIds } }]
-      }).toArray();
+      fetchedRawRecords = await findInventoryRecordsByIds(db, recordIds);
+      const locationTotals = new Map();
+      const batchReferences = [];
+      const ledgerReferences = [];
 
       for (const inv of fetchedRawRecords) {
-        const invId = inv.id || String(inv._id) || `${inv.productId}_${inv.locationId}`;
+        const invId = getInventoryRecordId(inv);
         const currentQty = parseFloat(inv.quantity) || 0;
+        const locId = getInventoryLocationId(inv);
 
         if (action === 'reset_test_stock') {
           stockReversalUnits -= currentQty;
           eligibleRecords.push({
             id: invId,
-            label: `Stock for Product ${inv.productId} at ${inv.locationId || 'all'}`,
+            label: `Stock for Product ${inv.productId} at ${locId}`,
             action: 'RESET_STOCK_TO_ZERO',
             details: `Adjust stock from ${currentQty} to 0 with balancing ledger audit movement.`
           });
         } else if (action === 'remove_orphans') {
           const prodExists = await db.collection('products').findOne({ id: inv.productId });
-          if (!prodExists && currentQty <= 0) {
+          const dependencyReport = await getOrphanInventoryDependencyReport(db, inv);
+          const blockReasons = [];
+
+          if (prodExists) {
+            blockReasons.push('Product Master now exists in catalog.');
+          }
+          if (dependencyReport.batches.length > 0) {
+            blockReasons.push(`${dependencyReport.batches.length} active batch reference(s)`);
+          }
+          if (dependencyReport.activeInvoices.length > 0) {
+            blockReasons.push(`${dependencyReport.activeInvoices.length} active invoice reference(s)`);
+          }
+          if (dependencyReport.activePurchases.length > 0) {
+            blockReasons.push(`${dependencyReport.activePurchases.length} active purchase reference(s)`);
+          }
+
+          dependencyReport.batches.forEach(batch => {
+            batchReferences.push({
+              inventoryId: invId,
+              productId: inv.productId,
+              batchId: batch.id || (batch._id ? String(batch._id) : ''),
+              lotNumber: batch.lotNumber || 'N/A',
+              remainingQuantity: parseFloat(batch.remainingQuantity) || 0,
+              locationId: batch.locationId || batch.storeId || locId
+            });
+          });
+          dependencyReport.ledgerRefs.forEach(ref => {
+            ledgerReferences.push({
+              inventoryId: invId,
+              productId: inv.productId,
+              movementId: ref.movementId || ref.id || (ref._id ? String(ref._id) : ''),
+              referenceType: ref.referenceType || '',
+              referenceId: ref.referenceId || '',
+              quantity: parseFloat(ref.quantity) || 0,
+              locationId: ref.locationId || ref.storeId || locId
+            });
+          });
+
+          if (blockReasons.length === 0) {
+            stockReversalUnits += currentQty;
+            locationTotals.set(locId, (locationTotals.get(locId) || 0) + currentQty);
             eligibleRecords.push({
               id: invId,
-              label: `Orphan Stock: ${inv.productId}`,
-              action: 'REMOVE_ORPHAN',
-              details: 'Remove empty inventory document whose product master does not exist.'
-            });
-          } else if (currentQty > 0) {
-            blockedRecords.push({
-              id: invId,
-              label: `Stock for Product ${inv.productId}`,
-              reason: `Stock is not zero (${currentQty} units). Reset stock first before removing.`
+              label: `ORPHAN INVENTORY at ${locId}`,
+              action: 'ORPHAN_INVENTORY_CLEANUP',
+              details: `${currentQty} units will be removed because Product Master is missing.`
             });
           } else {
             blockedRecords.push({
               id: invId,
-              label: `Stock for Product ${inv.productId}`,
-              reason: 'Product master still exists in catalog.'
+              label: `Inventory at ${locId}`,
+              reason: blockReasons.join('; ')
             });
           }
         }
+      }
+
+      if (action === 'remove_orphans') {
+        orphanInventoryImpact = {
+          recordCount: eligibleRecords.length,
+          totalQuantity: stockReversalUnits,
+          locations: Array.from(locationTotals.entries()).map(([locationId, quantity]) => ({ locationId, quantity })),
+          batchReferences,
+          ledgerReferences
+        };
+        warnings.push(`${eligibleRecords.length} orphan records`);
+        warnings.push(`${stockReversalUnits} total units`);
+        Array.from(locationTotals.entries()).forEach(([locationId, quantity]) => {
+          warnings.push(`${locationId}: ${quantity}`);
+        });
+        if (batchReferences.length > 0) warnings.push(`${batchReferences.length} active batch reference(s) blocked`);
+        if (ledgerReferences.length > 0) warnings.push(`${ledgerReferences.length} inventory ledger reference(s) present`);
       }
     }
 
@@ -679,6 +808,7 @@ const adminCleanupService = {
       blockedCount: blockedRecords.length,
       stockReversalUnits,
       financialImpact,
+      orphanInventoryImpact,
       reversible: action !== 'purge',
       executed: false,
       createdAt: new Date().toISOString()
@@ -692,6 +822,7 @@ const adminCleanupService = {
       blockedCount: blockedRecords.length,
       stockReversalUnits,
       financialImpact,
+      orphanInventoryImpact,
       reversible: action !== 'purge',
       eligibleRecords,
       blockedRecords,
@@ -751,9 +882,7 @@ const adminCleanupService = {
         $or: [{ id: { $in: targetQueryIds } }, { sku: { $in: targetQueryIds } }]
       }).toArray();
     } else if (domain === 'inventory') {
-      currentRawRecords = await db.collection('inventory').find({
-        $or: [{ id: { $in: targetQueryIds } }, { productId: { $in: targetQueryIds } }]
-      }).toArray();
+      currentRawRecords = await findInventoryRecordsByIds(db, targetQueryIds);
     }
 
     const currentStateFingerprint = computeStateFingerprint(currentRawRecords);
@@ -792,6 +921,7 @@ const adminCleanupService = {
       operationId,
       domain,
       action,
+      operationType: domain === 'inventory' && action === 'remove_orphans' ? 'ORPHAN_INVENTORY_CLEANUP' : action.toUpperCase(),
       status: 'EXECUTING',
       actorUserId: user.id || user.username,
       actorUsername,
@@ -803,7 +933,11 @@ const adminCleanupService = {
       failureCount: 0,
       stockReversalUnits: preview.stockReversalUnits,
       financialImpact: preview.financialImpact,
+      orphanInventoryImpact: preview.orphanInventoryImpact || null,
       affectedRecordIds: preview.eligibleRecords.map(r => r.id),
+      affectedProductIds: [],
+      affectedLocations: [],
+      beforeSnapshot: [],
       recoveryManifest: [],
       errors: [],
       createdAt: now,
@@ -980,14 +1114,12 @@ const adminCleanupService = {
       // --- EXECUTE INVENTORY ---
       else if (domain === 'inventory') {
         for (const item of preview.eligibleRecords) {
-          const invDoc = await db.collection('inventory').findOne({
-            $or: [{ id: item.id }, { productId: item.id }]
-          });
+          const [invDoc] = await findInventoryRecordsByIds(db, [item.id]);
           if (!invDoc) continue;
 
           recoveryManifest.push({
             collection: 'inventory',
-            id: invDoc.id || String(invDoc._id),
+            id: getInventoryRecordId(invDoc),
             preState: JSON.parse(JSON.stringify(invDoc))
           });
 
@@ -1010,8 +1142,50 @@ const adminCleanupService = {
             }
             processedIds.push(item.id);
           } else if (action === 'remove_orphans') {
+            const productExists = await db.collection('products').findOne({ id: invDoc.productId });
+            if (productExists) {
+              const err = new Error(`Product Master now exists for '${invDoc.productId}'. Orphan cleanup blocked.`);
+              err.code = 'STALE_PREVIEW';
+              throw err;
+            }
+
+            const dependencyReport = await getOrphanInventoryDependencyReport(db, invDoc);
+            if (
+              dependencyReport.batches.length > 0 ||
+              dependencyReport.activeInvoices.length > 0 ||
+              dependencyReport.activePurchases.length > 0
+            ) {
+              const err = new Error(`Inventory record '${getInventoryRecordId(invDoc)}' now has active dependencies. Orphan cleanup blocked.`);
+              err.code = 'DEPENDENCY_BLOCKED';
+              err.details = {
+                batches: dependencyReport.batches.length,
+                activeInvoices: dependencyReport.activeInvoices.length,
+                activePurchases: dependencyReport.activePurchases.length
+              };
+              throw err;
+            }
+
             await db.collection('inventory').deleteOne({ _id: invDoc._id });
             processedIds.push(item.id);
+
+            const locId = getInventoryLocationId(invDoc);
+            if (io) {
+              const envelope = realtimeService.createEventEnvelope(
+                'inventory',
+                'deleted',
+                invDoc.productId,
+                locId,
+                {
+                  productId: invDoc.productId,
+                  locationId: locId,
+                  storeId: locId,
+                  reason: 'ORPHAN_INVENTORY_CLEANUP'
+                },
+                invDoc.version || 1
+              );
+              io.to(`store_${locId}`).emit('inventory.updated', envelope);
+              io.to('sync_global').emit('inventory.updated', envelope);
+            }
           }
         }
       }
@@ -1024,6 +1198,9 @@ const adminCleanupService = {
             status: 'COMPLETED',
             successCount: processedIds.length,
             recoveryManifest,
+            affectedProductIds: Array.from(new Set(recoveryManifest.map(item => item.preState?.productId).filter(Boolean))),
+            affectedLocations: Array.from(new Set(recoveryManifest.map(item => getInventoryLocationId(item.preState)).filter(Boolean))),
+            beforeSnapshot: recoveryManifest.map(item => item.preState),
             completedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           }
@@ -1032,7 +1209,7 @@ const adminCleanupService = {
 
       // Write structured audit log
       await auditService.writeAuditLog(
-        'DATA_CLEANUP_EXECUTED',
+        operationDoc.operationType === 'ORPHAN_INVENTORY_CLEANUP' ? 'ORPHAN_INVENTORY_CLEANUP' : 'DATA_CLEANUP_EXECUTED',
         'maintenance',
         operationId,
         null,
@@ -1040,9 +1217,20 @@ const adminCleanupService = {
           operationId,
           domain,
           action,
+          operationType: operationDoc.operationType,
           recordCount: processedIds.length,
           actor: actorUsername,
-          reversible: preview.reversible
+          reversible: preview.reversible,
+          recordIds: processedIds,
+          productIds: Array.from(new Set(recoveryManifest.map(item => item.preState?.productId).filter(Boolean))),
+          locations: Array.from(new Set(recoveryManifest.map(item => getInventoryLocationId(item.preState)).filter(Boolean))),
+          quantities: recoveryManifest.map(item => ({
+            id: item.id,
+            productId: item.preState?.productId,
+            locationId: getInventoryLocationId(item.preState),
+            quantity: getInventoryQuantity(item.preState)
+          })),
+          beforeSnapshot: recoveryManifest.map(item => item.preState)
         },
         req
       );

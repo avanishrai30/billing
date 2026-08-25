@@ -20,7 +20,7 @@ export interface CleanupFilterState {
   category?: string;
   brand?: string;
   paymentMode?: string;
-  stockStatus?: 'all' | 'zero' | 'positive';
+  stockStatus?: 'all' | 'zero' | 'positive' | 'orphan';
   selectAllFiltered?: boolean;
 }
 
@@ -45,6 +45,28 @@ export interface CleanupPreviewResult {
   blockedCount: number;
   stockReversalUnits: number;
   financialImpact: number;
+  orphanInventoryImpact?: {
+    recordCount: number;
+    totalQuantity: number;
+    locations: Array<{ locationId: string; quantity: number }>;
+    batchReferences: Array<{
+      inventoryId: string;
+      productId: string;
+      batchId: string;
+      lotNumber: string;
+      remainingQuantity: number;
+      locationId: string;
+    }>;
+    ledgerReferences: Array<{
+      inventoryId: string;
+      productId: string;
+      movementId: string;
+      referenceType: string;
+      referenceId: string;
+      quantity: number;
+      locationId: string;
+    }>;
+  } | null;
   reversible: boolean;
   eligibleRecords: CleanupRecordSummary[];
   blockedRecords: CleanupBlockedRecord[];
@@ -100,6 +122,8 @@ export interface CleanupDomainSummary {
   inventory: {
     totalRecords: number;
     zeroStock: number;
+    orphanRecords?: number;
+    orphanQuantity?: number;
     totalLedgerEntries: number;
     potentialCleanup: number;
   };

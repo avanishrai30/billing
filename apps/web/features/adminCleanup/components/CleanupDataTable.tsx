@@ -223,7 +223,7 @@ export function CleanupDataTable({
                 className="text-xs flex items-center gap-1"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Remove Orphan Records
+                Orphan Inventory Cleanup
               </Button>
             </>
           )}
@@ -363,14 +363,23 @@ export function CleanupDataTable({
 
                   {domain === 'inventory' && (
                     <>
-                      <td className="p-3 font-semibold text-slate-900">{r.productName}</td>
-                      <td className="p-3 font-mono text-slate-600">{r.sku}</td>
+                      <td className="p-3 font-semibold text-slate-900">
+                        <div className="flex flex-col">
+                          <span>{r.isOrphan ? 'Product Master Missing' : r.productName}</span>
+                          {r.isOrphan && (
+                            <span className="text-[11px] font-bold text-red-700">ORPHAN INVENTORY</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3 font-mono text-slate-600">{r.isOrphan ? '—' : r.sku}</td>
                       <td className="p-3 text-slate-600">{r.locationId}</td>
                       <td className="p-3 text-right font-mono font-semibold text-slate-950">
                         {r.currentQuantity}
                       </td>
                       <td className="p-3 text-center">
-                        {r.currentQuantity <= 0 ? (
+                        {r.isOrphan ? (
+                          <Badge variant="danger" size="sm">ORPHAN</Badge>
+                        ) : r.currentQuantity <= 0 ? (
                           <Badge variant="danger" size="sm">ZERO STOCK</Badge>
                         ) : (
                           <Badge variant="success" size="sm">IN STOCK</Badge>
