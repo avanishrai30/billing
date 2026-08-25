@@ -112,7 +112,10 @@ router.post('/profile', verifyJWT, async (req, res) => {
     const updated = await userService.updateProfile(req.user.id, { name, email, phone }, req);
     res.json({ success: true, user: updated });
   } catch (err) {
-    res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Server error updating profile" } });
+    res.status(err.statusCode || 500).json({
+      success: false,
+      error: { code: err.code || "SERVER_ERROR", message: err.message || "Server error updating profile" }
+    });
   }
 });
 

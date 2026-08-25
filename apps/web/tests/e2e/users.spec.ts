@@ -289,6 +289,7 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
           expect(body).toMatchObject({
             name: 'Pradeep H',
             username: 'pradeep.all',
+            email: '',
             role: 'Employee',
             category: 'employee',
             assignedStoreId: 'all',
@@ -304,6 +305,7 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
           expect(body).toMatchObject({
             name: 'Pradeep H Store 1',
             username: 'pradeep.store1',
+            email: '',
             role: 'Employee',
             category: 'employee',
             assignedStoreId: 'store-1',
@@ -405,7 +407,7 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     const allStoresModal = page.getByRole('dialog');
     await allStoresModal.locator('input[name="name"]').fill('Pradeep H');
     await allStoresModal.locator('input[name="username"]').fill('pradeep.all');
-    await allStoresModal.locator('input[name="email"]').fill('pradeep.all@example.com');
+    await expect(allStoresModal.locator('input[name="email"]')).toHaveValue('');
     await allStoresModal.locator('input[name="phone"]').fill('9898989898');
     await allStoresModal.locator('input[name="password"]').fill('password123');
     await allStoresModal.locator('input[name="role"]').fill('Employee');
@@ -422,7 +424,7 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     const storeModal = page.getByRole('dialog');
     await storeModal.locator('input[name="name"]').fill('Pradeep H Store 1');
     await storeModal.locator('input[name="username"]').fill('pradeep.store1');
-    await storeModal.locator('input[name="email"]').fill('pradeep.store1@example.com');
+    await expect(storeModal.locator('input[name="email"]')).toHaveValue('');
     await storeModal.locator('input[name="phone"]').fill('9797979797');
     await storeModal.locator('input[name="password"]').fill('password123');
     await storeModal.locator('input[name="role"]').fill('Employee');

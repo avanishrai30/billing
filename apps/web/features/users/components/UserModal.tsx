@@ -139,9 +139,17 @@ export function UserModal({
     return 'inherit';
   };
 
-  const handleFormSubmit = async (values: UserFormValues) => {
+  const handleFormSubmit = async (values: UserFormValues, event?: React.BaseSyntheticEvent) => {
     // If editing and password is empty, don't send empty string
-    const payload = { ...values };
+    const form = event?.currentTarget instanceof HTMLFormElement ? event.currentTarget : null;
+    const formData = form ? new FormData(form) : null;
+    const actualEmail = formData?.get('email');
+    const actualPhone = formData?.get('phone');
+    const payload = {
+      ...values,
+      email: typeof actualEmail === 'string' ? actualEmail : values.email,
+      phone: typeof actualPhone === 'string' ? actualPhone : values.phone
+    };
     if (isEditing && !payload.password) {
       delete payload.password;
     }

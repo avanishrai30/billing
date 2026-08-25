@@ -21,6 +21,7 @@ import {
   type UserSummaryMetrics
 } from '../../../features/users';
 import { AccessDeniedState, useToast } from '../../../components/ui';
+import { ApiError } from '../../../lib/errors/types';
 
 const roleLabels: Record<UserCategory, string> = {
   'super admin': 'Super Admin',
@@ -31,7 +32,7 @@ const roleLabels: Record<UserCategory, string> = {
 
 export default function UsersPage() {
   const { user: currentUser, hasPermission } = useAuth();
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
   const canView = hasPermission('users.view');
   const canCreate = hasPermission('users.create') || hasPermission('users.update');
   const canManage = hasPermission('users.update') || hasPermission('users.create');
@@ -144,17 +145,26 @@ export default function UsersPage() {
   };
 
   const handleSaveUser = async (values: UserFormValues) => {
-    const previousCategory = selectedUser?.category;
-    const response = await saveMutation.mutateAsync(values);
-    const savedCategory = response.user.category || values.category || 'employee';
-    setSelectedUserId(response.user.id);
+    try {
+      const previousCategory = selectedUser?.category;
+      const response = await saveMutation.mutateAsync(values);
+      const savedCategory = response.user.category || values.category || 'employee';
+      setSelectedUserId(response.user.id);
 
-    if (previousCategory && previousCategory !== savedCategory) {
-      success(`Authorization role updated to ${roleLabels[savedCategory]}`);
-      return;
+      if (previousCategory && previousCategory !== savedCategory) {
+        success(`Authorization role updated to ${roleLabels[savedCategory]}`);
+        return;
+      }
+
+      success(selectedUser ? 'User account updated' : 'User account created');
+    } catch (err) {
+      const apiError = err instanceof ApiError ? err : null;
+      const message = apiError?.code === 'USER_EMAIL_ALREADY_EXISTS'
+        ? `${apiError.message} Use a different email or leave Email Address empty.`
+        : (err instanceof Error ? err.message : 'Unable to save user account.');
+      toastError('User Save Failed', message);
+      throw err;
     }
-
-    success(selectedUser ? 'User account updated' : 'User account created');
   };
 
   const handleConfirmDeactivate = async () => {

@@ -25,6 +25,16 @@ function normalizePermissionArray(value = []) {
   return Array.from(new Set((Array.isArray(value) ? value : []).filter(Boolean)));
 }
 
+function normalizeUsername(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeOptionalEmail(value) {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function normalizeStoreScopePayload(userData, existingUser) {
   const rawAssignedStoreId = userData.assignedStoreId ?? existingUser?.assignedStoreId ?? 'all';
   const assignedStoreId = String(rawAssignedStoreId || 'all').trim() || 'all';
@@ -62,8 +72,14 @@ async function assertStoreScopeExists(db, scope) {
 function normalizeUserAccessPayload(userData, existingUser) {
   const category = userData.category || existingUser?.category || authzService.normalizeCategory(userData);
   const storeScope = normalizeStoreScopePayload(userData, existingUser);
+  const hasEmailField = Object.prototype.hasOwnProperty.call(userData, 'email');
+  const normalizedEmail = normalizeOptionalEmail(hasEmailField ? userData.email : existingUser?.email);
+  const emailPayload = normalizedEmail ? { email: normalizedEmail } : {};
+  const { email, ...restUserData } = userData;
   return {
-    ...userData,
+    ...restUserData,
+    username: normalizeUsername(userData.username || existingUser?.username),
+    ...emailPayload,
     category,
     ...storeScope,
     permissions: normalizePermissionArray(userData.permissions || existingUser?.permissions || []),
@@ -78,10 +94,11 @@ async function assertUniqueUserIdentity(db, userDoc, existingUser) {
     throw createHttpError(`Username '${userDoc.username}' is already in use.`, 409, 'USERNAME_ALREADY_EXISTS');
   }
 
-  if (userDoc.email) {
-    const duplicateEmail = await db.collection('users').findOne({ email: userDoc.email });
+  const normalizedEmail = normalizeOptionalEmail(userDoc.email);
+  if (normalizedEmail) {
+    const duplicateEmail = await db.collection('users').findOne({ email: normalizedEmail });
     if (duplicateEmail && duplicateEmail.id !== existingUser?.id) {
-      throw createHttpError(`Email '${userDoc.email}' is already in use.`, 409, 'EMAIL_ALREADY_EXISTS');
+      throw createHttpError(`Email '${normalizedEmail}' is already in use.`, 409, 'USER_EMAIL_ALREADY_EXISTS');
     }
   }
 
@@ -101,7 +118,11 @@ function mapDuplicateKeyError(err) {
     return createHttpError(`Username '${keyValue.username || ''}' is already in use.`, 409, 'USERNAME_ALREADY_EXISTS');
   }
   if (keyPattern.email || keyValue.email) {
-    return createHttpError(`Email '${keyValue.email || ''}' is already in use.`, 409, 'EMAIL_ALREADY_EXISTS');
+    const normalizedEmail = normalizeOptionalEmail(keyValue.email);
+    const message = normalizedEmail
+      ? `Email '${normalizedEmail}' is already in use.`
+      : 'Optional email must be blank or a unique email address.';
+    return createHttpError(message, 409, 'USER_EMAIL_ALREADY_EXISTS');
   }
   if (keyPattern.id || keyValue.id) {
     return createHttpError('User ID collision detected. Please retry user creation.', 409, 'USER_ID_ALREADY_EXISTS');
@@ -301,6 +322,9 @@ const userService = {
         $set: userDoc,
         $unset: { password: "" }
       };
+      if (!userDoc.email) {
+        updatePayload.$unset.email = "";
+      }
 
       if (passwordHash) {
         const nextTokenVersion = (existingUser && existingUser.tokenVersion && existingUser.tokenVersion >= 1)
@@ -444,12 +468,46 @@ const userService = {
    */
   async updateProfile(userId, { name, email, phone }, req) {
     const { db, io } = getContext();
-    await db.collection('users').updateOne(
-      { id: userId },
-      { $set: { name, email, phone, updatedAt: new Date().toISOString() } }
-    );
+    const existingUser = await db.collection('users').findOne({ id: userId });
+    if (!existingUser) {
+      throw createHttpError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    const normalizedEmail = normalizeOptionalEmail(email);
+    if (normalizedEmail) {
+      const duplicateEmail = await db.collection('users').findOne({ email: normalizedEmail });
+      if (duplicateEmail && duplicateEmail.id !== userId) {
+        throw createHttpError(`Email '${normalizedEmail}' is already in use.`, 409, 'USER_EMAIL_ALREADY_EXISTS');
+      }
+    }
+
+    const updatePayload = {
+      $set: {
+        name: String(name || '').trim(),
+        phone: String(phone || '').trim(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+    if (normalizedEmail) {
+      updatePayload.$set.email = normalizedEmail;
+    } else {
+      updatePayload.$unset = {};
+      updatePayload.$unset.email = "";
+    }
+
+    try {
+      await db.collection('users').updateOne({ id: userId }, updatePayload);
+    } catch (err) {
+      const duplicateErr = mapDuplicateKeyError(err);
+      if (duplicateErr) throw duplicateErr;
+      throw err;
+    }
     const updated = await this.getUserById(userId);
-    await auditService.writeAuditLog('user_updated', 'user', userId, null, { name, email, phone }, req);
+    await auditService.writeAuditLog('user_updated', 'user', userId, existingUser, {
+      name: updatePayload.$set.name,
+      email: normalizedEmail || null,
+      phone: updatePayload.$set.phone
+    }, req);
     if (io) {
       io.to('sync_global').emit('user_updated', { user: updated });
     }

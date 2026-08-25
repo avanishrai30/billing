@@ -9,7 +9,10 @@ export const userFormSchema = z.object({
     .trim()
     .toLowerCase()
     .regex(/^[a-z0-9._-]+$/, 'Username can only contain lowercase alphanumeric characters, dots, hyphens, and underscores'),
-  email: z.string().trim().email('Invalid email address').optional().or(z.literal('')),
+  email: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? '' : value),
+    z.string().trim().email('Invalid email address').optional().or(z.literal(''))
+  ),
   phone: z.string().trim().max(20, 'Phone cannot exceed 20 characters').optional().or(z.literal('')),
   password: z
     .string()
@@ -39,7 +42,10 @@ export const changePasswordSchema = z
 
 export const updateProfileSchema = z.object({
   name: z.string().min(1, 'Name is required').trim(),
-  email: z.string().trim().email('Invalid email address').optional().or(z.literal('')),
+  email: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? '' : value),
+    z.string().trim().email('Invalid email address').optional().or(z.literal(''))
+  ),
   phone: z.string().trim().optional().or(z.literal(''))
 });
 

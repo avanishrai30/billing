@@ -52,6 +52,13 @@ function createMockDb({ usersTable, storesTable, auditLogsTable }) {
             err.keyValue = { username: doc.username };
             throw err;
           }
+          if (doc.email && Array.from(usersTable.values()).some(user => user.email === doc.email)) {
+            const err = new Error('duplicate key');
+            err.code = 11000;
+            err.keyPattern = { email: 1 };
+            err.keyValue = { email: doc.email };
+            throw err;
+          }
           usersTable.set(doc.id, doc);
         }
         if (name === 'audit_logs') auditLogsTable.push(doc);
@@ -198,6 +205,7 @@ describe('Employee and store-scoped user provisioning', () => {
     });
     expect(res.body.user.password).toBeUndefined();
     expect(res.body.user.passwordHash).toBeDefined();
+    expect(res.body.user.email).toBeUndefined();
   });
 
   test('Super Admin creates Employee for Store 1 and Store 2', async () => {
@@ -282,6 +290,70 @@ describe('Employee and store-scoped user provisioning', () => {
     expect(second.body.error.code).toBe('USERNAME_ALREADY_EXISTS');
   });
 
+  test('username is normalized lowercase and trimmed before uniqueness checks', async () => {
+    const first = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${tokenFor(superAdmin)}`)
+      .send(employeePayload({ username: ' Trimmed.User ' }));
+
+    expect(first.status).toBe(200);
+    expect(first.body.user.username).toBe('trimmed.user');
+
+    const second = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${tokenFor(superAdmin)}`)
+      .send(employeePayload({ username: 'trimmed.user' }));
+
+    expect(second.status).toBe(409);
+    expect(second.body.error.code).toBe('USERNAME_ALREADY_EXISTS');
+  });
+
+  test('optional empty email does not participate in duplicate checks', async () => {
+    const first = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${tokenFor(superAdmin)}`)
+      .send(employeePayload({ username: 'pradeep1', email: '', assignedStoreId: 'all', assignedStores: ['all'] }));
+    expect(first.status).toBe(200);
+    expect(first.body.user.email).toBeUndefined();
+
+    const second = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${tokenFor(superAdmin)}`)
+      .send(employeePayload({ username: 'pradeep2', email: '', assignedStoreId: 'store-1', assignedStores: ['store-1'] }));
+    expect(second.status).toBe(200);
+    expect(second.body.user.email).toBeUndefined();
+    expect(second.body.user.assignedStoreId).toBe('store-1');
+  });
+
+  test('whitespace email is normalized away', async () => {
+    const res = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${tokenFor(superAdmin)}`)
+      .send(employeePayload({ username: 'whitespace.email', email: '   ' }));
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBeUndefined();
+  });
+
+  test('duplicate real email returns USER_EMAIL_ALREADY_EXISTS with normalized email', async () => {
+    const first = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${tokenFor(superAdmin)}`)
+      .send(employeePayload({ username: 'email.owner', email: 'info@vcorganics.com' }));
+    expect(first.status).toBe(200);
+    expect(first.body.user.email).toBe('info@vcorganics.com');
+
+    const duplicate = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${tokenFor(superAdmin)}`)
+      .send(employeePayload({ username: 'pradeep3', email: ' INFO@vcorganics.com ' }));
+
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.error.code).toBe('USER_EMAIL_ALREADY_EXISTS');
+    expect(duplicate.body.error.message).toBe("Email 'info@vcorganics.com' is already in use.");
+    expect(duplicate.body.error.message).not.toContain("Email ''");
+  });
+
   test('missing password on create returns PASSWORD_REQUIRED', async () => {
     const payload = employeePayload({ username: 'missing.password' });
     delete payload.password;
@@ -324,6 +396,69 @@ describe('Employee and store-scoped user provisioning', () => {
     expect(edited.assignedStoreId).toBe('store-2');
     expect(edited.assignedStores).toEqual(['store-2']);
     expect(edited.password).toBeUndefined();
+  });
+
+  test('existing employee edit can clear email without duplicate failure', async () => {
+    const created = await userService.saveUser(employeePayload({
+      username: 'email.clear',
+      email: 'clear@example.com'
+    }), { user: superAdmin, headers: {} });
+
+    const edited = await userService.saveUser({
+      ...created,
+      email: ''
+    }, { user: superAdmin, headers: {} });
+
+    expect(edited.email).toBeUndefined();
+    expect(usersTable.get(created.id).email).toBeUndefined();
+  });
+
+  test('profile update can clear blank email and rejects duplicate real email', async () => {
+    const owner = await userService.saveUser(employeePayload({
+      username: 'profile.email.owner',
+      email: 'profile.owner@example.com'
+    }), { user: superAdmin, headers: {} });
+    const target = await userService.saveUser(employeePayload({
+      username: 'profile.email.target',
+      email: 'profile.target@example.com'
+    }), { user: superAdmin, headers: {} });
+
+    const cleared = await userService.updateProfile(target.id, {
+      name: target.name,
+      email: '   ',
+      phone: target.phone
+    }, { user: target, headers: {} });
+
+    expect(cleared.email).toBeUndefined();
+    expect(usersTable.get(target.id).email).toBeUndefined();
+
+    await expect(userService.updateProfile(target.id, {
+      name: target.name,
+      email: owner.email.toUpperCase(),
+      phone: target.phone
+    }, { user: target, headers: {} })).rejects.toMatchObject({
+      code: 'USER_EMAIL_ALREADY_EXISTS',
+      statusCode: 409
+    });
+  });
+
+  test('existing employee edit to duplicate email returns USER_EMAIL_ALREADY_EXISTS', async () => {
+    const owner = await userService.saveUser(employeePayload({
+      username: 'email.dupe.owner',
+      email: 'owner@example.com'
+    }), { user: superAdmin, headers: {} });
+    const target = await userService.saveUser(employeePayload({
+      username: 'email.dupe.target',
+      email: ''
+    }), { user: superAdmin, headers: {} });
+
+    await expect(userService.saveUser({
+      ...target,
+      email: owner.email
+    }, { user: superAdmin, headers: {} })).rejects.toMatchObject({
+      code: 'USER_EMAIL_ALREADY_EXISTS',
+      statusCode: 409
+    });
   });
 
   test('successful create emits user realtime synchronization events', async () => {

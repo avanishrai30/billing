@@ -76,7 +76,10 @@ const userSchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(1, "Name is required"),
   username: z.string().trim().min(1, "Username is required"),
-  email: z.string().trim().email("Invalid email address").optional().or(z.literal("")),
+  email: z.preprocess(
+    value => (typeof value === 'string' && value.trim() === '' ? '' : value),
+    z.string().trim().email("Invalid email address").optional().or(z.literal(""))
+  ),
   phone: z.string().trim().optional().or(z.literal("")),
   password: z.string().min(1).optional(),
   role: z.string().trim().min(1, "Role is required"),
