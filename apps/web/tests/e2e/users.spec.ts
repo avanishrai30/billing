@@ -285,6 +285,36 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
 
       if (route.request().method() === 'POST') {
         const body = JSON.parse(route.request().postData() || '{}');
+        if (body.username === 'pradeep.all') {
+          expect(body).toMatchObject({
+            name: 'Pradeep H',
+            username: 'pradeep.all',
+            role: 'Employee',
+            category: 'employee',
+            assignedStoreId: 'all',
+            assignedStores: ['all'],
+            permissions: [],
+            permissionGrants: [],
+            permissionDenies: [],
+            status: 'active'
+          });
+          expect(body.password).toBeTruthy();
+        }
+        if (body.username === 'pradeep.store1') {
+          expect(body).toMatchObject({
+            name: 'Pradeep H Store 1',
+            username: 'pradeep.store1',
+            role: 'Employee',
+            category: 'employee',
+            assignedStoreId: 'store-1',
+            assignedStores: ['store-1'],
+            permissions: [],
+            permissionGrants: [],
+            permissionDenies: [],
+            status: 'active'
+          });
+          expect(body.password).toBeTruthy();
+        }
         const id = body.id || `usr-${Date.now()}`;
         const newUser = {
           ...body,
@@ -369,6 +399,40 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     await expect(modal).not.toBeVisible();
 
     await expect(page.getByText('Amit Verma')).toBeVisible();
+
+    // 3b. Create Employee with canonical All Stores scope
+    await page.getByRole('button', { name: /add new user/i }).click();
+    const allStoresModal = page.getByRole('dialog');
+    await allStoresModal.locator('input[name="name"]').fill('Pradeep H');
+    await allStoresModal.locator('input[name="username"]').fill('pradeep.all');
+    await allStoresModal.locator('input[name="email"]').fill('pradeep.all@example.com');
+    await allStoresModal.locator('input[name="phone"]').fill('9898989898');
+    await allStoresModal.locator('input[name="password"]').fill('password123');
+    await allStoresModal.locator('input[name="role"]').fill('Employee');
+    await expect(allStoresModal.getByLabel('Store Scope Assignment')).toHaveValue('all');
+    await allStoresModal.getByRole('button', { name: /create user account/i }).click();
+    await expect(allStoresModal).not.toBeVisible();
+    await expect(page.getByText('Pradeep H', { exact: true })).toBeVisible();
+    const pradeepAllRow = page.getByRole('row').filter({ hasText: 'pradeep.all' });
+    await expect(pradeepAllRow.getByText('Employee', { exact: true }).first()).toBeVisible();
+    await expect(pradeepAllRow.getByText('All Stores (Global)')).toBeVisible();
+
+    // 3c. Create Employee with canonical Store 1 scope
+    await page.getByRole('button', { name: /add new user/i }).click();
+    const storeModal = page.getByRole('dialog');
+    await storeModal.locator('input[name="name"]').fill('Pradeep H Store 1');
+    await storeModal.locator('input[name="username"]').fill('pradeep.store1');
+    await storeModal.locator('input[name="email"]').fill('pradeep.store1@example.com');
+    await storeModal.locator('input[name="phone"]').fill('9797979797');
+    await storeModal.locator('input[name="password"]').fill('password123');
+    await storeModal.locator('input[name="role"]').fill('Employee');
+    await storeModal.getByLabel('Store Scope Assignment').selectOption('store-1');
+    await storeModal.getByRole('button', { name: /create user account/i }).click();
+    await expect(storeModal).not.toBeVisible();
+    await expect(page.getByText('Pradeep H Store 1')).toBeVisible();
+    const pradeepStoreRow = page.getByRole('row').filter({ hasText: 'pradeep.store1' });
+    await expect(pradeepStoreRow.getByText('Employee', { exact: true }).first()).toBeVisible();
+    await expect(pradeepStoreRow.getByText('Mumbai Flagship')).toBeVisible();
 
     // 4. Suspend User (Deactivate)
     await page.getByLabel('Deactivate user Ramesh Patil').click();

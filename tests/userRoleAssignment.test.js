@@ -12,7 +12,8 @@ function createCollectionBackedDb(usersTable, auditLogsTable) {
           return null;
         }
         if (name === 'role_permissions') return null;
-        if (name === 'businesses') return { id: query.id, name: 'Test Store' };
+        if (name === 'stores') return { id: query.id, name: 'Test Store' };
+        if (name === 'businesses') return { id: query.id, name: 'Test Business' };
         return null;
       },
       find: () => ({

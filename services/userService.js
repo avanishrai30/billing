@@ -25,17 +25,88 @@ function normalizePermissionArray(value = []) {
   return Array.from(new Set((Array.isArray(value) ? value : []).filter(Boolean)));
 }
 
+function normalizeStoreScopePayload(userData, existingUser) {
+  const rawAssignedStoreId = userData.assignedStoreId ?? existingUser?.assignedStoreId ?? 'all';
+  const assignedStoreId = String(rawAssignedStoreId || 'all').trim() || 'all';
+  const hasAssignedStores = Object.prototype.hasOwnProperty.call(userData, 'assignedStores');
+  const rawAssignedStores = hasAssignedStores
+    ? userData.assignedStores
+    : (existingUser?.assignedStores || [assignedStoreId]);
+  const assignedStores = normalizePermissionArray(rawAssignedStores)
+    .map(storeId => String(storeId).trim())
+    .filter(Boolean);
+  const normalizedAssignedStores = assignedStores.length > 0 ? assignedStores : [assignedStoreId];
+
+  if (assignedStoreId === 'all') {
+    if (normalizedAssignedStores.length !== 1 || normalizedAssignedStores[0] !== 'all') {
+      throw createHttpError('All Stores scope must be stored as assignedStoreId="all" and assignedStores=["all"].', 400, 'INVALID_STORE_SCOPE');
+    }
+    return { assignedStoreId: 'all', assignedStores: ['all'] };
+  }
+
+  if (normalizedAssignedStores.includes('all') || normalizedAssignedStores.length !== 1 || normalizedAssignedStores[0] !== assignedStoreId) {
+    throw createHttpError('Store-scoped users must use the same store ID in assignedStoreId and assignedStores.', 400, 'INVALID_STORE_SCOPE');
+  }
+
+  return { assignedStoreId, assignedStores: [assignedStoreId] };
+}
+
+async function assertStoreScopeExists(db, scope) {
+  if (scope.assignedStoreId === 'all') return;
+  const store = await db.collection('stores').findOne({ id: scope.assignedStoreId });
+  if (!store) {
+    throw createHttpError(`Store '${scope.assignedStoreId}' was not found. Select an active Store Scope from the stores list.`, 409, 'STORE_NOT_FOUND');
+  }
+}
+
 function normalizeUserAccessPayload(userData, existingUser) {
   const category = userData.category || existingUser?.category || authzService.normalizeCategory(userData);
+  const storeScope = normalizeStoreScopePayload(userData, existingUser);
   return {
     ...userData,
     category,
-    assignedStoreId: userData.assignedStoreId || existingUser?.assignedStoreId || 'all',
-    assignedStores: userData.assignedStores || existingUser?.assignedStores || [userData.assignedStoreId || existingUser?.assignedStoreId || 'all'],
+    ...storeScope,
     permissions: normalizePermissionArray(userData.permissions || existingUser?.permissions || []),
     permissionGrants: normalizePermissionArray(userData.permissionGrants || existingUser?.permissionGrants || []),
     permissionDenies: normalizePermissionArray(userData.permissionDenies || existingUser?.permissionDenies || [])
   };
+}
+
+async function assertUniqueUserIdentity(db, userDoc, existingUser) {
+  const duplicateUsername = await db.collection('users').findOne({ username: userDoc.username });
+  if (duplicateUsername && duplicateUsername.id !== existingUser?.id) {
+    throw createHttpError(`Username '${userDoc.username}' is already in use.`, 409, 'USERNAME_ALREADY_EXISTS');
+  }
+
+  if (userDoc.email) {
+    const duplicateEmail = await db.collection('users').findOne({ email: userDoc.email });
+    if (duplicateEmail && duplicateEmail.id !== existingUser?.id) {
+      throw createHttpError(`Email '${userDoc.email}' is already in use.`, 409, 'EMAIL_ALREADY_EXISTS');
+    }
+  }
+
+  if (!existingUser) {
+    const duplicateId = await db.collection('users').findOne({ id: userDoc.id });
+    if (duplicateId) {
+      throw createHttpError('User ID collision detected. Please retry user creation.', 409, 'USER_ID_ALREADY_EXISTS');
+    }
+  }
+}
+
+function mapDuplicateKeyError(err) {
+  if (!err || err.code !== 11000) return null;
+  const keyPattern = err.keyPattern || {};
+  const keyValue = err.keyValue || {};
+  if (keyPattern.username || keyValue.username) {
+    return createHttpError(`Username '${keyValue.username || ''}' is already in use.`, 409, 'USERNAME_ALREADY_EXISTS');
+  }
+  if (keyPattern.email || keyValue.email) {
+    return createHttpError(`Email '${keyValue.email || ''}' is already in use.`, 409, 'EMAIL_ALREADY_EXISTS');
+  }
+  if (keyPattern.id || keyValue.id) {
+    return createHttpError('User ID collision detected. Please retry user creation.', 409, 'USER_ID_ALREADY_EXISTS');
+  }
+  return createHttpError('User already exists.', 409, 'USER_ALREADY_EXISTS');
 }
 
 function accessFieldChanged(before = {}, after = {}) {
@@ -194,6 +265,12 @@ const userService = {
     const existingUser = userData.id ? await db.collection('users').findOne({ id: userId }) : null;
     const normalizedData = normalizeUserAccessPayload(userData, existingUser);
 
+    if (!existingUser && !passwordHash) {
+      throw createHttpError('Password is required when creating a new user.', 400, 'PASSWORD_REQUIRED');
+    }
+
+    await assertStoreScopeExists(db, normalizedData);
+
     const userDoc = {
       ...normalizedData,
       id: userId,
@@ -206,11 +283,18 @@ const userService = {
     delete userDoc.password; // Plaintext password is NEVER preserved
 
     await assertPrivilegeUpdateAllowed(db, existingUser, userDoc, req);
+    await assertUniqueUserIdentity(db, userDoc, existingUser);
 
     if (!normalizedData.id) {
       userDoc.createdAt = new Date().toISOString();
       userDoc.tokenVersion = 1;
-      await db.collection('users').insertOne(userDoc);
+      try {
+        await db.collection('users').insertOne(userDoc);
+      } catch (err) {
+        const duplicateErr = mapDuplicateKeyError(err);
+        if (duplicateErr) throw duplicateErr;
+        throw err;
+      }
       await auditService.writeAuditLog('user_created', 'user', userId, null, userDoc, req);
     } else {
       const updatePayload = {
@@ -228,11 +312,18 @@ const userService = {
         realtimeService.revokeUserSockets(userId);
       }
 
-      await db.collection('users').updateOne({ id: userId }, updatePayload);
+      try {
+        await db.collection('users').updateOne({ id: userId }, updatePayload);
+      } catch (err) {
+        const duplicateErr = mapDuplicateKeyError(err);
+        if (duplicateErr) throw duplicateErr;
+        throw err;
+      }
       await auditService.writeAuditLog('user_updated', 'user', userId, existingUser, userDoc, req);
     }
 
     if (io) {
+      io.to('sync_global').emit(normalizedData.id ? 'user_updated' : 'user_created', { user: userDoc });
       io.to('sync_global').emit('user_updated', { user: userDoc });
     }
     if (!passwordHash && (!existingUser || accessFieldChanged(existingUser, userDoc))) {
