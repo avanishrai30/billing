@@ -6,6 +6,33 @@ const auditService = require('../services/auditService');
 
 const router = express.Router();
 
+// GET /api/v1/inventory/command-center - Multi-store consolidated inventory view (Phase 33)
+router.get('/command-center', verifyJWT, requirePermission('inventory.view'), async (req, res) => {
+  const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
+  try {
+    const data = await inventoryService.getInventoryCommandCenter(req.user);
+
+    // Apply store scope restrictions if non-super-admin user is restricted to a single store
+    if (!isSuperAdmin(req.user) && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
+      const userStore = req.user.assignedStoreId;
+      data.stores = data.stores.filter(s => s.id === userStore);
+      data.networkBalances = data.networkBalances.map(b => ({
+        ...b,
+        locationBreakdown: b.locationBreakdown.filter(l => l.locationId === userStore)
+      }));
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error("Failed to fetch inventory command center data:", err);
+    res.status(500).json({
+      success: false,
+      error: { code: "COMMAND_CENTER_ERROR", message: err.message || "Server error fetching command center data" },
+      requestId
+    });
+  }
+});
+
 // GET /api/v1/inventory/summary - Fast aggregated inventory metrics
 router.get('/summary', verifyJWT, requirePermission('inventory.view'), async (req, res) => {
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
@@ -133,14 +160,14 @@ router.post('/adjust', verifyJWT, requirePermission('inventory.adjust'), require
       'inventory',
       productId,
       null,
-      { quantity: result.quantity, locationId: locId, type: type || 'MANUAL_ADJUSTMENT', notes },
+      { quantity: result, locationId: locId, type: type || 'MANUAL_ADJUSTMENT', notes },
       req
     );
 
     res.json({
       success: true,
       message: "Inventory adjusted successfully",
-      record: result
+      record: { productId, locationId: locId, quantity: result }
     });
   } catch (err) {
     console.error("Inventory adjustment error:", err);
@@ -152,11 +179,11 @@ router.post('/adjust', verifyJWT, requirePermission('inventory.adjust'), require
   }
 });
 
-// POST /api/v1/inventory/transfer - Transfer stock atomically between stores with idempotency
+// POST /api/v1/inventory/transfer - Transfer stock atomically between stores with Batch preservation & idempotency
 router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), async (req, res) => {
   const { db } = getContext();
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
-  const { productId, fromStoreId, toStoreId, fromLocationId, toLocationId, quantity, notes, transferId, transactionId } = req.body;
+  const { productId, fromStoreId, toStoreId, fromLocationId, toLocationId, quantity, notes, transferId, transactionId, batchId } = req.body;
   const fromLoc = fromLocationId || fromStoreId;
   const toLoc = toLocationId || toStoreId;
   const transKey = transferId || transactionId;
@@ -224,7 +251,8 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
       toLoc,
       quantity,
       req.user ? req.user.username : 'system',
-      notes || ''
+      notes || '',
+      batchId || null
     );
 
     await auditService.writeAuditLog(
@@ -232,7 +260,7 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
       'inventory',
       productId,
       null,
-      { fromLocationId: fromLoc, toLocationId: toLoc, quantity, referenceId: result.referenceId, notes },
+      { fromLocationId: fromLoc, toLocationId: toLoc, quantity, referenceId: result.referenceId, batchId, notes },
       req
     );
 
@@ -244,7 +272,7 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
     });
   } catch (err) {
     console.error("Stock transfer error:", err);
-    const statusCode = err.code === 'INSUFFICIENT_STOCK' ? 400 : 500;
+    const statusCode = err.code === 'INSUFFICIENT_STOCK' || err.code === 'INSUFFICIENT_BATCH_STOCK' ? 400 : 500;
     res.status(statusCode).json({
       success: false,
       error: {

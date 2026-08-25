@@ -1,7 +1,17 @@
 'use client';
 
 import React from 'react';
-import { History, SlidersHorizontal, ArrowLeftRight, PackageOpen } from 'lucide-react';
+import {
+  History,
+  SlidersHorizontal,
+  ArrowLeftRight,
+  PackageOpen,
+  Building2,
+  Warehouse,
+  AlertCircle,
+  Clock,
+  Eye
+} from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -14,39 +24,43 @@ import {
   Skeleton,
   IconButton
 } from '../../../components/ui';
-import {
-  calculateAvailableStock,
-  deriveStockStatus,
-  calculateStockValuation
-} from '../calculations';
-import type { InventoryBalance, StockStatus } from '../types';
+import { deriveStockStatus, calculateStockValuation } from '../calculations';
+import type {
+  NetworkInventoryItem,
+  CommandCenterStore,
+  StockStatus
+} from '../types';
 
 export interface InventoryTableProps {
-  balances: InventoryBalance[];
+  items: NetworkInventoryItem[];
+  selectedLocation: string; // 'network' | storeId
+  stores: CommandCenterStore[];
   isLoading: boolean;
   canAdjust?: boolean;
   canTransfer?: boolean;
-  onViewLedger: (item: InventoryBalance) => void;
-  onAdjustStock: (item: InventoryBalance) => void;
-  onTransferStock: (item: InventoryBalance) => void;
+  onInspectItem: (item: NetworkInventoryItem) => void;
+  onAdjustItem: (item: NetworkInventoryItem) => void;
+  onTransferItem: (item: NetworkInventoryItem) => void;
   onClearFilters?: () => void;
   isFiltered?: boolean;
 }
 
 export function InventoryTable({
-  balances,
+  items,
+  selectedLocation,
+  stores,
   isLoading,
   canAdjust = false,
   canTransfer = false,
-  onViewLedger,
-  onAdjustStock,
-  onTransferStock,
+  onInspectItem,
+  onAdjustItem,
+  onTransferItem,
   onClearFilters,
   isFiltered = false
 }: InventoryTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
         {Array.from({ length: 8 }).map((_, idx) => (
           <div key={idx} className="flex items-center justify-between gap-4 py-2">
             <Skeleton variant="text" className="w-1/4 h-5" />
@@ -59,15 +73,15 @@ export function InventoryTable({
     );
   }
 
-  if (balances.length === 0) {
+  if (items.length === 0) {
     return (
       <EmptyState
         icon={<PackageOpen className="w-8 h-8 text-slate-400" />}
         title={isFiltered ? 'No Matching Stock Records' : 'No Inventory Balances'}
         description={
           isFiltered
-            ? 'No inventory items match your selected filters. Try searching for a different product or clearing filters.'
-            : 'No stock records found for this location. Stock inwarded via Purchases will appear here.'
+            ? 'No inventory items match your selected search or filter criteria. Try resetting filters.'
+            : 'No stock recorded for this location. Stock inwarded via Purchases or Transfers will appear here.'
         }
         actionLabel={isFiltered ? 'Reset Filters' : undefined}
         onAction={isFiltered ? onClearFilters : undefined}
@@ -75,82 +89,180 @@ export function InventoryTable({
     );
   }
 
+  const isNetworkView = selectedLocation === 'network';
+  const selectedStoreName = stores.find((s) => s.id === selectedLocation)?.name || selectedLocation;
+
   return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
       <Table density="dense">
         <TableHeader>
           <tr>
-            <TableHead>Product Details</TableHead>
-            <TableHead>Outlet</TableHead>
-            <TableHead isNumeric>Current Stock</TableHead>
+            <TableHead>Product Identity</TableHead>
+            <TableHead>{isNetworkView ? 'Location Breakdown' : 'Outlet'}</TableHead>
+            <TableHead isNumeric>On Hand</TableHead>
             <TableHead isNumeric>Reserved</TableHead>
             <TableHead isNumeric>Available</TableHead>
-            <TableHead isNumeric>Reorder Lvl</TableHead>
+            <TableHead>Unit</TableHead>
+            <TableHead>Batch / Expiry</TableHead>
             <TableHead align="center">Status</TableHead>
             <TableHead isNumeric>Asset Value</TableHead>
             <TableHead align="right">Actions</TableHead>
           </tr>
         </TableHeader>
         <TableBody>
-          {balances.map((item) => {
-            const avail = calculateAvailableStock(item.quantity, item.reservedQuantity);
-            const status: StockStatus = deriveStockStatus(item.quantity, item.reorderLevel);
-            const val = calculateStockValuation(item.quantity, item.cost || 0);
+          {items.map((item) => {
+            // Determine on-hand and reserved based on view mode
+            let onHand = item.networkQuantity;
+            let reserved = item.networkReserved;
+            let available = item.networkAvailable;
+
+            if (!isNetworkView) {
+              const loc = item.locationBreakdown.find((l) => l.locationId === selectedLocation);
+              onHand = loc ? loc.quantity : 0;
+              reserved = loc ? loc.reservedQuantity : 0;
+              available = loc ? loc.available : 0;
+            }
+
+            const baseStatus: StockStatus = deriveStockStatus(onHand, item.reorderLevel);
+            const val = calculateStockValuation(onHand, item.cost || 0);
+
+            // Check if any batch is expiring soon
+            const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            const hasExpiringBatch = item.batches.some(
+              (b) => b.expiryDate && b.expiryDate <= thirtyDaysIso && b.remainingQuantity > 0
+            );
+
+            const displayStatus: StockStatus = hasExpiringBatch && baseStatus !== 'OUT_OF_STOCK'
+              ? 'EXPIRING_SOON'
+              : baseStatus;
 
             return (
-              <TableRow key={`${item.productId}-${item.locationId}`}>
-                {/* Product Details */}
+              <TableRow
+                key={item.productId}
+                className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                onClick={() => onInspectItem(item)}
+              >
+                {/* Product Identity */}
                 <TableCell>
-                  <div className="font-semibold text-slate-900 truncate max-w-[220px]" title={item.productName || item.productId}>
-                    {item.productName || item.productId}
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                    <span className="font-mono">{item.sku || 'No SKU'}</span>
-                    {item.category && <span>/ {item.category}</span>}
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-xs truncate max-w-[200px]" title={item.productName}>
+                        {item.productName}
+                      </span>
+                      {item.isOrphan && (
+                        <Badge variant="danger" size="sm">
+                          ORPHAN INVENTORY
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                      <span className="font-mono">{item.sku || 'No SKU'}</span>
+                      {item.barcode && <span className="font-mono">• {item.barcode}</span>}
+                      {item.category && <span>/ {item.category}</span>}
+                    </div>
                   </div>
                 </TableCell>
 
-                {/* Outlet */}
+                {/* Location Breakdown / Outlet */}
                 <TableCell>
-                  <span className="text-xs text-slate-700 font-mono">
-                    {item.locationId === 'all' ? 'All Stores' : item.locationId}
-                  </span>
+                  {isNetworkView ? (
+                    <div className="flex flex-wrap items-center gap-1.5 max-w-[280px]">
+                      {item.locationBreakdown.map((loc) => {
+                        if (loc.quantity <= 0) return null;
+                        return (
+                          <span
+                            key={loc.locationId}
+                            className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                              loc.isWarehouse
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-slate-50 text-slate-700 border-slate-200'
+                            }`}
+                            title={`${loc.locationName}: ${loc.quantity} on hand (${loc.available} avail)`}
+                          >
+                            {loc.isWarehouse ? (
+                              <Warehouse className="w-2.5 h-2.5 text-amber-600" />
+                            ) : (
+                              <Building2 className="w-2.5 h-2.5 text-blue-600" />
+                            )}
+                            <span className="truncate max-w-[70px]">{loc.locationName}:</span>
+                            <span className="font-mono font-bold">{loc.quantity}</span>
+                          </span>
+                        );
+                      })}
+                      {item.networkQuantity === 0 && (
+                        <span className="text-[11px] text-slate-400 italic">No stock across network</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium">
+                      <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                      <span>{selectedStoreName}</span>
+                    </div>
+                  )}
                 </TableCell>
 
-                {/* Current Stock */}
+                {/* On Hand */}
                 <TableCell isNumeric>
-                  <span className="font-bold text-slate-900 text-xs">
-                    {Number(item.quantity ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })} {item.unit || 'units'}
+                  <span className="font-bold text-slate-900 text-xs font-mono">
+                    {Number(onHand ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 
                 {/* Reserved */}
                 <TableCell isNumeric>
-                  <span className="text-slate-500 text-xs">
-                    {Number(item.reservedQuantity ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                  <span className="text-slate-500 text-xs font-mono">
+                    {Number(reserved ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 
                 {/* Available */}
                 <TableCell isNumeric>
-                  <span className="font-bold text-emerald-700 text-xs">
-                    {Number(avail ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                  <span className="font-bold text-emerald-700 text-xs font-mono">
+                    {Number(available ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                   </span>
                 </TableCell>
 
-                {/* Reorder Level */}
-                <TableCell isNumeric>
-                  <span className="text-slate-500 text-xs">
-                    {item.reorderLevel}
+                {/* Unit */}
+                <TableCell>
+                  <span className="text-xs text-slate-600 font-medium whitespace-nowrap">
+                    {item.unit || 'units'}
                   </span>
+                </TableCell>
+
+                {/* Batch & Expiry */}
+                <TableCell>
+                  {item.batches && item.batches.length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-mono font-semibold text-slate-800">
+                        {item.batches[0].lotNumber}
+                      </span>
+                      {item.batches[0].expiryDate && (
+                        <span className="text-[10px] text-slate-500">
+                          EXP {new Date(item.batches[0].expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                      {item.batches.length > 1 && (
+                        <span className="text-[10px] font-bold text-blue-600">
+                          +{item.batches.length - 1} more lots
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">No Lot / General</span>
+                  )}
                 </TableCell>
 
                 {/* Status */}
                 <TableCell align="center">
-                  {status === 'OUT_OF_STOCK' ? (
+                  {displayStatus === 'OUT_OF_STOCK' ? (
                     <Badge variant="danger" size="sm" dot>
                       Out of Stock
                     </Badge>
-                  ) : status === 'LOW_STOCK' ? (
+                  ) : displayStatus === 'EXPIRING_SOON' ? (
+                    <Badge variant="warning" size="sm" dot>
+                      Expiring Soon
+                    </Badge>
+                  ) : displayStatus === 'LOW_STOCK' ? (
                     <Badge variant="warning" size="sm" dot>
                       Low Stock
                     </Badge>
@@ -161,39 +273,44 @@ export function InventoryTable({
                   )}
                 </TableCell>
 
-                {/* Valuation */}
+                {/* Asset Value */}
                 <TableCell isNumeric>
-                  <span className="font-semibold text-slate-900 font-mono text-xs">
-                    ₹ {val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className="text-xs font-mono text-slate-700">
+                    ₹{val.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
                 </TableCell>
 
                 {/* Actions */}
-                <TableCell align="right">
-                  <div className="flex items-center justify-end gap-1.5">
+                <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-1">
                     <IconButton
-                      aria-label={`View movement history for ${item.productName || item.productId}`}
+                      aria-label="Inspect Item"
                       variant="ghost"
                       size="sm"
-                      onClick={() => onViewLedger(item)}
-                      icon={<History className="w-3.5 h-3.5 text-blue-600" />}
+                      onClick={() => onInspectItem(item)}
+                      icon={<Eye className="w-3.5 h-3.5 text-slate-600" />}
+                      title="Inspect product stock & batches"
                     />
-                    {canAdjust && (
-                      <IconButton
-                        aria-label={`Adjust stock for ${item.productName || item.productId}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onAdjustStock(item)}
-                        icon={<SlidersHorizontal className="w-3.5 h-3.5 text-amber-600" />}
-                      />
-                    )}
+
                     {canTransfer && (
                       <IconButton
-                        aria-label={`Transfer stock for ${item.productName || item.productId}`}
+                        aria-label="Transfer Stock"
                         variant="ghost"
                         size="sm"
-                        onClick={() => onTransferStock(item)}
-                        icon={<ArrowLeftRight className="w-3.5 h-3.5 text-emerald-600" />}
+                        onClick={() => onTransferItem(item)}
+                        icon={<ArrowLeftRight className="w-3.5 h-3.5 text-blue-600" />}
+                        title="Transfer to another location"
+                      />
+                    )}
+
+                    {canAdjust && (
+                      <IconButton
+                        aria-label="Adjust Stock"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onAdjustItem(item)}
+                        icon={<SlidersHorizontal className="w-3.5 h-3.5 text-slate-600" />}
+                        title="Manual stock adjustment"
                       />
                     )}
                   </div>
@@ -203,5 +320,6 @@ export function InventoryTable({
           })}
         </TableBody>
       </Table>
+    </div>
   );
 }

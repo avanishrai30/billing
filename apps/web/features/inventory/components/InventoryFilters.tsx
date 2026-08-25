@@ -32,11 +32,12 @@ export function InventoryFilters({
     { id: 'ALL', label: 'All Items' },
     { id: 'HEALTHY', label: 'In Stock' },
     { id: 'LOW_STOCK', label: 'Low Stock' },
-    { id: 'OUT_OF_STOCK', label: 'Out of Stock' }
+    { id: 'OUT_OF_STOCK', label: 'Out of Stock' },
+    { id: 'EXPIRING_SOON', label: 'Expiring Soon' }
   ];
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-3.5 sm:p-4 space-y-3 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+    <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 space-y-3 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1">
@@ -64,7 +65,7 @@ export function InventoryFilters({
           <select
             value={categoryFilter}
             onChange={(e) => onCategoryFilterChange(e.target.value)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer shadow-[0_6px_16px_rgba(15,23,42,0.04)]"
+            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-600 cursor-pointer shadow-sm"
             aria-label="Filter by Category"
           >
             <option value="ALL">All Categories</option>
@@ -88,9 +89,9 @@ export function InventoryFilters({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pt-1 border-t border-slate-100 scrollbar-thin no-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pt-1 border-t border-slate-100 scrollbar-none">
         <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 flex-shrink-0 mr-1">
-          <Filter className="w-3 h-3 text-blue-600" />
+          <Filter className="w-3 h-3 text-emerald-600" />
           Status:
         </span>
         {statusOptions.map((opt) => {
@@ -100,10 +101,10 @@ export function InventoryFilters({
               key={opt.id}
               type="button"
               onClick={() => onStatusFilterChange(opt.id)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex-shrink-0 focus-ring ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                 isSelected
-                  ? 'bg-blue-700 text-white font-semibold shadow-[0_8px_18px_rgba(37,99,235,0.16)]'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  ? 'bg-emerald-800 text-white shadow-sm font-semibold'
+                  : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
               }`}
             >
               {opt.label}

@@ -6,11 +6,13 @@ import { inventoryApi } from './api';
 import { useRealtime } from '../../hooks/useRealtime';
 import type {
   StockAdjustmentPayload,
-  StockTransferPayload
+  StockTransferPayload,
+  CommandCenterData
 } from './types';
 
 export const inventoryQueryKeys = {
   all: ['inventory'] as const,
+  commandCenter: ['inventory', 'command-center'] as const,
   summary: (locationId?: string) => ['inventory', 'summary', locationId || 'all'] as const,
   balances: (locationId?: string) => ['inventory', 'balances', locationId || 'all'] as const,
   logs: (params?: { productId?: string; locationId?: string; type?: string }) =>
@@ -22,6 +24,50 @@ export const inventoryQueryKeys = {
       params?.type || 'ALL'
     ] as const
 };
+
+/**
+ * Hook to query Multi-Store Consolidated Command Center data with Realtime invalidation
+ */
+export function useInventoryCommandCenterQuery() {
+  const queryClient = useQueryClient();
+  const { subscribe } = useRealtime();
+
+  const query = useQuery<CommandCenterData, Error>({
+    queryKey: inventoryQueryKeys.commandCenter,
+    queryFn: () => inventoryApi.getCommandCenter(),
+    staleTime: 30 * 1000
+  });
+
+  useEffect(() => {
+    const unsubUpdated = subscribe('inventory.updated', () => {
+      queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.commandCenter });
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'balances'] });
+    });
+    const unsubBulk = subscribe('inventory.bulk_updated', () => {
+      queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.commandCenter });
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'balances'] });
+    });
+    const unsubProd = subscribe('product_updated', () => {
+      queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.commandCenter });
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'balances'] });
+    });
+    const unsubProdDel = subscribe('product_deleted', () => {
+      queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.commandCenter });
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'balances'] });
+    });
+
+    return () => {
+      unsubUpdated();
+      unsubBulk();
+      unsubProd();
+      unsubProdDel();
+    };
+  }, [subscribe, queryClient]);
+
+  return query;
+}
 
 export function useInventorySummaryQuery(locationId?: string) {
   const queryClient = useQueryClient();
@@ -56,7 +102,7 @@ export function useInventoryBalancesQuery(locationId?: string) {
 
   const query = useQuery({
     queryKey: inventoryQueryKeys.balances(locationId),
-    queryFn: () => inventoryApi.getInventory({ locationId }),
+    queryFn: () => inventoryApi.listBalances(locationId),
     staleTime: 60 * 1000
   });
 
@@ -89,7 +135,7 @@ export function useInventoryLogsQuery(params?: {
 }) {
   return useQuery({
     queryKey: inventoryQueryKeys.logs(params),
-    queryFn: () => inventoryApi.getLogs(params),
+    queryFn: () => inventoryApi.getLogs(params || {}),
     staleTime: 30 * 1000
   });
 }
@@ -99,11 +145,8 @@ export function useAdjustStockMutation() {
 
   return useMutation({
     mutationFn: (payload: StockAdjustmentPayload) => inventoryApi.adjustStock(payload),
-    onSuccess: (_, variables) => {
-      // Targeted cache invalidation
-      queryClient.invalidateQueries({ queryKey: ['inventory', 'balances'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory', 'summary'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory', 'logs'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['pos', 'products'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics'] });
     }
@@ -116,10 +159,7 @@ export function useTransferStockMutation() {
   return useMutation({
     mutationFn: (payload: StockTransferPayload) => inventoryApi.transferStock(payload),
     onSuccess: () => {
-      // Invalidate balances and summaries for affected stores
-      queryClient.invalidateQueries({ queryKey: ['inventory', 'balances'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory', 'summary'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory', 'logs'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['pos', 'products'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics'] });
     }

@@ -1,42 +1,60 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useAuth } from '../../../hooks/useAuth';
-import {
-  useInventorySummaryQuery,
-  useInventoryBalancesQuery
-} from '../../../features/inventory/hooks';
-import { usePOSProductsQuery, usePOSStoresQuery } from '../../../features/pos/hooks';
+import { useAuthorization } from '../../../hooks/useAuthorization';
+import { useInventoryCommandCenterQuery } from '../../../features/inventory/hooks';
 import {
   InventoryHeader,
   InventorySummaryCards,
   InventoryFilters,
   InventoryTable,
+  InventoryDetailDrawer,
   StockAdjustmentModal,
   StockTransferModal,
   InventoryLedgerDrawer
 } from '../../../features/inventory/components';
 import { deriveStockStatus } from '../../../features/inventory/calculations';
-import { useStoreScope } from '../../../providers/StoreScopeProvider';
-import type { InventoryBalance, StockStatus } from '../../../features/inventory/types';
+import type {
+  NetworkInventoryItem,
+  StockStatus,
+  CommandCenterStore
+} from '../../../features/inventory/types';
 import { AccessDeniedState } from '../../../components/ui';
 
 export default function InventoryPage() {
-  const { user, hasPermission } = useAuth();
-  const { activeStoreId } = useStoreScope();
+  const { user, hasPermission, isSuperAdmin } = useAuthorization();
 
-  const assignedStoreId = user?.assignedStoreId && user.assignedStoreId !== 'all'
-    ? user.assignedStoreId
-    : (activeStoreId || 'all');
+  // Queries
+  const { data: commandCenterData, isLoading: isLoadingCommandCenter } = useInventoryCommandCenterQuery();
 
-  const [selectedLocation, setSelectedLocation] = useState<string>(assignedStoreId);
+  const stores: CommandCenterStore[] = useMemo(() => {
+    return commandCenterData?.stores || [];
+  }, [commandCenterData]);
 
-  // Sync with global store switch
-  React.useEffect(() => {
-    if (activeStoreId) {
-      setSelectedLocation(activeStoreId);
+  const networkBalances: NetworkInventoryItem[] = useMemo(() => {
+    return commandCenterData?.networkBalances || [];
+  }, [commandCenterData]);
+
+  const summary = commandCenterData?.summary;
+
+  // Selected Location: 'network' (for super admin) or specific store ID
+  const defaultLocation = useMemo(() => {
+    if (!isSuperAdmin && user?.assignedStoreId && user.assignedStoreId !== 'all') {
+      return user.assignedStoreId;
     }
-  }, [activeStoreId]);
+    return 'network';
+  }, [isSuperAdmin, user]);
+
+  const [selectedLocation, setSelectedLocation] = useState<string>(defaultLocation);
+
+  // Sync selected location once stores load
+  React.useEffect(() => {
+    if (!isSuperAdmin && user?.assignedStoreId && user.assignedStoreId !== 'all') {
+      setSelectedLocation(user.assignedStoreId);
+    }
+  }, [isSuperAdmin, user]);
+
+  // Filter states
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | StockStatus>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
@@ -44,14 +62,8 @@ export default function InventoryPage() {
   // Modal / Drawer state
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
-  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
-  const [activeItem, setActiveItem] = useState<InventoryBalance | null>(null);
-
-  // Queries
-  const { data: summary, isLoading: isLoadingSummary } = useInventorySummaryQuery(selectedLocation);
-  const { data: rawBalances = [], isLoading: isLoadingBalances } = useInventoryBalancesQuery(selectedLocation);
-  const { data: products = [], isLoading: isLoadingProducts } = usePOSProductsQuery();
-  const { data: stores = [] } = usePOSStoresQuery();
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [activeItem, setActiveItem] = useState<NetworkInventoryItem | null>(null);
 
   // Permissions
   const canView = hasPermission('inventory.view');
@@ -68,69 +80,49 @@ export default function InventoryPage() {
     );
   }
 
-  // Store options
-  const storeOptions = useMemo(() => {
-    const opts = [{ value: 'all', label: 'All Store Outlets' }];
-    for (const s of stores) {
-      opts.push({ value: s.id, label: s.name });
-    }
-    return opts;
-  }, [stores]);
-
-  // Product Map for metadata joining
-  const productMap = useMemo(() => {
-    const map = new Map<string, (typeof products)[0]>();
-    for (const p of products) {
-      map.set(p.id, p);
-    }
-    return map;
-  }, [products]);
-
-  // Joined Balances with Catalog Metadata
-  const joinedBalances: InventoryBalance[] = useMemo(() => {
-    return rawBalances.map((b) => {
-      const prod = productMap.get(b.productId);
-      return {
-        ...b,
-        productName: prod?.name || (b as any).productName || (b as any).name || b.productId,
-        sku: prod?.sku || '',
-        barcode: prod?.barcode || '',
-        unit: prod?.unit || 'units',
-        category: prod?.category || 'General',
-        brand: prod?.brand || '',
-        cost: Number(prod?.purchasePrice ?? prod?.cost ?? 0),
-        price: Number(prod?.sellingPrice ?? prod?.price ?? 0),
-        reorderLevel: b.reorderLevel || prod?.reorderLevel || 10
-      };
-    });
-  }, [rawBalances, productMap]);
-
-  // Category List
+  // Extract distinct categories from catalog
   const availableCategories = useMemo(() => {
     const set = new Set<string>();
-    for (const p of products) {
-      if (p.category && p.category.trim()) {
+    for (const p of networkBalances) {
+      if (p.category && p.category.trim() && p.category !== 'Missing Master') {
         set.add(p.category.trim());
       }
     }
     return Array.from(set).sort();
-  }, [products]);
+  }, [networkBalances]);
 
-  // Filtered Balances
-  const filteredBalances = useMemo(() => {
-    return joinedBalances.filter((item) => {
-      // Status Filter
-      if (statusFilter !== 'ALL') {
-        const itemStatus = deriveStockStatus(item.quantity, item.reorderLevel);
-        if (itemStatus !== statusFilter) return false;
+  // Filtered Items based on active tab and search/filter criteria
+  const filteredItems = useMemo(() => {
+    const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    return networkBalances.filter((item) => {
+      // 1. If single location selected, only show items with presence or allow zero items
+      let onHand = item.networkQuantity;
+      if (selectedLocation !== 'network') {
+        const loc = item.locationBreakdown.find((l) => l.locationId === selectedLocation);
+        onHand = loc ? loc.quantity : 0;
       }
 
-      // Category Filter
+      // 2. Status Filter
+      if (statusFilter !== 'ALL') {
+        const baseStatus = deriveStockStatus(onHand, item.reorderLevel);
+        const hasExpiringBatch = item.batches.some(
+          (b) => b.expiryDate && b.expiryDate <= thirtyDaysIso && b.remainingQuantity > 0
+        );
+
+        if (statusFilter === 'EXPIRING_SOON') {
+          if (!hasExpiringBatch) return false;
+        } else if (baseStatus !== statusFilter) {
+          return false;
+        }
+      }
+
+      // 3. Category Filter
       if (categoryFilter !== 'ALL' && item.category !== categoryFilter) {
         return false;
       }
 
-      // Text Search
+      // 4. Text Search (Product Name, SKU, Barcode)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchName = (item.productName || '').toLowerCase().includes(q);
@@ -141,7 +133,7 @@ export default function InventoryPage() {
 
       return true;
     });
-  }, [joinedBalances, statusFilter, categoryFilter, searchQuery]);
+  }, [networkBalances, selectedLocation, statusFilter, categoryFilter, searchQuery]);
 
   const isFiltered = searchQuery !== '' || statusFilter !== 'ALL' || categoryFilter !== 'ALL';
 
@@ -151,47 +143,58 @@ export default function InventoryPage() {
     setCategoryFilter('ALL');
   };
 
-  const handleOpenAdjustment = (item?: InventoryBalance) => {
+  const handleInspectItem = (item: NetworkInventoryItem) => {
+    setActiveItem(item);
+    setIsDetailOpen(true);
+  };
+
+  const handleOpenAdjustment = (item?: NetworkInventoryItem) => {
     setActiveItem(item || null);
     setIsAdjustmentOpen(true);
   };
 
-  const handleOpenTransfer = (item?: InventoryBalance) => {
+  const handleOpenTransfer = (item?: NetworkInventoryItem) => {
     setActiveItem(item || null);
     setIsTransferOpen(true);
   };
 
-  const handleViewLedger = (item: InventoryBalance) => {
-    setActiveItem(item);
-    setIsLedgerOpen(true);
-  };
-
   const productSelectorList = useMemo(() => {
-    return products.map((p) => ({
-      id: p.id,
-      name: p.name,
+    return networkBalances.map((p) => ({
+      id: p.productId,
+      name: p.productName,
       sku: p.sku,
-      cost: Number(p.purchasePrice ?? p.cost ?? 0)
+      cost: p.cost
     }));
-  }, [products]);
+  }, [networkBalances]);
+
+  const storeOptions = useMemo(() => {
+    return stores.map((s) => ({
+      value: s.id,
+      label: `${s.name}${s.isWarehouse ? ' (Central Hub)' : ''}`
+    }));
+  }, [stores]);
 
   return (
     <div className="space-y-4 pb-10">
+      {/* Header & Location Navigation */}
       <InventoryHeader
         selectedLocation={selectedLocation}
-        storeOptions={storeOptions}
+        stores={stores}
         onSelectLocation={setSelectedLocation}
         canAdjust={canAdjust}
         canTransfer={canTransfer}
         onOpenAdjustment={() => handleOpenAdjustment()}
         onOpenTransfer={() => handleOpenTransfer()}
+        isSuperAdmin={isSuperAdmin}
       />
 
+      {/* Summary KPI Cards */}
       <InventorySummaryCards
         summary={summary}
-        isLoading={isLoadingSummary}
+        isLoading={isLoadingCommandCenter}
       />
 
+      {/* Filter Toolbar */}
       <InventoryFilters
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -203,43 +206,50 @@ export default function InventoryPage() {
         onClearFilters={handleClearFilters}
       />
 
+      {/* Inventory Command Center Data Table */}
       <InventoryTable
-        balances={filteredBalances}
-        isLoading={isLoadingBalances || isLoadingProducts}
+        items={filteredItems}
+        selectedLocation={selectedLocation}
+        stores={stores}
+        isLoading={isLoadingCommandCenter}
         canAdjust={canAdjust}
         canTransfer={canTransfer}
-        onViewLedger={handleViewLedger}
-        onAdjustStock={handleOpenAdjustment}
-        onTransferStock={handleOpenTransfer}
+        onInspectItem={handleInspectItem}
+        onAdjustItem={handleOpenAdjustment}
+        onTransferItem={handleOpenTransfer}
         onClearFilters={handleClearFilters}
         isFiltered={isFiltered}
       />
 
-      {/* Stock Adjustment Modal */}
+      {/* Detail & Multi-Location Stock Drawer */}
+      <InventoryDetailDrawer
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        item={activeItem}
+        canAdjust={canAdjust}
+        canTransfer={canTransfer}
+        onAdjustStock={handleOpenAdjustment}
+        onTransferStock={handleOpenTransfer}
+      />
+
+      {/* Inter-Store & Batch-Aware Stock Transfer Modal */}
+      <StockTransferModal
+        isOpen={isTransferOpen}
+        onClose={() => setIsTransferOpen(false)}
+        selectedItem={activeItem}
+        items={networkBalances}
+        stores={stores}
+        defaultLocationId={selectedLocation === 'network' ? undefined : selectedLocation}
+      />
+
+      {/* Stock Level Adjustment Modal */}
       <StockAdjustmentModal
         isOpen={isAdjustmentOpen}
         onClose={() => setIsAdjustmentOpen(false)}
         selectedItem={activeItem}
         products={productSelectorList}
-        storeOptions={storeOptions.filter((s) => s.value !== 'all')}
-        defaultLocationId={selectedLocation === 'all' ? (stores[0]?.id || 'store-1') : selectedLocation}
-      />
-
-      {/* Inter-Store Transfer Modal */}
-      <StockTransferModal
-        isOpen={isTransferOpen}
-        onClose={() => setIsTransferOpen(false)}
-        selectedItem={activeItem}
-        products={productSelectorList}
         storeOptions={storeOptions}
-        defaultLocationId={selectedLocation === 'all' ? (stores[0]?.id || 'store-1') : selectedLocation}
-      />
-
-      {/* Immutable Ledger Drawer */}
-      <InventoryLedgerDrawer
-        isOpen={isLedgerOpen}
-        onClose={() => setIsLedgerOpen(false)}
-        item={activeItem}
+        defaultLocationId={selectedLocation === 'network' ? (stores[0]?.id || 'store-1') : selectedLocation}
       />
     </div>
   );

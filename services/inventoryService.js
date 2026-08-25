@@ -2,8 +2,8 @@ const { getContext } = require('../modules/context');
 const auditService = require('./auditService');
 
 /**
- * Authoritative Inventory Domain Service (ERP V3 - Stage 07)
- * Owns collections: 'inventory', 'inventory_ledger'
+ * Authoritative Inventory Domain Service (ERP V3 - Stage 07 & Phase 33 Multi-Store Command Center)
+ * Owns collections: 'inventory', 'inventory_ledger', 'product_batches'
  */
 const inventoryService = {
   /**
@@ -63,7 +63,6 @@ const inventoryService = {
 
       const doc = updateResult ? (updateResult.value || updateResult) : null;
       if (!doc || doc.quantity === undefined) {
-        // Stock was insufficient or record not found
         const currentRec = await db.collection('inventory').findOne({
           productId,
           $or: [{ locationId: cleanLocationId }, { storeId: cleanLocationId }]
@@ -84,10 +83,10 @@ const inventoryService = {
       // 2. Insert immutable ledger entry
       await db.collection('inventory_ledger').insertOne({
         movementId,
-        id: movementId, // legacy alias
+        id: movementId,
         productId,
         locationId: cleanLocationId,
-        storeId: cleanLocationId, // legacy alias
+        storeId: cleanLocationId,
         locationType,
         type: type.toUpperCase(),
         quantity: delta,
@@ -102,7 +101,7 @@ const inventoryService = {
         createdAt: now
       });
 
-      // 3. Emit realtime event after successful DB write (unless suppressed during batch import)
+      // 3. Emit realtime event
       if (io && !skipRealtimeSocket) {
         const realtimeService = require('./realtimeService');
         const envelope = realtimeService.createEventEnvelope(
@@ -120,6 +119,7 @@ const inventoryService = {
           doc.version || 1
         );
         io.to(`store_${cleanLocationId}`).emit('inventory.updated', envelope);
+        io.to('sync_global').emit('inventory.updated', envelope);
       }
 
       return { success: true, movementId, beforeQuantity, afterQuantity };
@@ -135,7 +135,7 @@ const inventoryService = {
         $inc: { quantity: delta, version: 1 },
         $set: {
           locationId: cleanLocationId,
-          storeId: cleanLocationId, // legacy compatibility
+          storeId: cleanLocationId,
           locationType,
           updatedAt: now
         },
@@ -191,6 +191,7 @@ const inventoryService = {
         doc ? (doc.version || 1) : 1
       );
       io.to(`store_${cleanLocationId}`).emit('inventory.updated', envelope);
+      io.to('sync_global').emit('inventory.updated', envelope);
     }
 
     return { success: true, movementId, beforeQuantity, afterQuantity };
@@ -253,7 +254,6 @@ const inventoryService = {
 
   /**
    * Batch stock consumption for POS invoices
-   * Guarantees atomic all-or-nothing stock commitment with rollback protection
    */
   async consumeStockBatch(items, locationId, referenceId, performedBy) {
     if (!Array.isArray(items) || items.length === 0 || !locationId) {
@@ -297,7 +297,6 @@ const inventoryService = {
 
       return { success: true, movements: completedDeductions };
     } catch (err) {
-      // 3. Rollback any completed deductions if an error occurs
       console.error(`[InventoryService] Error in consumeStockBatch for ref ${referenceId}, initiating compensating rollback...`, err);
       const rollbackSuccesses = [];
       const rollbackFailures = [];
@@ -426,7 +425,7 @@ const inventoryService = {
   },
 
   /**
-   * Batch stock reversion (Invoice void or Purchase deletion)
+   * Batch stock reversion
    */
   async revertStockBatch(items, locationId, type, referenceType, referenceId, performedBy) {
     if (!Array.isArray(items) || items.length === 0 || !locationId) return;
@@ -457,15 +456,82 @@ const inventoryService = {
   },
 
   /**
-   * Inter-store atomic stock transfer
-   * Enforces that source location must have sufficient stock, or entire transfer fails.
+   * Inter-store atomic stock transfer with Batch & Expiry support (Phase 33)
+   * Enforces that source location must have sufficient stock and maintains network total invariant.
    */
-  async transferStock(productId, fromLocationId, toLocationId, quantity, performedBy, notes = '') {
+  async transferStock(productId, fromLocationId, toLocationId, quantity, performedBy, notes = '', batchId = null) {
+    const { db } = getContext();
     const qty = Math.abs(parseFloat(quantity) || 0);
     if (qty <= 0) throw new Error("Transfer quantity must be greater than zero");
     if (fromLocationId === toLocationId) throw new Error("Source and target locations cannot be the same");
 
     const transferRef = `tf-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+
+    // 0. Batch check & transfer if batchId provided
+    let sourceBatch = null;
+    if (batchId) {
+      sourceBatch = await db.collection('product_batches').findOne({
+        id: batchId,
+        productId,
+        $or: [{ locationId: fromLocationId }, { storeId: fromLocationId }, { locationId: 'all' }, { locationId: { $exists: false } }]
+      });
+
+      if (!sourceBatch) {
+        sourceBatch = await db.collection('product_batches').findOne({ id: batchId, productId });
+      }
+
+      if (sourceBatch) {
+        const batchRem = parseFloat(sourceBatch.remainingQuantity) || 0;
+        if (batchRem < qty) {
+          const err = new Error(`Insufficient batch stock for batch '${sourceBatch.lotNumber}'. Available: ${batchRem}, Requested: ${qty}`);
+          err.code = 'INSUFFICIENT_BATCH_STOCK';
+          throw err;
+        }
+
+        // Decrement source batch
+        await db.collection('product_batches').updateOne(
+          { _id: sourceBatch._id },
+          {
+            $inc: { remainingQuantity: -qty },
+            $set: { updatedAt: new Date().toISOString() }
+          }
+        );
+
+        // Find or create destination batch
+        const destBatch = await db.collection('product_batches').findOne({
+          productId,
+          lotNumber: sourceBatch.lotNumber,
+          $or: [{ locationId: toLocationId }, { storeId: toLocationId }]
+        });
+
+        if (destBatch) {
+          await db.collection('product_batches').updateOne(
+            { _id: destBatch._id },
+            {
+              $inc: { remainingQuantity: qty },
+              $set: { updatedAt: new Date().toISOString() }
+            }
+          );
+        } else {
+          await db.collection('product_batches').insertOne({
+            id: `batch-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            productId,
+            lotNumber: sourceBatch.lotNumber,
+            manufactureDate: sourceBatch.manufactureDate,
+            expiryDate: sourceBatch.expiryDate,
+            receivedQuantity: qty,
+            remainingQuantity: qty,
+            unitCost: sourceBatch.unitCost || 0,
+            sellingPrice: sourceBatch.sellingPrice || 0,
+            locationId: toLocationId,
+            storeId: toLocationId,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    }
 
     // 1. Deduct from source store with atomic $gte guard
     const deductRes = await this.recordMovementAtomic({
@@ -477,7 +543,7 @@ const inventoryService = {
       referenceType: 'transfer',
       referenceId: transferRef,
       performedBy,
-      notes: `Transfer Out to ${toLocationId}: ${notes}`.trim()
+      notes: `Transfer Out to ${toLocationId}${sourceBatch ? ` [Batch: ${sourceBatch.lotNumber}]` : ''}: ${notes}`.trim()
     });
 
     try {
@@ -491,7 +557,7 @@ const inventoryService = {
         referenceType: 'transfer',
         referenceId: transferRef,
         performedBy,
-        notes: `Transfer In from ${fromLocationId}: ${notes}`.trim()
+        notes: `Transfer In from ${fromLocationId}${sourceBatch ? ` [Batch: ${sourceBatch.lotNumber}]` : ''}: ${notes}`.trim()
       });
 
       return {
@@ -500,11 +566,17 @@ const inventoryService = {
         fromBefore: deductRes.beforeQuantity,
         fromAfter: deductRes.afterQuantity,
         toBefore: addRes.beforeQuantity,
-        toAfter: addRes.afterQuantity
+        toAfter: addRes.afterQuantity,
+        batchLotNumber: sourceBatch ? sourceBatch.lotNumber : null
       };
     } catch (err) {
-      // Rollback source deduction if destination add fails
       console.error(`[InventoryService] Transfer destination failed, reverting source store deduction...`, err);
+      if (sourceBatch) {
+        await db.collection('product_batches').updateOne(
+          { _id: sourceBatch._id },
+          { $inc: { remainingQuantity: qty }, $set: { updatedAt: new Date().toISOString() } }
+        );
+      }
       await this.recordMovementAtomic({
         productId,
         locationId: fromLocationId,
@@ -583,6 +655,204 @@ const inventoryService = {
       reorderLevel: parseFloat(r.reorderLevel) || 10,
       version: r.version || 1
     }));
+  },
+
+  /**
+   * Comprehensive Multi-Store Inventory Command Center Aggregator (Phase 33)
+   */
+  async getInventoryCommandCenter(user) {
+    const { db } = getContext();
+
+    // 1. Fetch stores
+    const rawStores = await db.collection('stores').find({ status: { $ne: 'inactive' } }).sort({ name: 1 }).toArray();
+
+    // Normalize stores with a designated Central Warehouse
+    let stores = rawStores.map(s => ({
+      id: s.id,
+      name: s.name,
+      code: s.code || `ST-${s.name.substring(0, 3).toUpperCase()}`,
+      isWarehouse: !!s.isWarehouse || s.id === 'central-warehouse' || s.name.toLowerCase().includes('central') || s.name.toLowerCase().includes('warehouse')
+    }));
+
+    if (!stores.some(s => s.isWarehouse)) {
+      if (stores.length > 0) {
+        stores[0].isWarehouse = true;
+      } else {
+        stores = [
+          { id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', isWarehouse: true }
+        ];
+      }
+    }
+
+    // 2. Fetch all non-archived products
+    const products = await db.collection('products').find({ isArchived: { $ne: true } }).toArray();
+    const productMap = new Map();
+    products.forEach(p => productMap.set(p.id, p));
+
+    // 3. Fetch all inventory records
+    const inventoryRecords = await db.collection('inventory').find({}).toArray();
+
+    // 4. Fetch all active product batches
+    const rawBatches = await db.collection('product_batches').find({
+      status: { $ne: 'archived' },
+      remainingQuantity: { $gt: 0 }
+    }).sort({ expiryDate: 1 }).toArray();
+
+    const batchesByProduct = new Map();
+    rawBatches.forEach(b => {
+      if (!batchesByProduct.has(b.productId)) {
+        batchesByProduct.set(b.productId, []);
+      }
+      batchesByProduct.get(b.productId).push({
+        id: b.id || (b._id ? String(b._id) : ''),
+        lotNumber: b.lotNumber || 'N/A',
+        expiryDate: b.expiryDate,
+        manufactureDate: b.manufactureDate,
+        remainingQuantity: parseFloat(b.remainingQuantity) || 0,
+        locationId: b.locationId || b.storeId || 'all'
+      });
+    });
+
+    // 5. Group inventory by productId
+    const inventoryByProduct = new Map();
+    inventoryRecords.forEach(r => {
+      if (!inventoryByProduct.has(r.productId)) {
+        inventoryByProduct.set(r.productId, []);
+      }
+      inventoryByProduct.get(r.productId).push(r);
+    });
+
+    const allProductIds = Array.from(new Set([
+      ...products.map(p => p.id),
+      ...inventoryRecords.map(r => r.productId)
+    ]));
+
+    let networkStockTotal = 0;
+    let centralStockTotal = 0;
+    let storeStockTotal = 0;
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
+    let totalValuation = 0;
+    let expiringSoonCount = 0;
+
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    const thirtyDaysIso = thirtyDaysFromNow.toISOString();
+
+    const networkBalances = [];
+
+    for (const prodId of allProductIds) {
+      const prod = productMap.get(prodId);
+      const isOrphan = !prod;
+      const invList = inventoryByProduct.get(prodId) || [];
+      const prodBatches = batchesByProduct.get(prodId) || [];
+
+      // Check if any batch is expiring soon (within 30 days)
+      const hasExpiringBatch = prodBatches.some(b => b.expiryDate && b.expiryDate <= thirtyDaysIso && b.remainingQuantity > 0);
+      if (hasExpiringBatch) {
+        expiringSoonCount++;
+      }
+
+      // Location breakdown
+      const locationBreakdown = stores.map(st => {
+        const matchingInv = invList.find(r => (r.locationId === st.id || r.storeId === st.id));
+        const q = matchingInv ? (parseFloat(matchingInv.quantity) || 0) : 0;
+        const res = matchingInv ? (parseFloat(matchingInv.reservedQuantity) || 0) : 0;
+        const avail = Math.max(0, q - res);
+
+        return {
+          locationId: st.id,
+          locationName: st.name,
+          isWarehouse: st.isWarehouse,
+          quantity: q,
+          reservedQuantity: res,
+          available: avail
+        };
+      });
+
+      invList.forEach(r => {
+        const loc = r.locationId || r.storeId || 'all';
+        if (!stores.some(st => st.id === loc)) {
+          const q = parseFloat(r.quantity) || 0;
+          const res = parseFloat(r.reservedQuantity) || 0;
+          locationBreakdown.push({
+            locationId: loc,
+            locationName: loc === 'all' ? 'Unassigned' : loc,
+            isWarehouse: false,
+            quantity: q,
+            reservedQuantity: res,
+            available: Math.max(0, q - res)
+          });
+        }
+      });
+
+      const networkQuantity = locationBreakdown.reduce((acc, l) => acc + l.quantity, 0);
+      const networkReserved = locationBreakdown.reduce((acc, l) => acc + l.reservedQuantity, 0);
+      const networkAvailable = Math.max(0, networkQuantity - networkReserved);
+
+      const centralBreakdown = locationBreakdown.find(l => l.isWarehouse);
+      const centralQty = centralBreakdown ? centralBreakdown.quantity : 0;
+      const storeQty = networkQuantity - centralQty;
+
+      networkStockTotal += networkQuantity;
+      centralStockTotal += centralQty;
+      storeStockTotal += storeQty;
+
+      const unitCost = Number(prod?.purchasePrice ?? prod?.cost ?? 0);
+      const sellingPrice = Number(prod?.sellingPrice ?? prod?.price ?? 0);
+      const reorderLevel = Number(prod?.reorderLevel || 10);
+
+      totalValuation += (networkQuantity * unitCost);
+
+      if (networkQuantity <= 0) {
+        outOfStockCount++;
+      } else if (networkQuantity <= reorderLevel) {
+        lowStockCount++;
+      }
+
+      networkBalances.push({
+        productId: prodId,
+        productName: prod?.name || (isOrphan ? `Orphan Item (${prodId})` : prodId),
+        sku: prod?.sku || '',
+        barcode: prod?.barcode || '',
+        brand: prod?.brand || '',
+        category: prod?.category || (isOrphan ? 'Missing Master' : 'General'),
+        unit: prod?.unit || 'units',
+        cost: unitCost,
+        price: sellingPrice,
+        reorderLevel,
+        isOrphan,
+        defaultExpiryDate: prod?.defaultExpiryDate || null,
+        networkQuantity,
+        networkReserved,
+        networkAvailable,
+        locationBreakdown,
+        batches: prodBatches
+      });
+    }
+
+    // Sort by product name
+    networkBalances.sort((a, b) => {
+      if (a.isOrphan && !b.isOrphan) return 1;
+      if (!a.isOrphan && b.isOrphan) return -1;
+      return (a.productName || '').localeCompare(b.productName || '');
+    });
+
+    return {
+      success: true,
+      stores,
+      networkBalances,
+      summary: {
+        totalProducts: products.length,
+        networkStock: Math.round(networkStockTotal * 100) / 100,
+        centralStock: Math.round(centralStockTotal * 100) / 100,
+        storeStock: Math.round(storeStockTotal * 100) / 100,
+        lowStockCount,
+        outOfStockCount,
+        expiringSoonCount,
+        totalValuation: Math.round(totalValuation * 100) / 100
+      }
+    };
   },
 
   /**

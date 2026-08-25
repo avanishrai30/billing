@@ -5,3 +5,4 @@ export * from './InventoryTable';
 export * from './StockAdjustmentModal';
 export * from './StockTransferModal';
 export * from './InventoryLedgerDrawer';
+export * from './InventoryDetailDrawer';

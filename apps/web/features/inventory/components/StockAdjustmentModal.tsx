@@ -13,12 +13,12 @@ import {
 } from '../../../components/ui';
 import { stockAdjustmentSchema, type StockAdjustmentFormValues } from '../schemas';
 import { useAdjustStockMutation } from '../hooks';
-import type { InventoryBalance } from '../types';
+import type { InventoryBalance, NetworkInventoryItem } from '../types';
 
 export interface StockAdjustmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedItem: InventoryBalance | null;
+  selectedItem: NetworkInventoryItem | InventoryBalance | null;
   products: Array<{ id: string; name: string; sku?: string; cost?: number }>;
   storeOptions: Array<{ value: string; label: string }>;
   defaultLocationId: string;
@@ -55,16 +55,24 @@ export function StockAdjustmentModal({
   });
 
   const currentProductId = watch('productId');
+  const currentLocationId = watch('locationId');
   const targetQuantity = watch('quantity');
 
   useEffect(() => {
     if (isOpen) {
       setServerError(null);
       if (selectedItem) {
+        const prodId = selectedItem.productId;
+        const locId = (selectedItem as any).locationId && (selectedItem as any).locationId !== 'all' && (selectedItem as any).locationId !== 'network'
+          ? (selectedItem as any).locationId
+          : defaultLocationId;
+
+        const currentQty = (selectedItem as any).quantity ?? (selectedItem as any).networkQuantity ?? 0;
+
         reset({
-          productId: selectedItem.productId,
-          locationId: selectedItem.locationId === 'all' ? defaultLocationId : selectedItem.locationId,
-          quantity: selectedItem.quantity,
+          productId: prodId,
+          locationId: locId,
+          quantity: currentQty,
           type: 'MANUAL_ADJUSTMENT',
           referenceId: `ADJ-${Date.now().toString().slice(-6)}`,
           notes: ''
@@ -83,7 +91,7 @@ export function StockAdjustmentModal({
   }, [isOpen, selectedItem, defaultLocationId, products, reset]);
 
   const selectedProduct = products.find((p) => p.id === currentProductId);
-  const currentStock = selectedItem?.quantity ?? 0;
+  const currentStock = (selectedItem as any)?.quantity ?? (selectedItem as any)?.networkQuantity ?? 0;
   const delta = (Number(targetQuantity) || 0) - currentStock;
 
   const onSubmit = async (values: StockAdjustmentFormValues) => {
@@ -154,9 +162,9 @@ export function StockAdjustmentModal({
         <FormField label="Store Outlet" required error={errors.locationId?.message}>
           <Select
             options={storeOptions}
-            value={watch('locationId')}
+            value={currentLocationId}
             onChange={(e) => setValue('locationId', e.target.value)}
-            disabled={!!selectedItem}
+            disabled={!!selectedItem && (selectedItem as any).locationId !== 'all' && (selectedItem as any).locationId !== 'network'}
           />
         </FormField>
 

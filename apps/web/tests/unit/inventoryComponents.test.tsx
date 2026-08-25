@@ -6,90 +6,134 @@ import {
   InventorySummaryCards,
   InventoryFilters,
   InventoryTable,
+  InventoryDetailDrawer,
   StockTransferModal
 } from '../../features/inventory/components';
 import { AppProviders } from '../../providers/AppProviders';
-import type { InventoryBalance, InventorySummary } from '../../features/inventory/types';
+import type {
+  NetworkInventoryItem,
+  CommandCenterSummary,
+  CommandCenterStore
+} from '../../features/inventory/types';
 
-describe('Inventory Component Layer Unit Suite', () => {
-  const sampleSummary: InventorySummary = {
-    totalProducts: 20,
-    totalTrackedItems: 18,
-    totalUnits: 1250,
-    lowStockCount: 3,
-    outOfStockCount: 1,
-    inventoryValue: 68500,
-    locationId: 'store-1'
+describe('Phase 33 Multi-Store Inventory Command Center Component Suite', () => {
+  const sampleStores: CommandCenterStore[] = [
+    { id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', isWarehouse: true },
+    { id: 'store-1', name: 'Store 1 — Indiranagar', code: 'ST-IND', isWarehouse: false },
+    { id: 'store-2', name: 'Store 2 — Koramangala', code: 'ST-KOR', isWarehouse: false },
+    { id: 'store-3', name: 'Store 3 — Whitefield', code: 'ST-WHI', isWarehouse: false }
+  ];
+
+  const sampleSummary: CommandCenterSummary = {
+    totalProducts: 10,
+    networkStock: 135,
+    centralStock: 100,
+    storeStock: 35,
+    lowStockCount: 1,
+    outOfStockCount: 0,
+    expiringSoonCount: 1,
+    totalValuation: 60750
   };
 
-  const sampleBalances: InventoryBalance[] = [
+  const sampleItems: NetworkInventoryItem[] = [
     {
-      productId: 'prod-101',
+      productId: 'prod-ghee-1',
       productName: 'A2 Cow Ghee 1L',
-      sku: 'GHEE-1L',
-      locationId: 'store-1',
-      quantity: 45,
-      reservedQuantity: 5,
-      reorderLevel: 10,
+      sku: 'AIA000002',
+      barcode: 'AIA000002',
+      category: 'Dairy',
+      brand: 'VC Organics',
+      unit: '1 litre jar',
       cost: 450,
-      unit: 'tin',
-      category: 'Dairy'
+      price: 650,
+      reorderLevel: 25,
+      isOrphan: false,
+      networkQuantity: 135,
+      networkReserved: 0,
+      networkAvailable: 135,
+      locationBreakdown: [
+        { locationId: 'central-warehouse', locationName: 'Central Warehouse', isWarehouse: true, quantity: 100, reservedQuantity: 0, available: 100 },
+        { locationId: 'store-1', locationName: 'Store 1', isWarehouse: false, quantity: 20, reservedQuantity: 0, available: 20 },
+        { locationId: 'store-2', locationName: 'Store 2', isWarehouse: false, quantity: 10, reservedQuantity: 0, available: 10 },
+        { locationId: 'store-3', locationName: 'Store 3', isWarehouse: false, quantity: 5, reservedQuantity: 0, available: 5 }
+      ],
+      batches: [
+        {
+          id: 'batch-001',
+          lotNumber: 'LOT-2026-001',
+          expiryDate: '2027-08-25T00:00:00.000Z',
+          remainingQuantity: 100,
+          locationId: 'central-warehouse'
+        }
+      ]
     },
     {
-      productId: 'prod-102',
-      productName: 'Organic Paneer 500g',
-      sku: 'PAN-500',
-      locationId: 'store-1',
-      quantity: 4,
-      reservedQuantity: 0,
+      productId: 'prod-orphan-99',
+      productName: 'Orphan Item (prod-orphan-99)',
+      sku: '',
+      barcode: '',
+      category: 'Missing Master',
+      unit: 'units',
+      cost: 0,
+      price: 0,
       reorderLevel: 10,
-      cost: 160,
-      unit: 'pack',
-      category: 'Dairy'
+      isOrphan: true,
+      networkQuantity: 15,
+      networkReserved: 0,
+      networkAvailable: 15,
+      locationBreakdown: [
+        { locationId: 'store-1', locationName: 'Store 1', isWarehouse: false, quantity: 15, reservedQuantity: 0, available: 15 }
+      ],
+      batches: []
     }
   ];
 
-  it('1. InventoryHeader renders title, outlet switcher, and mutation triggers', () => {
+  it('1. InventoryHeader renders location tabs for Network, Central Warehouse, and Stores with action triggers', () => {
     const handleAdjust = jest.fn();
     const handleTransfer = jest.fn();
-    const handleLocation = jest.fn();
+    const handleSelectLocation = jest.fn();
 
     render(
       <InventoryHeader
-        selectedLocation="store-1"
-        storeOptions={[
-          { value: 'all', label: 'All Store Outlets' },
-          { value: 'store-1', label: 'Flagship Store' }
-        ]}
-        onSelectLocation={handleLocation}
+        selectedLocation="network"
+        stores={sampleStores}
+        onSelectLocation={handleSelectLocation}
         canAdjust={true}
         canTransfer={true}
         onOpenAdjustment={handleAdjust}
         onOpenTransfer={handleTransfer}
+        isSuperAdmin={true}
       />
     );
 
-    expect(screen.getByText('Inventory & Stock Management')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /stock adjustment/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /transfer stock/i })).toBeInTheDocument();
+    expect(screen.getByText('Inventory Command Center')).toBeInTheDocument();
+    expect(screen.getByText('Network Consolidated')).toBeInTheDocument();
+    expect(screen.getByText('Central Warehouse')).toBeInTheDocument();
+    expect(screen.getByText('Store 1 — Indiranagar')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /stock adjustment/i }));
-    expect(handleAdjust).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText('Central Warehouse'));
+    expect(handleSelectLocation).toHaveBeenCalledWith('central-warehouse');
 
     fireEvent.click(screen.getByRole('button', { name: /transfer stock/i }));
     expect(handleTransfer).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /stock adjustment/i }));
+    expect(handleAdjust).toHaveBeenCalledTimes(1);
   });
 
-  it('2. InventorySummaryCards renders 4 authoritative metric cards with formatted numbers', () => {
+  it('2. InventorySummaryCards renders Network Stock, Central Stock, Store Stock, Low Stock, and Expiring Soon', () => {
     render(<InventorySummaryCards summary={sampleSummary} isLoading={false} />);
 
-    expect(screen.getByText('1,250')).toBeInTheDocument(); // Total units
-    expect(screen.getByText('3')).toBeInTheDocument(); // Low stock count
-    expect(screen.getByText('1')).toBeInTheDocument(); // Out of stock count
-    expect(screen.getByText(/₹ 68,500.00/)).toBeInTheDocument(); // Valuation
+    expect(screen.getByText('Network Stock')).toBeInTheDocument();
+    expect(screen.getByText('135')).toBeInTheDocument();
+    expect(screen.getByText('Central Stock')).toBeInTheDocument();
+    expect(screen.getByText('100')).toBeInTheDocument();
+    expect(screen.getByText('Store Stock')).toBeInTheDocument();
+    expect(screen.getByText('35')).toBeInTheDocument();
+    expect(screen.getByText('Expiring Soon')).toBeInTheDocument();
   });
 
-  it('3. InventoryFilters triggers search, status pill selection, and reset', () => {
+  it('3. InventoryFilters triggers search, status pill selection including Expiring Soon, and reset', () => {
     const handleSearch = jest.fn();
     const handleStatus = jest.fn();
     const handleCategory = jest.fn();
@@ -103,90 +147,90 @@ describe('Inventory Component Layer Unit Suite', () => {
         onStatusFilterChange={handleStatus}
         categoryFilter="Dairy"
         onCategoryFilterChange={handleCategory}
-        categories={['Dairy', 'Bakery']}
+        categories={['Dairy', 'Grains']}
         onClearFilters={handleClear}
       />
     );
 
     expect(screen.getByDisplayValue('Ghee')).toBeInTheDocument();
 
-    const lowStockPill = screen.getByRole('button', { name: 'Low Stock' });
-    fireEvent.click(lowStockPill);
-    expect(handleStatus).toHaveBeenCalledWith('LOW_STOCK');
+    const expiringSoonPill = screen.getByRole('button', { name: 'Expiring Soon' });
+    fireEvent.click(expiringSoonPill);
+    expect(handleStatus).toHaveBeenCalledWith('EXPIRING_SOON');
 
     const resetBtn = screen.getByRole('button', { name: /reset/i });
     fireEvent.click(resetBtn);
     expect(handleClear).toHaveBeenCalledTimes(1);
   });
 
-  it('4. InventoryTable renders stock balances with computed availability and badges', () => {
-    const handleViewLedger = jest.fn();
+  it('4. InventoryTable renders Network view with Location Breakdown badges and Orphan Warning', () => {
+    const handleInspect = jest.fn();
+    const handleTransfer = jest.fn();
+    const handleAdjust = jest.fn();
 
     render(
       <InventoryTable
-        balances={sampleBalances}
+        items={sampleItems}
+        selectedLocation="network"
+        stores={sampleStores}
         isLoading={false}
         canAdjust={true}
         canTransfer={true}
-        onViewLedger={handleViewLedger}
-        onAdjustStock={jest.fn()}
-        onTransferStock={jest.fn()}
+        onInspectItem={handleInspect}
+        onAdjustItem={handleAdjust}
+        onTransferItem={handleTransfer}
       />
     );
 
     expect(screen.getByText('A2 Cow Ghee 1L')).toBeInTheDocument();
-    expect(screen.getByText('Organic Paneer 500g')).toBeInTheDocument();
-    expect(screen.getByText('40')).toBeInTheDocument(); // Available 45 - 5
-    expect(screen.getByText('In Stock')).toBeInTheDocument();
-    expect(screen.getByText('Low Stock')).toBeInTheDocument();
+    expect(screen.getByText('ORPHAN INVENTORY')).toBeInTheDocument();
+    expect(screen.getByText('1 litre jar')).toBeInTheDocument();
+    expect(screen.getByText('LOT-2026-001')).toBeInTheDocument();
 
-    const historyBtn = screen.getByRole('button', {
-      name: /view movement history for a2 cow ghee 1l/i
-    });
-    fireEvent.click(historyBtn);
-    expect(handleViewLedger).toHaveBeenCalledTimes(1);
+    // Click row to inspect
+    fireEvent.click(screen.getByText('A2 Cow Ghee 1L'));
+    expect(handleInspect).toHaveBeenCalledWith(sampleItems[0]);
   });
 
-  it('5. StockTransferModal opens and renders form controls without infinite update loops', () => {
+  it('5. InventoryDetailDrawer renders stock by location breakdown and active batches', () => {
+    render(
+      <AppProviders>
+        <InventoryDetailDrawer
+          isOpen={true}
+          onClose={jest.fn()}
+          item={sampleItems[0]}
+          canAdjust={true}
+          canTransfer={true}
+          onAdjustStock={jest.fn()}
+          onTransferStock={jest.fn()}
+        />
+      </AppProviders>
+    );
+
+    expect(screen.getByText('Stock by Location Breakdown')).toBeInTheDocument();
+    expect(screen.getByText('Central Warehouse')).toBeInTheDocument();
+    expect(screen.getByText('Active Product Batches & Expiry')).toBeInTheDocument();
+    expect(screen.getByText('LOT: LOT-2026-001')).toBeInTheDocument();
+  });
+
+  it('6. StockTransferModal renders Live Simulation Preview with constant network total', () => {
     const handleClose = jest.fn();
 
-    const { rerender } = render(
+    render(
       <AppProviders>
         <StockTransferModal
           isOpen={true}
           onClose={handleClose}
-          selectedItem={sampleBalances[0]}
-          products={[{ id: 'prod-101', name: 'A2 Cow Ghee 1L' }]}
-          storeOptions={[
-            { value: 'all', label: 'All Stores' },
-            { value: 'store-1', label: 'Store 1' },
-            { value: 'store-2', label: 'Store 2' }
-          ]}
-          defaultLocationId="store-1"
+          selectedItem={sampleItems[0]}
+          items={sampleItems}
+          stores={sampleStores}
+          defaultLocationId="central-warehouse"
         />
       </AppProviders>
     );
 
     expect(screen.getByText(/inter-store stock transfer/i)).toBeInTheDocument();
-
-    // Re-render to verify stability without Maximum update depth errors
-    rerender(
-      <AppProviders>
-        <StockTransferModal
-          isOpen={true}
-          onClose={handleClose}
-          selectedItem={sampleBalances[0]}
-          products={[{ id: 'prod-101', name: 'A2 Cow Ghee 1L' }]}
-          storeOptions={[
-            { value: 'all', label: 'All Stores' },
-            { value: 'store-1', label: 'Store 1' },
-            { value: 'store-2', label: 'Store 2' }
-          ]}
-          defaultLocationId="store-1"
-        />
-      </AppProviders>
-    );
-
-    expect(screen.getByText(/inter-store stock transfer/i)).toBeInTheDocument();
+    expect(screen.getByText(/live transfer simulation preview/i)).toBeInTheDocument();
+    expect(screen.getByText('Network Total')).toBeInTheDocument();
   });
 });

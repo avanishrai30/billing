@@ -10,9 +10,73 @@ export type MovementType =
   | 'TRANSFER_IN'
   | 'TRANSFER_OUT'
   | 'VOID'
-  | 'DAMAGE';
+  | 'DAMAGE'
+  | 'CLEANUP_RESET';
 
-export type StockStatus = 'HEALTHY' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+export type StockStatus = 'HEALTHY' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'EXPIRING_SOON';
+
+export interface LocationStockBreakdown {
+  locationId: string;
+  locationName: string;
+  isWarehouse: boolean;
+  quantity: number;
+  reservedQuantity: number;
+  available: number;
+}
+
+export interface ProductBatchSummary {
+  id: string;
+  lotNumber: string;
+  expiryDate?: string;
+  manufactureDate?: string;
+  remainingQuantity: number;
+  locationId?: string;
+}
+
+export interface NetworkInventoryItem {
+  productId: string;
+  productName: string;
+  sku: string;
+  barcode: string;
+  brand?: string;
+  category: string;
+  unit: string;
+  cost: number;
+  price: number;
+  reorderLevel: number;
+  isOrphan: boolean;
+  defaultExpiryDate?: string | null;
+  networkQuantity: number;
+  networkReserved: number;
+  networkAvailable: number;
+  locationBreakdown: LocationStockBreakdown[];
+  batches: ProductBatchSummary[];
+}
+
+export interface CommandCenterSummary {
+  totalProducts: number;
+  networkStock: number;
+  centralStock: number;
+  storeStock: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  expiringSoonCount: number;
+  totalValuation: number;
+}
+
+export interface CommandCenterStore {
+  id: string;
+  name: string;
+  code: string;
+  isWarehouse: boolean;
+}
+
+export interface CommandCenterData {
+  success: boolean;
+  stores: CommandCenterStore[];
+  networkBalances: NetworkInventoryItem[];
+  summary: CommandCenterSummary;
+}
 
 export interface InventoryBalance {
   _id?: string;
@@ -35,6 +99,8 @@ export interface InventoryBalance {
   brand?: string;
   cost?: number;
   price?: number;
+  isOrphan?: boolean;
+  batches?: ProductBatchSummary[];
 }
 
 export interface InventorySummary {
@@ -67,7 +133,6 @@ export interface InventoryLedgerLog {
   notes?: string;
   createdAt: string;
 
-  // Joined product metadata for drawer
   productName?: string;
   sku?: string;
   unit?: string;
@@ -104,7 +169,7 @@ export interface StockAvailabilityResponse {
 export interface StockAdjustmentPayload {
   productId: string;
   locationId: string;
-  quantity: number; // Target absolute quantity
+  quantity: number;
   type?: string;
   referenceId?: string;
   notes?: string;
@@ -118,6 +183,7 @@ export interface StockTransferPayload {
   quantity: number;
   transferId?: string;
   transactionId?: string;
+  batchId?: string;
   notes?: string;
 }
 
@@ -133,5 +199,6 @@ export interface StockTransferResponse {
     fromAfter: number;
     toBefore: number;
     toAfter: number;
+    batchLotNumber?: string | null;
   };
 }
