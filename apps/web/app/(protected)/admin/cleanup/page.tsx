@@ -22,7 +22,8 @@ import type {
   CleanupDomain,
   CleanupAction,
   CleanupFilterState,
-  CleanupPreviewResult
+  CleanupPreviewResult,
+  CleanupExecutionResult
 } from '../../../../features/adminCleanup/types';
 
 export default function AdminCleanupPage() {
@@ -50,6 +51,7 @@ export default function AdminCleanupPage() {
   const [activePreview, setActivePreview] = useState<CleanupPreviewResult | null>(null);
   const [activeAction, setActiveAction] = useState<CleanupAction | null>(null);
   const [isOperationsOpen, setIsOperationsOpen] = useState(false);
+  const [lastOperationSummary, setLastOperationSummary] = useState<CleanupExecutionResult | null>(null);
 
   // Queries
   const { data: summary, refetch: refetchSummary } = useCleanupSummaryQuery();
@@ -148,7 +150,7 @@ export default function AdminCleanupPage() {
   };
 
   // Execute confirmed cleanup
-  const handleConfirmExecute = async (confirmCode?: string) => {
+  const handleConfirmExecute = async (confirmCode: string, password: string) => {
     if (!activePreview || !activeAction) return;
 
     try {
@@ -158,14 +160,16 @@ export default function AdminCleanupPage() {
         targetIds: selectedIds,
         previewToken: activePreview.previewToken,
         confirmCode,
-        filters
+        filters,
+        password
       });
 
       setIsPreviewOpen(false);
       setSelectedIds([]);
+      setLastOperationSummary(res.result);
       success(
         'Maintenance Executed',
-        `Successfully processed ${res.result?.processedCount || activePreview.eligibleCount} records.`
+        `Cleaned ${res.result?.cleanedCount ?? res.result?.processedCount ?? activePreview.eligibleCount}; protected ${res.result?.skippedCount ?? activePreview.blockedCount}.`
       );
       refetchSummary();
       refetchRecords();
@@ -213,6 +217,29 @@ export default function AdminCleanupPage() {
         onFilterChange={handleFilterChange}
         onReset={handleResetFilters}
       />
+
+      {lastOperationSummary && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-950">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="font-bold">Cleanup Operation Completed</div>
+              <div className="mt-1 text-xs text-emerald-800">
+                Cleaned: <strong>{lastOperationSummary.cleanedCount ?? lastOperationSummary.processedCount}</strong>
+                {' - '}Skipped / blocked: <strong>{lastOperationSummary.skippedCount ?? lastOperationSummary.blockedCount ?? 0}</strong>
+                {' - '}Failed: <strong>{lastOperationSummary.failedCount ?? 0}</strong>
+                {' - '}Operation ID: <span className="font-mono">{lastOperationSummary.operationId}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="self-start rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-900 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:self-auto"
+              onClick={() => setIsOperationsOpen(true)}
+            >
+              View Operation History
+            </button>
+          </div>
+        </div>
+      )}
 
       {isError ? (
         <ErrorState

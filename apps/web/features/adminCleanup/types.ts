@@ -74,6 +74,19 @@ export interface CleanupPreviewResult {
   previewToken: string | null;
 }
 
+export interface CleanupExecutionResult {
+  operationId: string;
+  domain: CleanupDomain;
+  action: CleanupAction;
+  processedCount: number;
+  cleanedCount?: number;
+  skippedCount?: number;
+  blockedCount?: number;
+  failedCount?: number;
+  reversible: boolean;
+  completedAt: string;
+}
+
 export interface CleanupOperationDoc {
   operationId: string;
   domain: CleanupDomain;
@@ -96,6 +109,11 @@ export interface CleanupOperationDoc {
   completedAt?: string;
   failedAt?: string;
   error?: string;
+  selectedCount?: number;
+  eligibleIds?: string[];
+  blockedIds?: string[];
+  skippedCount?: number;
+  confirmedAt?: string;
 }
 
 export interface CleanupDomainSummary {

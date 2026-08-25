@@ -6,6 +6,7 @@ import type {
   CleanupDomainSummary,
   CleanupQueryResult,
   CleanupPreviewResult,
+  CleanupExecutionResult,
   CleanupOperationDoc
 } from './types';
 
@@ -61,8 +62,9 @@ export const adminCleanupApi = {
     targetIds: string[],
     previewToken?: string | null,
     confirmCode?: string,
-    filters?: CleanupFilterState
-  ): Promise<{ success: boolean; result: any }> {
+    filters?: CleanupFilterState,
+    password?: string
+  ): Promise<{ success: boolean; result: CleanupExecutionResult }> {
     return apiClient.post<{ success: boolean; result: any }>(
       `/api/v1/admin/cleanup/${domain}/execute`,
       {
@@ -70,7 +72,8 @@ export const adminCleanupApi = {
         targetIds,
         previewToken,
         confirmCode,
-        filters
+        filters,
+        password
       }
     );
   },

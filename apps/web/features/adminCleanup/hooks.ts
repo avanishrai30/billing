@@ -68,7 +68,8 @@ export function useCleanupExecuteMutation() {
       targetIds,
       previewToken,
       confirmCode,
-      filters
+      filters,
+      password
     }: {
       domain: CleanupDomain;
       action: CleanupAction;
@@ -76,7 +77,8 @@ export function useCleanupExecuteMutation() {
       previewToken?: string | null;
       confirmCode?: string;
       filters?: CleanupFilterState;
-    }) => adminCleanupApi.executeCleanup(domain, action, targetIds, previewToken, confirmCode, filters),
+      password?: string;
+    }) => adminCleanupApi.executeCleanup(domain, action, targetIds, previewToken, confirmCode, filters, password),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-cleanup'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });

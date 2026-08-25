@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle,
@@ -20,7 +20,7 @@ export interface CleanupPreviewModalProps {
   onClose: () => void;
   preview: CleanupPreviewResult | null;
   isLoading: boolean;
-  onConfirmExecute: (confirmCode?: string) => void;
+  onConfirmExecute: (confirmCode: string, password: string) => void;
   isExecuting: boolean;
 }
 
@@ -33,13 +33,32 @@ export function CleanupPreviewModal({
   isExecuting
 }: CleanupPreviewModalProps) {
   const [typedConfirm, setTypedConfirm] = useState('');
+  const [password, setPassword] = useState('');
+  const [isFinalStep, setIsFinalStep] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTypedConfirm('');
+      setPassword('');
+      setIsFinalStep(false);
+    }
+  }, [isOpen, preview?.previewToken]);
 
   if (!isOpen || !preview) return null;
 
-  const isPurge = preview.action === 'purge';
   const orphanImpact = preview.orphanInventoryImpact;
-  const expectedConfirmCode = `PURGE ${preview.eligibleCount} RECORDS`;
-  const isConfirmValid = !isPurge || typedConfirm.trim().toUpperCase() === expectedConfirmCode;
+  const domainRecordLabel = {
+    invoices: 'INVOICE RECORD',
+    purchases: 'PURCHASE RECORD',
+    products: 'PRODUCT RECORD',
+    inventory: 'INVENTORY RECORD'
+  }[preview.domain];
+  const expectedConfirmCode = `DELETE ${preview.eligibleCount} ${domainRecordLabel}${preview.eligibleCount === 1 ? '' : 'S'}`;
+  const isConfirmValid = typedConfirm === expectedConfirmCode;
+  const canExecute = preview.eligibleCount > 0 && isConfirmValid && password.length > 0 && !isExecuting;
+  const locationSummary = orphanImpact?.locations || [];
+
+  const actionLabel = preview.action.replace(/_/g, ' ').toUpperCase();
 
   const getActionColor = () => {
     if (preview.action === 'purge') return 'danger';
@@ -51,53 +70,133 @@ export function CleanupPreviewModal({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Maintenance Cleanup Dry-Run Preview"
+      title={isFinalStep ? 'Final Cleanup Confirmation' : 'Maintenance Cleanup Preview'}
       maxWidth="lg"
     >
       <div className="space-y-4 text-xs">
         {/* Safety Warning Header */}
         <div
           className={`p-3.5 rounded-xl border flex items-start gap-3 ${
-            isPurge
+            isFinalStep
               ? 'bg-red-50/80 border-red-200 text-red-950'
               : 'bg-amber-50/80 border-amber-200 text-amber-950'
           }`}
         >
           <AlertTriangle
             className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-              isPurge ? 'text-red-600' : 'text-amber-600'
+              isFinalStep ? 'text-red-600' : 'text-amber-600'
             }`}
           />
           <div>
             <div className="font-bold text-sm">
-              {isPurge ? 'Permanent Purge Operation' : 'Dry-Run Impact Analysis'}
+              {isFinalStep ? 'Irreversible Execution Gate' : 'Dry-Run Impact Analysis'}
             </div>
             <p className="mt-0.5 text-xs opacity-90">
-              {isPurge
-                ? 'Hard-deleting records is irreversible. All associated audit logs will record this action permanently.'
-                : 'Review the simulated stock and financial ledger adjustments before confirming execution.'}
+              {isFinalStep
+                ? 'Eligible records will be permanently modified. Protected records will not be touched.'
+                : 'Review selected records, cleanup eligibility, and protection reasons before continuing.'}
             </p>
           </div>
         </div>
 
+        {preview.eligibleCount === 0 && (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+            <div className="font-bold text-slate-900">Nothing Eligible to Clean</div>
+            <p className="mt-1 text-slate-600">
+              The selected records are protected by dependency or stale-state safeguards. Review the protected reasons below and generate a fresh preview after resolving them.
+            </p>
+          </div>
+        )}
+
+        {isFinalStep ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <span className="text-[11px] text-slate-500 font-medium block">Domain</span>
+                <span className="text-sm font-bold text-slate-900 capitalize">{preview.domain}</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <span className="text-[11px] text-slate-500 font-medium block">Action</span>
+                <span className="text-sm font-bold text-slate-900">{actionLabel}</span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                <span className="text-[11px] text-emerald-700 font-medium block">Eligible for Cleanup</span>
+                <span className="text-lg font-bold font-mono text-emerald-800">{preview.eligibleCount}</span>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <span className="text-[11px] text-red-700 font-medium block">Blocked / Protected</span>
+                <span className="text-lg font-bold font-mono text-red-800">{preview.blockedCount}</span>
+              </div>
+            </div>
+
+            <div className="bg-red-50/70 border border-red-200 rounded-xl p-3.5 text-red-950">
+              <div className="font-bold">
+                {preview.eligibleCount} {domainRecordLabel.toLowerCase()}{preview.eligibleCount === 1 ? '' : 's'}
+                {orphanImpact?.totalQuantity ? ` / ${orphanImpact.totalQuantity} units` : ''}
+              </div>
+              <p className="mt-1">
+                will be permanently deleted. Blocked records will not be modified.
+              </p>
+            </div>
+
+            {locationSummary.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-bold text-slate-700">Affected Locations</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {locationSummary.map((loc) => (
+                    <div key={loc.locationId} className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-2 py-1.5">
+                      <span className="font-semibold text-slate-800">{loc.locationId}</span>
+                      <span className="font-mono font-bold text-slate-900">{loc.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5 space-y-3">
+              <label className="font-bold text-slate-900 block text-xs">
+                Type <span className="font-mono bg-red-100 text-red-900 px-1.5 py-0.5 rounded select-all">{expectedConfirmCode}</span> to confirm:
+              </label>
+              <Input
+                value={typedConfirm}
+                onChange={(e) => setTypedConfirm(e.target.value)}
+                placeholder={expectedConfirmCode}
+                className="font-mono text-xs"
+                autoFocus
+              />
+              <label className="font-bold text-slate-900 block text-xs" htmlFor="cleanup-super-admin-password">
+                Super Admin Password
+              </label>
+              <Input
+                id="cleanup-super-admin-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+              />
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Impact Cards Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <span className="text-[11px] text-slate-500 font-medium block">Total Targeted</span>
+            <span className="text-[11px] text-slate-500 font-medium block">Selected</span>
             <span className="text-lg font-bold font-mono text-slate-900">{preview.totalSelected}</span>
           </div>
           <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-            <span className="text-[11px] text-emerald-700 font-medium block">Eligible to Proceed</span>
+            <span className="text-[11px] text-emerald-700 font-medium block">Eligible for Cleanup</span>
             <span className="text-lg font-bold font-mono text-emerald-800">{preview.eligibleCount}</span>
           </div>
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <span className="text-[11px] text-red-700 font-medium block">Blocked / Ineligible</span>
+            <span className="text-[11px] text-red-700 font-medium block">Blocked / Protected</span>
             <span className="text-lg font-bold font-mono text-red-800">{preview.blockedCount}</span>
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <span className="text-[11px] text-blue-700 font-medium block">Reversibility</span>
             <span className="text-sm font-bold text-blue-900 block mt-1">
-              {preview.reversible ? '✓ Rollbackable' : '✗ Permanent'}
+              {preview.reversible ? 'Rollbackable' : 'Permanent'}
             </span>
           </div>
         </div>
@@ -194,21 +293,7 @@ export function CleanupPreviewModal({
             </div>
           </div>
         )}
-
-        {/* Typed Confirmation required for permanent Purge */}
-        {isPurge && preview.eligibleCount > 0 && (
-          <div className="bg-slate-50 border border-slate-300 rounded-xl p-3.5 space-y-2">
-            <label className="font-bold text-slate-900 block text-xs">
-              Type <span className="font-mono bg-red-100 text-red-900 px-1.5 py-0.5 rounded select-all">{expectedConfirmCode}</span> to confirm permanent deletion:
-            </label>
-            <Input
-              value={typedConfirm}
-              onChange={(e) => setTypedConfirm(e.target.value)}
-              placeholder={expectedConfirmCode}
-              className="font-mono text-xs"
-              autoFocus
-            />
-          </div>
+          </>
         )}
 
         {/* Action Buttons */}
@@ -216,17 +301,26 @@ export function CleanupPreviewModal({
           <Button variant="ghost" size="sm" onClick={onClose} disabled={isExecuting}>
             Cancel
           </Button>
-          <Button
-            variant={getActionColor() as any}
-            size="sm"
-            onClick={() => onConfirmExecute(typedConfirm)}
-            disabled={preview.eligibleCount === 0 || !isConfirmValid || isExecuting}
-            isLoading={isExecuting}
-          >
-            {isPurge
-              ? `Confirm & Purge ${preview.eligibleCount} Records`
-              : `Execute ${preview.action.toUpperCase()} (${preview.eligibleCount} Records)`}
-          </Button>
+          {isFinalStep ? (
+            <Button
+              variant={getActionColor() as any}
+              size="sm"
+              onClick={() => onConfirmExecute(typedConfirm, password)}
+              disabled={!canExecute}
+              isLoading={isExecuting}
+            >
+              Confirm Cleanup
+            </Button>
+          ) : preview.eligibleCount > 0 ? (
+            <Button
+              variant={getActionColor() as any}
+              size="sm"
+              onClick={() => setIsFinalStep(true)}
+              disabled={isExecuting}
+            >
+              Continue to Final Confirmation
+            </Button>
+          ) : null}
         </div>
       </div>
     </Dialog>

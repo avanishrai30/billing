@@ -1,8 +1,11 @@
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { getContext } = require('../modules/context');
 const auditService = require('./auditService');
 const inventoryService = require('./inventoryService');
 const authzService = require('./authzService');
+
+const PREVIEW_TTL_MS = 10 * 60 * 1000;
 
 /**
  * Super Admin Data Cleanup & Maintenance Service
@@ -129,6 +132,61 @@ async function getOrphanInventoryDependencyReport(db, inv) {
     activePurchases,
     ledgerRefs
   };
+}
+
+function createCleanupError(message, code, statusCode = 400) {
+  const err = new Error(message);
+  err.code = code;
+  err.statusCode = statusCode;
+  return err;
+}
+
+function getDomainRecordNoun(domain, count) {
+  const label = {
+    invoices: 'INVOICE RECORD',
+    purchases: 'PURCHASE RECORD',
+    products: 'PRODUCT RECORD',
+    inventory: 'INVENTORY RECORD'
+  }[domain] || 'RECORD';
+  return `${label}${count === 1 ? '' : 'S'}`;
+}
+
+function getExpectedConfirmCode(domain, eligibleCount) {
+  return `DELETE ${eligibleCount} ${getDomainRecordNoun(domain, eligibleCount)}`;
+}
+
+async function verifySuperAdminPassword(db, user, password) {
+  if (!authzService.isSuperAdmin(user)) {
+    throw createCleanupError('Canonical Super Admin authorization required.', 'FORBIDDEN', 403);
+  }
+  if (!password || typeof password !== 'string') {
+    throw createCleanupError('Super Admin password is required to execute cleanup.', 'PASSWORD_REQUIRED', 400);
+  }
+
+  const persistedUser = await db.collection('users').findOne({
+    $or: [
+      { id: user.id },
+      { username: user.username },
+      { email: user.email }
+    ].filter(clause => Object.values(clause)[0])
+  });
+
+  if (!persistedUser || !authzService.isSuperAdmin(persistedUser)) {
+    throw createCleanupError('Canonical Super Admin account could not be verified.', 'FORBIDDEN', 403);
+  }
+
+  let passwordMatches = false;
+  if (persistedUser.passwordHash) {
+    passwordMatches = bcrypt.compareSync(password, persistedUser.passwordHash);
+  } else if (persistedUser.password) {
+    passwordMatches = password === persistedUser.password;
+  }
+
+  if (!passwordMatches) {
+    throw createCleanupError('Super Admin password verification failed.', 'INVALID_PASSWORD', 403);
+  }
+
+  return true;
 }
 
 const adminCleanupService = {
@@ -806,6 +864,8 @@ const adminCleanupService = {
       stateFingerprint,
       eligibleCount: eligibleRecords.length,
       blockedCount: blockedRecords.length,
+      eligibleIds: eligibleRecords.map(r => r.id),
+      blockedIds: blockedRecords.map(r => r.id),
       stockReversalUnits,
       financialImpact,
       orphanInventoryImpact,
@@ -835,7 +895,7 @@ const adminCleanupService = {
   /**
    * 4. Execute Administrative Cleanup Operation with Stale-Preview and Double-Execution Guard
    */
-  async executeCleanup({ domain, action, targetIds = [], filters = {}, previewToken, confirmCode, user, req }) {
+  async executeCleanup({ domain, action, targetIds = [], filters = {}, previewToken, confirmCode, password, user, req }) {
     if (!authzService.isSuperAdmin(user)) {
       const err = new Error("Super Admin authorization required for cleanup execution");
       err.code = "FORBIDDEN";
@@ -846,23 +906,24 @@ const adminCleanupService = {
     const { db, io } = getContext();
 
     if (!previewToken) {
-      const err = new Error("Preview token is required before executing cleanup.");
-      err.code = "PREVIEW_REQUIRED";
-      throw err;
+      throw createCleanupError("Preview token is required before executing cleanup.", "PREVIEW_REQUIRED", 400);
     }
+
+    await verifySuperAdminPassword(db, user, password);
 
     // Step A: Validate Preview Token & Double-Execution Guard
     const previewDoc = await db.collection('cleanup_previews').findOne({ previewToken });
     if (!previewDoc) {
-      const err = new Error("Preview token is invalid or expired. Please generate a fresh preview.");
-      err.code = "INVALID_PREVIEW";
-      throw err;
+      throw createCleanupError("Preview token is invalid or expired. Please generate a fresh preview.", "INVALID_PREVIEW", 409);
     }
 
     if (previewDoc.executed) {
-      const err = new Error("This cleanup operation has already been executed. Duplicate execution rejected.");
-      err.code = "DUPLICATE_EXECUTION";
-      throw err;
+      throw createCleanupError("This cleanup operation has already been executed. Duplicate execution rejected.", "DUPLICATE_EXECUTION", 409);
+    }
+
+    const previewAgeMs = Date.now() - Date.parse(previewDoc.createdAt || 0);
+    if (!previewDoc.createdAt || Number.isNaN(previewAgeMs) || previewAgeMs > PREVIEW_TTL_MS) {
+      throw createCleanupError("Preview token has expired. Please generate a fresh preview.", "STALE_PREVIEW", 409);
     }
 
     // Step B: Stale Preview Check — inspect current state of targeted records
@@ -887,16 +948,8 @@ const adminCleanupService = {
 
     const currentStateFingerprint = computeStateFingerprint(currentRawRecords);
     if (currentStateFingerprint !== previewDoc.stateFingerprint) {
-      const err = new Error("Target records have changed since preview was generated. STALE PREVIEW / RE-PREVIEW REQUIRED.");
-      err.code = "STALE_PREVIEW";
-      throw err;
+      throw createCleanupError("Target records have changed since preview was generated. STALE PREVIEW / RE-PREVIEW REQUIRED.", "STALE_PREVIEW", 409);
     }
-
-    // Mark preview token as executed atomically
-    await db.collection('cleanup_previews').updateOne(
-      { previewToken },
-      { $set: { executed: true, executedAt: new Date().toISOString(), executedBy: user.username || user.name } }
-    );
 
     const operationId = `op-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
     const now = new Date().toISOString();
@@ -904,17 +957,41 @@ const adminCleanupService = {
 
     // Step C: Run preview evaluation to get exact current eligible records
     const preview = await this.previewCleanup(domain, action, targetQueryIds, filters, user);
-    if (preview.eligibleCount === 0) {
-      throw new Error("No eligible records found to execute cleanup on.");
+    const originalEligibleIds = (previewDoc.eligibleIds || []).slice().sort();
+    const currentEligibleIds = preview.eligibleRecords.map(r => r.id).sort();
+    const originalBlockedIds = (previewDoc.blockedIds || []).slice().sort();
+    const currentBlockedIds = preview.blockedRecords.map(r => r.id).sort();
+    if (
+      preview.eligibleCount !== previewDoc.eligibleCount ||
+      preview.blockedCount !== previewDoc.blockedCount ||
+      JSON.stringify(currentEligibleIds) !== JSON.stringify(originalEligibleIds) ||
+      JSON.stringify(currentBlockedIds) !== JSON.stringify(originalBlockedIds)
+    ) {
+      throw createCleanupError("Cleanup eligibility changed since preview was generated. STALE PREVIEW / RE-PREVIEW REQUIRED.", "STALE_PREVIEW", 409);
     }
 
-    // High-risk Purge verification
-    if (action === 'purge') {
-      const expectedConfirm = `PURGE ${preview.eligibleCount} RECORDS`;
-      if (!confirmCode || confirmCode.trim().toUpperCase() !== expectedConfirm) {
-        throw new Error(`Typed confirmation mismatch. Required: '${expectedConfirm}'`);
-      }
+    if (preview.eligibleCount === 0) {
+      throw createCleanupError("Nothing eligible to clean. Protected records were not modified.", "NOTHING_ELIGIBLE", 409);
     }
+
+    const expectedConfirm = getExpectedConfirmCode(domain, preview.eligibleCount);
+    if (!confirmCode || confirmCode.trim() !== expectedConfirm) {
+      throw createCleanupError(`Typed confirmation mismatch. Required: '${expectedConfirm}'`, "CONFIRMATION_MISMATCH", 400);
+    }
+
+    // Mark preview token as executed after re-authentication and final confirmation.
+    await db.collection('cleanup_previews').updateOne(
+      { previewToken },
+      {
+        $set: {
+          executed: true,
+          executedAt: now,
+          executedBy: actorUsername,
+          confirmationCode: expectedConfirm,
+          passwordReauthenticated: true
+        }
+      }
+    );
 
     // Step D: Record initial operation state in cleanup_operations collection
     const operationDoc = {
@@ -929,6 +1006,9 @@ const adminCleanupService = {
       reversible: preview.reversible,
       rolledBack: false,
       totalTargeted: preview.eligibleCount,
+      selectedCount: preview.totalSelected,
+      eligibleIds: preview.eligibleRecords.map(r => r.id),
+      blockedIds: preview.blockedRecords.map(r => r.id),
       successCount: 0,
       failureCount: 0,
       stockReversalUnits: preview.stockReversalUnits,
@@ -938,6 +1018,9 @@ const adminCleanupService = {
       affectedProductIds: [],
       affectedLocations: [],
       beforeSnapshot: [],
+      afterSnapshot: [],
+      confirmedAt: now,
+      passwordReauthentication: { verified: true, verifiedAt: now },
       recoveryManifest: [],
       errors: [],
       createdAt: now,
@@ -1197,10 +1280,13 @@ const adminCleanupService = {
           $set: {
             status: 'COMPLETED',
             successCount: processedIds.length,
+            failureCount: 0,
+            skippedCount: preview.blockedCount,
             recoveryManifest,
             affectedProductIds: Array.from(new Set(recoveryManifest.map(item => item.preState?.productId).filter(Boolean))),
             affectedLocations: Array.from(new Set(recoveryManifest.map(item => getInventoryLocationId(item.preState)).filter(Boolean))),
             beforeSnapshot: recoveryManifest.map(item => item.preState),
+            afterSnapshot: [],
             completedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           }
@@ -1221,6 +1307,8 @@ const adminCleanupService = {
           recordCount: processedIds.length,
           actor: actorUsername,
           reversible: preview.reversible,
+          eligibleIds: preview.eligibleRecords.map(r => r.id),
+          blockedIds: preview.blockedRecords.map(r => r.id),
           recordIds: processedIds,
           productIds: Array.from(new Set(recoveryManifest.map(item => item.preState?.productId).filter(Boolean))),
           locations: Array.from(new Set(recoveryManifest.map(item => getInventoryLocationId(item.preState)).filter(Boolean))),
@@ -1230,7 +1318,10 @@ const adminCleanupService = {
             locationId: getInventoryLocationId(item.preState),
             quantity: getInventoryQuantity(item.preState)
           })),
-          beforeSnapshot: recoveryManifest.map(item => item.preState)
+          confirmationTimestamp: now,
+          passwordReauthentication: { verified: true, verifiedAt: now },
+          beforeSnapshot: recoveryManifest.map(item => item.preState),
+          afterSnapshot: []
         },
         req
       );
@@ -1241,6 +1332,10 @@ const adminCleanupService = {
         domain,
         action,
         processedCount: processedIds.length,
+        cleanedCount: processedIds.length,
+        skippedCount: preview.blockedCount,
+        blockedCount: preview.blockedCount,
+        failedCount: 0,
         reversible: preview.reversible,
         completedAt: new Date().toISOString()
       };
@@ -1253,6 +1348,7 @@ const adminCleanupService = {
             status: 'FAILED',
             error: err.message,
             successCount: processedIds.length,
+            failureCount: Math.max((operationDoc.eligibleIds || []).length - processedIds.length, 1),
             recoveryManifest,
             failedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()

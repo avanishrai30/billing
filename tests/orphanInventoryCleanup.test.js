@@ -1,6 +1,7 @@
 const adminCleanupService = require('../services/adminCleanupService');
 const inventoryService = require('../services/inventoryService');
 const { setupContext } = require('../modules/context');
+const bcrypt = require('bcryptjs');
 
 function getValueByPath(doc, path) {
   return path.split('.').reduce((value, part) => {
@@ -115,6 +116,7 @@ describe('Safe orphan inventory cleanup', () => {
     category: 'super admin',
     assignedStoreId: 'all'
   };
+  const superAdminPassword = 'CorrectHorseBatteryStaple!';
 
   beforeEach(() => {
     emittedEvents = [];
@@ -125,6 +127,13 @@ describe('Safe orphan inventory cleanup', () => {
       })
     };
     setupContext(mockDb, mockIo, 'test-secret', '/tmp', {}, new Map());
+    mockDb.collection('users').insertOne({
+      id: superAdmin.id,
+      username: superAdmin.username,
+      category: 'super admin',
+      passwordHash: bcrypt.hashSync(superAdminPassword, 4),
+      status: 'active'
+    });
   });
 
   async function seedBaseInventory() {
@@ -201,11 +210,16 @@ describe('Safe orphan inventory cleanup', () => {
       action: 'remove_orphans',
       targetIds: ['inv-B'],
       previewToken: preview.previewToken,
+      confirmCode: 'DELETE 1 INVENTORY RECORD',
+      password: superAdminPassword,
       user: superAdmin,
       req: { user: superAdmin, ip: '127.0.0.1', headers: {} }
     });
 
     expect(result.processedCount).toBe(1);
+    expect(result.cleanedCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+    expect(result.failedCount).toBe(0);
     expect(await mockDb.collection('inventory').findOne({ id: 'inv-A' })).not.toBeNull();
     expect(await mockDb.collection('inventory').findOne({ id: 'inv-B' })).toBeNull();
 
@@ -213,10 +227,18 @@ describe('Safe orphan inventory cleanup', () => {
     expect(operation.operationType).toBe('ORPHAN_INVENTORY_CLEANUP');
     expect(operation.affectedProductIds).toEqual(['prod-B']);
     expect(operation.affectedLocations).toEqual(['Store 1']);
+    expect(operation.eligibleIds).toEqual(['inv-B']);
+    expect(operation.blockedIds).toEqual([]);
+    expect(operation.passwordReauthentication).toMatchObject({ verified: true });
     expect(operation.beforeSnapshot[0]).toMatchObject({ productId: 'prod-B', quantity: 17 });
+    expect(JSON.stringify(operation)).not.toContain(superAdminPassword);
 
     const audit = await mockDb.collection('audit_logs').findOne({ eventType: 'ORPHAN_INVENTORY_CLEANUP' });
     expect(audit).not.toBeNull();
+    expect(audit.after.eligibleIds).toEqual(['inv-B']);
+    expect(audit.after.blockedIds).toEqual([]);
+    expect(audit.after.passwordReauthentication).toMatchObject({ verified: true });
+    expect(JSON.stringify(audit)).not.toContain(superAdminPassword);
 
     expect(emittedEvents.some(e => e.room === 'store_Store 1' && e.eventName === 'inventory.updated')).toBe(true);
     expect(emittedEvents.some(e => e.room === 'sync_global' && e.eventName === 'inventory.updated')).toBe(true);
@@ -243,6 +265,8 @@ describe('Safe orphan inventory cleanup', () => {
       action: 'remove_orphans',
       targetIds: ['inv-B'],
       previewToken: preview.previewToken,
+      confirmCode: 'DELETE 1 INVENTORY RECORD',
+      password: superAdminPassword,
       user: superAdmin
     })).rejects.toThrow(/No eligible records|Product Master now exists|STALE PREVIEW/);
 
@@ -265,5 +289,104 @@ describe('Safe orphan inventory cleanup', () => {
     expect(preview.eligibleCount).toBe(0);
     expect(preview.blockedRecords[0].reason).toContain('active batch reference');
     expect(preview.orphanInventoryImpact.batchReferences).toHaveLength(1);
+  });
+
+  test('zero eligible preview cannot execute cleanup', async () => {
+    await seedBaseInventory();
+    const preview = await adminCleanupService.previewCleanup('inventory', 'remove_orphans', ['inv-A'], {}, superAdmin);
+
+    expect(preview.eligibleCount).toBe(0);
+    await expect(adminCleanupService.executeCleanup({
+      domain: 'inventory',
+      action: 'remove_orphans',
+      targetIds: ['inv-A'],
+      previewToken: preview.previewToken,
+      confirmCode: 'DELETE 0 INVENTORY RECORDS',
+      password: superAdminPassword,
+      user: superAdmin
+    })).rejects.toMatchObject({ code: 'NOTHING_ELIGIBLE', statusCode: 409 });
+    expect(await mockDb.collection('inventory').findOne({ id: 'inv-A' })).not.toBeNull();
+  });
+
+  test('exact confirmation text is required', async () => {
+    await seedBaseInventory();
+    const preview = await adminCleanupService.previewCleanup('inventory', 'remove_orphans', ['inv-B'], {}, superAdmin);
+
+    await expect(adminCleanupService.executeCleanup({
+      domain: 'inventory',
+      action: 'remove_orphans',
+      targetIds: ['inv-B'],
+      previewToken: preview.previewToken,
+      confirmCode: 'DELETE 1',
+      password: superAdminPassword,
+      user: superAdmin
+    })).rejects.toMatchObject({ code: 'CONFIRMATION_MISMATCH' });
+    expect(await mockDb.collection('inventory').findOne({ id: 'inv-B' })).not.toBeNull();
+  });
+
+  test('wrong Super Admin password is rejected before cleanup', async () => {
+    await seedBaseInventory();
+    const preview = await adminCleanupService.previewCleanup('inventory', 'remove_orphans', ['inv-B'], {}, superAdmin);
+
+    await expect(adminCleanupService.executeCleanup({
+      domain: 'inventory',
+      action: 'remove_orphans',
+      targetIds: ['inv-B'],
+      previewToken: preview.previewToken,
+      confirmCode: 'DELETE 1 INVENTORY RECORD',
+      password: 'wrong-password',
+      user: superAdmin
+    })).rejects.toMatchObject({ code: 'INVALID_PASSWORD', statusCode: 403 });
+    expect(await mockDb.collection('inventory').findOne({ id: 'inv-B' })).not.toBeNull();
+  });
+
+  test('duplicate execution is rejected', async () => {
+    await seedBaseInventory();
+    const preview = await adminCleanupService.previewCleanup('inventory', 'remove_orphans', ['inv-B'], {}, superAdmin);
+
+    await adminCleanupService.executeCleanup({
+      domain: 'inventory',
+      action: 'remove_orphans',
+      targetIds: ['inv-B'],
+      previewToken: preview.previewToken,
+      confirmCode: 'DELETE 1 INVENTORY RECORD',
+      password: superAdminPassword,
+      user: superAdmin
+    });
+
+    await expect(adminCleanupService.executeCleanup({
+      domain: 'inventory',
+      action: 'remove_orphans',
+      targetIds: ['inv-B'],
+      previewToken: preview.previewToken,
+      confirmCode: 'DELETE 1 INVENTORY RECORD',
+      password: superAdminPassword,
+      user: superAdmin
+    })).rejects.toMatchObject({ code: 'DUPLICATE_EXECUTION' });
+  });
+
+  test('batch dependency appearing after preview causes stale conflict', async () => {
+    await seedBaseInventory();
+    const preview = await adminCleanupService.previewCleanup('inventory', 'remove_orphans', ['inv-B'], {}, superAdmin);
+
+    await mockDb.collection('product_batches').insertOne({
+      id: 'batch-B-late',
+      productId: 'prod-B',
+      lotNumber: 'LOT-LATE',
+      remainingQuantity: 4,
+      status: 'active',
+      locationId: 'Store 1'
+    });
+
+    await expect(adminCleanupService.executeCleanup({
+      domain: 'inventory',
+      action: 'remove_orphans',
+      targetIds: ['inv-B'],
+      previewToken: preview.previewToken,
+      confirmCode: 'DELETE 1 INVENTORY RECORD',
+      password: superAdminPassword,
+      user: superAdmin
+    })).rejects.toMatchObject({ code: 'STALE_PREVIEW', statusCode: 409 });
+    expect(await mockDb.collection('inventory').findOne({ id: 'inv-B' })).not.toBeNull();
   });
 });

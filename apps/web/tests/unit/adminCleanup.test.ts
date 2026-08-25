@@ -86,7 +86,8 @@ describe('Phase 32 / 32.1 Super Admin Cleanup & Maintenance API & Business Rules
     const res = await adminCleanupApi.previewCleanup('invoices', 'void', ['inv-1', 'inv-2']);
     expect(apiClient.post).toHaveBeenCalledWith('/api/v1/admin/cleanup/invoices/preview', {
       action: 'void',
-      targetIds: ['inv-1', 'inv-2']
+      targetIds: ['inv-1', 'inv-2'],
+      filters: undefined
     });
     expect(res.eligibleCount).toBe(1);
     expect(res.blockedCount).toBe(1);
@@ -106,13 +107,22 @@ describe('Phase 32 / 32.1 Super Admin Cleanup & Maintenance API & Business Rules
       }
     });
 
-    const res = await adminCleanupApi.executeCleanup('products', 'archive', ['prd-1', 'prd-2'], 'prev-token-123');
+    const res = await adminCleanupApi.executeCleanup(
+      'products',
+      'archive',
+      ['prd-1', 'prd-2'],
+      'prev-token-123',
+      'DELETE 2 PRODUCT RECORDS',
+      undefined,
+      'super-secret'
+    );
     expect(apiClient.post).toHaveBeenCalledWith('/api/v1/admin/cleanup/products/execute', {
       action: 'archive',
       targetIds: ['prd-1', 'prd-2'],
       previewToken: 'prev-token-123',
-      confirmCode: undefined,
-      filters: undefined
+      confirmCode: 'DELETE 2 PRODUCT RECORDS',
+      filters: undefined,
+      password: 'super-secret'
     });
     expect(res.result.operationId).toBe('op-12345');
     expect(res.result.processedCount).toBe(5);
@@ -124,7 +134,7 @@ describe('Phase 32 / 32.1 Super Admin Cleanup & Maintenance API & Business Rules
     );
 
     await expect(
-      adminCleanupApi.executeCleanup('invoices', 'void', ['inv-1'], 'stale-token-123')
+      adminCleanupApi.executeCleanup('invoices', 'void', ['inv-1'], 'stale-token-123', 'DELETE 1 INVOICE RECORD', undefined, 'super-secret')
     ).rejects.toThrow('STALE PREVIEW / RE-PREVIEW REQUIRED');
   });
 
@@ -134,7 +144,7 @@ describe('Phase 32 / 32.1 Super Admin Cleanup & Maintenance API & Business Rules
     );
 
     await expect(
-      adminCleanupApi.executeCleanup('invoices', 'void', ['inv-1'], 'executed-token-123')
+      adminCleanupApi.executeCleanup('invoices', 'void', ['inv-1'], 'executed-token-123', 'DELETE 1 INVOICE RECORD', undefined, 'super-secret')
     ).rejects.toThrow('Duplicate execution rejected');
   });
 

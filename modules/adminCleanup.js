@@ -89,7 +89,7 @@ router.post('/:domain/preview', verifyJWT, requireSuperAdmin, async (req, res) =
 router.post('/:domain/execute', verifyJWT, requireSuperAdmin, async (req, res) => {
   try {
     const { domain } = req.params;
-    const { action, targetIds = [], filters = {}, previewToken, confirmCode } = req.body;
+    const { action, targetIds = [], filters = {}, previewToken, confirmCode, password } = req.body;
 
     if (!action) {
       return res.status(400).json({
@@ -105,6 +105,7 @@ router.post('/:domain/execute', verifyJWT, requireSuperAdmin, async (req, res) =
       filters,
       previewToken,
       confirmCode,
+      password,
       user: req.user,
       req
     });

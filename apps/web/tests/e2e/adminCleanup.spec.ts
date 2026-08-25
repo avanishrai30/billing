@@ -138,6 +138,10 @@ test.describe('Phase 32 / 32.1 — Super Admin Cleanup & Maintenance Center E2E 
     });
 
     await page.route('**/api/v1/admin/cleanup/*/execute', async (route) => {
+      const body = route.request().postDataJSON();
+      expect(body.previewToken).toBe('prev-mock-token-1');
+      expect(body.confirmCode).toBe('DELETE 1 INVOICE RECORD');
+      expect(body.password).toBe('super-secret');
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -146,6 +150,9 @@ test.describe('Phase 32 / 32.1 — Super Admin Cleanup & Maintenance Center E2E 
           result: {
             operationId: 'op-exec-999',
             processedCount: 1,
+            cleanedCount: 1,
+            skippedCount: 0,
+            failedCount: 0,
             reversible: true,
             completedAt: new Date().toISOString()
           }
@@ -183,20 +190,27 @@ test.describe('Phase 32 / 32.1 — Super Admin Cleanup & Maintenance Center E2E 
     // 6. Verify Dry-Run Preview Modal
     const modal = page.getByRole('dialog');
     await expect(modal).toBeVisible();
-    await expect(modal.getByText('Maintenance Cleanup Dry-Run Preview')).toBeVisible();
-    await expect(modal.getByText('Eligible to Proceed')).toBeVisible();
+    await expect(modal.getByText('Maintenance Cleanup Preview')).toBeVisible();
+    await expect(modal.getByText('Eligible for Cleanup')).toBeVisible();
     await expect(modal.getByText('Simulated Ledger Adjustments:')).toBeVisible();
     await expect(modal.getByText('+3 units')).toBeVisible();
 
-    // 7. Confirm and Execute
-    const confirmExecBtn = modal.getByRole('button', { name: /execute void/i });
+    // 7. Continue to final confirmation and execute
+    await modal.getByRole('button', { name: /continue to final confirmation/i }).click();
+    await expect(modal.getByText('Final Cleanup Confirmation')).toBeVisible();
+    await expect(modal.getByText('DELETE 1 INVOICE RECORD')).toBeVisible();
+    await modal.getByPlaceholder('DELETE 1 INVOICE RECORD').fill('DELETE 1 INVOICE RECORD');
+    await modal.getByLabel('Super Admin Password').fill('super-secret');
+    const confirmExecBtn = modal.getByRole('button', { name: /confirm cleanup/i });
     await confirmExecBtn.click();
 
     // 8. Verify Toast Notification
     await expect(page.getByText('Maintenance Executed')).toBeVisible();
+    await expect(page.getByText('Cleanup Operation Completed')).toBeVisible();
+    await expect(page.getByText('op-exec-999')).toBeVisible();
 
     // 9. Inspect Operations History Drawer
-    const historyBtn = page.getByRole('button', { name: /audit & operation history/i });
+    const historyBtn = page.getByRole('button', { name: /view operation history/i });
     await historyBtn.click();
     await expect(page.getByText('Maintenance Operations Audit Trail')).toBeVisible();
     await expect(page.getByText('op-20260824-001')).toBeVisible();
