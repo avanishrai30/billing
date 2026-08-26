@@ -21,6 +21,11 @@ export interface StoreScopeContextValue {
   isMultiStoreRestricted: boolean;
   userAssignedStores: string[];
   allowedStores: StoreDoc[];
+  currentLocationId: string | undefined;
+  authorizedLocations: StoreDoc[];
+  isWarehouse: boolean;
+  isSuperAdmin: boolean;
+  canViewAllLocations: boolean;
   stores: StoreDoc[];
   isLoadingStores: boolean;
   activeStore: StoreDoc | null;
@@ -38,9 +43,9 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
   });
 
   // Extract user's authoritative assigned stores
-  const { userAssignedStores, canAccessAllStores } = useMemo(() => {
+  const { userAssignedStores, canAccessAllStores, isSuperAdminUser } = useMemo(() => {
     if (!user) {
-      return { userAssignedStores: [], canAccessAllStores: false };
+      return { userAssignedStores: [], canAccessAllStores: false, isSuperAdminUser: false };
     }
 
     const role = (user.role || '').toLowerCase();
@@ -60,13 +65,14 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
     const hasGlobalScope = isSuper || (category === 'admin' && (rawStores.includes('all') || user.assignedStoreId === 'all'));
 
     if (hasGlobalScope) {
-      return { userAssignedStores: ['all'], canAccessAllStores: true };
+      return { userAssignedStores: ['all'], canAccessAllStores: true, isSuperAdminUser: isSuper };
     }
 
     const sanitizedStores = rawStores.filter(s => s && s !== 'all' && s !== 'none');
     return {
       userAssignedStores: sanitizedStores.length > 0 ? sanitizedStores : (user.assignedStoreId ? [user.assignedStoreId] : []),
-      canAccessAllStores: false
+      canAccessAllStores: false,
+      isSuperAdminUser: isSuper
     };
   }, [user]);
 
@@ -165,6 +171,10 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
 
   const isAllStores = activeStoreId === 'all';
   const effectiveStoreId = isAllStores ? undefined : activeStoreId;
+  const currentLocationId = effectiveStoreId;
+  const authorizedLocations = allowedStores;
+  const isWarehouse = activeStore?.locationType === 'WAREHOUSE';
+  const canViewAllLocations = canAccessAllStores;
 
   const scope: StoreScope = useMemo(() => {
     if (isAllStores) {
@@ -185,6 +195,11 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
       isMultiStoreRestricted,
       userAssignedStores,
       allowedStores,
+      currentLocationId,
+      authorizedLocations,
+      isWarehouse,
+      isSuperAdmin: isSuperAdminUser,
+      canViewAllLocations,
       stores,
       isLoadingStores,
       activeStore,
@@ -201,6 +216,11 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
       isMultiStoreRestricted,
       userAssignedStores,
       allowedStores,
+      currentLocationId,
+      authorizedLocations,
+      isWarehouse,
+      isSuperAdminUser,
+      canViewAllLocations,
       stores,
       isLoadingStores,
       activeStore,

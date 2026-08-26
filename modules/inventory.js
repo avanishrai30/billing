@@ -1,6 +1,6 @@
 const express = require('express');
 const { getContext, verifyJWT } = require('./context');
-const { requirePermission, requireStoreScope, getStoreScopeFilter, isSuperAdmin, assertStoreAccess } = require('../services/authzService');
+const { requirePermission, requireStoreScope, getStoreScopeFilter, getAuthorizedStoreIds, isSuperAdmin, assertStoreAccess } = require('../services/authzService');
 const inventoryService = require('../services/inventoryService');
 const auditService = require('../services/auditService');
 
@@ -11,16 +11,6 @@ router.get('/command-center', verifyJWT, requirePermission('inventory.view'), as
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   try {
     const data = await inventoryService.getInventoryCommandCenter(req.user);
-
-    // Apply store scope restrictions if non-super-admin user is restricted to a single store
-    if (!isSuperAdmin(req.user) && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
-      const userStore = req.user.assignedStoreId;
-      data.stores = data.stores.filter(s => s.id === userStore);
-      data.networkBalances = data.networkBalances.map(b => ({
-        ...b,
-        locationBreakdown: b.locationBreakdown.filter(l => l.locationId === userStore)
-      }));
-    }
 
     res.json(data);
   } catch (err) {
@@ -38,8 +28,24 @@ router.get('/summary', verifyJWT, requirePermission('inventory.view'), async (re
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   try {
     let locId = req.query.locationId || req.query.storeId;
-    if (!isSuperAdmin(req.user) && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
-      locId = req.user.assignedStoreId;
+    const authorizedStoreIds = getAuthorizedStoreIds(req.user);
+    const canViewAllStores = isSuperAdmin(req.user) || authorizedStoreIds.includes('*') || authorizedStoreIds.includes('all');
+    if (!canViewAllStores) {
+      if (authorizedStoreIds.length === 0) {
+        return res.status(403).json({
+          success: false,
+          error: { code: "STORE_ACCESS_DENIED", message: "Forbidden: No authorized inventory locations are assigned to this user" },
+          requestId
+        });
+      }
+      if (locId && !authorizedStoreIds.includes(locId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You cannot view inventory for store '${locId}'` },
+          requestId
+        });
+      }
+      locId = locId || authorizedStoreIds;
     }
     const summary = await inventoryService.getInventorySummary(locId);
     res.json(summary);
@@ -59,15 +65,26 @@ router.post('/check-availability', verifyJWT, requirePermission('inventory.view'
   const { items, storeId, locationId } = req.body;
   let locId = locationId || storeId;
 
-  if (!isSuperAdmin(req.user) && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
-    if (locId && locId !== req.user.assignedStoreId) {
-      return res.status(403).json({
-        success: false,
-        error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You cannot check inventory for store '${locId}'` },
-        requestId
-      });
+  if (!isSuperAdmin(req.user)) {
+    const authorizedStoreIds = getAuthorizedStoreIds(req.user);
+    const canViewAllStores = authorizedStoreIds.includes('*') || authorizedStoreIds.includes('all');
+    if (!canViewAllStores) {
+      if (authorizedStoreIds.length === 0) {
+        return res.status(403).json({
+          success: false,
+          error: { code: "STORE_ACCESS_DENIED", message: "Forbidden: No authorized inventory locations are assigned to this user" },
+          requestId
+        });
+      }
+      if (locId && !authorizedStoreIds.includes(locId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You cannot check inventory for store '${locId}'` },
+          requestId
+        });
+      }
+      locId = locId || authorizedStoreIds[0];
     }
-    locId = req.user.assignedStoreId;
   }
 
   try {
@@ -87,10 +104,37 @@ router.get('/', verifyJWT, requirePermission('inventory.view'), async (req, res)
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   try {
     const filter = {};
-    if (!isSuperAdmin(req.user) && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
-      filter.locationId = req.user.assignedStoreId;
-    } else if (req.query.storeId || req.query.locationId) {
-      filter.locationId = req.query.locationId || req.query.storeId;
+    const requestedLocationId = req.query.locationId || req.query.storeId;
+    const authorizedStoreIds = getAuthorizedStoreIds(req.user);
+    const canViewAllStores = isSuperAdmin(req.user) || authorizedStoreIds.includes('*') || authorizedStoreIds.includes('all');
+    if (!canViewAllStores && authorizedStoreIds.length === 0) {
+      return res.json({ success: true, inventory: [] });
+    }
+    if (!canViewAllStores && requestedLocationId && !authorizedStoreIds.includes(requestedLocationId)) {
+      return res.status(403).json({
+        success: false,
+        error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You cannot view inventory for store '${requestedLocationId}'` },
+        requestId
+      });
+    }
+
+    const scopedFilter = getStoreScopeFilter(req.user);
+    if (scopedFilter._id === null) {
+      return res.json({ success: true, inventory: [] });
+    } else if (scopedFilter.$or) {
+      const firstScopedCondition = scopedFilter.$or[0] || {};
+      const scopedLocation = firstScopedCondition.locationId || firstScopedCondition.storeId;
+      if (scopedLocation && scopedLocation.$in) {
+        filter.locationIds = scopedLocation.$in;
+      } else if (scopedLocation) {
+        filter.locationId = scopedLocation;
+      }
+    } else if (scopedFilter.locationId) {
+      filter.locationId = scopedFilter.locationId;
+    } else if (scopedFilter.storeId) {
+      filter.locationId = scopedFilter.storeId;
+    } else if (requestedLocationId) {
+      filter.locationId = requestedLocationId;
     }
 
     if (req.query.productId) {
@@ -113,9 +157,26 @@ router.get('/logs', verifyJWT, requirePermission('inventory.view'), async (req, 
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   try {
     const queryOptions = { ...req.query };
-    if (!isSuperAdmin(req.user) && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
-      queryOptions.storeId = req.user.assignedStoreId;
-      queryOptions.locationId = req.user.assignedStoreId;
+    const requestedLocationId = req.query.locationId || req.query.storeId;
+    const authorizedStoreIds = getAuthorizedStoreIds(req.user);
+    const canViewAllStores = isSuperAdmin(req.user) || authorizedStoreIds.includes('*') || authorizedStoreIds.includes('all');
+    if (!canViewAllStores) {
+      if (authorizedStoreIds.length === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          pagination: { limit: Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 500), nextCursor: null }
+        });
+      }
+      if (requestedLocationId && !authorizedStoreIds.includes(requestedLocationId)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You cannot view inventory logs for store '${requestedLocationId}'` },
+          requestId
+        });
+      }
+      queryOptions.locationId = requestedLocationId || authorizedStoreIds;
+      delete queryOptions.storeId;
     }
     const result = await inventoryService.getLedgerLogs(queryOptions);
     res.json(result);
@@ -205,27 +266,29 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
     });
   }
 
-  // Store authorization check on source store
+  // Store authorization check on source and destination locations
   try {
     assertStoreAccess(req.user, fromLoc);
+    assertStoreAccess(req.user, toLoc);
   } catch (authErr) {
     await auditService.writeAuditLog(
       'AUTHORIZATION_DENIED',
       'security',
       req.user.id || req.user.username,
       null,
-      {
-        requiredPermission: 'inventory.transfer',
-        sourceStore: fromLoc,
-        endpoint: req.originalUrl || req.path,
-        method: 'POST',
-        reason: `Store scope mismatch: cannot transfer stock out of store '${fromLoc}'`
-      },
-      req
-    );
+        {
+          requiredPermission: 'inventory.transfer',
+          sourceStore: fromLoc,
+          destinationStore: toLoc,
+          endpoint: req.originalUrl || req.path,
+          method: 'POST',
+          reason: `Store scope mismatch: cannot transfer stock between '${fromLoc}' and '${toLoc}'`
+        },
+        req
+      );
     return res.status(403).json({
       success: false,
-      error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You are not authorized to transfer stock out of store '${fromLoc}'` },
+      error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You are not authorized to transfer stock between '${fromLoc}' and '${toLoc}'` },
       requestId
     });
   }
@@ -233,6 +296,17 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
   try {
     // Idempotency check: if transferId was already processed in ledger, return existing transfer
     if (transKey) {
+      const existingTransfer = await db.collection('stock_transfers').findOne({ id: transKey });
+      if (existingTransfer && existingTransfer.status === 'COMPLETED') {
+        return res.json({
+          success: true,
+          message: "Stock transfer already completed",
+          referenceId: existingTransfer.referenceId,
+          duplicate: true,
+          transfer: existingTransfer.result || null,
+          stockTransfer: existingTransfer
+        });
+      }
       const existingLedger = await db.collection('inventory_ledger').findOne({ referenceId: transKey });
       if (existingLedger) {
         console.log(`[Transfer] Idempotent hit: transfer #${transKey} already recorded.`);
@@ -245,22 +319,35 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
       }
     }
 
-    const result = await inventoryService.transferStock(
+    const result = await inventoryService.completeStockTransfer({
       productId,
-      fromLoc,
-      toLoc,
+      fromLocationId: fromLoc,
+      toLocationId: toLoc,
       quantity,
-      req.user ? req.user.username : 'system',
-      notes || '',
-      batchId || null
-    );
+      performedBy: req.user ? (req.user.id || req.user.username) : 'system',
+      requestedBy: req.user ? (req.user.id || req.user.username) : 'system',
+      approvedBy: req.user ? (req.user.id || req.user.username) : 'system',
+      completedBy: req.user ? (req.user.id || req.user.username) : 'system',
+      notes: notes || '',
+      batchId: batchId || null,
+      transferId: transKey || null
+    });
 
     await auditService.writeAuditLog(
-      'inventory_transfer',
+      'TRANSFER_COMPLETED',
       'inventory',
       productId,
       null,
-      { fromLocationId: fromLoc, toLocationId: toLoc, quantity, referenceId: result.referenceId, batchId, notes },
+      {
+        fromLocationId: fromLoc,
+        toLocationId: toLoc,
+        quantity,
+        referenceId: result.referenceId,
+        transferId: result.stockTransfer?.id,
+        transferNumber: result.stockTransfer?.transferNumber,
+        batchId,
+        notes
+      },
       req
     );
 
@@ -268,13 +355,14 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
       success: true,
       message: "Stock transfer completed successfully",
       referenceId: result.referenceId,
-      transfer: result
+      transfer: result,
+      stockTransfer: result.stockTransfer
     });
   } catch (err) {
     console.error("Stock transfer error:", err);
-    const statusCode = err.code === 'PRODUCT_MASTER_NOT_FOUND'
+    const statusCode = err.statusCode || (err.code === 'PRODUCT_MASTER_NOT_FOUND'
       ? 409
-      : err.code === 'INSUFFICIENT_STOCK' || err.code === 'INSUFFICIENT_BATCH_STOCK' ? 400 : 500;
+      : err.code === 'INSUFFICIENT_STOCK' || err.code === 'INSUFFICIENT_BATCH_STOCK' ? 400 : 500);
     res.status(statusCode).json({
       success: false,
       error: {

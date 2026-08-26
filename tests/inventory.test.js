@@ -1,5 +1,6 @@
 const inventoryService = require('../services/inventoryService');
 const { setupContext } = require('../modules/context');
+const { auditInventoryStoreArchitecture } = require('../scripts/migrations/audit_inventory_store_architecture');
 
 // Lightweight in-memory MongoDB mock engine for offline unit test execution
 function createMockDb() {
@@ -19,6 +20,7 @@ function createMockDb() {
       }
       if (typeof val === 'object' && val !== null) {
         if (val.$gte !== undefined && (doc[key] === undefined || doc[key] < val.$gte)) return false;
+        if (val.$gt !== undefined && (doc[key] === undefined || doc[key] <= val.$gt)) return false;
         if (val.$ne !== undefined && doc[key] === val.$ne) return false;
         if (val.$in !== undefined && !val.$in.includes(doc[key])) return false;
       } else {
@@ -121,6 +123,8 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
       name: 'Central Warehouse',
       code: 'WH-01',
       status: 'active',
+      locationType: 'WAREHOUSE',
+      isHub: true,
       isWarehouse: true
     });
     await mockDb.collection('stores').insertOne({
@@ -128,6 +132,7 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
       name: 'Store 1',
       code: 'ST-1',
       status: 'active',
+      locationType: 'STORE',
       isWarehouse: false
     });
     await mockDb.collection('stores').insertOne({
@@ -135,6 +140,7 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
       name: 'Store 2',
       code: 'ST-2',
       status: 'active',
+      locationType: 'STORE',
       isWarehouse: false
     });
   }
@@ -415,5 +421,180 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
       expect.objectContaining({ locationId: 'central-warehouse', quantity: 70 }),
       expect.objectContaining({ locationId: 'store-1', quantity: 30 })
     ]));
+  });
+
+  test('11. Command Center supports assignedStores multi-location scope and replenishment suggestions', async () => {
+    await seedStores();
+    await mockDb.collection('products').insertOne({
+      id: 'prod-multi-scope',
+      name: 'Multi Store Product',
+      sku: 'SKU-MULTI',
+      reorderLevel: 15,
+      targetStock: 40,
+      isArchived: false,
+      status: 'active'
+    });
+    await inventoryService.adjustStock('prod-multi-scope', 'central-warehouse', 100, 'OPENING', 'central', 'test-runner');
+    await inventoryService.adjustStock('prod-multi-scope', 'store-1', 10, 'OPENING', 'store-1', 'test-runner');
+    await inventoryService.adjustStock('prod-multi-scope', 'store-2', 22, 'OPENING', 'store-2', 'test-runner');
+    await mockDb.collection('inventory').updateOne(
+      { productId: 'prod-multi-scope', locationId: 'store-1' },
+      { $set: { reorderLevel: 15, targetStock: 40 } }
+    );
+    await mockDb.collection('inventory').updateOne(
+      { productId: 'prod-multi-scope', locationId: 'store-2' },
+      { $set: { reorderLevel: 15, targetStock: 40 } }
+    );
+
+    const data = await inventoryService.getInventoryCommandCenter({
+      category: 'employee',
+      assignedStoreId: 'store-1',
+      assignedStores: ['store-1', 'store-2']
+    });
+    const item = data.networkBalances.find(row => row.productId === 'prod-multi-scope');
+
+    expect(data.stores.map(store => store.id).sort()).toEqual(['store-1', 'store-2']);
+    expect(item.networkQuantity).toBe(32);
+    expect(item.locationBreakdown).toEqual(expect.arrayContaining([
+      expect.objectContaining({ locationId: 'store-1', quantity: 10, suggestedTransfer: 30 }),
+      expect.objectContaining({ locationId: 'store-2', quantity: 22, suggestedTransfer: 0 })
+    ]));
+    expect(item.replenishmentRequired).toBe(true);
+    expect(item.replenishmentSuggestions).toEqual([
+      expect.objectContaining({ locationId: 'store-1', currentStock: 10, reorderLevel: 15, targetStock: 40, suggestedTransfer: 30 })
+    ]);
+    expect(data.summary.replenishmentRequiredCount).toBe(1);
+  });
+
+  test('12. Canonical stock transfer records lifecycle and emits legacy plus location realtime rooms', async () => {
+    const emittedEvents = [];
+    const mockIo = {
+      to(room) {
+        return {
+          emit(eventName, payload) {
+            emittedEvents.push({ room, eventName, payload });
+          }
+        };
+      }
+    };
+    setupContext(mockDb, mockIo, 'test-secret', '/tmp', {}, new Map());
+    await seedStores();
+    await seedProduct('prod-canonical-transfer');
+    await inventoryService.adjustStock('prod-canonical-transfer', 'central-warehouse', 50, 'OPENING', 'central', 'test-runner');
+
+    const result = await inventoryService.completeStockTransfer({
+      productId: 'prod-canonical-transfer',
+      fromLocationId: 'central-warehouse',
+      toLocationId: 'store-1',
+      quantity: 15,
+      performedBy: 'admin',
+      transferId: 'transfer-fixed-1',
+      notes: 'Warehouse replenishment'
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.fromAfter).toBe(35);
+    expect(result.toAfter).toBe(15);
+    expect(result.stockTransfer).toMatchObject({
+      id: 'transfer-fixed-1',
+      status: 'COMPLETED',
+      fromLocationId: 'central-warehouse',
+      toLocationId: 'store-1',
+      completedBy: 'admin'
+    });
+
+    const transferDoc = await mockDb.collection('stock_transfers').findOne({ id: 'transfer-fixed-1' });
+    expect(transferDoc.status).toBe('COMPLETED');
+    expect(transferDoc.items).toEqual([
+      expect.objectContaining({ productId: 'prod-canonical-transfer', quantity: 15 })
+    ]);
+
+    expect(emittedEvents).toEqual(expect.arrayContaining([
+      expect.objectContaining({ room: 'store_central-warehouse', eventName: 'inventory.transfer.completed' }),
+      expect.objectContaining({ room: 'location:central-warehouse', eventName: 'inventory.transfer.completed' }),
+      expect.objectContaining({ room: 'store_store-1', eventName: 'inventory.transfer.completed' }),
+      expect.objectContaining({ room: 'location:store-1', eventName: 'inventory.transfer.completed' }),
+      expect.objectContaining({ room: 'sync_global', eventName: 'inventory.transfer.completed' }),
+      expect.objectContaining({ room: 'org:global', eventName: 'inventory.transfer.completed' })
+    ]));
+
+    await expect(inventoryService.completeStockTransfer({
+      productId: 'prod-canonical-transfer',
+      fromLocationId: 'central-warehouse',
+      toLocationId: 'store-1',
+      quantity: 15,
+      performedBy: 'admin',
+      transferId: 'transfer-fixed-1'
+    })).resolves.toMatchObject({ stockTransfer: expect.objectContaining({ id: 'transfer-fixed-1', status: 'COMPLETED' }) });
+  });
+
+  test('13. Read-only architecture audit reports drift without mutating data', async () => {
+    await seedStores();
+    await seedProduct('prod-valid-audit');
+    await mockDb.collection('inventory').insertOne({
+      id: 'inv-valid',
+      productId: 'prod-valid-audit',
+      locationId: 'store-1',
+      quantity: 8
+    });
+    await mockDb.collection('inventory').insertOne({
+      id: 'inv-missing-product',
+      productId: 'prod-missing-audit',
+      locationId: 'store-1',
+      quantity: 3
+    });
+    await mockDb.collection('inventory').insertOne({
+      id: 'inv-invalid-location',
+      productId: 'prod-valid-audit',
+      locationId: 'ghost-store',
+      quantity: 2
+    });
+    await mockDb.collection('inventory').insertOne({
+      id: 'inv-duplicate',
+      productId: 'prod-valid-audit',
+      locationId: 'store-1',
+      quantity: 1
+    });
+    await mockDb.collection('users').insertOne({
+      id: 'user-invalid-store',
+      username: 'badstore',
+      category: 'employee',
+      assignedStores: ['ghost-store']
+    });
+    await mockDb.collection('invoices').insertOne({
+      id: 'invoice-no-store',
+      invoiceNumber: 'INV-NO-STORE'
+    });
+    await mockDb.collection('product_batches').insertOne({
+      id: 'batch-bad',
+      productId: 'prod-missing-audit',
+      locationId: 'ghost-store',
+      remainingQuantity: 4
+    });
+
+    const beforeCount = (await mockDb.collection('inventory').find({}).toArray()).length;
+    const report = await auditInventoryStoreArchitecture(mockDb);
+    const afterCount = (await mockDb.collection('inventory').find({}).toArray()).length;
+
+    expect(report.mutated).toBe(false);
+    expect(afterCount).toBe(beforeCount);
+    expect(report.findings.missingProductRefs).toEqual([
+      expect.objectContaining({ inventoryId: 'inv-missing-product', productId: 'prod-missing-audit' })
+    ]);
+    expect(report.findings.invalidLocations).toEqual([
+      expect.objectContaining({ inventoryId: 'inv-invalid-location', locationId: 'ghost-store' })
+    ]);
+    expect(report.findings.duplicateBalances).toEqual([
+      expect.objectContaining({ productId: 'prod-valid-audit', locationId: 'store-1' })
+    ]);
+    expect(report.findings.invalidStoreAssignments).toEqual([
+      expect.objectContaining({ userId: 'user-invalid-store', assignedStoreId: 'ghost-store' })
+    ]);
+    expect(report.findings.missingInvoiceStoreId).toEqual([
+      expect.objectContaining({ invoiceId: 'invoice-no-store' })
+    ]);
+    expect(report.findings.batchInconsistencies).toEqual([
+      expect.objectContaining({ batchId: 'batch-bad' })
+    ]);
   });
 });

@@ -3,12 +3,24 @@ const { getContext, verifyJWT, writeAuditLog } = require('./context');
 const { requirePermission, requireAnyPermission, isSuperAdmin, assertStoreAccess } = require('../services/authzService');
 const storeService = require('../services/storeService');
 
+function normalizeLocationType(store = {}) {
+  const raw = String(store.locationType || '').trim().toUpperCase();
+  if (raw === 'WAREHOUSE' || raw === 'STORE') return raw;
+  const name = String(store.name || '').toLowerCase();
+  if (store.isWarehouse === true || store.id === 'central-warehouse' || name.includes('warehouse')) {
+    return 'WAREHOUSE';
+  }
+  return 'STORE';
+}
+
 function normalizeStoreRecord(store, employeeCount = 0) {
+  const locationType = normalizeLocationType(store);
   return {
     ...store,
     id: store.id,
     name: store.name,
     code: store.code || `ST-${(store.name || 'OUT').substring(0, 3).toUpperCase()}`,
+    locationType,
     status: store.status || 'active',
     address: store.address || '',
     phone: store.phone || '',
@@ -88,6 +100,7 @@ router.post('/', verifyJWT, requireAnyPermission(['stores.create', 'stores.updat
       ...storeData,
       id: storeId,
       code: storeData.code || `ST-${storeData.name.substring(0, 3).toUpperCase()}`,
+      locationType: normalizeLocationType({ ...storeData, id: storeId }),
       status: storeData.status || 'active',
       isHub: storeData.isHub === true,
       hubPriority: typeof storeData.hubPriority === 'number' ? storeData.hubPriority : (parseInt(storeData.hubPriority) || 1),
@@ -118,6 +131,9 @@ router.patch('/:id', verifyJWT, requirePermission('stores.update'), async (req, 
   const updates = { ...req.body, updatedAt: new Date().toISOString() };
   delete updates.id;
   delete updates._id;
+  if (req.body.locationType !== undefined || req.body.name !== undefined || req.body.isWarehouse !== undefined) {
+    updates.locationType = normalizeLocationType({ ...req.body, id: storeId });
+  }
 
   try {
     const result = await db.collection('stores').findOneAndUpdate(

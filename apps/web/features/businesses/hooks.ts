@@ -73,6 +73,17 @@ export function useUpdateBusinessMutation() {
     mutationFn: ({ id, payload }: { id: string; payload: Partial<BusinessFormPayload> }) =>
       businessesApi.updateBusiness(id, payload),
     onSuccess: (res, variables) => {
+      if (res.business) {
+        const updateBusinessList = (current: any) => {
+          if (!Array.isArray(current)) return current;
+          return current.map((business) =>
+            business.id === variables.id ? { ...business, ...res.business } : business
+          );
+        };
+        queryClient.setQueryData(businessQueryKeys.list(), updateBusinessList);
+        queryClient.setQueriesData({ queryKey: ['businesses'] }, updateBusinessList);
+        queryClient.setQueryData(businessQueryKeys.detail(variables.id), res.business);
+      }
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
       queryClient.invalidateQueries({ queryKey: ['stores'] });
       queryClient.invalidateQueries({ queryKey: ['business', variables.id] });

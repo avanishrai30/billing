@@ -8,7 +8,8 @@ import {
   Dialog,
   Button,
   FormField,
-  Input
+  Input,
+  Select
 } from '../../../components/ui';
 import { storeFormSchema, type StoreFormValues } from '../schemas';
 import { useCreateStoreMutation, useUpdateStoreMutation } from '../hooks';
@@ -45,6 +46,7 @@ export function StoreModal({
       code: '',
       address: '',
       phone: '',
+      locationType: 'STORE',
       status: 'active'
     }
   });
@@ -59,6 +61,7 @@ export function StoreModal({
           code: store.code || '',
           address: store.address || '',
           phone: store.phone || '',
+          locationType: (store.locationType === 'WAREHOUSE' ? 'WAREHOUSE' : 'STORE'),
           status: (store.status as 'active' | 'inactive') || 'active'
         });
       } else {
@@ -68,6 +71,7 @@ export function StoreModal({
           code: '',
           address: '',
           phone: '',
+          locationType: 'STORE',
           status: 'active'
         });
       }
@@ -140,13 +144,15 @@ export function StoreModal({
           </FormField>
         </div>
 
-        {/* Phone & Status */}
+        {/* Location Type & Status */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FormField label="Contact Phone" error={errors.phone?.message}>
-            <Input
-              type="tel"
-              placeholder="e.g. 022-26401234"
-              {...register('phone')}
+          <FormField label="Physical Location Type" error={errors.locationType?.message}>
+            <Select
+              {...register('locationType')}
+              options={[
+                { value: 'STORE', label: 'Store' },
+                { value: 'WAREHOUSE', label: 'Warehouse' }
+              ]}
             />
           </FormField>
 
@@ -160,6 +166,15 @@ export function StoreModal({
             </select>
           </FormField>
         </div>
+
+        {/* Phone */}
+        <FormField label="Contact Phone" error={errors.phone?.message}>
+          <Input
+            type="tel"
+            placeholder="e.g. 022-26401234"
+            {...register('phone')}
+          />
+        </FormField>
 
         {/* Address */}
         <FormField label="Store Physical Address" error={errors.address?.message}>

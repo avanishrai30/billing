@@ -322,7 +322,11 @@ describe('Stage 11: Realtime Architecture & Synchronization Hardening', () => {
     realtimeService.emitToStore('store-bulk', 'inventory.bulk_updated', bulkEnvelope);
 
     const bulkEvents = emittedEvents.filter(e => e.eventName === 'inventory.bulk_updated');
-    expect(bulkEvents.length).toBe(1);
+    expect(bulkEvents).toEqual(expect.arrayContaining([
+      expect.objectContaining({ room: 'store_store-bulk' }),
+      expect.objectContaining({ room: 'location:store-bulk' })
+    ]));
+    expect(bulkEvents.length).toBe(2);
     expect(bulkEvents[0].payload.action).toBe('bulk_updated');
     expect(bulkEvents[0].payload.data.affectedCount).toBe(3);
   });
@@ -373,11 +377,15 @@ describe('Stage 11: Realtime Architecture & Synchronization Hardening', () => {
     expect(tfRes.toAfter).toBe(25);
 
     const sourceEvents = emittedEvents.filter(e => e.room === 'store_store-source');
+    const canonicalSourceEvents = emittedEvents.filter(e => e.room === 'location:store-source');
     const destEvents = emittedEvents.filter(e => e.room === 'store_store-dest');
+    const canonicalDestEvents = emittedEvents.filter(e => e.room === 'location:store-dest');
     const globalEvents = emittedEvents.filter(e => e.room === 'sync_global');
 
     expect(sourceEvents.length).toBe(1);
+    expect(canonicalSourceEvents.length).toBe(1);
     expect(destEvents.length).toBe(1);
+    expect(canonicalDestEvents.length).toBe(1);
     expect(globalEvents.length).toBe(0); // Zero global leakage!
   });
 
@@ -419,4 +427,3 @@ describe('Stage 11: Realtime Architecture & Synchronization Hardening', () => {
     );
   });
 });
-

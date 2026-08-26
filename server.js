@@ -132,7 +132,9 @@ io.on('connection', (socket) => {
   // Automatic idempotent global sync room membership for all authenticated sockets
   if (!socket.joinedRooms.has('sync_global')) {
     socket.join('sync_global');
+    socket.join('org:global');
     socket.joinedRooms.add('sync_global');
+    socket.joinedRooms.add('org:global');
     console.log(`[Socket Room Joined] Socket ${socket.id} (user: ${username}) joined room 'sync_global'`);
   }
 
@@ -172,18 +174,23 @@ io.on('connection', (socket) => {
       // Idempotent join for sync_global
       if (!socket.joinedRooms.has('sync_global')) {
         socket.join('sync_global');
+        socket.join('org:global');
         socket.joinedRooms.add('sync_global');
+        socket.joinedRooms.add('org:global');
         console.log(`[Socket Room Joined] Socket ${socket.id} (user: ${username}) joined room 'sync_global'`);
       }
 
       // Idempotent join for store room
       if (data.storeId && data.storeId !== 'default') {
         const targetRoom = `store_${data.storeId}`;
+        const canonicalRoom = `location:${data.storeId}`;
         if (socket.joinedRooms.has(targetRoom)) {
           console.log(`[Socket Duplicate Ignored] Socket ${socket.id} already in room '${targetRoom}'`);
         } else {
           socket.join(targetRoom);
+          socket.join(canonicalRoom);
           socket.joinedRooms.add(targetRoom);
+          socket.joinedRooms.add(canonicalRoom);
           console.log(`[Socket Room Joined] Socket ${socket.id} (user: ${username}) joined room '${targetRoom}'`);
         }
       }

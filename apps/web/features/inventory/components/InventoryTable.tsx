@@ -312,7 +312,7 @@ export function InventoryTable({
 
                     {canTransfer && (
                       <IconButton
-                        aria-label="Transfer Stock"
+                        aria-label={`Transfer ${item.productName}`}
                         variant="ghost"
                         size="sm"
                         onClick={() => onTransferItem(item)}

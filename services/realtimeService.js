@@ -31,18 +31,21 @@ function createEventEnvelope(entity, action, entityId, locationId = null, data =
 /**
  * Emits an event to a specific store room
  */
-function emitToStore(storeId, eventName, payload) {
-  if (!ioInstance || !storeId) return;
-  const room = `store_${storeId}`;
-  ioInstance.to(room).emit(eventName, payload);
+function emitToStore(storeId, eventName, payload, ioOverride = null) {
+  const targetIo = ioOverride || ioInstance;
+  if (!targetIo || !storeId) return;
+  targetIo.to(`store_${storeId}`).emit(eventName, payload);
+  targetIo.to(`location:${storeId}`).emit(eventName, payload);
 }
 
 /**
  * Emits an event to sync_global (strictly for genuinely global metadata)
  */
-function emitGlobal(eventName, payload) {
-  if (!ioInstance) return;
-  ioInstance.to('sync_global').emit(eventName, payload);
+function emitGlobal(eventName, payload, ioOverride = null) {
+  const targetIo = ioOverride || ioInstance;
+  if (!targetIo) return;
+  targetIo.to('sync_global').emit(eventName, payload);
+  targetIo.to('org:global').emit(eventName, payload);
 }
 
 /**

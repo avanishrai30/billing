@@ -11,6 +11,7 @@ export interface StoreDoc {
   address?: string;
   phone?: string;
   businessId?: string;
+  locationType?: 'WAREHOUSE' | 'STORE' | string;
   status: 'active' | 'inactive' | string;
   isHub?: boolean;
   hubPriority?: number;

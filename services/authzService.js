@@ -242,6 +242,13 @@ async function resolveUserPermissionDetails(user) {
 }
 
 function toAuthUser(dbUser, tokenUser = {}) {
+  const assignedStoreId = dbUser.assignedStoreId || tokenUser.assignedStoreId || 'all';
+  const assignedStores = Array.isArray(dbUser.assignedStores)
+    ? dbUser.assignedStores
+    : (Array.isArray(tokenUser.assignedStores)
+      ? tokenUser.assignedStores
+      : (assignedStoreId && assignedStoreId !== 'none' ? [assignedStoreId] : ['all']));
+
   return {
     id: dbUser.id,
     name: dbUser.name,
@@ -250,8 +257,8 @@ function toAuthUser(dbUser, tokenUser = {}) {
     phone: dbUser.phone,
     role: dbUser.role || tokenUser.role || 'Employee',
     category: dbUser.category || tokenUser.category || normalizeCategory(dbUser),
-    assignedStoreId: dbUser.assignedStoreId || tokenUser.assignedStoreId || 'all',
-    assignedStores: dbUser.assignedStores || tokenUser.assignedStores || ['all'],
+    assignedStoreId,
+    assignedStores,
     permissionGrants: dbUser.permissionGrants || [],
     permissionDenies: dbUser.permissionDenies || [],
     permissions: dbUser.permissions || [],

@@ -22,7 +22,12 @@ function ScopeConsumer() {
     isRestricted,
     switchStore,
     scope,
-    stores
+    stores,
+    currentLocationId,
+    authorizedLocations,
+    isWarehouse,
+    isSuperAdmin,
+    canViewAllLocations
   } = useStoreScope();
 
   return (
@@ -32,6 +37,11 @@ function ScopeConsumer() {
       <div data-testid="is-restricted">{isRestricted ? 'yes' : 'no'}</div>
       <div data-testid="scope-mode">{scope.mode}</div>
       <div data-testid="stores-count">{stores.length}</div>
+      <div data-testid="current-location">{currentLocationId || 'network'}</div>
+      <div data-testid="authorized-locations">{authorizedLocations.length}</div>
+      <div data-testid="is-warehouse">{isWarehouse ? 'yes' : 'no'}</div>
+      <div data-testid="is-super-admin">{isSuperAdmin ? 'yes' : 'no'}</div>
+      <div data-testid="can-view-all">{canViewAllLocations ? 'yes' : 'no'}</div>
       <button onClick={() => switchStore('store-2')}>Switch to Store 2</button>
       <button onClick={() => switchStore('all')}>Switch to All</button>
     </div>
@@ -40,8 +50,8 @@ function ScopeConsumer() {
 
 describe('StoreScopeProvider & useStoreScope Unit Suite', () => {
   const mockStoresList = [
-    { id: 'store-1', name: 'Store 1', code: 'ST-01', status: 'active' },
-    { id: 'store-2', name: 'Store 2', code: 'ST-02', status: 'active' }
+    { id: 'store-1', name: 'Store 1', code: 'ST-01', locationType: 'STORE', status: 'active' },
+    { id: 'store-2', name: 'Store 2', code: 'ST-02', locationType: 'WAREHOUSE', status: 'active' }
   ];
 
   beforeEach(() => {
@@ -76,6 +86,10 @@ describe('StoreScopeProvider & useStoreScope Unit Suite', () => {
     });
 
     expect(screen.getByTestId('active-store')).toHaveTextContent('store-2');
+    expect(screen.getByTestId('current-location')).toHaveTextContent('store-2');
+    expect(screen.getByTestId('is-warehouse')).toHaveTextContent('yes');
+    expect(screen.getByTestId('is-super-admin')).toHaveTextContent('yes');
+    expect(screen.getByTestId('can-view-all')).toHaveTextContent('yes');
     expect(screen.getByTestId('is-all')).toHaveTextContent('no');
     expect(screen.getByTestId('scope-mode')).toHaveTextContent('store');
     expect(realtimeManager.joinStore).toHaveBeenCalledWith('store-2');
@@ -109,6 +123,9 @@ describe('StoreScopeProvider & useStoreScope Unit Suite', () => {
 
     expect(screen.getByTestId('is-restricted')).toHaveTextContent('yes');
     expect(screen.getByTestId('active-store')).toHaveTextContent('store-1');
+    expect(screen.getByTestId('current-location')).toHaveTextContent('store-1');
+    expect(screen.getByTestId('authorized-locations')).toHaveTextContent('1');
+    expect(screen.getByTestId('can-view-all')).toHaveTextContent('no');
 
     // Attempting to switch to store-2 should be rejected
     act(() => {

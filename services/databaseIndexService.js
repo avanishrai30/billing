@@ -22,6 +22,7 @@ const EXPECTED_INDEXES = {
   ],
   product_batches: [
     { keys: { productId: 1, lotNumber: 1 }, options: { name: "productId_1_lotNumber_1" } },
+    { keys: { productId: 1, locationId: 1, expiryDate: 1 }, options: { name: "productId_1_locationId_1_expiryDate_1" } },
     { keys: { expiryDate: 1 }, options: { name: "expiryDate_1" } },
     { keys: { status: 1 }, options: { name: "status_1" } }
   ],
@@ -36,6 +37,7 @@ const EXPECTED_INDEXES = {
   ],
   invoices: [
     { keys: { locationId: 1, createdAt: -1 }, options: { name: "locationId_1_createdAt_desc" } },
+    { keys: { storeId: 1, createdAt: -1 }, options: { name: "storeId_1_createdAt_desc" } },
     { keys: { invoiceNumber: 1 }, options: { unique: true, sparse: true, name: "invoiceNumber_1_sparse" } },
     { keys: { transactionId: 1 }, options: { sparse: true, name: "transactionId_1_sparse" } },
     { keys: { createdAt: -1 }, options: { name: "createdAt_desc" } }
@@ -47,7 +49,14 @@ const EXPECTED_INDEXES = {
   ],
   users: [
     { keys: { username: 1 }, options: { unique: true, sparse: true, name: "username_1_sparse" } },
-    { keys: { id: 1 }, options: { unique: true, sparse: true, name: "id_1_sparse" } }
+    { keys: { id: 1 }, options: { unique: true, sparse: true, name: "id_1_sparse" } },
+    { keys: { assignedStores: 1 }, options: { name: "assignedStores_1" } }
+  ],
+  stock_transfers: [
+    { keys: { fromLocationId: 1, createdAt: -1 }, options: { name: "fromLocationId_1_createdAt_desc" } },
+    { keys: { toLocationId: 1, createdAt: -1 }, options: { name: "toLocationId_1_createdAt_desc" } },
+    { keys: { id: 1 }, options: { unique: true, sparse: true, name: "id_1_sparse" } },
+    { keys: { status: 1, createdAt: -1 }, options: { name: "status_1_createdAt_desc" } }
   ],
   audit_logs: [
     { keys: { timestamp: -1 }, options: { name: "timestamp_desc" } },

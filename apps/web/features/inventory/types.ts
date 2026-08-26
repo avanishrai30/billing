@@ -18,10 +18,15 @@ export type StockStatus = 'HEALTHY' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'EXPIRING_S
 export interface LocationStockBreakdown {
   locationId: string;
   locationName: string;
+  locationType?: 'WAREHOUSE' | 'STORE' | string;
   isWarehouse: boolean;
+  isHub?: boolean;
   quantity: number;
   reservedQuantity: number;
   available: number;
+  reorderLevel?: number;
+  targetStock?: number;
+  suggestedTransfer?: number;
 }
 
 export interface ProductBatchSummary {
@@ -51,6 +56,16 @@ export interface NetworkInventoryItem {
   networkAvailable: number;
   locationBreakdown: LocationStockBreakdown[];
   batches: ProductBatchSummary[];
+  replenishmentRequired?: boolean;
+  replenishmentSuggestions?: Array<{
+    productId: string;
+    locationId: string;
+    locationName: string;
+    currentStock: number;
+    reorderLevel: number;
+    targetStock: number;
+    suggestedTransfer: number;
+  }>;
 }
 
 export interface CommandCenterSummary {
@@ -63,6 +78,7 @@ export interface CommandCenterSummary {
   lowStockCount: number;
   outOfStockCount: number;
   expiringSoonCount: number;
+  replenishmentRequiredCount?: number;
   totalValuation: number;
 }
 
@@ -70,6 +86,8 @@ export interface CommandCenterStore {
   id: string;
   name: string;
   code: string;
+  locationType?: 'WAREHOUSE' | 'STORE' | string;
+  isHub?: boolean;
   isWarehouse: boolean;
 }
 

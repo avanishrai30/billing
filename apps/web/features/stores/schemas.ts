@@ -8,6 +8,7 @@ export const storeSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   businessId: z.string().optional(),
+  locationType: z.enum(['WAREHOUSE', 'STORE']).optional().default('STORE'),
   status: z.enum(['active', 'inactive']).default('active'),
   isHub: z.boolean().optional(),
   hubPriority: z.number().optional(),
@@ -22,6 +23,7 @@ export const storeFormSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   businessId: z.string().optional(),
+  locationType: z.enum(['WAREHOUSE', 'STORE']).optional().default('STORE'),
   status: z.enum(['active', 'inactive']).default('active'),
   isHub: z.boolean().optional(),
   hubPriority: z.number().optional()

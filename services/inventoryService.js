@@ -22,6 +22,37 @@ async function assertProductMasterExists(productId) {
   return product;
 }
 
+function inferLocationTypeFromRecord(location = {}, fallback = 'STORE') {
+  const explicit = String(location.locationType || '').trim().toUpperCase();
+  if (explicit === 'WAREHOUSE' || explicit === 'STORE') return explicit;
+  const name = String(location.name || '').toLowerCase();
+  if (location.isWarehouse === true || location.id === 'central-warehouse' || name.includes('warehouse')) {
+    return 'WAREHOUSE';
+  }
+  const fallbackType = String(fallback || 'STORE').trim().toUpperCase();
+  return fallbackType === 'WAREHOUSE' ? 'WAREHOUSE' : 'STORE';
+}
+
+async function resolveLocationType(db, locationId, fallback = 'STORE') {
+  if (!locationId || locationId === 'all' || locationId === 'network') return inferLocationTypeFromRecord({}, fallback);
+  const location = await db.collection('stores').findOne({ id: locationId });
+  return inferLocationTypeFromRecord(location || { id: locationId }, fallback);
+}
+
+function createTransferNumber() {
+  return `TRF-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+}
+
+function resolveAuthorizedLocationIds(user) {
+  const authzService = require('./authzService');
+  const authorizedIds = authzService.getAuthorizedStoreIds(user);
+  const canViewAll = authorizedIds.includes('*') || authorizedIds.includes('all');
+  return {
+    canViewAll,
+    locationIds: canViewAll ? [] : authorizedIds.filter(Boolean)
+  };
+}
+
 /**
  * Authoritative Inventory Domain Service (ERP V3 - Stage 07 & Phase 33 Multi-Store Command Center)
  * Owns collections: 'inventory', 'inventory_ledger', 'product_batches'
@@ -51,6 +82,7 @@ const inventoryService = {
     const delta = parseFloat(quantityDelta) || 0;
     const now = new Date().toISOString();
     const movementId = `mov-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const resolvedLocationType = await resolveLocationType(db, cleanLocationId, locationType);
 
     if (delta === 0) {
       throw new Error("Inventory quantity delta cannot be zero");
@@ -72,7 +104,7 @@ const inventoryService = {
           $set: {
             locationId: cleanLocationId,
             storeId: cleanLocationId, // legacy compatibility
-            locationType,
+            locationType: resolvedLocationType,
             updatedAt: now
           },
           $setOnInsert: {
@@ -110,7 +142,7 @@ const inventoryService = {
         productId,
         locationId: cleanLocationId,
         storeId: cleanLocationId,
-        locationType,
+        locationType: resolvedLocationType,
         type: type.toUpperCase(),
         quantity: delta,
         beforeQuantity,
@@ -141,8 +173,7 @@ const inventoryService = {
           },
           doc.version || 1
         );
-        io.to(`store_${cleanLocationId}`).emit('inventory.updated', envelope);
-        io.to('sync_global').emit('inventory.updated', envelope);
+        realtimeService.emitToStore(cleanLocationId, 'inventory.updated', envelope, io);
       }
 
       return { success: true, movementId, beforeQuantity, afterQuantity };
@@ -157,10 +188,10 @@ const inventoryService = {
       {
         $inc: { quantity: delta, version: 1 },
         $set: {
-          locationId: cleanLocationId,
-          storeId: cleanLocationId,
-          locationType,
-          updatedAt: now
+            locationId: cleanLocationId,
+            storeId: cleanLocationId,
+            locationType: resolvedLocationType,
+            updatedAt: now
         },
         $setOnInsert: {
           productId,
@@ -183,7 +214,7 @@ const inventoryService = {
       productId,
       locationId: cleanLocationId,
       storeId: cleanLocationId,
-      locationType,
+      locationType: resolvedLocationType,
       type: type.toUpperCase(),
       quantity: delta,
       beforeQuantity,
@@ -213,8 +244,7 @@ const inventoryService = {
         },
         doc ? (doc.version || 1) : 1
       );
-      io.to(`store_${cleanLocationId}`).emit('inventory.updated', envelope);
-      io.to('sync_global').emit('inventory.updated', envelope);
+      realtimeService.emitToStore(cleanLocationId, 'inventory.updated', envelope, io);
     }
 
     return { success: true, movementId, beforeQuantity, afterQuantity };
@@ -616,6 +646,152 @@ const inventoryService = {
   },
 
   /**
+   * Completes an immediate stock transfer and records its canonical lifecycle.
+   * The existing ledger-backed transferStock remains the atomic movement engine.
+   */
+  async completeStockTransfer({
+    productId,
+    fromLocationId,
+    toLocationId,
+    quantity,
+    performedBy = 'system',
+    notes = '',
+    batchId = null,
+    transferId = null,
+    requestedBy = null,
+    approvedBy = null,
+    completedBy = null
+  }) {
+    const { db, io } = getContext();
+    const qty = Math.abs(parseFloat(quantity) || 0);
+    if (qty <= 0) throw new Error("Transfer quantity must be greater than zero");
+    if (fromLocationId === toLocationId) throw new Error("Source and target locations cannot be the same");
+
+    const now = new Date().toISOString();
+    const id = transferId || `trf-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const transferNumber = createTransferNumber();
+
+    if (transferId) {
+      const existingTransfer = await db.collection('stock_transfers').findOne({ id: transferId });
+      if (existingTransfer) {
+        if (existingTransfer.status === 'COMPLETED') {
+          return {
+            ...(existingTransfer.result || { success: true, referenceId: existingTransfer.referenceId }),
+            stockTransfer: existingTransfer
+          };
+        }
+        const err = new Error(`Stock transfer '${transferId}' already exists with status '${existingTransfer.status}'.`);
+        err.code = 'TRANSFER_ALREADY_EXISTS';
+        err.statusCode = 409;
+        throw err;
+      }
+    }
+
+    const baseTransfer = {
+      id,
+      transferNumber,
+      fromLocationId,
+      toLocationId,
+      status: 'REQUESTED',
+      requestedBy: requestedBy || performedBy,
+      approvedBy: approvedBy || performedBy,
+      completedBy: null,
+      items: [{ productId, quantity: qty, batchId: batchId || null }],
+      notes,
+      createdAt: now,
+      requestedAt: now,
+      approvedAt: now,
+      completedAt: null,
+      updatedAt: now
+    };
+
+    await db.collection('stock_transfers').insertOne(baseTransfer);
+
+    if (io) {
+      const realtimeService = require('./realtimeService');
+      const createdEnvelope = realtimeService.createEventEnvelope(
+        'inventory.transfer',
+        'created',
+        id,
+        fromLocationId,
+        baseTransfer
+      );
+      realtimeService.emitToStore(fromLocationId, 'inventory.transfer.created', createdEnvelope, io);
+      realtimeService.emitToStore(toLocationId, 'inventory.transfer.created', createdEnvelope, io);
+      realtimeService.emitGlobal('inventory.transfer.created', createdEnvelope, io);
+    }
+
+    try {
+      const result = await this.transferStock(
+        productId,
+        fromLocationId,
+        toLocationId,
+        qty,
+        performedBy,
+        notes,
+        batchId
+      );
+
+      const completedAt = new Date().toISOString();
+      const completedTransfer = {
+        ...baseTransfer,
+        status: 'COMPLETED',
+        completedBy: completedBy || performedBy,
+        completedAt,
+        updatedAt: completedAt,
+        referenceId: result.referenceId,
+        result
+      };
+
+      await db.collection('stock_transfers').updateOne(
+        { id },
+        {
+          $set: {
+            status: 'COMPLETED',
+            completedBy: completedTransfer.completedBy,
+            completedAt,
+            updatedAt: completedAt,
+            referenceId: result.referenceId,
+            result
+          }
+        }
+      );
+
+      if (io) {
+        const realtimeService = require('./realtimeService');
+        const completedEnvelope = realtimeService.createEventEnvelope(
+          'inventory.transfer',
+          'completed',
+          id,
+          toLocationId,
+          completedTransfer
+        );
+        realtimeService.emitToStore(fromLocationId, 'inventory.transfer.completed', completedEnvelope, io);
+        realtimeService.emitToStore(toLocationId, 'inventory.transfer.completed', completedEnvelope, io);
+        realtimeService.emitGlobal('inventory.transfer.completed', completedEnvelope, io);
+      }
+
+      return {
+        ...result,
+        stockTransfer: completedTransfer
+      };
+    } catch (err) {
+      await db.collection('stock_transfers').updateOne(
+        { id },
+        {
+          $set: {
+            status: 'CANCELLED',
+            cancelledAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            cancellationReason: err.message
+          }
+        }
+      );
+      throw err;
+    }
+  },
+
+  /**
    * Manual Stock Adjustment
    */
   async adjustStock(productId, locationId, targetQuantity, type = 'ADJUSTMENT', referenceId = 'N/A', performedBy = 'system', notes = '', unitCost = 0) {
@@ -660,7 +836,12 @@ const inventoryService = {
     const { db } = getContext();
     const mongoFilter = {};
 
-    if (filter.storeId || filter.locationId) {
+    if (Array.isArray(filter.locationIds) && filter.locationIds.length > 0) {
+      mongoFilter.$or = [
+        { locationId: { $in: filter.locationIds } },
+        { storeId: { $in: filter.locationIds } }
+      ];
+    } else if (filter.storeId || filter.locationId) {
       const locId = filter.locationId || filter.storeId;
       mongoFilter.$or = [{ locationId: locId }, { storeId: locId }];
     }
@@ -685,13 +866,11 @@ const inventoryService = {
    */
   async getInventoryCommandCenter(user) {
     const { db } = getContext();
-    const authzService = require('./authzService');
-    const isRestrictedStoreUser = !authzService.isSuperAdmin(user) && user?.assignedStoreId && user.assignedStoreId !== 'all';
-    const restrictedStoreId = isRestrictedStoreUser ? user.assignedStoreId : null;
+    const { canViewAll, locationIds: restrictedLocationIds } = resolveAuthorizedLocationIds(user);
 
     // 1. Fetch stores
-    const storeFilter = restrictedStoreId
-      ? { id: restrictedStoreId, status: { $ne: 'inactive' } }
+    const storeFilter = !canViewAll
+      ? { id: { $in: restrictedLocationIds }, status: { $ne: 'inactive' } }
       : { status: { $ne: 'inactive' } };
     const rawStores = await db.collection('stores').find(storeFilter).sort({ name: 1 }).toArray();
 
@@ -700,15 +879,18 @@ const inventoryService = {
       id: s.id,
       name: s.name,
       code: s.code || `ST-${s.name.substring(0, 3).toUpperCase()}`,
-      isWarehouse: !!s.isWarehouse || s.id === 'central-warehouse' || s.name.toLowerCase().includes('central') || s.name.toLowerCase().includes('warehouse')
+      locationType: inferLocationTypeFromRecord(s),
+      isHub: !!s.isHub,
+      isWarehouse: inferLocationTypeFromRecord(s) === 'WAREHOUSE'
     }));
 
-    if (!restrictedStoreId && !stores.some(s => s.isWarehouse)) {
+    if (canViewAll && !stores.some(s => s.isWarehouse)) {
       if (stores.length > 0) {
         stores[0].isWarehouse = true;
+        stores[0].locationType = 'WAREHOUSE';
       } else {
         stores = [
-          { id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', isWarehouse: true }
+          { id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', locationType: 'WAREHOUSE', isHub: true, isWarehouse: true }
         ];
       }
     }
@@ -724,8 +906,8 @@ const inventoryService = {
     // 3. Fetch inventory records. Store-scoped users only receive their store's
     // balances; zero-stock rows for every active product are synthesized in
     // memory below without writing inventory documents.
-    const inventoryFilter = restrictedStoreId
-      ? { $or: [{ locationId: restrictedStoreId }, { storeId: restrictedStoreId }] }
+    const inventoryFilter = !canViewAll
+      ? { $or: [{ locationId: { $in: restrictedLocationIds } }, { storeId: { $in: restrictedLocationIds } }] }
       : {};
     const inventoryRecords = await db.collection('inventory').find(inventoryFilter).toArray();
 
@@ -734,8 +916,11 @@ const inventoryService = {
       status: { $ne: 'archived' },
       remainingQuantity: { $gt: 0 }
     };
-    if (restrictedStoreId) {
-      batchFilter.$or = [{ locationId: restrictedStoreId }, { storeId: restrictedStoreId }];
+    if (!canViewAll) {
+      batchFilter.$or = [
+        { locationId: { $in: restrictedLocationIds } },
+        { storeId: { $in: restrictedLocationIds } }
+      ];
     }
     const rawBatches = await db.collection('product_batches').find(batchFilter).sort({ expiryDate: 1 }).toArray();
 
@@ -776,6 +961,7 @@ const inventoryService = {
     let outOfStockCount = 0;
     let totalValuation = 0;
     let expiringSoonCount = 0;
+    let replenishmentRequiredCount = 0;
 
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
@@ -801,14 +987,24 @@ const inventoryService = {
         const q = matchingInv ? (parseFloat(matchingInv.quantity) || 0) : 0;
         const res = matchingInv ? (parseFloat(matchingInv.reservedQuantity) || 0) : 0;
         const avail = Math.max(0, q - res);
+        const locationReorderLevel = parseFloat(matchingInv?.reorderLevel ?? prod?.reorderLevel ?? prod?.reorder ?? 10) || 10;
+        const targetStock = parseFloat(matchingInv?.targetStock ?? prod?.targetStock ?? Math.max(locationReorderLevel * 2, locationReorderLevel)) || locationReorderLevel;
+        const suggestedTransfer = !st.isWarehouse && q < locationReorderLevel
+          ? Math.max(0, targetStock - q)
+          : 0;
 
         return {
           locationId: st.id,
           locationName: st.name,
+          locationType: st.locationType,
           isWarehouse: st.isWarehouse,
+          isHub: st.isHub,
           quantity: q,
           reservedQuantity: res,
-          available: avail
+          available: avail,
+          reorderLevel: locationReorderLevel,
+          targetStock,
+          suggestedTransfer
         };
       });
 
@@ -820,10 +1016,15 @@ const inventoryService = {
           locationBreakdown.push({
             locationId: loc,
             locationName: loc === 'all' ? 'Unassigned' : loc,
+            locationType: r.locationType || 'STORE',
             isWarehouse: false,
+            isHub: false,
             quantity: q,
             reservedQuantity: res,
-            available: Math.max(0, q - res)
+            available: Math.max(0, q - res),
+            reorderLevel: parseFloat(r.reorderLevel) || 10,
+            targetStock: parseFloat(r.targetStock) || Math.max((parseFloat(r.reorderLevel) || 10) * 2, 10),
+            suggestedTransfer: 0
           });
         }
       });
@@ -835,12 +1036,26 @@ const inventoryService = {
       const centralBreakdown = locationBreakdown.find(l => l.isWarehouse);
       const centralQty = centralBreakdown ? centralBreakdown.quantity : 0;
       const storeQty = networkQuantity - centralQty;
+      const replenishmentSuggestions = locationBreakdown
+        .filter(l => !l.isWarehouse && l.suggestedTransfer > 0)
+        .map(l => ({
+          productId: prodId,
+          locationId: l.locationId,
+          locationName: l.locationName,
+          currentStock: l.quantity,
+          reorderLevel: l.reorderLevel,
+          targetStock: l.targetStock,
+          suggestedTransfer: l.suggestedTransfer
+        }));
 
       networkStockTotal += networkQuantity;
       centralStockTotal += centralQty;
       storeStockTotal += storeQty;
       if (!isOrphan && networkQuantity > 0) {
         stockedProducts++;
+      }
+      if (!isOrphan && replenishmentSuggestions.length > 0) {
+        replenishmentRequiredCount++;
       }
 
       const unitCost = Number(prod?.purchasePrice ?? prod?.cost ?? 0);
@@ -872,7 +1087,9 @@ const inventoryService = {
         networkReserved,
         networkAvailable,
         locationBreakdown,
-        batches: prodBatches
+        batches: prodBatches,
+        replenishmentRequired: replenishmentSuggestions.length > 0,
+        replenishmentSuggestions
       });
     }
 
@@ -897,6 +1114,7 @@ const inventoryService = {
         lowStockCount,
         outOfStockCount,
         expiringSoonCount,
+        replenishmentRequiredCount,
         totalValuation: Math.round(totalValuation * 100) / 100
       }
     };
@@ -908,7 +1126,12 @@ const inventoryService = {
   async getInventorySummary(locationId) {
     const { db } = getContext();
     const match = {};
-    if (locationId && locationId !== 'all') {
+    if (Array.isArray(locationId) && locationId.length > 0) {
+      match.$or = [
+        { locationId: { $in: locationId } },
+        { storeId: { $in: locationId } }
+      ];
+    } else if (locationId && locationId !== 'all') {
       match.$or = [{ locationId }, { storeId: locationId }];
     }
 
@@ -978,7 +1201,12 @@ const inventoryService = {
     if (productId) filter.productId = productId;
 
     const loc = locationId || storeId;
-    if (loc && loc !== 'all') {
+    if (Array.isArray(loc) && loc.length > 0) {
+      filter.$or = [
+        { locationId: { $in: loc } },
+        { storeId: { $in: loc } }
+      ];
+    } else if (loc && loc !== 'all') {
       filter.$or = [{ locationId: loc }, { storeId: loc }];
     }
 
