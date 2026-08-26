@@ -30,6 +30,8 @@ import {
   formatDisplayDate,
   formatInputDate,
   LABEL_PROFILE_PRESETS,
+  resolvePrinterModelProfile,
+  type DetectedPrinter,
   type LabelProfile
 } from '../../../lib/utils/labelProfiles';
 import { buildProductLabelDocument } from '../../../lib/utils/labelDocument';
@@ -178,6 +180,27 @@ export function ProductPrintBarcodeDialog({
   const labelTypography = useMemo(() => calculateLabelTypography(effectiveProfile), [effectiveProfile]);
   const barcodeFit = useMemo(() => calculateBarcodeFit(assignedBarcode, effectiveProfile), [assignedBarcode, effectiveProfile]);
   const previewScale = useMemo(() => calculateLabelScale(effectiveProfile, 300, 220), [effectiveProfile]);
+  const compatibleAgentPrinter = useMemo(() => {
+    if (!agentHealth.connected) return null;
+    return (agentHealth.printers || []).find((detected) => {
+      const resolved = resolvePrinterModelProfile(detected);
+      if (!resolved) return false;
+      return resolved.language === effectiveProfile.printerLanguage ||
+        resolved.language.replace('-', '') === String(effectiveProfile.printerLanguage || '').replace('-', '');
+    }) || null;
+  }, [agentHealth.connected, agentHealth.printers, effectiveProfile.printerLanguage]);
+  const compatibleAgentPrinterName = useMemo(() => {
+    if (!compatibleAgentPrinter) return null;
+    if (typeof compatibleAgentPrinter === 'string') return compatibleAgentPrinter;
+    const detected = compatibleAgentPrinter as DetectedPrinter;
+    return detected.model || detected.name || detected.id || null;
+  }, [compatibleAgentPrinter]);
+  const canUseNativePrinter = Boolean(
+    agentHealth.connected &&
+    compatibleAgentPrinterName &&
+    effectiveProfile.printerLanguage &&
+    effectiveProfile.printerLanguage !== 'BROWSER'
+  );
 
   const handleOpenAddBatch = () => {
     setIsAddingBatch(true);
@@ -313,7 +336,7 @@ export function ProductPrintBarcodeDialog({
     const labelCount = Math.min(Math.max(1, quantity), 100);
 
     // 1. If Local Print Agent is online, dispatch native TSPL/ZPL command stream directly
-    if (agentHealth.connected) {
+    if (canUseNativePrinter) {
       setIsPrintingNative(true);
       try {
         const labelDoc = buildProductLabelDocument({
@@ -329,6 +352,7 @@ export function ProductPrintBarcodeDialog({
         const printResult = await sendNativePrintJob(
           {
             printerProfileId: effectiveProfile.id,
+            printerName: compatibleAgentPrinterName || printerName,
             mediaProfile: {
               widthMm: effectiveProfile.widthMm,
               heightMm: effectiveProfile.heightMm,
@@ -357,6 +381,8 @@ export function ProductPrintBarcodeDialog({
       } finally {
         setIsPrintingNative(false);
       }
+    } else if (agentHealth.connected) {
+      toastError('Native Print Notice', 'Print Agent is online but no compatible printer was discovered. Using browser print.');
     }
 
     // 2. High-fidelity physical popup browser printing fallback
@@ -805,17 +831,28 @@ export function ProductPrintBarcodeDialog({
 
             {/* Selected Batch Summary Card or Editable SKU Default Expiry Card */}
             {selectedBatch ? (
-              <div className="bg-slate-100/70 border border-slate-200 rounded-lg px-3 py-2 text-xs flex flex-col gap-1 text-slate-700">
-                <div className="flex items-center justify-between">
-                  <span>Lot: <strong className="text-slate-900 font-mono">{selectedBatch.lotNumber}</strong></span>
-                  <span className="flex items-center gap-1.5">
+              <div className="bg-slate-100/70 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="min-w-0 sm:col-span-3">
+                    <span className="text-slate-500">Lot</span>
+                    <strong className="block text-slate-900 font-mono truncate">{selectedBatch.lotNumber}</strong>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-slate-500">Batch expiry</span>
+                    <strong className="block text-slate-900 font-mono truncate">
+                      {selectedBatch.expiryDate ? formatDisplayDate(selectedBatch.expiryDate) : 'No Expiry'}
+                    </strong>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-slate-500">Available</span>
+                    <strong className="block text-emerald-700 font-mono truncate">{selectedBatch.remainingQuantity ?? 0} units</strong>
+                  </div>
+                  <div className="flex items-end">
                     <Badge variant="brand" size="sm">📦 BATCH EXPIRY</Badge>
-                    <strong className="text-slate-900 font-mono">{selectedBatch.expiryDate ? formatDisplayDate(selectedBatch.expiryDate) : 'No Expiry'}</strong>
-                  </span>
-                  <span>Available: <strong className="text-emerald-700 font-mono">{selectedBatch.remainingQuantity ?? 0} units</strong></span>
+                  </div>
                 </div>
                 {productDefaultExpiry && selectedBatch.expiryDate && productDefaultExpiry !== selectedBatch.expiryDate && (
-                  <div className="text-[10px] text-slate-500 italic">
+                  <div className="text-[10px] text-slate-500 italic mt-1.5">
                     * Overriding SKU default expiry ({formatDisplayDate(productDefaultExpiry)})
                   </div>
                 )}
@@ -1024,24 +1061,49 @@ export function ProductPrintBarcodeDialog({
               </span>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
-              <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+              <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                 <span className="block text-slate-400">Printer</span>
-                <span className="block truncate font-bold text-slate-900">{printerName || 'TVS LP-46 Dlite'}</span>
+                <span className="block break-words font-bold text-slate-900">{compatibleAgentPrinterName || printerName || 'TVS LP-46 Dlite'}</span>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+              <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                 <span className="block text-slate-400">Media & Gap</span>
-                <span className="block truncate font-bold text-slate-900">
+                <span className="block break-words font-bold text-slate-900">
                   {mediaType === 'CONTINUOUS' ? 'Continuous' : `Die-Cut (${effectiveProfile.gapMm ?? gapMm ?? 2}mm)`}
                 </span>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+              <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                 <span className="block text-slate-400">Engine Dialect</span>
-                <span className="block truncate font-bold text-slate-900">{printerLanguage || 'TSPL-EZ'}</span>
+                <span className="block break-words font-bold text-slate-900">{printerLanguage || 'TSPL-EZ'}</span>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+              <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                 <span className="block text-slate-400">Resolution</span>
-                <span className="block truncate font-bold text-slate-900">{effectiveProfile.dpi || 203} DPI</span>
+                <span className="block break-words font-bold text-slate-900">{effectiveProfile.dpi || 203} DPI</span>
+              </div>
+            </div>
+
+            <div className="mt-2 text-[10px] text-slate-500">
+              Native print: <strong className="text-slate-800">
+                {canUseNativePrinter ? 'ready' : agentHealth.connected ? 'agent online, no compatible printer' : 'browser fallback'}
+              </strong>
+            </div>
+
+            <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] text-slate-600">
+              <div className="grid grid-cols-3 gap-2">
+                <span>
+                  Across printhead
+                  <strong className="block font-mono text-slate-900">{effectiveProfile.physicalMedia?.acrossPrintheadMm ?? effectiveProfile.widthMm} mm</strong>
+                </span>
+                <span>
+                  Feed direction
+                  <strong className="block font-mono text-slate-900">{effectiveProfile.physicalMedia?.alongFeedMm ?? effectiveProfile.heightMm} mm</strong>
+                </span>
+                <span>
+                  Gap / rotation
+                  <strong className="block font-mono text-slate-900">
+                    {mediaType === 'CONTINUOUS' ? '0' : (effectiveProfile.gapMm ?? gapMm ?? 2)} mm / {effectiveProfile.barcodeRotation ?? 0}°
+                  </strong>
+                </span>
               </div>
             </div>
 

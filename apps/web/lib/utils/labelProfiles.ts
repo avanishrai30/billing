@@ -5,6 +5,14 @@ export type MediaType = 'DIE_CUT' | 'CONTINUOUS' | 'BLACK_MARK';
 export type SensorMode = 'GAP' | 'BLACK_MARK' | 'CONTINUOUS';
 export type PrinterLanguage = 'TSPL' | 'TSPL-EZ' | 'ZPL' | 'EPL' | 'BROWSER';
 export type PrinterInterface = 'USB' | 'NETWORK' | 'BLUETOOTH' | 'BROWSER';
+export type LabelOrientation = 'portrait' | 'landscape' | 0 | 90 | 180 | 270;
+export type BarcodeRotation = 0 | 90 | 180 | 270;
+
+export type PhysicalMedia = {
+  acrossPrintheadMm: number;
+  alongFeedMm: number;
+  gapMm: number;
+};
 
 export type PrinterCapabilities = {
   nativeBarcode: boolean;
@@ -16,6 +24,16 @@ export type PrinterCapabilities = {
   supportsFeed: boolean;
   supportsUsb: boolean;
   supportsNetwork: boolean;
+};
+
+export type DetectedPrinter = {
+  id?: string;
+  name?: string;
+  manufacturer?: string;
+  model?: string;
+  interface?: PrinterInterface | string;
+  dpi?: number;
+  languages?: string[];
 };
 
 export type LabelProfile = {
@@ -37,7 +55,9 @@ export type LabelProfile = {
   marginLeftMm: number;
   xOffsetMm?: number;
   yOffsetMm?: number;
-  orientation: 'portrait' | 'landscape' | 0 | 90 | 180 | 270;
+  orientation: LabelOrientation;
+  barcodeRotation?: BarcodeRotation;
+  physicalMedia?: PhysicalMedia;
   lockAspectRatio?: boolean;
   autoFit: boolean;
   barcodeFormat: BarcodeFormat;
@@ -123,6 +143,12 @@ export const TVS_LP46_DLITE_PROFILE: LabelProfile = {
   yOffsetMm: 0,
   dpi: 203,
   orientation: 'portrait',
+  barcodeRotation: 0,
+  physicalMedia: {
+    acrossPrintheadMm: 58,
+    alongFeedMm: 40,
+    gapMm: 2
+  },
   lockAspectRatio: false,
   autoFit: true,
   barcodeFormat: 'AUTO',
@@ -200,6 +226,41 @@ export const PRINTER_MODEL_PROFILES: {
   }
 ];
 
+function normalizePrinterToken(value?: string | null): string {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+export function resolvePrinterModelProfile(printer?: DetectedPrinter | string | null) {
+  if (!printer) return null;
+  const detected = typeof printer === 'string'
+    ? { name: printer }
+    : printer;
+  const haystack = normalizePrinterToken([
+    detected.manufacturer,
+    detected.model,
+    detected.name,
+    detected.id,
+    ...(detected.languages || [])
+  ].filter(Boolean).join(' '));
+
+  const hasTvs = haystack.includes('tvs') || haystack.includes('tvs electronics');
+  const hasLp46 = haystack.includes('lp 46') || haystack.includes('lp46');
+  const hasDlite = haystack.includes('dlite') || haystack.includes('d lite');
+  if (hasTvs && hasLp46 && hasDlite) {
+    return PRINTER_MODEL_PROFILES.find((profile) => profile.id === 'tvs_lp46_dlite') || null;
+  }
+
+  return PRINTER_MODEL_PROFILES.find((profile) => {
+    const manufacturer = normalizePrinterToken(profile.manufacturer);
+    const model = normalizePrinterToken(profile.model);
+    return Boolean(manufacturer && haystack.includes(manufacturer)) ||
+      Boolean(model && model !== 'system printer' && haystack.includes(model));
+  }) || null;
+}
+
 export const LABEL_PROFILE_PRESETS: LabelProfile[] = [
   {
     id: 'label_58x30',
@@ -221,6 +282,12 @@ export const LABEL_PROFILE_PRESETS: LabelProfile[] = [
     yOffsetMm: 0,
     dpi: 203,
     orientation: 'portrait',
+    barcodeRotation: 0,
+    physicalMedia: {
+      acrossPrintheadMm: 58,
+      alongFeedMm: 30,
+      gapMm: 2
+    },
     lockAspectRatio: false,
     autoFit: true,
     barcodeFormat: 'AUTO',
@@ -255,6 +322,12 @@ export const LABEL_PROFILE_PRESETS: LabelProfile[] = [
     yOffsetMm: 0,
     dpi: 203,
     orientation: 'portrait',
+    barcodeRotation: 0,
+    physicalMedia: {
+      acrossPrintheadMm: 58,
+      alongFeedMm: 40,
+      gapMm: 2
+    },
     lockAspectRatio: false,
     autoFit: true,
     barcodeFormat: 'AUTO',
@@ -289,6 +362,12 @@ export const LABEL_PROFILE_PRESETS: LabelProfile[] = [
     yOffsetMm: 0,
     dpi: 203,
     orientation: 'portrait',
+    barcodeRotation: 0,
+    physicalMedia: {
+      acrossPrintheadMm: 60,
+      alongFeedMm: 40,
+      gapMm: 2
+    },
     lockAspectRatio: false,
     autoFit: true,
     barcodeFormat: 'AUTO',
@@ -323,6 +402,12 @@ export const LABEL_PROFILE_PRESETS: LabelProfile[] = [
     yOffsetMm: 0,
     dpi: 203,
     orientation: 'portrait',
+    barcodeRotation: 0,
+    physicalMedia: {
+      acrossPrintheadMm: 70,
+      alongFeedMm: 40,
+      gapMm: 2
+    },
     lockAspectRatio: false,
     autoFit: true,
     barcodeFormat: 'AUTO',
@@ -357,6 +442,12 @@ export const LABEL_PROFILE_PRESETS: LabelProfile[] = [
     yOffsetMm: 0,
     dpi: 203,
     orientation: 'portrait',
+    barcodeRotation: 0,
+    physicalMedia: {
+      acrossPrintheadMm: 80,
+      alongFeedMm: 50,
+      gapMm: 3
+    },
     lockAspectRatio: false,
     autoFit: true,
     barcodeFormat: 'AUTO',
@@ -391,6 +482,12 @@ export const LABEL_PROFILE_PRESETS: LabelProfile[] = [
     yOffsetMm: 0,
     dpi: 203,
     orientation: 'portrait',
+    barcodeRotation: 0,
+    physicalMedia: {
+      acrossPrintheadMm: 100,
+      alongFeedMm: 50,
+      gapMm: 3
+    },
     lockAspectRatio: false,
     autoFit: true,
     barcodeFormat: 'AUTO',
@@ -446,6 +543,21 @@ export function normalizeLabelProfile(profile: LabelProfile): LabelProfile {
     marginBottomMm: clamp(Number(profile.marginBottomMm) || 0, 0, maxVerticalMargin),
     marginLeftMm: clamp(Number(profile.marginLeftMm) || 0, 0, maxHorizontalMargin),
     orientation: profile.orientation || 'portrait',
+    barcodeRotation: (profile.barcodeRotation ?? 0) as BarcodeRotation,
+    physicalMedia: {
+      acrossPrintheadMm: clamp(
+        Number(profile.physicalMedia?.acrossPrintheadMm ?? profile.widthMm) || widthMm,
+        20,
+        160
+      ),
+      alongFeedMm: clamp(
+        Number(profile.physicalMedia?.alongFeedMm ?? profile.heightMm) || heightMm,
+        15,
+        120
+      ),
+      gapMm: clamp(Number(profile.physicalMedia?.gapMm ?? profile.gapMm ?? 2) || 0, 0, 20)
+    },
+    gapMm: clamp(Number(profile.gapMm ?? profile.physicalMedia?.gapMm ?? 2) || 0, 0, 20),
     autoFit: profile.autoFit !== false,
     barcodeFormat: profile.barcodeFormat || 'AUTO',
     fontScale: clamp(Number(profile.fontScale) || 1, 0.75, 1.4),
@@ -460,9 +572,12 @@ export function getLabelProfileById(id?: string): LabelProfile {
 
 export function calculateLabelGeometry(inputProfile: LabelProfile): LabelGeometry {
   const profile = normalizeLabelProfile(inputProfile);
-  const isLandscape = profile.orientation === 'landscape';
-  const widthMm = isLandscape ? Math.max(profile.widthMm, profile.heightMm) : profile.widthMm;
-  const heightMm = isLandscape ? Math.min(profile.widthMm, profile.heightMm) : profile.heightMm;
+  const media = profile.physicalMedia;
+  const baseWidthMm = media?.acrossPrintheadMm ?? profile.widthMm;
+  const baseHeightMm = media?.alongFeedMm ?? profile.heightMm;
+  const rotatesCanvas = profile.orientation === 90 || profile.orientation === 270;
+  const widthMm = rotatesCanvas ? baseHeightMm : baseWidthMm;
+  const heightMm = rotatesCanvas ? baseWidthMm : baseHeightMm;
   const printableWidthMm = Math.max(1, widthMm - profile.marginLeftMm - profile.marginRightMm);
   const printableHeightMm = Math.max(1, heightMm - profile.marginTopMm - profile.marginBottomMm);
   const contentInsetMm = Math.min(1.2, Math.max(0.4, printableWidthMm * 0.015));
@@ -630,5 +745,3 @@ export function formatInputDate(value?: string | null): string {
   }
   return raw;
 }
-
-

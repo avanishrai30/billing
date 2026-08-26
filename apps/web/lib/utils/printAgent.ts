@@ -1,5 +1,5 @@
 import { type LabelDocument } from './labelDocument';
-import { type LabelProfile } from './labelProfiles';
+import { type DetectedPrinter, type LabelProfile } from './labelProfiles';
 import { getPrinterAdapterForProfile } from './printerAdapters';
 
 export const DEFAULT_PRINT_AGENT_URL = 'http://127.0.0.1:9123';
@@ -7,12 +7,13 @@ export const DEFAULT_PRINT_AGENT_URL = 'http://127.0.0.1:9123';
 export type PrintAgentHealth = {
   connected: boolean;
   version?: string;
-  printers?: string[];
+  printers?: Array<string | DetectedPrinter>;
   error?: string;
 };
 
 export type PrintJob = {
   printerProfileId: string;
+  printerName?: string;
   mediaProfile: {
     widthMm: number;
     heightMm: number;
@@ -51,16 +52,46 @@ export async function checkPrintAgentHealth(
     }
 
     const data = await res.json();
+    const printers = await fetchDetectedPrinters(baseUrl).catch(() => []);
     return {
       connected: true,
       version: data.version || '1.0.0',
-      printers: data.printers || ['TVS LP-46 Dlite (USB)']
+      printers
     };
   } catch (err: any) {
     return {
       connected: false,
       error: err?.message?.includes('aborted') ? 'Connection timed out' : 'Agent offline'
     };
+  }
+}
+
+/**
+ * Discover real printers from the local workstation agent.
+ * The browser itself cannot discover arbitrary USB printers; this is agent-owned.
+ */
+export async function fetchDetectedPrinters(
+  baseUrl: string = DEFAULT_PRINT_AGENT_URL
+): Promise<Array<string | DetectedPrinter>> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 1200);
+
+  try {
+    const res = await fetch(`${baseUrl}/printers`, {
+      method: 'GET',
+      signal: controller.signal
+    });
+
+    if (!res.ok) {
+      return [];
+    }
+
+    const data = await res.json();
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.printers)) return data.printers;
+    return [];
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -80,7 +111,7 @@ export async function sendNativePrintJob(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        printerName: profile.name || 'TVS LP-46 Dlite',
+        printerName: job.printerName || profile.model || profile.name || 'TVS LP-46 Dlite',
         interface: profile.interface || 'USB',
         printerLanguage: profile.printerLanguage || 'TSPL-EZ',
         copies: job.copies,

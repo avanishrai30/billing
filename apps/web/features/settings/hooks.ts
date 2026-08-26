@@ -276,14 +276,22 @@ export function usePrinterLabelPreferences() {
   }, [updatePreferences]);
 
   const setCustomProfile = useCallback((nextProfile: LabelProfile) => {
+    const widthMm = Number(nextProfile.widthMm) || CUSTOM_LABEL_PROFILE.widthMm;
+    const heightMm = Number(nextProfile.heightMm) || CUSTOM_LABEL_PROFILE.heightMm;
+    const gap = Number(nextProfile.gapMm ?? nextProfile.physicalMedia?.gapMm ?? gapMm) || 0;
     const normalized = normalizeLabelProfile({
       ...CUSTOM_LABEL_PROFILE,
       ...nextProfile,
       id: 'custom',
-      name: 'Custom'
+      name: 'Custom',
+      physicalMedia: {
+        acrossPrintheadMm: widthMm,
+        alongFeedMm: heightMm,
+        gapMm: gap
+      }
     });
     updatePreferences({ customProfile: normalized });
-  }, [updatePreferences]);
+  }, [gapMm, updatePreferences]);
 
   const setPrinterName = useCallback((nextName: string) => {
     updatePreferences({ printerName: nextName });

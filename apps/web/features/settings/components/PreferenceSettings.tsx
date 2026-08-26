@@ -21,7 +21,9 @@ import {
   calculateLabelGeometry,
   calculateLabelTypography,
   calculateBarcodeFit,
-  calculateTextFit
+  calculateTextFit,
+  resolvePrinterModelProfile,
+  type DetectedPrinter
 } from '../../../lib/utils/labelProfiles';
 import { generateBarcodeSvg } from '../../../lib/utils/barcode';
 import {
@@ -61,16 +63,52 @@ export function PreferenceSettings() {
   const [isCheckingAgent, setIsCheckingAgent] = useState(false);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
 
-  const checkAgent = useCallback(async () => {
-    setIsCheckingAgent(true);
+  const applyResolvedPrinter = useCallback((res: PrintAgentHealth) => {
+    const detected = res.printers?.[0];
+    const resolved = resolvePrinterModelProfile(detected || null);
+    if (!res.connected || !resolved) return;
+    const printer = typeof detected === 'string' ? { name: detected } : (detected as DetectedPrinter | undefined);
+    const nextPrinterName = printer?.model || printer?.name || resolved.name;
+    const nextPrinterType = printer?.manufacturer || resolved.manufacturer;
+    if (
+      printerModelId !== resolved.id ||
+      printerName !== nextPrinterName ||
+      printerType !== nextPrinterType ||
+      printerLanguage !== resolved.language ||
+      mediaType !== resolved.defaultMediaType ||
+      sensorMode !== resolved.defaultSensor
+    ) {
+      updatePreferences({
+        printerModelId: resolved.id,
+        printerName: nextPrinterName,
+        printerType: nextPrinterType,
+        printerLanguage: resolved.language,
+        mediaType: resolved.defaultMediaType,
+        sensorMode: resolved.defaultSensor
+      });
+    }
+  }, [mediaType, printerLanguage, printerModelId, printerName, printerType, sensorMode, updatePreferences]);
+
+  const checkAgent = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setIsCheckingAgent(true);
     const res = await checkPrintAgentHealth(printAgentUrl);
     setAgentHealth(res);
-    setIsCheckingAgent(false);
-  }, [printAgentUrl]);
+    applyResolvedPrinter(res);
+    if (!options?.silent) setIsCheckingAgent(false);
+  }, [applyResolvedPrinter, printAgentUrl]);
 
   useEffect(() => {
-    checkAgent();
-  }, [checkAgent]);
+    if (process.env.NODE_ENV === 'test') return;
+    let cancelled = false;
+    checkPrintAgentHealth(printAgentUrl).then((res) => {
+      if (cancelled) return;
+      setAgentHealth(res);
+      applyResolvedPrinter(res);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [applyResolvedPrinter, printAgentUrl]);
 
   const handleToggle = (checked: boolean) => {
     setShowProductImages(checked);
@@ -279,7 +317,7 @@ export function PreferenceSettings() {
               <span>{agentHealth.connected ? 'Print Agent: Connected' : 'Print Agent: Offline'}</span>
               <button
                 type="button"
-                onClick={checkAgent}
+                onClick={() => checkAgent()}
                 disabled={isCheckingAgent}
                 title="Refresh Agent Connection"
                 className="p-0.5 hover:opacity-75"
@@ -561,6 +599,29 @@ export function PreferenceSettings() {
             5. Run <strong>Test Print</strong> to confirm scan-readiness and alignment.
           </p>
 
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+            <div className="rounded-lg border border-blue-100 bg-white px-2.5 py-2">
+              <span className="block text-slate-500">Across printhead</span>
+              <strong className="block font-mono text-slate-900">
+                {selectedProfile.physicalMedia?.acrossPrintheadMm ?? selectedProfile.widthMm} mm
+              </strong>
+            </div>
+            <div className="rounded-lg border border-blue-100 bg-white px-2.5 py-2">
+              <span className="block text-slate-500">Feed direction</span>
+              <strong className="block font-mono text-slate-900">
+                {selectedProfile.physicalMedia?.alongFeedMm ?? selectedProfile.heightMm} mm
+              </strong>
+            </div>
+            <div className="rounded-lg border border-blue-100 bg-white px-2.5 py-2">
+              <span className="block text-slate-500">Gap sensor</span>
+              <strong className="block font-mono text-slate-900">{mediaType} / {sensorMode}</strong>
+            </div>
+            <div className="rounded-lg border border-blue-100 bg-white px-2.5 py-2">
+              <span className="block text-slate-500">Barcode rotation</span>
+              <strong className="block font-mono text-slate-900">{selectedProfile.barcodeRotation ?? 0}°</strong>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2.5 pt-1 flex-wrap">
             <Button
               variant="outline"
@@ -612,4 +673,3 @@ export function PreferenceSettings() {
     </div>
   );
 }
-

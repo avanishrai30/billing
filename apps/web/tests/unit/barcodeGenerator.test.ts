@@ -17,6 +17,8 @@ import {
   formatDisplayDate,
   formatInputDate,
   LABEL_PROFILE_PRESETS,
+  normalizeLabelProfile,
+  resolvePrinterModelProfile,
   mmToPx,
   pxToMm
 } from '../../lib/utils/labelProfiles';
@@ -109,7 +111,12 @@ describe('Printer Profile Label Geometry', () => {
       marginLeftMm: 3,
       marginRightMm: 3,
       marginTopMm: 2,
-      marginBottomMm: 2
+      marginBottomMm: 2,
+      physicalMedia: {
+        acrossPrintheadMm: 72,
+        alongFeedMm: 38,
+        gapMm: 2
+      }
     });
 
     expect(custom.widthMm).toBe(72);
@@ -188,6 +195,51 @@ describe('Printer Profile Label Geometry', () => {
     expect(geometry.widthMm).toBeGreaterThanOrEqual(geometry.heightMm);
     expect(geometry.widthMm).toBe(58);
     expect(geometry.heightMm).toBe(40);
+  });
+
+  it('keeps label orientation separate from barcode rotation for horizontal TVS labels', () => {
+    const profile = {
+      ...LABEL_PROFILE_PRESETS[0],
+      widthMm: 58,
+      heightMm: 30,
+      physicalMedia: {
+        acrossPrintheadMm: 58,
+        alongFeedMm: 30,
+        gapMm: 2
+      },
+      orientation: 'landscape' as const,
+      barcodeRotation: 0 as const
+    };
+    const geometry = calculateLabelGeometry(profile);
+    const { buildProductLabelDocument } = require('../../lib/utils/labelDocument');
+    const doc = buildProductLabelDocument({
+      product: {
+        id: 'prd-1',
+        name: 'ADUKALE MADDUR VADE',
+        sku: 'ADU-MV',
+        barcode: '890609529642',
+        sellingPrice: 395
+      },
+      profile
+    });
+    const barcode = doc.elements.find((element: any) => element.type === 'barcode');
+
+    expect(geometry.widthMm).toBe(58);
+    expect(geometry.heightMm).toBe(30);
+    expect(doc.orientation).toBe(0);
+    expect(barcode.rotation).toBe(0);
+  });
+
+  it('resolves TVS LP-46 Dlite from normalized detected printer metadata', () => {
+    expect(resolvePrinterModelProfile({
+      name: 'TVS Electronics LP-46 Dlite USB',
+      languages: ['TSPL-EZ']
+    })?.id).toBe('tvs_lp46_dlite');
+    expect(resolvePrinterModelProfile({
+      manufacturer: 'TVS',
+      model: 'LP46 D-Lite',
+      dpi: 203
+    })?.id).toBe('tvs_lp46_dlite');
   });
 });
 
@@ -389,7 +441,92 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
     expect(validation.valid).toBe(true);
     expect(validation.violations).toHaveLength(0);
   });
+
+  it('8. Print agent health uses /printers discovery without fake TVS fallback', async () => {
+    const { checkPrintAgentHealth } = require('../../lib/utils/printAgent');
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockImplementation((...args: unknown[]) => {
+      const url = String(args[0]);
+      if (url.endsWith('/health')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ version: '1.2.3', printers: ['TVS LP-46 Dlite (stale health payload)'] })
+        });
+      }
+      if (url.endsWith('/printers')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ printers: [] })
+        });
+      }
+      return Promise.reject(new Error('unexpected URL'));
+    });
+
+    const health = await checkPrintAgentHealth('http://127.0.0.1:9123');
+
+    expect(health.connected).toBe(true);
+    expect(health.printers).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/printers'), expect.any(Object));
+    fetchMock.mockRestore();
+  });
+
+  it('9. Native print job targets the detected printer name, not the label preset name', async () => {
+    const { sendNativePrintJob } = require('../../lib/utils/printAgent');
+    const doc = buildProductLabelDocument({
+      product: {
+        id: 'prd-1',
+        name: 'A2 Cow Cultured Ghee 500ml',
+        sku: 'GHEE-A2-500',
+        barcode: '8901234567890',
+        sellingPrice: 650
+      },
+      profile: TVS_LP46_DLITE_PROFILE
+    });
+    const fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ jobId: 'job-1', message: 'ok' })
+    });
+
+    await sendNativePrintJob(
+      {
+        printerProfileId: TVS_LP46_DLITE_PROFILE.id,
+        printerName: 'TVS Electronics LP-46 Dlite USB',
+        mediaProfile: {
+          widthMm: 58,
+          heightMm: 40,
+          gapMm: 2,
+          sensorMode: 'GAP'
+        },
+        copies: 1,
+        document: doc
+      },
+      TVS_LP46_DLITE_PROFILE,
+      'http://127.0.0.1:9123'
+    );
+
+    const body = JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(body.printerName).toBe('TVS Electronics LP-46 Dlite USB');
+    expect(body.printerName).not.toBe(TVS_LP46_DLITE_PROFILE.name);
+    fetchMock.mockRestore();
+  });
+
+  it('10. Custom label normalization keeps physical media synced with custom dimensions', () => {
+    const custom = normalizeLabelProfile({
+      ...TVS_LP46_DLITE_PROFILE,
+      id: 'custom',
+      name: 'Custom',
+      widthMm: 80,
+      heightMm: 35,
+      physicalMedia: {
+        acrossPrintheadMm: 80,
+        alongFeedMm: 35,
+        gapMm: 2
+      }
+    });
+    const geometry = calculateLabelGeometry(custom);
+
+    expect(custom.physicalMedia?.acrossPrintheadMm).toBe(80);
+    expect(custom.physicalMedia?.alongFeedMm).toBe(35);
+    expect(geometry.widthMm).toBe(80);
+    expect(geometry.heightMm).toBe(35);
+  });
 });
-
-
-

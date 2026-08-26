@@ -100,9 +100,11 @@ export class TSPLAdapter implements LabelPrinterAdapter {
         else if (el.format === 'EAN8') tsplBarcodeType = 'EAN8';
         else if (el.format === 'UPC') tsplBarcodeType = 'UPCA';
 
+        const rotation = el.rotation ?? 0;
+
         // TSPL BARCODE command: BARCODE x,y,"type",height,human_readable,rotation,narrow,wide,"content"
         commands.push(
-          `BARCODE ${barcodeX},${barcodeY},"${tsplBarcodeType}",${barHeightDots},${readable},0,${narrowDots},${wideDots},"${el.value}"`
+          `BARCODE ${barcodeX},${barcodeY},"${tsplBarcodeType}",${barHeightDots},${readable},${rotation},${narrowDots},${wideDots},"${el.value}"`
         );
       }
     }
@@ -202,7 +204,8 @@ export class ZPLAdapter implements LabelPrinterAdapter {
         const y = marginTopDots + mmToDots(el.yMm, dpi);
         const barHeight = mmToDots(el.heightMm - (el.showHumanReadableText ? 4 : 0), dpi);
         const moduleDots = Math.max(1, Math.round(mmToDots(el.moduleWidthMm || 0.25, dpi)));
-        commands.push(`^FO${x},${y}^BY${moduleDots},2.5,${barHeight}^BCN,${barHeight},${el.showHumanReadableText ? 'Y' : 'N'},N,N^FD${el.value}^FS`);
+        const orientation = el.rotation === 90 ? 'R' : el.rotation === 180 ? 'I' : el.rotation === 270 ? 'B' : 'N';
+        commands.push(`^FO${x},${y}^BY${moduleDots},2.5,${barHeight}^BC${orientation},${barHeight},${el.showHumanReadableText ? 'Y' : 'N'},N,N^FD${el.value}^FS`);
       }
     }
 
@@ -258,7 +261,8 @@ export class EPLAdapter implements LabelPrinterAdapter {
         const x = mmToDots(el.xMm, dpi);
         const y = mmToDots(el.yMm, dpi);
         const barHeight = mmToDots(el.heightMm, dpi);
-        commands.push(`B${x},${y},0,1,2,4,${barHeight},B,"${el.value}"`);
+        const rotation = el.rotation === 90 ? 1 : el.rotation === 180 ? 2 : el.rotation === 270 ? 3 : 0;
+        commands.push(`B${x},${y},${rotation},1,2,4,${barHeight},B,"${el.value}"`);
       }
     }
 

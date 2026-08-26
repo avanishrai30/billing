@@ -39,6 +39,7 @@ export type LabelBarcodeElement = {
   showHumanReadableText: boolean;
   quietZoneModules?: number;
   moduleWidthMm?: number;
+  rotation?: 0 | 90 | 180 | 270;
 };
 
 export type LabelLineElement = {
@@ -221,7 +222,8 @@ export function buildProductLabelDocument(options: BuildLabelDocumentOptions): L
       heightMm: barcodeHeightMm,
       showHumanReadableText: profile.showBarcodeValue,
       quietZoneModules: barcodeFit.quietZoneModules,
-      moduleWidthMm: dotsToMm(barcodeFit.moduleWidthPx, profile.dpi || 203)
+      moduleWidthMm: dotsToMm(barcodeFit.moduleWidthPx, profile.dpi || 203),
+      rotation: profile.barcodeRotation ?? 0
     });
     currentY += barcodeHeightMm + typography.rowGapMm * 0.5;
   }
@@ -301,7 +303,7 @@ export function buildProductLabelDocument(options: BuildLabelDocumentOptions): L
     widthMm: geometry.printableWidthMm,
     heightMm: geometry.printableHeightMm,
     dpi: profile.dpi || 203,
-    orientation: typeof profile.orientation === 'number' ? profile.orientation : (profile.orientation === 'landscape' ? 90 : 0),
+    orientation: typeof profile.orientation === 'number' ? profile.orientation : 0,
     elements
   };
 }
