@@ -22,6 +22,7 @@ import {
   mmToPx,
   pxToMm
 } from '../../lib/utils/labelProfiles';
+import { calculatePreviewFit } from '../../lib/utils/previewFit';
 
 describe('Code 128 Auto Barcode Vector Engine (ISO/IEC 15417)', () => {
   it('1. Correctly selects Start B for alphanumeric and short numeric codes', () => {
@@ -79,6 +80,45 @@ describe('Code 128 Auto Barcode Vector Engine (ISO/IEC 15417)', () => {
 });
 
 describe('Printer Profile Label Geometry', () => {
+  it('contains physical preview canvas inside available viewport without distortion', () => {
+    const fit = calculatePreviewFit({
+      labelWidthPx: 384,
+      labelHeightPx: 144,
+      availableWidthPx: 320,
+      availableHeightPx: 240,
+      paddingPx: 16
+    });
+
+    expect(fit.widthPx).toBeLessThanOrEqual(320);
+    expect(fit.heightPx).toBeLessThanOrEqual(240);
+    expect(fit.widthPx / fit.heightPx).toBeCloseTo(384 / 144, 5);
+    expect(fit.offsetX).toBeGreaterThanOrEqual(0);
+    expect(fit.offsetY).toBeGreaterThanOrEqual(0);
+  });
+
+  it('contains extreme portrait and landscape labels using one uniform scale', () => {
+    const cases = [
+      [120, 30],
+      [30, 120],
+      [160, 40],
+      [40, 120]
+    ] as const;
+
+    for (const [width, height] of cases) {
+      const fit = calculatePreviewFit({
+        labelWidthPx: mmToPx(width, 96),
+        labelHeightPx: mmToPx(height, 96),
+        availableWidthPx: 460,
+        availableHeightPx: 340,
+        paddingPx: 20
+      });
+
+      expect(fit.widthPx).toBeLessThanOrEqual(460);
+      expect(fit.heightPx).toBeLessThanOrEqual(340);
+      expect(fit.widthPx / fit.heightPx).toBeCloseTo(width / height, 5);
+    }
+  });
+
   it('calculates printable geometry from physical millimeter media', () => {
     const profile = LABEL_PROFILE_PRESETS.find((preset) => preset.id === 'label_58x40')!;
     const geometry = calculateLabelGeometry(profile);

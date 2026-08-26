@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const mockProducts = [
   {
@@ -88,6 +88,41 @@ const mockBatches = [
     status: 'active'
   }
 ];
+
+async function expectBarcodePreviewContained(page: Page) {
+  const viewport = page.getByTestId('barcode-preview-viewport');
+  const outer = page.getByTestId('barcode-preview-outer');
+  const canvas = page.getByTestId('barcode-label-canvas');
+  const barcodeBox = page.getByTestId('barcode-svg-box');
+
+  await expect(viewport).toBeVisible();
+  await expect(outer).toBeVisible();
+  await expect(canvas).toBeVisible();
+  await expect(barcodeBox).toBeVisible();
+
+  const boxes = await Promise.all([
+    viewport.boundingBox(),
+    outer.boundingBox(),
+    canvas.boundingBox(),
+    barcodeBox.boundingBox()
+  ]);
+  const [viewportBox, outerBox, canvasBox, barcodeBoxRect] = boxes;
+  expect(viewportBox).not.toBeNull();
+  expect(outerBox).not.toBeNull();
+  expect(canvasBox).not.toBeNull();
+  expect(barcodeBoxRect).not.toBeNull();
+  if (!viewportBox || !outerBox || !canvasBox || !barcodeBoxRect) return;
+
+  const tolerance = 1;
+  expect(outerBox.x).toBeGreaterThanOrEqual(viewportBox.x - tolerance);
+  expect(outerBox.y).toBeGreaterThanOrEqual(viewportBox.y - tolerance);
+  expect(outerBox.x + outerBox.width).toBeLessThanOrEqual(viewportBox.x + viewportBox.width + tolerance);
+  expect(outerBox.y + outerBox.height).toBeLessThanOrEqual(viewportBox.y + viewportBox.height + tolerance);
+  expect(barcodeBoxRect.x).toBeGreaterThanOrEqual(canvasBox.x - tolerance);
+  expect(barcodeBoxRect.y).toBeGreaterThanOrEqual(canvasBox.y - tolerance);
+  expect(barcodeBoxRect.x + barcodeBoxRect.width).toBeLessThanOrEqual(canvasBox.x + canvasBox.width + tolerance);
+  expect(barcodeBoxRect.y + barcodeBoxRect.height).toBeLessThanOrEqual(canvasBox.y + canvasBox.height + tolerance);
+}
 
 test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3)', () => {
   test.beforeEach(async ({ page }) => {
@@ -505,5 +540,4 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     await expect(printActionBtn).toBeVisible();
   });
 });
-
 

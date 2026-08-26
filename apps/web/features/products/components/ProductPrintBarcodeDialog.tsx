@@ -10,7 +10,9 @@ import {
   Tag,
   Sparkles,
   Check,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ArrowLeftRight,
+  ArrowUpDown
 } from 'lucide-react';
 import {
   Dialog,
@@ -24,20 +26,24 @@ import { generateBarcodeSvg } from '../../../lib/utils/barcode';
 import {
   calculateBarcodeFit,
   calculateLabelGeometry,
-  calculateLabelScale,
   calculateLabelTypography,
   calculateTextFit,
   formatDisplayDate,
   formatInputDate,
   LABEL_PROFILE_PRESETS,
+  mmToPx,
   resolvePrinterModelProfile,
+  type BarcodeRotation,
   type DetectedPrinter,
   type LabelProfile
 } from '../../../lib/utils/labelProfiles';
+import { calculatePreviewFit } from '../../../lib/utils/previewFit';
 import { buildProductLabelDocument } from '../../../lib/utils/labelDocument';
 import {
   checkPrintAgentHealth,
   sendNativePrintJob,
+  sendNativeCalibrate,
+  sendNativeTestPrint,
   type PrintAgentHealth
 } from '../../../lib/utils/printAgent';
 import { usePrinterLabelPreferences } from '../../settings/hooks';
@@ -63,6 +69,37 @@ const escapeHtml = (value: string) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+
+function useElementSize<T extends HTMLElement>() {
+  const ref = React.useRef<T | null>(null);
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+
+  React.useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const update = () => {
+      const rect = element.getBoundingClientRect();
+      setSize({
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      });
+    };
+
+    update();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
+
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, size] as const;
+}
 
 export function ProductPrintBarcodeDialog({
   isOpen,
@@ -112,6 +149,9 @@ export function ProductPrintBarcodeDialog({
   const [showPrice, setShowPrice] = useState<boolean>(true);
   const [showLotExpiry, setShowLotExpiry] = useState<boolean>(true);
   const [showBrand, setShowBrand] = useState<boolean>(true);
+  const [labelOrientation, setLabelOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
+  const [barcodeRotation, setBarcodeRotation] = useState<BarcodeRotation>(0);
+  const [previewViewportRef, previewViewportSize] = useElementSize<HTMLDivElement>();
 
   // Direct SKU Expiry Edit state
   const [skuExpiryInput, setSkuExpiryInput] = useState<string>('');
@@ -171,15 +211,26 @@ export function ProductPrintBarcodeDialog({
 
   const effectiveProfile = useMemo<LabelProfile>(() => ({
     ...selectedProfile,
+    orientation: labelOrientation === 'vertical' ? 90 : 0,
+    barcodeRotation,
     showPrice: selectedProfile.showPrice && showPrice,
     showLot: selectedProfile.showLot && showLotExpiry,
     showExpiry: selectedProfile.showExpiry && showLotExpiry
-  }), [selectedProfile, showLotExpiry, showPrice]);
+  }), [barcodeRotation, labelOrientation, selectedProfile, showLotExpiry, showPrice]);
 
   const labelGeometry = useMemo(() => calculateLabelGeometry(effectiveProfile), [effectiveProfile]);
   const labelTypography = useMemo(() => calculateLabelTypography(effectiveProfile), [effectiveProfile]);
   const barcodeFit = useMemo(() => calculateBarcodeFit(assignedBarcode, effectiveProfile), [assignedBarcode, effectiveProfile]);
-  const previewScale = useMemo(() => calculateLabelScale(effectiveProfile, 300, 220), [effectiveProfile]);
+  const labelBaseWidthPx = useMemo(() => mmToPx(labelGeometry.widthMm, 96), [labelGeometry.widthMm]);
+  const labelBaseHeightPx = useMemo(() => mmToPx(labelGeometry.heightMm, 96), [labelGeometry.heightMm]);
+  const previewFit = useMemo(() => calculatePreviewFit({
+    labelWidthPx: labelBaseWidthPx,
+    labelHeightPx: labelBaseHeightPx,
+    availableWidthPx: previewViewportSize.width || 440,
+    availableHeightPx: previewViewportSize.height || 300,
+    paddingPx: 20,
+    maxScale: 2.6
+  }), [labelBaseHeightPx, labelBaseWidthPx, previewViewportSize.height, previewViewportSize.width]);
   const compatibleAgentPrinter = useMemo(() => {
     if (!agentHealth.connected) return null;
     return (agentHealth.printers || []).find((detected) => {
@@ -565,18 +616,66 @@ export function ProductPrintBarcodeDialog({
     success('Print Initiated', `Dispatched ${labelCount} label(s) for ${product.name}`);
   };
 
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const handleTestPrint = async () => {
+    setIsTesting(true);
+    try {
+      const res = await sendNativeTestPrint(effectiveProfile, printAgentUrl);
+      if (res.success) {
+        success('Test Print Sent', res.message || 'Diagnostic label printed successfully.');
+      } else {
+        toastError('Test Print Notice', res.message);
+      }
+    } catch (err: any) {
+      toastError('Test Print Error', err?.message || 'Failed to send test label.');
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleCalibrate = async () => {
+    setIsCalibrating(true);
+    try {
+      const res = await sendNativeCalibrate(effectiveProfile, printAgentUrl);
+      if (res.success) {
+        success('Calibration Sent', res.message || 'Sensor calibration triggered.');
+      } else {
+        toastError('Calibration Notice', res.message);
+      }
+    } catch (err: any) {
+      toastError('Calibration Error', err?.message || 'Failed to trigger calibration.');
+    } finally {
+      setIsCalibrating(false);
+    }
+  };
+
   // Footer summary text
   const footerSummary = useMemo(() => {
     const parts = [
-      selectedProfile.name,
+      compatibleAgentPrinterName || printerName || selectedProfile.name,
       `${labelGeometry.widthMm} x ${labelGeometry.heightMm} mm`,
+      labelOrientation === 'vertical' ? 'Vertical' : 'Horizontal',
+      `${selectedProfile.dpi || 203} DPI`,
       selectedBatch
         ? `Batch ${selectedBatch.lotNumber}`
         : (productDefaultExpiry ? `Default EXP ${formatDisplayDate(productDefaultExpiry)}` : 'Master Barcode'),
       `${quantity} Label${quantity > 1 ? 's' : ''}`
     ];
     return parts.join(' • ');
-  }, [labelGeometry.heightMm, labelGeometry.widthMm, productDefaultExpiry, quantity, selectedBatch, selectedProfile.name]);
+  }, [
+    compatibleAgentPrinterName,
+    labelGeometry.heightMm,
+    labelGeometry.widthMm,
+    labelOrientation,
+    printerName,
+    productDefaultExpiry,
+    quantity,
+    selectedBatch,
+    selectedProfile.dpi,
+    selectedProfile.name
+  ]);
 
   if (!product) return null;
 
@@ -601,16 +700,30 @@ export function ProductPrintBarcodeDialog({
   const previewPriceFontMm = previewPriceText
     ? calculateTextFit(previewPriceText, labelGeometry.textMaxWidthMm, labelTypography.priceFontMm, 2)
     : labelTypography.priceFontMm;
+  const barcodeBoxWidthPx = mmToPx(barcodeFit.displayWidthMm, 96);
+  const barcodeBoxHeightPx = mmToPx(barcodeFit.displayHeightMm, 96);
+  const barcodePreviewStyle: React.CSSProperties = {
+    width: `${barcodeRotation === 90 || barcodeRotation === 270 ? barcodeBoxHeightPx : barcodeBoxWidthPx}px`,
+    height: `${barcodeRotation === 90 || barcodeRotation === 270 ? barcodeBoxWidthPx : barcodeBoxHeightPx}px`,
+    maxWidth: `${mmToPx(labelGeometry.barcodeMaxWidthMm, 96)}px`,
+    maxHeight: `${mmToPx(labelGeometry.barcodeMaxHeightMm + 3, 96)}px`
+  };
+  const barcodeSvgStyle: React.CSSProperties = {
+    width: `${barcodeBoxWidthPx}px`,
+    height: `${barcodeBoxHeightPx}px`,
+    transform: `translate(-50%, -50%) rotate(${barcodeRotation}deg)`,
+    transformOrigin: 'center'
+  };
   const previewOuterStyle: React.CSSProperties = {
-    width: `${labelGeometry.widthMm * previewScale}mm`,
-    height: `${labelGeometry.heightMm * previewScale}mm`
+    width: `${previewFit.widthPx}px`,
+    height: `${previewFit.heightPx}px`
   };
   const labelCanvasStyle: React.CSSProperties = {
-    width: `${labelGeometry.widthMm}mm`,
-    height: `${labelGeometry.heightMm}mm`,
-    padding: `${effectiveProfile.marginTopMm}mm ${effectiveProfile.marginRightMm}mm ${effectiveProfile.marginBottomMm}mm ${effectiveProfile.marginLeftMm}mm`,
-    gap: `${labelTypography.rowGapMm}mm`,
-    transform: `scale(${previewScale})`,
+    width: `${labelBaseWidthPx}px`,
+    height: `${labelBaseHeightPx}px`,
+    padding: `${mmToPx(effectiveProfile.marginTopMm, 96)}px ${mmToPx(effectiveProfile.marginRightMm, 96)}px ${mmToPx(effectiveProfile.marginBottomMm, 96)}px ${mmToPx(effectiveProfile.marginLeftMm, 96)}px`,
+    gap: `${mmToPx(labelTypography.rowGapMm, 96)}px`,
+    transform: `scale(${previewFit.scale})`,
     transformOrigin: 'top left'
   };
 
@@ -629,11 +742,33 @@ export function ProductPrintBarcodeDialog({
 
   const footerContent = (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
-      <div className="text-xs text-slate-500 font-medium truncate max-w-sm hidden sm:block">
+      <div className="text-xs text-slate-500 font-medium hidden sm:block min-w-0 flex-1">
         {footerSummary}
       </div>
-      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-        <Button variant="ghost" onClick={onClose}>
+      <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto justify-end">
+        {agentHealth.connected && (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTestPrint}
+              isLoading={isTesting}
+            >
+              Test Print
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCalibrate}
+              isLoading={isCalibrating}
+            >
+              Calibrate
+            </Button>
+          </>
+        )}
+        <Button variant="ghost" size="sm" onClick={onClose}>
           Cancel
         </Button>
         <Button
@@ -656,11 +791,11 @@ export function ProductPrintBarcodeDialog({
       title="Print Barcode Labels"
       description={`${product.name} • SKU: ${product.sku}`}
       footer={footerContent}
-      maxWidth="2xl"
+      maxWidth="5xl"
     >
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 py-1">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 py-1">
         {/* LEFT COLUMN: Configuration Controls */}
-        <div className="md:col-span-7 space-y-4">
+        <div className="lg:col-span-5 space-y-4 min-w-0">
           {/* 1. Product Identity Card */}
           <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 space-y-2">
             <div className="flex items-center justify-between">
@@ -745,16 +880,16 @@ export function ProductPrintBarcodeDialog({
                     }`}
                   >
                     <div>
-                      <div className="text-[11px] font-bold text-slate-900 leading-tight">
-                        {profile.name}
-                      </div>
-                      <div className="text-[10px] font-mono text-blue-700 font-semibold mt-0.5">
+                      <div className="text-[12px] font-bold text-slate-900 leading-tight font-mono">
                         {profile.widthMm} x {profile.heightMm} mm
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        {profile.id === 'custom' ? 'Custom' : `${profile.dpi || 203} DPI`}
                       </div>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[9px] text-slate-400 truncate">
-                        {profile.id === 'custom' ? 'Custom media' : `${profile.dpi || 203} DPI`}
+                      <span className="text-[9px] text-slate-400">
+                        {profile.mediaType === 'CONTINUOUS' ? 'Continuous' : `Gap ${profile.gapMm ?? 2}mm`}
                       </span>
                       {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />}
                     </div>
@@ -764,39 +899,91 @@ export function ProductPrintBarcodeDialog({
             </div>
 
             {selectedProfileId === 'custom' && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                {([
-                  ['Width', 'widthMm', 20, 160],
-                  ['Height', 'heightMm', 15, 120],
-                  ['DPI', 'dpi', 152, 600],
-                  ['Margin', 'marginTopMm', 0, 20]
-                ] as const).map(([label, key, min, max]) => (
-                  <div key={String(key)} className="space-y-1">
-                    <label className="text-[10px] font-semibold text-slate-600">{label}</label>
-                    <Input
-                      type="number"
-                      min={Number(min)}
-                      max={Number(max)}
-                      value={Number(customProfile[key as keyof typeof customProfile]) || ''}
-                      onChange={(event) => {
-                        const nextValue = Number(event.target.value);
-                        const nextProfile = {
-                          ...customProfile,
-                          [key]: nextValue
-                        };
-                        if (key === 'marginTopMm') {
-                          nextProfile.marginRightMm = nextValue;
-                          nextProfile.marginBottomMm = nextValue;
-                          nextProfile.marginLeftMm = nextValue;
-                        }
-                        setCustomProfile(nextProfile);
-                      }}
-                      className="h-8 text-xs"
-                    />
-                  </div>
-                ))}
+              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <div className="text-[11px] font-semibold text-slate-700">Custom media dimensions</div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {([
+                    ['Width', 'widthMm', 20, 160],
+                    ['Height', 'heightMm', 15, 120],
+                    ['Gap', 'gapMm', 0, 20],
+                    ['X offset', 'xOffsetMm', -20, 20],
+                    ['Y offset', 'yOffsetMm', -20, 20]
+                  ] as const).map(([label, key, min, max]) => (
+                    <div key={String(key)} className="space-y-1">
+                      <label className="text-[10px] font-semibold text-slate-600">{label}</label>
+                      <Input
+                        type="number"
+                        min={Number(min)}
+                        max={Number(max)}
+                        value={Number(customProfile[key as keyof typeof customProfile]) || ''}
+                        onChange={(event) => {
+                          const nextValue = Number(event.target.value);
+                          const nextProfile = {
+                            ...customProfile,
+                            [key]: nextValue
+                          };
+                          if (key === 'widthMm' || key === 'heightMm' || key === 'gapMm') {
+                            nextProfile.physicalMedia = {
+                              acrossPrintheadMm: key === 'widthMm' ? nextValue : (customProfile.physicalMedia?.acrossPrintheadMm ?? customProfile.widthMm),
+                              alongFeedMm: key === 'heightMm' ? nextValue : (customProfile.physicalMedia?.alongFeedMm ?? customProfile.heightMm),
+                              gapMm: key === 'gapMm' ? nextValue : (customProfile.physicalMedia?.gapMm ?? customProfile.gapMm ?? 2)
+                            };
+                          }
+                          setCustomProfile(nextProfile);
+                        }}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-800 block">Label Orientation</label>
+              <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
+                {([
+                  ['horizontal', 'Horizontal', <ArrowLeftRight key="horizontal" className="w-3.5 h-3.5" />],
+                  ['vertical', 'Vertical', <ArrowUpDown key="vertical" className="w-3.5 h-3.5" />]
+                ] as const).map(([value, label, icon]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setLabelOrientation(value)}
+                    className={`h-8 rounded-md text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                      labelOrientation === value
+                        ? 'bg-white text-blue-700 shadow-xs border border-slate-200'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-800 block">Barcode Orientation</label>
+              <div className="grid grid-cols-4 gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
+                {([0, 90, 180, 270] as BarcodeRotation[]).map((rotation) => (
+                  <button
+                    key={rotation}
+                    type="button"
+                    onClick={() => setBarcodeRotation(rotation)}
+                    className={`h-8 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                      barcodeRotation === rotation
+                        ? 'bg-white text-blue-700 shadow-xs border border-slate-200'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {rotation}°
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* 3. Batch / Expiry Selection */}
@@ -1049,7 +1236,7 @@ export function ProductPrintBarcodeDialog({
         </div>
 
         {/* RIGHT COLUMN: Physical Print Simulator */}
-        <div className="md:col-span-5 flex flex-col justify-between bg-slate-100/90 border border-slate-200/90 rounded-2xl p-4 shadow-inner min-h-[320px]">
+        <div className="lg:col-span-7 flex min-w-0 flex-col justify-between bg-slate-100/90 border border-slate-200/90 rounded-2xl p-4 shadow-inner min-h-[420px]">
           <div>
             <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200 text-slate-600">
               <span className="font-bold uppercase tracking-wider text-[10px] flex items-center gap-1">
@@ -1121,9 +1308,14 @@ export function ProductPrintBarcodeDialog({
             )}
 
             {/* Scaled physical label canvas */}
-            <div className="mt-4 flex items-center justify-center p-2 overflow-hidden">
-              <div style={previewOuterStyle}>
+            <div
+              ref={previewViewportRef}
+              data-testid="barcode-preview-viewport"
+              className="mt-4 flex h-[340px] min-h-[300px] w-full min-w-0 items-center justify-center rounded-xl border border-slate-200 bg-white/45 p-5 overflow-visible"
+            >
+              <div data-testid="barcode-preview-outer" style={previewOuterStyle}>
                 <div
+                  data-testid="barcode-label-canvas"
                   className="bg-white text-slate-900 rounded-md shadow-sm border border-dashed border-slate-300 flex flex-col items-center justify-center text-center select-none transition-colors overflow-hidden"
                   style={labelCanvasStyle}
                 >
@@ -1132,7 +1324,7 @@ export function ProductPrintBarcodeDialog({
                     {showBrand && (
                       <span
                         className="font-bold uppercase text-slate-500 max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
-                        style={{ fontSize: `${labelTypography.brandFontMm}mm` }}
+                        style={{ fontSize: `${mmToPx(labelTypography.brandFontMm, 96)}px` }}
                       >
                         {previewBrandText}
                       </span>
@@ -1140,8 +1332,8 @@ export function ProductPrintBarcodeDialog({
                     <div
                       className="font-bold text-slate-900 max-w-full overflow-hidden"
                       style={{
-                        fontSize: `${previewProductFontMm}mm`,
-                        lineHeight: `${labelTypography.productLineHeightMm}mm`,
+                        fontSize: `${mmToPx(previewProductFontMm, 96)}px`,
+                        lineHeight: `${mmToPx(labelTypography.productLineHeightMm, 96)}px`,
                         display: '-webkit-box',
                         WebkitBoxOrient: 'vertical',
                         WebkitLineClamp: 2
@@ -1152,18 +1344,22 @@ export function ProductPrintBarcodeDialog({
 
                     {/* SVG Vector Barcode Output */}
                     <div
-                      className="flex justify-center items-center overflow-hidden"
-                      style={{
-                        width: `${labelGeometry.barcodeMaxWidthMm}mm`,
-                        maxHeight: `${labelGeometry.barcodeMaxHeightMm + 4}mm`
-                      }}
-                      dangerouslySetInnerHTML={{ __html: livePreviewSvg }}
-                    />
+                      data-testid="barcode-svg-box"
+                      className="relative flex shrink-0 items-center justify-center overflow-visible [&_svg]:block [&_svg]:max-w-none"
+                      style={barcodePreviewStyle}
+                    >
+                      <div
+                        data-testid="barcode-svg-content"
+                        className="absolute left-1/2 top-1/2"
+                        style={barcodeSvgStyle}
+                        dangerouslySetInnerHTML={{ __html: livePreviewSvg }}
+                      />
+                    </div>
 
                     {showPrice && (
                       <div
                         className="font-extrabold text-slate-950 font-mono max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
-                        style={{ fontSize: `${previewPriceFontMm}mm`, lineHeight: 1.05 }}
+                        style={{ fontSize: `${mmToPx(previewPriceFontMm, 96)}px`, lineHeight: 1.05 }}
                       >
                         {previewPriceText}
                       </div>
@@ -1171,10 +1367,11 @@ export function ProductPrintBarcodeDialog({
 
                     {showLotExpiry && (selectedBatch || effectiveExpiry) && (
                       <div
-                        className="font-semibold text-slate-600 max-w-full overflow-hidden flex flex-col items-center gap-[0.2mm]"
+                        className="font-semibold text-slate-600 max-w-full overflow-hidden flex flex-col items-center"
                         style={{
-                          fontSize: `${labelTypography.metaFontMm}mm`,
-                          lineHeight: `${labelTypography.metaLineHeightMm}mm`
+                          fontSize: `${mmToPx(labelTypography.metaFontMm, 96)}px`,
+                          lineHeight: `${mmToPx(labelTypography.metaLineHeightMm, 96)}px`,
+                          gap: `${mmToPx(0.2, 96)}px`
                         }}
                       >
                         {selectedBatch?.lotNumber && (
