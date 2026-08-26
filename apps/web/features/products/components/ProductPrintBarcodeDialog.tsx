@@ -27,6 +27,8 @@ import {
   calculateLabelScale,
   calculateLabelTypography,
   calculateTextFit,
+  formatDisplayDate,
+  formatInputDate,
   LABEL_PROFILE_PRESETS,
   type LabelProfile
 } from '../../../lib/utils/labelProfiles';
@@ -90,7 +92,7 @@ export function ProductPrintBarcodeDialog({
 
   React.useEffect(() => {
     if (product) {
-      setSkuExpiryInput(product.defaultExpiryDate || product.doe || '');
+      setSkuExpiryInput(formatInputDate(product.defaultExpiryDate || product.doe || ''));
     }
   }, [product, isOpen]);
 
@@ -134,10 +136,11 @@ export function ProductPrintBarcodeDialog({
   const isBatchSelected = Boolean(selectedBatch);
 
   const effectiveExpiry = useMemo(() => {
-    if (isBatchSelected) {
-      return (selectedBatch?.expiryDate || '').trim();
-    }
-    return (skuExpiryInput.trim() || productDefaultExpiry);
+    const rawExpiry = isBatchSelected
+      ? (selectedBatch?.expiryDate || '').trim()
+      : (skuExpiryInput.trim() || productDefaultExpiry);
+
+    return formatDisplayDate(rawExpiry);
   }, [isBatchSelected, selectedBatch, skuExpiryInput, productDefaultExpiry]);
 
   const effectiveProfile = useMemo<LabelProfile>(() => ({
@@ -193,7 +196,7 @@ export function ProductPrintBarcodeDialog({
         }))
       });
       if (cleanDate) {
-        success('Product Expiry Saved', `Updated SKU default expiry to ${cleanDate} for ${product.name}`);
+        success('Product Expiry Saved', `Updated SKU default expiry to ${formatDisplayDate(cleanDate)} for ${product.name}`);
       } else {
         success('Product Expiry Cleared', `Removed SKU default expiry for ${product.name}`);
       }
@@ -470,7 +473,7 @@ export function ProductPrintBarcodeDialog({
       `${labelGeometry.widthMm} x ${labelGeometry.heightMm} mm`,
       selectedBatch
         ? `Batch ${selectedBatch.lotNumber}`
-        : (productDefaultExpiry ? `Default EXP ${productDefaultExpiry}` : 'Master Barcode'),
+        : (productDefaultExpiry ? `Default EXP ${formatDisplayDate(productDefaultExpiry)}` : 'Master Barcode'),
       `${quantity} Label${quantity > 1 ? 's' : ''}`
     ];
     return parts.join(' • ');
@@ -516,12 +519,12 @@ export function ProductPrintBarcodeDialog({
     {
       value: 'none',
       label: productDefaultExpiry
-        ? `🏷️ Master Barcode (Default EXP: ${productDefaultExpiry})`
+        ? `🏷️ Master Barcode (Default EXP: ${formatDisplayDate(productDefaultExpiry)})`
         : '🏷️ Master Product Barcode (No Expiry)'
     },
     ...batches.map((b) => ({
       value: b.id,
-      label: `📦 Lot: ${b.lotNumber} | EXP: ${b.expiryDate || 'No Expiry'} (${b.remainingQuantity || 0} left)`
+      label: `📦 Lot: ${b.lotNumber} | EXP: ${b.expiryDate ? formatDisplayDate(b.expiryDate) : 'No Expiry'} (${b.remainingQuantity || 0} left)`
     }))
   ];
 
@@ -734,13 +737,13 @@ export function ProductPrintBarcodeDialog({
                   <span>Lot: <strong className="text-slate-900 font-mono">{selectedBatch.lotNumber}</strong></span>
                   <span className="flex items-center gap-1.5">
                     <Badge variant="brand" size="sm">📦 BATCH EXPIRY</Badge>
-                    <strong className="text-slate-900 font-mono">{selectedBatch.expiryDate || 'No Expiry'}</strong>
+                    <strong className="text-slate-900 font-mono">{selectedBatch.expiryDate ? formatDisplayDate(selectedBatch.expiryDate) : 'No Expiry'}</strong>
                   </span>
                   <span>Available: <strong className="text-emerald-700 font-mono">{selectedBatch.remainingQuantity ?? 0} units</strong></span>
                 </div>
                 {productDefaultExpiry && selectedBatch.expiryDate && productDefaultExpiry !== selectedBatch.expiryDate && (
                   <div className="text-[10px] text-slate-500 italic">
-                    * Overriding SKU default expiry ({productDefaultExpiry})
+                    * Overriding SKU default expiry ({formatDisplayDate(productDefaultExpiry)})
                   </div>
                 )}
               </div>
@@ -752,7 +755,7 @@ export function ProductPrintBarcodeDialog({
                     <span className="font-semibold text-blue-950">Product Expiry</span>
                   </div>
                   {productDefaultExpiry ? (
-                    <span className="text-[11px] font-mono font-medium text-blue-700">Current: {productDefaultExpiry}</span>
+                    <span className="text-[11px] font-mono font-medium text-blue-700">Current: {formatDisplayDate(productDefaultExpiry)}</span>
                   ) : (
                     <span className="text-[11px] text-slate-400 italic">No SKU default expiry configured</span>
                   )}
@@ -772,7 +775,7 @@ export function ProductPrintBarcodeDialog({
                     size="sm"
                     onClick={handleSaveSkuExpiry}
                     isLoading={saveProductMutation.isPending}
-                    disabled={skuExpiryInput === productDefaultExpiry}
+                    disabled={skuExpiryInput === formatInputDate(productDefaultExpiry)}
                   >
                     Save Expiry
                   </Button>

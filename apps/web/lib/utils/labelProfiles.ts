@@ -383,3 +383,43 @@ export function calculateLabelScale(profile: LabelProfile, maxWidthPx = 300, max
   return Math.min(maxWidthPx / widthPx, maxHeightPx / heightPx, 1.8);
 }
 
+export function formatDisplayDate(value?: string | null): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  // Preserve the calendar date encoded by ISO/date strings (YYYY-MM-DD)
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+  }
+
+  // Support already-formatted values (DD/MM/YYYY or DD-MM-YYYY)
+  if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(raw)) {
+    return raw.replace(/-/g, '/');
+  }
+
+  // Safe fallback for other valid date values with UTC timezone
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return raw;
+  }
+
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC'
+  }).format(parsed);
+}
+
+export function formatInputDate(value?: string | null): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) {
+    return isoMatch[1];
+  }
+  return raw;
+}
+
+

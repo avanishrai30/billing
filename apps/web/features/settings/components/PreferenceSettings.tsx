@@ -287,7 +287,7 @@ export function PreferenceSettings() {
                           <div class="label-price">₹395.00</div>
                           <div class="label-meta">
                             <div>Lot: LOT-OPENING</div>
-                            <div>EXP: 2026-12-03</div>
+                            <div>EXP: 03/12/2026</div>
                           </div>
                         </div>
                       </div>

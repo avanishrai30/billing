@@ -10,6 +10,7 @@ import { useSaveProductMutation } from '../hooks';
 import { ProductImageUploader } from './ProductImageUploader';
 import { ProductBarcodeManager } from './ProductBarcodeManager';
 import { calculateProductMargin } from '../calculations';
+import { formatInputDate } from '../../../lib/utils/labelProfiles';
 import type { ProductDoc, BarcodeSource } from '../types';
 
 export interface ProductModalProps {
@@ -104,9 +105,9 @@ export function ProductModal({
           weightUnit: product.weightUnit || 'g',
           sellingMode: product.sellingMode || 'packaged',
           type: (product.type || 'OWN').toUpperCase() as 'OWN' | 'EXTERNAL',
-          dom: product.dom || '',
-          doe: product.doe || '',
-          defaultExpiryDate: product.defaultExpiryDate || product.doe || '',
+          dom: formatInputDate(product.dom || ''),
+          doe: formatInputDate(product.doe || ''),
+          defaultExpiryDate: formatInputDate(product.defaultExpiryDate || product.doe || ''),
           status: product.status || 'active',
           description: product.description || '',
           image: product.image || '',

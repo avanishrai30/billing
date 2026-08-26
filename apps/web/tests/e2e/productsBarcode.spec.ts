@@ -13,7 +13,7 @@ const mockProducts = [
     purchasePrice: 420,
     sellingPrice: 650,
     gst: 12,
-    defaultExpiryDate: '2026-08-25',
+    defaultExpiryDate: '2026-08-25T00:00:00.000Z',
     unit: 'bottle',
     sellingMode: 'packaged',
     type: 'OWN',
@@ -82,7 +82,7 @@ const mockBatches = [
     productId: 'prd-101',
     lotNumber: 'LOT-2026-08',
     manufactureDate: '2026-08-01',
-    expiryDate: '2027-08-31',
+    expiryDate: '2027-08-31T00:00:00.000Z',
     receivedQuantity: 100,
     remainingQuantity: 84,
     status: 'active'
@@ -373,40 +373,49 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     const batchSelect = page.locator('select').filter({ hasText: /Master Barcode|Lot:/ });
     await batchSelect.selectOption('none');
 
-    // Verify SKU DEFAULT badge is visible with 2026-08-25
+    // Verify SKU DEFAULT badge is visible with formatted date 25/08/2026
     await expect(page.getByText('🏷️ SKU DEFAULT')).toBeVisible();
-    await expect(page.getByText('Current: 2026-08-25')).toBeVisible();
+    await expect(page.getByText('Current: 25/08/2026')).toBeVisible();
 
-    // Verify Live Print Simulator shows SKU Default
-    await expect(page.getByText('EXP: 2026-08-25', { exact: true })).toBeVisible();
+    // Verify raw ISO string is NOT leaked into the DOM
+    await expect(page.locator('body')).not.toContainText('2026-08-25T00:00:00');
+
+    // Verify Live Print Simulator shows SKU Default in DD/MM/YYYY format
+    await expect(page.getByText('EXP: 25/08/2026', { exact: true })).toBeVisible();
     await expect(page.getByText('(SKU Default)')).toBeVisible();
 
-    // Edit SKU Expiry directly in Barcode Studio
+    // Date input field continues using HTML date format YYYY-MM-DD
     const expiryInput = page.locator('input[type="date"]').filter({ hasText: '' }).first();
+    await expect(expiryInput).toHaveValue('2026-08-25');
+
+    // Edit SKU Expiry directly in Barcode Studio
     await expiryInput.fill('2026-09-30');
     const saveExpiryBtn = page.getByRole('button', { name: 'Save Expiry' });
     await expect(saveExpiryBtn).toBeEnabled();
     await saveExpiryBtn.click();
 
-    // Verify toast notification and updated display
+    // Verify toast notification and updated display with formatted date
     await expect(page.getByText('Product Expiry Saved')).toBeVisible();
-    await expect(page.getByText('Current: 2026-09-30')).toBeVisible();
-    await expect(page.getByText('EXP: 2026-09-30', { exact: true })).toBeVisible();
+    await expect(page.getByText('Current: 30/09/2026')).toBeVisible();
+    await expect(page.getByText('EXP: 30/09/2026', { exact: true })).toBeVisible();
 
     // Now select batch bat-201
     await batchSelect.selectOption('bat-201');
 
-    // Verify BATCH EXPIRY badge is visible
+    // Verify BATCH EXPIRY badge is visible with formatted date
     await expect(page.getByText('📦 BATCH EXPIRY')).toBeVisible();
-    await expect(page.locator('.bg-slate-100\\/70').getByText('2027-08-31')).toBeVisible();
+    await expect(page.locator('.bg-slate-100\\/70').getByText('31/08/2027')).toBeVisible();
 
-    // Verify batch override note shows new SKU default
-    await expect(page.getByText('* Overriding SKU default expiry (2026-09-30)')).toBeVisible();
+    // Verify batch override note shows new formatted SKU default
+    await expect(page.getByText('* Overriding SKU default expiry (30/09/2026)')).toBeVisible();
 
-    // Verify Live Print Simulator shows Batch Expiry and Lot
+    // Verify Live Print Simulator shows Batch Expiry and Lot in DD/MM/YYYY format
     const simulator = page.locator('.select-none');
     await expect(simulator.getByText('Lot: LOT-2026-08')).toBeVisible();
-    await expect(simulator.getByText('EXP: 2027-08-31')).toBeVisible();
+    await expect(simulator.getByText('EXP: 31/08/2027')).toBeVisible();
+
+    // Verify raw ISO batch string is NOT leaked into simulator or dialog
+    await expect(page.locator('body')).not.toContainText('2027-08-31T00:00:00');
   });
 
   test('8. Auto-sizing Barcode Label & Printer Profile switching (58x30, 58x40, 80x50, Custom)', async ({ page }) => {

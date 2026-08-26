@@ -25,6 +25,7 @@ import {
   Button
 } from '../../../components/ui';
 import { normalizePublicAssetUrl } from '../../../lib/utils/media';
+import { formatDisplayDate } from '../../../lib/utils/labelProfiles';
 import { calculateProductMargin } from '../calculations';
 import type { ProductDoc } from '../types';
 
@@ -170,7 +171,7 @@ export function ProductTable({
                       {(p.defaultExpiryDate || p.doe) && (
                         <div className="text-[10px] text-slate-500 font-sans flex items-center gap-1">
                           <span className="text-slate-400">EXP:</span>
-                          <span className="font-mono text-slate-700">{p.defaultExpiryDate || p.doe}</span>
+                          <span className="font-mono text-slate-700">{formatDisplayDate(p.defaultExpiryDate || p.doe)}</span>
                         </div>
                       )}
                     </div>

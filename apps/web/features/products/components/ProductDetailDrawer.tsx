@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Drawer, Badge, Button, StatusBadge } from '../../../components/ui';
 import { normalizePublicAssetUrl } from '../../../lib/utils/media';
+import { formatDisplayDate } from '../../../lib/utils/labelProfiles';
 import { calculateProductMargin } from '../calculations';
 import type { ProductDoc } from '../types';
 
@@ -155,7 +156,7 @@ export function ProductDetailDrawer({
                 <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-xs">
                   <span className="text-[10px] text-slate-500 block font-medium">Default Expiry</span>
                   <span className="text-xs font-semibold font-mono text-slate-900">
-                    {product.defaultExpiryDate || product.doe}
+                    {formatDisplayDate(product.defaultExpiryDate || product.doe)}
                   </span>
                 </div>
               )}
@@ -163,7 +164,7 @@ export function ProductDetailDrawer({
                 <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-xs">
                   <span className="text-[10px] text-slate-500 block font-medium">Date of Mfg</span>
                   <span className="text-xs font-semibold font-mono text-slate-700">
-                    {product.dom}
+                    {formatDisplayDate(product.dom)}
                   </span>
                 </div>
               )}

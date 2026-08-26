@@ -14,6 +14,8 @@ import {
   calculateLabelScale,
   calculateLabelTypography,
   calculateTextFit,
+  formatDisplayDate,
+  formatInputDate,
   LABEL_PROFILE_PRESETS,
   mmToPx,
   pxToMm
@@ -188,4 +190,33 @@ describe('Printer Profile Label Geometry', () => {
     expect(geometry.heightMm).toBe(40);
   });
 });
+
+describe('Canonical Label Expiry Date Formatter', () => {
+  it('formats canonical ISO date timestamps into DD/MM/YYYY without timezone shift', () => {
+    expect(formatDisplayDate('2027-08-25T00:00:00.000Z')).toBe('25/08/2027');
+    expect(formatDisplayDate('2027-08-25')).toBe('25/08/2027');
+    expect(formatDisplayDate('2026-12-03T23:59:59.999Z')).toBe('03/12/2026');
+  });
+
+  it('handles null, undefined, empty strings and already-formatted dates safely', () => {
+    expect(formatDisplayDate(null)).toBe('');
+    expect(formatDisplayDate(undefined)).toBe('');
+    expect(formatDisplayDate('')).toBe('');
+    expect(formatDisplayDate('   ')).toBe('');
+    expect(formatDisplayDate('25-08-2027')).toBe('25/08/2027');
+    expect(formatDisplayDate('25/08/2027')).toBe('25/08/2027');
+  });
+
+  it('preserves invalid date strings as safe fallback', () => {
+    expect(formatDisplayDate('not-a-date')).toBe('not-a-date');
+  });
+
+  it('formats input values for HTML date controls in YYYY-MM-DD format', () => {
+    expect(formatInputDate('2027-08-25T00:00:00.000Z')).toBe('2027-08-25');
+    expect(formatInputDate('2027-08-25')).toBe('2027-08-25');
+    expect(formatInputDate(null)).toBe('');
+    expect(formatInputDate(undefined)).toBe('');
+  });
+});
+
 
