@@ -225,15 +225,41 @@ test.describe('Phase 6 POS Terminal Migration E2E Suite', () => {
     await page.getByRole('tab', { name: 'All Products' }).click();
     await expect(page.getByText('A2 Pure Cow Ghee 1L')).toBeVisible();
 
-    // 5. Add Product to Cart
-    const addGheeBtn = page.getByRole('button', { name: /add a2 pure cow ghee 1l to cart/i });
+    // 5. Add Product to Cart & verify stacked price / full-width button layout
+    const gheeCard = page.getByTestId('product-card-prod-101');
+    const gheePrice = gheeCard.getByTestId('product-price-prod-101');
+    const addGheeBtn = gheeCard.getByRole('button', { name: /add a2 pure cow ghee 1l to cart/i });
+    await expect(gheePrice).toBeVisible();
+    await expect(addGheeBtn).toBeVisible();
+
+    // Verify Price and Add button bounding box geometry (stacked strictly vertically, no collision)
+    const priceBox = await gheePrice.boundingBox();
+    const buttonBox = await addGheeBtn.boundingBox();
+    const cardBox = await gheeCard.boundingBox();
+
+    expect(priceBox).not.toBeNull();
+    expect(buttonBox).not.toBeNull();
+    expect(cardBox).not.toBeNull();
+
+    // Price section is stacked strictly above the action button
+    expect(priceBox!.y + priceBox!.height).toBeLessThanOrEqual(buttonBox!.y + 2);
+    // Button occupies full card inner width
+    expect(buttonBox!.width).toBeGreaterThanOrEqual(cardBox!.width - 25);
+
     await addGheeBtn.click();
 
     // Verify Cart item added
     const cartPanel = page.getByTestId('pos-cart-panel');
     await expect(cartPanel.getByText('A2 Pure Cow Ghee 1L')).toBeVisible();
-    const gheeCard = page.getByTestId('product-card-prod-101');
     await expect(gheeCard.getByText('1 in cart')).toBeVisible();
+
+    // Verify full-width quantity stepper geometry
+    const gheeStepper = gheeCard.getByTestId('product-stepper-prod-101');
+    await expect(gheeStepper).toBeVisible();
+    const stepperBox = await gheeStepper.boundingBox();
+    expect(stepperBox).not.toBeNull();
+    expect(priceBox!.y + priceBox!.height).toBeLessThanOrEqual(stepperBox!.y + 2);
+    expect(stepperBox!.width).toBeGreaterThanOrEqual(cardBox!.width - 25);
 
     // Add same product again using card stepper to verify quantity increments to 2
     const incGheeBtn = gheeCard.getByRole('button', { name: /increase quantity/i });
@@ -436,5 +462,50 @@ test.describe('Phase 6 POS Terminal Migration E2E Suite', () => {
 
     // Capture Visual Screenshot of large catalog split scroll
     await page.screenshot({ path: 'test-results/desktop-pos-split-pane.png', fullPage: true });
+  });
+
+  test('4. ProductCard Stacked Price & Action Layout Stability Across 1024px, 1280px, 1536px & Mobile 430x932', async ({
+    page
+  }) => {
+    const viewports = [
+      { name: 'desktop-1024', width: 1024, height: 768 },
+      { name: 'desktop-1280', width: 1280, height: 800 },
+      { name: 'desktop-1536', width: 1536, height: 864 },
+      { name: 'mobile-430', width: 430, height: 932 }
+    ];
+
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto('/pos');
+      await page.waitForLoadState('networkidle');
+
+      const card = page.getByTestId('product-card-prod-101');
+      await expect(card).toBeVisible();
+
+      const price = card.getByTestId('product-price-prod-101');
+      const addBtn = card.getByRole('button', { name: /add a2 pure cow ghee 1l to cart/i });
+
+      await expect(price).toBeVisible();
+      await expect(addBtn).toBeVisible();
+      await expect(addBtn.getByText('Add')).toBeVisible();
+
+      // Bounding box verification: Price is strictly above Add button, and Add button spans full inner width
+      const priceBox = await price.boundingBox();
+      const buttonBox = await addBtn.boundingBox();
+      const cardBox = await card.boundingBox();
+
+      expect(priceBox).not.toBeNull();
+      expect(buttonBox).not.toBeNull();
+      expect(cardBox).not.toBeNull();
+
+      expect(priceBox!.y + priceBox!.height).toBeLessThanOrEqual(buttonBox!.y + 2);
+      expect(buttonBox!.width).toBeGreaterThanOrEqual(cardBox!.width - 25);
+
+      // Capture visual QA snapshot for each viewport
+      await page.screenshot({
+        path: `test-results/pos-product-card-${vp.name}.png`,
+        fullPage: false
+      });
+    }
   });
 });

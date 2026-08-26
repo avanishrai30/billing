@@ -43,7 +43,7 @@ describe('POS Component Layer & Interaction Unit Suite', () => {
     expect(handleAdd).toHaveBeenCalledWith(sampleProduct);
   });
 
-  it('1b. ProductCard renders unclipped [ + Add ] button with min-width and wraps title cleanly', () => {
+  it('1b. ProductCard renders unclipped full-width [ + Add ] button and wraps title cleanly', () => {
     const longProduct: POSProduct = {
       ...sampleProduct,
       id: 'prod-long-price',
@@ -62,10 +62,10 @@ describe('POS Component Layer & Interaction Unit Suite', () => {
     );
 
     expect(screen.getByText(longProduct.name)).toHaveClass('line-clamp-2');
-    expect(screen.getByText(/₹12,000.00/)).toHaveClass('whitespace-nowrap');
+    expect(screen.getByText(/₹12,000.00/)).toBeInTheDocument();
 
     const addBtn = screen.getByRole('button', { name: /add organic a2 gir cow cultured ghee premium 1 litre jar to cart/i });
-    expect(addBtn).toHaveClass('min-w-[88px]', 'whitespace-nowrap', 'shrink-0');
+    expect(addBtn).toHaveClass('w-full', 'whitespace-nowrap');
   });
 
   it('1c. ProductCard replaces Add with interactive quantity stepper when cartQuantity > 0', () => {
