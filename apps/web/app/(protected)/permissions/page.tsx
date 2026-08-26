@@ -168,6 +168,8 @@ export default function PermissionsPage() {
       assignedStoreId: draftStoreId,
       assignedStores: [draftStoreId],
       status: selectedUser.status,
+      avatar: selectedUser.avatar,
+      avatarUpdatedAt: selectedUser.avatarUpdatedAt,
       permissions: selectedUser.permissions || []
     });
 

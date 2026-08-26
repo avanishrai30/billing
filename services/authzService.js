@@ -255,9 +255,12 @@ function toAuthUser(dbUser, tokenUser = {}) {
     permissionGrants: dbUser.permissionGrants || [],
     permissionDenies: dbUser.permissionDenies || [],
     permissions: dbUser.permissions || [],
-    avatar: dbUser.avatar || '',
+    avatar: dbUser.avatar || null,
+    avatarUpdatedAt: dbUser.avatarUpdatedAt || null,
     status: dbUser.status || 'active',
-    tokenVersion: dbUser.tokenVersion || tokenUser.tokenVersion || 1
+    tokenVersion: dbUser.tokenVersion || tokenUser.tokenVersion || 1,
+    updatedAt: dbUser.updatedAt || null,
+    createdAt: dbUser.createdAt || null
   };
 }
 

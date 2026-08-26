@@ -260,14 +260,12 @@ test.describe('Global User Avatar Consistency & Roles & Access E2E Suite', () =>
         permissionDenies: []
       };
 
-      // Emit on centralized realtime manager socket or dispatch event
-      const socket = (window as any).__aiavro_socket;
-      if (socket) {
-        socket.emit('user_updated', { success: true, user: updatedHemasree, userId: 'usr-hemasree' });
+      const realtime = (window as any).__aiavro_realtime;
+      if (realtime) {
+        realtime.dispatch('user_updated', { success: true, user: updatedHemasree, userId: 'usr-hemasree' });
       }
     });
 
-    // Verify UserAvatar component renders image dynamically when cache updates
     // Navigate to /users to verify cross-page consistency
     await page.goto('/users');
     await page.waitForLoadState('domcontentloaded');
@@ -275,5 +273,50 @@ test.describe('Global User Avatar Consistency & Roles & Access E2E Suite', () =>
     await expect(table).toBeVisible();
     const rajeshRow = table.locator('tr').filter({ hasText: 'Rajesh' });
     await expect(rajeshRow.locator('[data-testid="user-avatar"] img')).toBeVisible();
+  });
+
+  test('4. Live realtime replacement & avatar removal on Roles & Access page without page reload', async ({ page }) => {
+    await page.goto('/permissions');
+    await page.waitForLoadState('domcontentloaded');
+
+    const usersTab = page.getByRole('tab', { name: /users/i });
+    await expect(usersTab).toBeVisible();
+    await usersTab.click();
+
+    // 1. Rajesh card shows uploaded photo
+    const rajeshCard = page.locator('button').filter({ hasText: 'Rajesh' }).first();
+    await expect(rajeshCard.locator('[data-testid="user-avatar"] img')).toBeVisible();
+
+    // 2. Emit user_updated removing Rajesh's avatar
+    mockUsers[0].avatar = null;
+    mockUsers[0].avatarUpdatedAt = null;
+
+    await page.evaluate(() => {
+      const realtime = (window as any).__aiavro_realtime;
+      if (realtime) {
+        realtime.dispatch('user_updated', {
+          userId: 'usr-rajesh',
+          avatar: null,
+          avatarUpdatedAt: null,
+          user: {
+            id: 'usr-rajesh',
+            name: 'Rajesh',
+            username: 'rajesh',
+            role: 'Store Cashier',
+            category: 'employee',
+            status: 'active',
+            assignedStoreId: 'store-1',
+            assignedStores: ['store-1'],
+            avatar: null,
+            avatarUpdatedAt: null,
+            updatedAt: '2026-08-26T08:00:00Z'
+          }
+        });
+      }
+    });
+
+    // 3. Rajesh card in Roles & Access immediately falls back to "R" without reload
+    await expect(rajeshCard.locator('[data-testid="user-avatar"]').getByText('R', { exact: true })).toBeVisible();
+    await expect(rajeshCard.locator('[data-testid="user-avatar"] img')).toHaveCount(0);
   });
 });

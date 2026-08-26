@@ -389,6 +389,22 @@ const userService = {
     if (!user) return null;
     return {
       userId,
+      user: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        category: user.category || authzService.normalizeCategory(user),
+        assignedStoreId: user.assignedStoreId,
+        assignedStores: user.assignedStores,
+        status: user.status,
+        avatar: user.avatar || null,
+        avatarUpdatedAt: user.avatarUpdatedAt || null,
+        updatedAt: user.updatedAt || null,
+        createdAt: user.createdAt || null
+      },
       ...await authzService.resolveUserPermissionDetails(user)
     };
   },

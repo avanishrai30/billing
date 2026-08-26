@@ -179,9 +179,30 @@ class RealtimeSocketManager {
     };
   }
 
+  /**
+   * Dispatches an event directly to all registered in-process subscribers.
+   * Useful for testing, offline dispatch, or synthesized bridge events.
+   */
+  public dispatch<T = any>(eventName: string, data: RealtimeEnvelope<T> | any): void {
+    const handlers = this.eventListeners.get(eventName);
+    if (handlers) {
+      handlers.forEach((h) => {
+        try {
+          h(data);
+        } catch (e) {
+          console.error(`[Realtime] Dispatch handler error for '${eventName}':`, e);
+        }
+      });
+    }
+  }
+
   public getSocket(): Socket | null {
     return this.socket;
   }
 }
 
 export const realtimeManager = new RealtimeSocketManager();
+
+if (typeof window !== 'undefined') {
+  (window as any).__aiavro_realtime = realtimeManager;
+}

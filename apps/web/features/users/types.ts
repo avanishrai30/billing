@@ -36,6 +36,8 @@ export interface UserFormPayload {
   permissions?: string[];
   permissionGrants?: string[];
   permissionDenies?: string[];
+  avatar?: string | null;
+  avatarUpdatedAt?: string | null;
   status?: UserStatus;
 }
 

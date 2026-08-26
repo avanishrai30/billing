@@ -26,6 +26,8 @@ export const userFormSchema = z.object({
   permissions: z.array(z.string()).default([]),
   permissionGrants: z.array(z.string()).default([]),
   permissionDenies: z.array(z.string()).default([]),
+  avatar: z.string().nullable().optional(),
+  avatarUpdatedAt: z.string().nullable().optional(),
   status: z.enum(['active', 'suspended', 'inactive']).default('active')
 });
 
