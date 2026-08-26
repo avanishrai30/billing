@@ -20,7 +20,7 @@ import {
   type UserCategory,
   type UserDoc
 } from '../../../features/users';
-import { AccessDeniedState, Badge, Button, Drawer, Input, Select, Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui';
+import { AccessDeniedState, Badge, Button, Drawer, Input, Select, Tabs, TabsContent, TabsList, TabsTrigger, UserAvatar } from '../../../components/ui';
 
 const roleLabels: Record<UserCategory, string> = {
   'super admin': 'Super Admin',
@@ -272,9 +272,7 @@ export default function PermissionsPage() {
                       className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-xs transition-colors hover:border-blue-200 hover:bg-blue-50/40 focus-ring"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xs font-bold text-blue-700">
-                          {(user.name || user.username || 'U').slice(0, 1).toUpperCase()}
-                        </div>
+                        <UserAvatar user={user} size="md" shape="rounded" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="truncate text-sm font-semibold text-slate-950">{user.name}</p>
@@ -315,9 +313,12 @@ export default function PermissionsPage() {
                   }}
                   className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-left shadow-xs hover:border-blue-200 hover:bg-blue-50/40 focus-ring"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950">{user.name}</p>
-                    <p className="font-mono text-xs text-slate-500">@{user.username}</p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <UserAvatar user={user} size="sm" shape="rounded" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-950">{user.name}</p>
+                      <p className="font-mono text-xs text-slate-500">@{user.username}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <Badge variant="success" size="sm">{user.permissionGrants?.length || 0} grants</Badge>
@@ -377,6 +378,20 @@ export default function PermissionsPage() {
       >
         {selectedUser && (
           <div className="space-y-5">
+            <div className="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+              <UserAvatar user={selectedUser} size="lg" shape="circle" priority />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold text-slate-900 truncate">{selectedUser.name}</h3>
+                  <Badge variant={selectedUser.status === 'active' ? 'success' : 'neutral'} size="sm">
+                    {selectedUser.status?.toUpperCase()}
+                  </Badge>
+                </div>
+                <p className="text-xs font-mono text-slate-500">@{selectedUser.username}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">{selectedUser.role} • {selectedUser.email || selectedUser.phone || 'No direct contact'}</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <p className="text-[11px] font-medium text-slate-500">Effective</p>

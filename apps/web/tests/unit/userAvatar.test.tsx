@@ -91,5 +91,33 @@ describe('UserAvatar Component & Business Initials Suite', () => {
       expect(screen.getByLabelText('Status: online')).toBeInTheDocument();
       expect(screen.getByText('AS')).toBeInTheDocument();
     });
+
+    it('9. Resets error state and updates image src when avatar URL changes', () => {
+      const initialUser = {
+        id: 'usr-5',
+        name: 'Rajesh',
+        avatar: '/uploads/users/broken.webp'
+      };
+
+      const { rerender } = render(<UserAvatar user={initialUser} size="md" />);
+      const img = screen.getByRole('img', { name: 'Rajesh' });
+      fireEvent.error(img);
+
+      expect(screen.getByText('R')).toBeInTheDocument();
+
+      // Update with valid new avatar
+      const updatedUser = {
+        id: 'usr-5',
+        name: 'Rajesh',
+        avatar: '/uploads/users/new-avatar.webp',
+        avatarUpdatedAt: '2026-08-26T07:00:00Z'
+      };
+
+      rerender(<UserAvatar user={updatedUser} size="md" />);
+
+      const newImg = screen.getByRole('img', { name: 'Rajesh' });
+      expect(newImg).toBeInTheDocument();
+      expect(newImg).toHaveAttribute('src', expect.stringContaining('/uploads/users/new-avatar.webp?v='));
+    });
   });
 });

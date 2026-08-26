@@ -308,8 +308,8 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
             name: 'Pradeep H',
             username: 'pradeep.all',
             email: '',
-            role: 'Employee',
-            category: 'employee',
+            role: 'Administrator',
+            category: 'admin',
             assignedStoreId: 'all',
             assignedStores: ['all'],
             permissions: [],
@@ -420,7 +420,7 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
 
     await expect(page.getByText('Amit Verma')).toBeVisible();
 
-    // 3b. Create Employee with canonical All Stores scope
+    // 3b. Create Admin with canonical All Stores scope
     await page.getByRole('button', { name: /add new user/i }).click();
     const allStoresModal = page.getByRole('dialog');
     await allStoresModal.locator('input[name="name"]').fill('Pradeep H');
@@ -428,16 +428,17 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     await expect(allStoresModal.locator('input[name="email"]')).toHaveValue('');
     await allStoresModal.locator('input[name="phone"]').fill('9898989898');
     await allStoresModal.locator('input[name="password"]').fill('password123');
-    await allStoresModal.locator('input[name="role"]').fill('Employee');
-    await expect(allStoresModal.getByLabel('Store Scope Assignment')).toHaveValue('all');
+    await allStoresModal.getByLabel('Authorization Role').selectOption('admin');
+    await allStoresModal.locator('input[name="role"]').fill('Administrator');
+    await allStoresModal.getByRole('button', { name: 'All Stores' }).click();
     await allStoresModal.getByRole('button', { name: /create user account/i }).click();
     await expect(allStoresModal).not.toBeVisible();
     await expect(page.getByText('Pradeep H', { exact: true })).toBeVisible();
     const pradeepAllRow = page.getByRole('row').filter({ hasText: 'pradeep.all' });
-    await expect(pradeepAllRow.getByText('Employee', { exact: true }).first()).toBeVisible();
+    await expect(pradeepAllRow.getByText('Admin', { exact: true }).first()).toBeVisible();
     await expect(pradeepAllRow.getByText('All Stores (Global)')).toBeVisible();
 
-    // 3c. Create Employee with canonical Store 1 scope
+    // 3c. Create Employee with Mumbai Flagship store assignment
     await page.getByRole('button', { name: /add new user/i }).click();
     const storeModal = page.getByRole('dialog');
     await storeModal.locator('input[name="name"]').fill('Pradeep H Store 1');
@@ -446,7 +447,7 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     await storeModal.locator('input[name="phone"]').fill('9797979797');
     await storeModal.locator('input[name="password"]').fill('password123');
     await storeModal.locator('input[name="role"]').fill('Employee');
-    await storeModal.getByLabel('Store Scope Assignment').selectOption('store-1');
+    await expect(storeModal.locator('label').filter({ hasText: 'Mumbai Flagship' })).toBeVisible();
     await storeModal.getByRole('button', { name: /create user account/i }).click();
     await expect(storeModal).not.toBeVisible();
     await expect(page.getByText('Pradeep H Store 1')).toBeVisible();

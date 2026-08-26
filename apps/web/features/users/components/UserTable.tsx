@@ -91,12 +91,6 @@ export function UserTable({
           {users.map((user) => {
             const isSelf = user.id === currentUserId;
             const storeObj = user.assignedStoreId && user.assignedStoreId !== 'all' ? storeMap.get(user.assignedStoreId) : null;
-            const initials = (user.name || user.username || 'U')
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2);
 
             const category = user.category || 'employee';
             const categoryLabel =

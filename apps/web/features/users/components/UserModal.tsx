@@ -86,9 +86,13 @@ export function UserModal({
 
   React.useLayoutEffect(() => {
     if (isOpen) {
+      const defaultStoreList = stores.length > 0 ? [stores[0].id] : ['store-1'];
+      const targetCategory = user?.category || 'employee';
       const initialAssignedStores = Array.isArray(user?.assignedStores) && user.assignedStores.length > 0
         ? user.assignedStores
-        : (user?.assignedStoreId ? [user.assignedStoreId] : ['all']);
+        : (user?.assignedStoreId && user.assignedStoreId !== 'all'
+            ? [user.assignedStoreId]
+            : (targetCategory === 'admin' || targetCategory === 'super admin' ? ['all'] : defaultStoreList));
 
       reset({
         id: user?.id || undefined,
@@ -98,8 +102,10 @@ export function UserModal({
         phone: user?.phone || '',
         password: '',
         role: user?.role || '',
-        category: user?.category || 'employee',
-        assignedStoreId: user?.assignedStoreId || (initialAssignedStores[0] || 'all'),
+        category: targetCategory,
+        assignedStoreId: user?.assignedStoreId && user?.assignedStoreId !== 'all'
+          ? user.assignedStoreId
+          : (initialAssignedStores[0] || 'store-1'),
         assignedStores: initialAssignedStores,
         status: user?.status || 'active',
         permissions: user?.permissions || [],
@@ -107,7 +113,18 @@ export function UserModal({
         permissionDenies: user?.permissionDenies || []
       });
     }
-  }, [isOpen, userSyncKey, reset]);
+  }, [isOpen, userSyncKey, reset, stores]);
+
+  React.useEffect(() => {
+    if (watchedCategory === 'employee' || watchedCategory === 'auditor') {
+      const currentStores = watch('assignedStores') || [];
+      if (currentStores.includes('all') || currentStores.length === 0) {
+        const fallback = stores.length > 0 ? [stores[0].id] : ['store-1'];
+        setValue('assignedStores', fallback, { shouldDirty: true });
+        setValue('assignedStoreId', fallback[0], { shouldDirty: true });
+      }
+    }
+  }, [watchedCategory, stores, setValue, watch]);
 
   const handleToggleStore = (storeId: string) => {
     const current = (watch('assignedStores') || []).filter(s => s !== 'all');
