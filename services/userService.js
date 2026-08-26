@@ -76,10 +76,18 @@ function normalizeUserAccessPayload(userData, existingUser) {
   const normalizedEmail = normalizeOptionalEmail(hasEmailField ? userData.email : existingUser?.email);
   const emailPayload = normalizedEmail ? { email: normalizedEmail } : {};
   const { email, ...restUserData } = userData;
+  const avatar = Object.prototype.hasOwnProperty.call(userData, 'avatar')
+    ? (userData.avatar || null)
+    : (existingUser?.avatar || null);
+  const avatarUpdatedAt = Object.prototype.hasOwnProperty.call(userData, 'avatarUpdatedAt')
+    ? (userData.avatarUpdatedAt || null)
+    : (existingUser?.avatarUpdatedAt || null);
   return {
     ...restUserData,
     username: normalizeUsername(userData.username || existingUser?.username),
     ...emailPayload,
+    avatar,
+    avatarUpdatedAt,
     category,
     ...storeScope,
     permissions: normalizePermissionArray(userData.permissions || existingUser?.permissions || []),
@@ -520,14 +528,20 @@ const userService = {
   async updateAvatar(userId, avatarPath, req) {
     const { db, io } = getContext();
     const finalAvatar = avatarPath || null;
+    const now = new Date().toISOString();
     await db.collection('users').updateOne(
       { id: userId },
-      { $set: { avatar: finalAvatar, updatedAt: new Date().toISOString() } }
+      { $set: { avatar: finalAvatar, avatarUpdatedAt: now, updatedAt: now } }
     );
     const updated = await this.getUserById(userId);
     await auditService.writeAuditLog('user_updated', 'user', userId, null, { avatar: finalAvatar }, req);
     if (io) {
-      io.to('sync_global').emit('user_updated', { user: updated });
+      io.to('sync_global').emit('user_updated', {
+        userId,
+        avatar: finalAvatar,
+        avatarUpdatedAt: now,
+        user: updated
+      });
     }
     return updated;
   }

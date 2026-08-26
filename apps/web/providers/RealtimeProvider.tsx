@@ -68,8 +68,32 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const unsubscribeUser = realtimeManager.subscribe<{ userId?: string; user?: { id?: string } }>('user_updated', (payload: any) => {
+    const unsubscribeUser = realtimeManager.subscribe<{ userId?: string; user?: any; avatar?: string; avatarUpdatedAt?: string }>('user_updated', (payload: any) => {
       const targetUserId = payload?.userId || payload?.user?.id || payload?.data?.userId || payload?.data?.user?.id;
+      const incomingUser = payload?.user || payload?.data?.user;
+
+      if (incomingUser?.id) {
+        queryClient.setQueryData<any[]>(['users', 'list'], (current: any[] | undefined) => {
+          if (!current) return current;
+          return current.map((u) => (u.id === incomingUser.id ? { ...u, ...incomingUser } : u));
+        });
+        queryClient.setQueryData<any>(['users', 'detail', incomingUser.id], (current: any) => {
+          return current ? { ...current, ...incomingUser } : incomingUser;
+        });
+      } else if (targetUserId && (payload?.avatar !== undefined || payload?.avatarUpdatedAt !== undefined)) {
+        queryClient.setQueryData<any[]>(['users', 'list'], (current: any[] | undefined) => {
+          if (!current) return current;
+          return current.map((u) =>
+            u.id === targetUserId
+              ? { ...u, avatar: payload.avatar, avatarUpdatedAt: payload.avatarUpdatedAt }
+              : u
+          );
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+
       if (targetUserId === user?.id) {
         refreshSession();
       }

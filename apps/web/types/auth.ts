@@ -27,6 +27,7 @@ export interface AuthUser {
   permissionGrants?: string[];
   permissionDenies?: string[];
   avatar?: string | null;
+  avatarUpdatedAt?: string | null;
   status: 'active' | 'suspended' | 'inactive';
   updatedAt?: string;
   createdAt?: string;

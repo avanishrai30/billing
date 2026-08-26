@@ -27,6 +27,7 @@ export * from './StatCard';
 export * from './FeedbackStates';
 export * from './Toast';
 export * from './Avatar';
+export * from './UserAvatar';
 export * from './Tooltip';
 export * from './smokey-background';
 export { LoginForm } from './login-form';

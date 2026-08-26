@@ -2,10 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Menu, LogOut, Store, UserCircle, Lock } from 'lucide-react';
+import { Menu, LogOut, Store, Lock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useStoreScope } from '../../providers/StoreScopeProvider';
-import { normalizePublicAssetUrl } from '../../lib/utils/media';
+import { UserAvatar } from '../ui/UserAvatar';
 
 interface TopbarProps {
   onOpenMobileMenu: () => void;
@@ -13,7 +13,6 @@ interface TopbarProps {
 
 export function Topbar({ onOpenMobileMenu }: TopbarProps) {
   const { user, logout } = useAuth();
-  const avatarUrl = normalizePublicAssetUrl(user?.avatar || undefined);
   const {
     activeStoreId,
     isRestricted,
@@ -73,16 +72,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
 
       <div className="flex items-center gap-4">
         <Link href="/profile" className="hidden sm:flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors hover:bg-slate-50 focus-ring">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 text-xs font-semibold overflow-hidden">
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt={user?.name || user?.username || 'Profile'} className="h-full w-full object-cover" />
-            ) : user?.name ? (
-              user.name.charAt(0).toUpperCase()
-            ) : (
-              <UserCircle className="w-4 h-4 text-slate-500" />
-            )}
-          </div>
+          <UserAvatar user={user} size="sm" shape="rounded" priority />
           <div className="flex flex-col text-left">
             <span className="text-xs font-medium text-slate-900 truncate max-w-[120px]">
               {user?.name || user?.username}

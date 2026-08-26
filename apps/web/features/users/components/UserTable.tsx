@@ -11,7 +11,8 @@ import {
   TableCell,
   Badge,
   EmptyState,
-  IconButton
+  IconButton,
+  UserAvatar
 } from '../../../components/ui';
 import type { UserDoc } from '../types';
 import type { StoreDoc } from '../../stores/types';
@@ -120,9 +121,7 @@ export function UserTable({
                 {/* User Profile */}
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
-                      {initials}
-                    </div>
+                    <UserAvatar user={user} size="sm" shape="circle" />
                     <div>
                       <div className="font-semibold text-slate-900 text-xs truncate max-w-[180px]" title={user.name}>
                         {user.name}

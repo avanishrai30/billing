@@ -8,7 +8,8 @@ import {
   Button,
   FormField,
   Input,
-  Select
+  Select,
+  UserAvatar
 } from '../../../components/ui';
 import { userFormSchema, type UserFormValues } from '../schemas';
 import type { UserDoc } from '../types';
@@ -180,6 +181,15 @@ export function UserModal({
       }
     >
       <form id="user-form" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 py-2">
+        {isEditing && (
+          <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200/80 rounded-xl mb-3">
+            <UserAvatar user={user} size="md" shape="circle" priority />
+            <div className="min-w-0">
+              <div className="font-semibold text-slate-900 text-xs">{user?.name}</div>
+              <div className="text-[11px] text-slate-500 font-mono">@{user?.username} • {user?.role}</div>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Full Name */}
           <FormField label="Full Name" required error={errors.name?.message}>

@@ -125,18 +125,31 @@ router.post('/avatar', verifyJWT, async (req, res) => {
   if (avatar === null || avatar === '') {
     try {
       const updated = await userService.updateAvatar(req.user.id, null, req);
-      return res.json({ success: true, avatar: null, user: updated });
+      return res.json({ success: true, avatar: null, avatarUpdatedAt: updated.avatarUpdatedAt || null, user: updated });
     } catch (err) {
       return res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to reset avatar" } });
     }
   }
-  if (typeof avatar !== 'string' || !avatar.startsWith('/uploads/users/')) {
+
+  if (typeof avatar !== 'string' || (!avatar.startsWith('/uploads/users/') && !avatar.startsWith('/uploads/employees/'))) {
     return res.status(400).json({ success: false, error: { code: "INVALID_AVATAR", message: "Avatar must be an uploaded user profile image" } });
+  }
+
+  // Reject path traversal and scheme injections
+  if (avatar.includes('..') || avatar.includes('\\') || avatar.includes('://') || avatar.toLowerCase().includes('javascript:')) {
+    return res.status(400).json({ success: false, error: { code: "INVALID_AVATAR", message: "Invalid avatar path security violation" } });
+  }
+
+  // Validate allowed extensions
+  const validExtensions = ['.webp', '.png', '.jpg', '.jpeg', '.gif', '.svg'];
+  const ext = avatar.toLowerCase().slice(avatar.lastIndexOf('.'));
+  if (!validExtensions.includes(ext)) {
+    return res.status(400).json({ success: false, error: { code: "INVALID_AVATAR_TYPE", message: "Unsupported image extension for avatar" } });
   }
 
   try {
     const updated = await userService.updateAvatar(req.user.id, avatar, req);
-    res.json({ success: true, avatar, user: updated });
+    res.json({ success: true, avatar, avatarUpdatedAt: updated.avatarUpdatedAt || null, user: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Failed to update avatar" } });
   }

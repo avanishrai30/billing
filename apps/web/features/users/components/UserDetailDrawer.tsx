@@ -5,7 +5,8 @@ import { User, Shield, Store, Mail, Phone, Calendar, Key, UserX, Edit2 } from 'l
 import {
   Drawer,
   Button,
-  Badge
+  Badge,
+  UserAvatar
 } from '../../../components/ui';
 import type { UserDoc } from '../types';
 import type { StoreDoc } from '../../stores/types';
@@ -99,10 +100,16 @@ export function UserDetailDrawer({
 
         {/* User Profile Card */}
         <div className="bg-[#001845] p-4 rounded-xl border border-white/10 space-y-3">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Identity & Contact Details
-          </h4>
-          <div className="grid grid-cols-1 gap-2.5 text-xs">
+          <div className="flex items-center gap-3">
+            <UserAvatar user={user} size="lg" shape="circle" priority />
+            <div>
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Identity & Contact Details
+              </h4>
+              <p className="text-white font-semibold text-sm">{user.name}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-2.5 text-xs pt-1">
             <div className="flex items-center gap-2 text-slate-300">
               <User className="h-4 w-4 text-slate-400" />
               <span>

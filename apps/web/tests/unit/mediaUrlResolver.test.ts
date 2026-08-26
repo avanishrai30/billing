@@ -1,4 +1,4 @@
-import { normalizePublicAssetUrl } from '../../lib/utils/media';
+import { normalizePublicAssetUrl, normalizeUserAvatarUrl } from '../../lib/utils/media';
 import { getApiBaseUrl } from '../../lib/api/client';
 
 describe('Public Media & Brand Asset URL Resolver', () => {
@@ -49,5 +49,32 @@ describe('Public Media & Brand Asset URL Resolver', () => {
     process.env.NEXT_PUBLIC_API_BASE_URL = 'https://api.vcorganics.com';
     const resolved = normalizePublicAssetUrl('/uploads/logos/custom-tenant.webp');
     expect(resolved).toBe('https://api.vcorganics.com/uploads/logos/custom-tenant.webp');
+  });
+
+  it('6. Rejects malicious javascript: schemes and directory traversals', () => {
+    expect(normalizePublicAssetUrl('javascript:alert(1)')).toBeNull();
+    expect(normalizePublicAssetUrl('vbscript:msgbox(1)')).toBeNull();
+    expect(normalizePublicAssetUrl('/uploads/../etc/passwd')).toBeNull();
+    expect(normalizePublicAssetUrl('data:text/html,<script>alert(1)</script>')).toBeNull();
+  });
+
+  it('7. normalizeUserAvatarUrl appends deterministic version parameter for cache-busting', () => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = 'https://api-staging.vcorganics.com';
+    const version = '2026-08-26T12:00:00.000Z';
+    const resolved = normalizeUserAvatarUrl('/uploads/users/rajesh-1723321234.webp', version);
+    expect(resolved).toBe(`https://api-staging.vcorganics.com/uploads/users/rajesh-1723321234.webp?v=${encodeURIComponent(version)}`);
+  });
+
+  it('8. normalizeUserAvatarUrl does not duplicate version parameter if already present', () => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = 'https://api.vcorganics.com';
+    const resolved = normalizeUserAvatarUrl('/uploads/users/user.webp?v=123', '456');
+    expect(resolved).toBe('https://api.vcorganics.com/uploads/users/user.webp?v=123');
+  });
+
+  it('9. normalizeUserAvatarUrl preserves data and blob URLs without query strings', () => {
+    const dataUrl = 'data:image/webp;base64,UklGRmQAAABXRUJQVlA4...';
+    expect(normalizeUserAvatarUrl(dataUrl, '123')).toBe(dataUrl);
+    const blobUrl = 'blob:http://localhost:3000/1234-5678';
+    expect(normalizeUserAvatarUrl(blobUrl, '123')).toBe(blobUrl);
   });
 });

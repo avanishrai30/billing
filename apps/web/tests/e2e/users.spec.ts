@@ -1,6 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-let mockUsers = [
+let mockUsers: Array<{
+  id: string;
+  name: string;
+  username: string;
+  email?: string;
+  phone?: string;
+  role: string;
+  category: string;
+  assignedStoreId: string;
+  assignedStores: string[];
+  permissions: string[];
+  permissionGrants: string[];
+  permissionDenies: string[];
+  status: string;
+  tokenVersion: number;
+  avatar?: string | null;
+  avatarUpdatedAt?: string | null;
+  createdAt: string;
+}> = [
   {
     id: 'usr-1',
     name: 'Super Admin',
@@ -478,5 +496,110 @@ test.describe('Phase 13B User Accounts & Team Management E2E Suite', () => {
     scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
+
+  test('3. Realtime User Avatar Display, Initials Fallback, and Zero Broken Image Layout', async ({ page }) => {
+    // Populate one user with an avatar, one with initials
+    mockUsers = [
+      {
+        id: 'usr-1',
+        name: 'Super Admin',
+        username: 'admin',
+        email: 'admin@vcorganics.com',
+        phone: '9876543210',
+        role: 'Enterprise Owner',
+        category: 'super admin',
+        assignedStoreId: 'all',
+        assignedStores: ['all'],
+        permissions: [],
+        permissionGrants: [],
+        permissionDenies: [],
+        status: 'active',
+        tokenVersion: 1,
+        avatar: '/uploads/users/admin-avatar.webp',
+        avatarUpdatedAt: '2026-08-26T10:00:00.000Z',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'usr-2',
+        name: 'Vikram Shinde',
+        username: 'vikram.s',
+        email: 'vikram@vcorganics.com',
+        phone: '9123456780',
+        role: 'Store Manager',
+        category: 'admin',
+        assignedStoreId: 'store-1',
+        assignedStores: ['store-1'],
+        permissions: [],
+        permissionGrants: [],
+        permissionDenies: [],
+        status: 'active',
+        tokenVersion: 1,
+        avatar: null,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'usr-3',
+        name: 'Pradeep H',
+        username: 'pradeep.h',
+        email: 'pradeep@vcorganics.com',
+        phone: '9888877777',
+        role: 'Auditor',
+        category: 'auditor',
+        assignedStoreId: 'all',
+        assignedStores: ['all'],
+        permissions: [],
+        permissionGrants: [],
+        permissionDenies: [],
+        status: 'active',
+        tokenVersion: 1,
+        avatar: '/uploads/users/broken-avatar.webp',
+        avatarUpdatedAt: '2026-08-26T10:00:00.000Z',
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    await page.route('**/uploads/users/**', async (route) => {
+      if (route.request().url().includes('broken-avatar')) {
+        return route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not Found' });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'image/webp',
+        body: Buffer.from('UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=', 'base64')
+      });
+    });
+
+    await page.goto('/users');
+    await page.waitForLoadState('networkidle');
+
+    // 1. Verify User 1 renders image avatar with resolved URL
+    const adminRow = page.getByRole('row').filter({ hasText: 'Super Admin' });
+    const adminAvatar = adminRow.getByTestId('user-avatar');
+    const adminAvatarImg = adminAvatar.locator('img');
+    await expect(adminAvatarImg).toBeVisible();
+    const imgSrc = await adminAvatarImg.getAttribute('src');
+    expect(imgSrc).toContain('/uploads/users/admin-avatar.webp?v=');
+
+    // 2. Verify User 2 renders initials fallback (VS)
+    const vikramRow = page.getByRole('row').filter({ hasText: 'Vikram Shinde' });
+    const vikramAvatar = vikramRow.getByTestId('user-avatar');
+    await expect(vikramAvatar.getByText('VS')).toBeVisible();
+    await expect(vikramAvatar.locator('img')).not.toBeVisible();
+
+    // 3. Verify User 3 with broken avatar image 404 gracefully falls back to initials (PH) without broken image icon
+    const pradeepRow = page.getByRole('row').filter({ hasText: 'Pradeep H' });
+    const pradeepAvatar = pradeepRow.getByTestId('user-avatar');
+    await expect(pradeepAvatar.getByText('PH')).toBeVisible();
+    await expect(pradeepAvatar.locator('img')).not.toBeVisible();
+
+    // 4. Inspect user drawer to verify avatar inside identity details
+    await adminRow.getByLabel('View user details for Super Admin').click();
+    const drawer = page.getByRole('dialog');
+    await expect(drawer).toBeVisible();
+    const drawerAvatarImg = drawer.getByTestId('user-avatar').locator('img');
+    await expect(drawerAvatarImg).toBeVisible();
+    await drawer.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(drawer).not.toBeVisible();
   });
 });

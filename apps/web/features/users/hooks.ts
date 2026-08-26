@@ -83,6 +83,15 @@ export function useUsersQuery() {
       const incomingUser = payload?.user || payload?.data?.user;
       if (incomingUser?.id) {
         applyAuthoritativeUserToCache(queryClient, incomingUser);
+      } else if (payload?.userId && (payload?.avatar !== undefined || payload?.avatarUpdatedAt !== undefined)) {
+        queryClient.setQueryData<UserDoc[]>(userQueryKeys.list(), (current) => {
+          if (!current) return current;
+          return current.map((u) =>
+            u.id === payload.userId
+              ? { ...u, avatar: payload.avatar, avatarUpdatedAt: payload.avatarUpdatedAt }
+              : u
+          );
+        });
       }
 
       queryClient.invalidateQueries({ queryKey: userQueryKeys.all });

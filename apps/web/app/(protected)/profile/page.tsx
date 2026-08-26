@@ -29,8 +29,7 @@ import {
 } from '../../../features/users';
 import { useStoresQuery } from '../../../features/stores/hooks';
 import { AuditEventBadge } from '../../../features/audit';
-import { Button, FormField, Input, Avatar, useToast } from '../../../components/ui';
-import { normalizePublicAssetUrl } from '../../../lib/utils/media';
+import { Button, FormField, Input, UserAvatar, useToast } from '../../../components/ui';
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -84,7 +83,7 @@ export default function ProfilePage() {
   }, [user?.assignedStoreId, stores]);
 
   const rawAvatar = user?.avatar;
-  const avatarSrc = previewUrl || (rawAvatar ? normalizePublicAssetUrl(rawAvatar) : null);
+  const avatarSrc = previewUrl || rawAvatar || null;
   const hasCustomAvatar = Boolean(user?.avatar);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -212,11 +211,14 @@ export default function ProfilePage() {
           <div className="flex items-center gap-4 sm:gap-5">
             {/* Avatar with interactive overlay */}
             <div className="relative flex-shrink-0">
-              <Avatar
-                src={avatarSrc}
-                name={user?.name || user?.username || 'User'}
+              <UserAvatar
+                user={user}
+                avatar={previewUrl || user?.avatar}
+                avatarUpdatedAt={previewUrl ? Date.now().toString() : user?.avatarUpdatedAt}
                 size="2xl"
-                className="h-20 w-20 rounded-2xl border-2 border-white/20 bg-slate-800 text-xl font-bold shadow-inner sm:h-22 sm:w-22"
+                shape="rounded"
+                priority
+                className="h-20 w-20 sm:h-22 sm:w-22 rounded-2xl shadow-inner"
               />
               {isUploadingAvatar && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/70 backdrop-blur-xs">

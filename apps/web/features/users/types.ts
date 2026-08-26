@@ -16,7 +16,8 @@ export interface UserDoc {
   permissionDenies?: string[];
   status: UserStatus;
   tokenVersion?: number;
-  avatar?: string;
+  avatar?: string | null;
+  avatarUpdatedAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
