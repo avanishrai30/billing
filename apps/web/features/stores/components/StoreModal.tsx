@@ -168,6 +168,23 @@ export function StoreModal({
             {...register('address')}
           />
         </FormField>
+
+        {/* Distribution HUB Designation */}
+        <div className="p-3 bg-purple-50/60 border border-purple-100 rounded-xl space-y-2.5">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register('isHub')}
+              className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+            />
+            <span className="font-semibold text-xs text-purple-950">
+              Designate as Distribution HUB
+            </span>
+          </label>
+          <p className="text-[11px] text-slate-500 pl-6">
+            Distribution Hubs act as primary inward stock receivers and regional transfer dispatch centers.
+          </p>
+        </div>
       </form>
     </Dialog>
   );

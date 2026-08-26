@@ -36,36 +36,55 @@ function normalizeOptionalEmail(value) {
 }
 
 function normalizeStoreScopePayload(userData, existingUser) {
-  const rawAssignedStoreId = userData.assignedStoreId ?? existingUser?.assignedStoreId ?? 'all';
-  const assignedStoreId = String(rawAssignedStoreId || 'all').trim() || 'all';
+  const category = userData.category || existingUser?.category || authzService.normalizeCategory(userData);
   const hasAssignedStores = Object.prototype.hasOwnProperty.call(userData, 'assignedStores');
-  const rawAssignedStores = hasAssignedStores
-    ? userData.assignedStores
-    : (existingUser?.assignedStores || [assignedStoreId]);
-  const assignedStores = normalizePermissionArray(rawAssignedStores)
-    .map(storeId => String(storeId).trim())
-    .filter(Boolean);
-  const normalizedAssignedStores = assignedStores.length > 0 ? assignedStores : [assignedStoreId];
+  const rawAssignedStoreId = userData.assignedStoreId ?? existingUser?.assignedStoreId;
+  
+  let assignedStores = normalizePermissionArray(
+    hasAssignedStores
+      ? userData.assignedStores
+      : (existingUser?.assignedStores || (rawAssignedStoreId ? [rawAssignedStoreId] : ['all']))
+  ).map(storeId => String(storeId).trim()).filter(Boolean);
 
-  if (assignedStoreId === 'all') {
-    if (normalizedAssignedStores.length !== 1 || normalizedAssignedStores[0] !== 'all') {
-      throw createHttpError('All Stores scope must be stored as assignedStoreId="all" and assignedStores=["all"].', 400, 'INVALID_STORE_SCOPE');
-    }
+  // Super Admin is always global
+  if (category === 'super admin') {
     return { assignedStoreId: 'all', assignedStores: ['all'] };
   }
 
-  if (normalizedAssignedStores.includes('all') || normalizedAssignedStores.length !== 1 || normalizedAssignedStores[0] !== assignedStoreId) {
-    throw createHttpError('Store-scoped users must use the same store ID in assignedStoreId and assignedStores.', 400, 'INVALID_STORE_SCOPE');
+  // Global Admin
+  if (category === 'admin' && (rawAssignedStoreId === 'all' || assignedStores.includes('all'))) {
+    return { assignedStoreId: 'all', assignedStores: ['all'] };
   }
 
-  return { assignedStoreId, assignedStores: [assignedStoreId] };
+  // Filter out 'all' for store-restricted users (employees, auditors, non-global admins)
+  assignedStores = assignedStores.filter(s => s !== 'all');
+
+  if (assignedStores.length === 0) {
+    if (rawAssignedStoreId && rawAssignedStoreId !== 'all') {
+      assignedStores = [rawAssignedStoreId];
+    } else if (category === 'employee' || category === 'auditor') {
+      throw createHttpError('Employees must be assigned to at least one physical store.', 400, 'INVALID_STORE_SCOPE');
+    } else {
+      return { assignedStoreId: 'all', assignedStores: ['all'] };
+    }
+  }
+
+  // Primary store must be one of the assigned stores
+  let assignedStoreId = String(rawAssignedStoreId || '').trim();
+  if (!assignedStoreId || assignedStoreId === 'all' || !assignedStores.includes(assignedStoreId)) {
+    assignedStoreId = assignedStores[0];
+  }
+
+  return { assignedStoreId, assignedStores };
 }
 
 async function assertStoreScopeExists(db, scope) {
-  if (scope.assignedStoreId === 'all') return;
-  const store = await db.collection('stores').findOne({ id: scope.assignedStoreId });
-  if (!store) {
-    throw createHttpError(`Store '${scope.assignedStoreId}' was not found. Select an active Store Scope from the stores list.`, 409, 'STORE_NOT_FOUND');
+  if (scope.assignedStores.includes('all') || scope.assignedStoreId === 'all') return;
+  for (const storeId of scope.assignedStores) {
+    const store = await db.collection('stores').findOne({ id: storeId });
+    if (!store) {
+      throw createHttpError(`Store '${storeId}' was not found. Select an active Store Scope from the stores list.`, 409, 'STORE_NOT_FOUND');
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 const express = require('express');
 const { getContext, verifyJWT } = require('./context');
-const { requirePermission, requireStoreScope, getStoreScopeFilter, isSuperAdmin } = require('../services/authzService');
+const { requirePermission, requireStoreScope, getStoreScopeFilter, isSuperAdmin, assertStoreAccess } = require('../services/authzService');
 const inventoryService = require('../services/inventoryService');
 const auditService = require('../services/auditService');
 
@@ -206,29 +206,28 @@ router.post('/transfer', verifyJWT, requirePermission('inventory.transfer'), asy
   }
 
   // Store authorization check on source store
-  if (req.user && req.user.assignedStoreId && req.user.assignedStoreId !== 'all' && !isSuperAdmin(req.user)) {
-    if (req.user.assignedStoreId !== fromLoc) {
-      await auditService.writeAuditLog(
-        'AUTHORIZATION_DENIED',
-        'security',
-        req.user.id || req.user.username,
-        null,
-        {
-          requiredPermission: 'inventory.transfer',
-          userStore: req.user.assignedStoreId,
-          sourceStore: fromLoc,
-          endpoint: req.originalUrl || req.path,
-          method: 'POST',
-          reason: `Store scope mismatch: cannot transfer stock out of store '${fromLoc}'`
-        },
-        req
-      );
-      return res.status(403).json({
-        success: false,
-        error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You are not authorized to transfer stock out of store '${fromLoc}'` },
-        requestId
-      });
-    }
+  try {
+    assertStoreAccess(req.user, fromLoc);
+  } catch (authErr) {
+    await auditService.writeAuditLog(
+      'AUTHORIZATION_DENIED',
+      'security',
+      req.user.id || req.user.username,
+      null,
+      {
+        requiredPermission: 'inventory.transfer',
+        sourceStore: fromLoc,
+        endpoint: req.originalUrl || req.path,
+        method: 'POST',
+        reason: `Store scope mismatch: cannot transfer stock out of store '${fromLoc}'`
+      },
+      req
+    );
+    return res.status(403).json({
+      success: false,
+      error: { code: "STORE_ACCESS_DENIED", message: `Forbidden: You are not authorized to transfer stock out of store '${fromLoc}'` },
+      requestId
+    });
   }
 
   try {

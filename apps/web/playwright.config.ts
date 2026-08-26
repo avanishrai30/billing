@@ -116,7 +116,7 @@ export default defineConfig({
   ],
   webServer: e2eEnvironment.useLocalWebServer
     ? {
-        command: 'npx next dev --port 3100',
+        command: 'npx next start --port 3100',
         url: LOCAL_WEB_URL,
         reuseExistingServer: !process.env.CI,
         timeout: 120 * 1000,

@@ -9,7 +9,7 @@ export default defineConfig({
   webServer: config.webServer
     ? {
         ...config.webServer,
-        command: 'cd apps/web && npx next dev --port 3100'
+        command: 'cd apps/web && npx next start --port 3100'
       }
     : undefined
 });

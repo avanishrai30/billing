@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
-import { useStoresQuery } from '../../../features/stores/hooks';
+import { useStoresQuery, useSetStoreHubStatusMutation } from '../../../features/stores/hooks';
 import { useBusinessesQuery } from '../../../features/businesses/hooks';
 import {
   StoreHeader,
@@ -12,6 +12,7 @@ import {
   StoreModal,
   StoreDeleteDialog
 } from '../../../features/stores/components';
+import { StoreTeamDrawer } from '../../../features/stores/components/StoreTeamDrawer';
 import {
   BusinessHeader,
   BusinessProfileCard,
@@ -19,36 +20,49 @@ import {
 } from '../../../features/businesses/components';
 import { calculateStoreMetrics } from '../../../features/stores/calculations';
 import type { StoreDoc } from '../../../features/stores/types';
-import type { BusinessDoc } from '../../../features/businesses/types';
-import { AccessDeniedState } from '../../../components/ui';
+import { AccessDeniedState, useToast } from '../../../components/ui';
 
 export default function StoresPage() {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const { success, error } = useToast();
   const canView = hasPermission('stores.view');
 
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Store Modals State
+  // Store Modals & Drawers State
   const [activeModalStore, setActiveModalStore] = useState<StoreDoc | null>(null);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
 
   const [activeDeleteStore, setActiveDeleteStore] = useState<StoreDoc | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
+  const [teamDrawerStore, setTeamDrawerStore] = useState<StoreDoc | null>(null);
+  const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false);
+
   // Business Modal State
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
 
-  // Queries
+  // Queries & Mutations
   const { data: stores = [], isLoading: isLoadingStores } = useStoresQuery();
   const { data: businesses = [], isLoading: isLoadingBusinesses } = useBusinessesQuery();
+  const setHubMutation = useSetStoreHubStatusMutation();
 
   const primaryBusiness = businesses[0] || null;
 
-  // Permissions
+  // Permissions & Roles
+  const userCategory = (user?.category || '').toLowerCase();
+  const userRole = (user?.role || '').toLowerCase();
+  const isSuperAdmin =
+    userCategory === 'super admin' ||
+    userCategory === 'superadmin' ||
+    userCategory === 'owner' ||
+    userRole === 'super admin' ||
+    userRole === 'superadmin' ||
+    userRole === 'owner';
   const canCreateStore = hasPermission('stores.create');
   const canEditStore = hasPermission('stores.update');
   const canDeleteStore = hasPermission('stores.delete');
-
+  const canManageTeam = hasPermission('users.update') || isSuperAdmin;
   const canEditBusiness = hasPermission('businesses.update') || hasPermission('businesses.create');
 
   // Filtered Stores (memoized search)
@@ -95,6 +109,28 @@ export default function StoresPage() {
     setIsDeleteOpen(true);
   };
 
+  const handleOpenTeamDrawer = (store: StoreDoc) => {
+    setTeamDrawerStore(store);
+    setIsTeamDrawerOpen(true);
+  };
+
+  const handleToggleHubStatus = async (store: StoreDoc) => {
+    const nextHubState = !store.isHub;
+    try {
+      await setHubMutation.mutateAsync({
+        storeId: store.id,
+        isHub: nextHubState,
+        hubPriority: nextHubState ? 5 : 1
+      });
+      success(
+        nextHubState ? 'Hub Promoted' : 'Hub Demoted',
+        `${store.name} has been ${nextHubState ? 'designated as a Distribution Hub' : 'reverted to a standard store'}.`
+      );
+    } catch (err: any) {
+      error('Hub Status Error', err?.message || 'Failed to update store Hub status.');
+    }
+  };
+
   return (
     <div className="space-y-8 pb-12">
       {/* SECTION 1: Business Identity & Legal Entity Profile */}
@@ -110,7 +146,7 @@ export default function StoresPage() {
       </section>
 
       {/* SECTION 2: Multi-Store Outlets Registry */}
-      <section className="space-y-6 pt-4 border-t border-white/10">
+      <section className="space-y-6 pt-4 border-t border-slate-200">
         <StoreHeader
           canCreate={canCreateStore}
           onOpenCreate={handleOpenAddStore}
@@ -129,18 +165,31 @@ export default function StoresPage() {
           isLoading={isLoadingStores}
           canEdit={canEditStore}
           canDelete={canDeleteStore}
+          isSuperAdmin={isSuperAdmin}
           onEditStore={handleOpenEditStore}
           onDeleteStore={handleOpenDeleteStore}
+          onManageEmployees={handleOpenTeamDrawer}
+          onToggleHubStatus={handleToggleHubStatus}
           isFiltered={searchQuery.trim() !== ''}
           onClearFilters={() => setSearchQuery('')}
         />
       </section>
 
-      {/* Modals & Dialogs */}
+      {/* Modals & Drawers */}
       <StoreModal
         isOpen={isStoreModalOpen}
         onClose={() => setIsStoreModalOpen(false)}
         store={activeModalStore}
+      />
+
+      <StoreTeamDrawer
+        isOpen={isTeamDrawerOpen}
+        onClose={() => {
+          setIsTeamDrawerOpen(false);
+          setTeamDrawerStore(null);
+        }}
+        store={teamDrawerStore}
+        canManage={canManageTeam}
       />
 
       <StoreDeleteDialog

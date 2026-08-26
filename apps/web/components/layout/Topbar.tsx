@@ -15,7 +15,11 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
   const { user, logout } = useAuth();
   const {
     activeStoreId,
+    canAccessAllStores,
     isRestricted,
+    isSingleStoreRestricted,
+    isMultiStoreRestricted,
+    allowedStores,
     stores,
     isLoadingStores,
     activeStore,
@@ -36,7 +40,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200/80 text-xs text-slate-700 shadow-[0_1px_0_rgba(255,255,255,0.8)]">
           <Store className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
 
-          {isRestricted ? (
+          {isSingleStoreRestricted ? (
             <div className="flex items-center gap-1.5 font-mono text-slate-700">
               <span className="truncate max-w-[140px] sm:max-w-none">
                 {activeStore ? `${activeStore.name} (${activeStore.code})` : `Store: ${activeStoreId}`}
@@ -49,6 +53,20 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
                 Locked
               </span>
             </div>
+          ) : isRestricted ? (
+            <select
+              aria-label="Select active store outlet"
+              value={activeStoreId}
+              disabled={isLoadingStores}
+              onChange={(e) => switchStore(e.target.value)}
+              className="bg-transparent text-slate-700 font-mono text-xs focus:outline-none cursor-pointer pr-1 truncate max-w-[150px] sm:max-w-[220px]"
+            >
+              {allowedStores.map((s) => (
+                <option key={s.id} value={s.id} className="bg-white text-slate-900">
+                  {s.name} ({s.code})
+                </option>
+              ))}
+            </select>
           ) : (
             <select
               aria-label="Select active store outlet"

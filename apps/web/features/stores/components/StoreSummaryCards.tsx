@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Store, CheckCircle, XCircle } from 'lucide-react';
+import { Store, CheckCircle, XCircle, Share2 } from 'lucide-react';
 import { Skeleton } from '../../../components/ui';
 import type { StoreSummaryMetrics } from '../types';
 
@@ -13,8 +13,8 @@ export interface StoreSummaryCardsProps {
 export function StoreSummaryCards({ metrics, isLoading }: StoreSummaryCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
-        {Array.from({ length: 3 }).map((_, idx) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        {Array.from({ length: 4 }).map((_, idx) => (
           <div
             key={idx}
             className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-xs"
@@ -32,24 +32,32 @@ export function StoreSummaryCards({ metrics, isLoading }: StoreSummaryCardsProps
 
   const cards = [
     {
-      label: 'Registered Store Outlets',
-      value: metrics.totalStores.toLocaleString('en-IN'),
-      subtext: 'Physical branches & retail points',
+      label: 'Registered Stores',
+      value: (metrics.totalStores || 0).toLocaleString('en-IN'),
+      subtext: 'Total physical branches & retail points',
       icon: Store,
       color: 'text-blue-600',
       bg: 'bg-blue-50 border-blue-200'
     },
     {
-      label: 'Active Operating Outlets',
-      value: metrics.activeStoresCount.toLocaleString('en-IN'),
-      subtext: 'Operational billing terminals',
+      label: 'Active Stores',
+      value: (metrics.activeStoresCount || 0).toLocaleString('en-IN'),
+      subtext: 'Operational billing outlets',
       icon: CheckCircle,
       color: 'text-emerald-600',
       bg: 'bg-emerald-50 border-emerald-200'
     },
     {
-      label: 'Inactive / Suspended',
-      value: metrics.inactiveStoresCount.toLocaleString('en-IN'),
+      label: 'Distribution Hubs',
+      value: (metrics.hubStoresCount || 0).toLocaleString('en-IN'),
+      subtext: 'Regional stock distribution centers',
+      icon: Share2,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50 border-purple-200'
+    },
+    {
+      label: 'Inactive Outlets',
+      value: (metrics.inactiveStoresCount || 0).toLocaleString('en-IN'),
       subtext: 'Offline outlet configurations',
       icon: XCircle,
       color: 'text-rose-600',
@@ -58,32 +66,30 @@ export function StoreSummaryCards({ metrics, isLoading }: StoreSummaryCardsProps
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
-      {cards.map((c) => {
-        const Icon = c.icon;
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+      {cards.map((card, idx) => {
+        const IconComponent = card.icon;
         return (
           <div
-            key={c.label}
-            className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs"
+            key={idx}
+            className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-4.5 flex flex-col justify-between shadow-xs hover:border-slate-300 transition-colors"
           >
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-semibold text-slate-500 truncate">
-                {c.label}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                {card.label}
               </span>
               <div
-                className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${c.bg} ${c.color}`}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center border ${card.bg}`}
               >
-                <Icon className="w-4 h-4" />
+                <IconComponent className={`w-4 h-4 ${card.color}`} />
               </div>
             </div>
 
-            <div>
-              <div className="text-lg sm:text-xl font-bold font-mono text-slate-900 tracking-tight tabular-nums">
-                {c.value}
+            <div className="mt-2">
+              <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                {card.value}
               </div>
-              <div className="text-[11px] text-slate-500 mt-0.5 truncate">
-                {c.subtext}
-              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">{card.subtext}</p>
             </div>
           </div>
         );

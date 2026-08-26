@@ -13,7 +13,8 @@ describe('Store Component Layer Unit Suite', () => {
   const sampleMetrics: StoreSummaryMetrics = {
     totalStores: 5,
     activeStoresCount: 4,
-    inactiveStoresCount: 1
+    inactiveStoresCount: 1,
+    hubStoresCount: 1
   };
 
   const sampleStores: StoreDoc[] = [
@@ -23,7 +24,9 @@ describe('Store Component Layer Unit Suite', () => {
       code: 'ST-MUM',
       address: 'Bandra West, Mumbai',
       phone: '022-26401234',
-      status: 'active'
+      status: 'active',
+      isHub: false,
+      employeeCount: 3
     },
     {
       id: 'st-2',
@@ -31,7 +34,9 @@ describe('Store Component Layer Unit Suite', () => {
       code: 'ST-PUN',
       address: 'Kalyani Nagar, Pune',
       phone: '020-25601234',
-      status: 'inactive'
+      status: 'inactive',
+      isHub: true,
+      employeeCount: 0
     }
   ];
 
@@ -53,12 +58,12 @@ describe('Store Component Layer Unit Suite', () => {
     expect(handleCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('2. StoreSummaryCards renders 3 metric cards with formatted numbers', () => {
+  it('2. StoreSummaryCards renders metric cards with formatted numbers', () => {
     render(<StoreSummaryCards metrics={sampleMetrics} isLoading={false} />);
 
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getAllByText('1')).toHaveLength(2);
   });
 
   it('3. StoreFilters handles search input and reset trigger', () => {
@@ -80,9 +85,11 @@ describe('Store Component Layer Unit Suite', () => {
     expect(handleClear).toHaveBeenCalledTimes(1);
   });
 
-  it('4. StoreTable renders rows with branch code and action triggers', () => {
+  it('4. StoreTable renders rows with branch code, hub badges, and action triggers', () => {
     const handleEdit = jest.fn();
     const handleDelete = jest.fn();
+    const handleManage = jest.fn();
+    const handleToggleHub = jest.fn();
 
     render(
       <StoreTable
@@ -90,8 +97,11 @@ describe('Store Component Layer Unit Suite', () => {
         isLoading={false}
         canEdit={true}
         canDelete={true}
+        isSuperAdmin={true}
         onEditStore={handleEdit}
         onDeleteStore={handleDelete}
+        onManageEmployees={handleManage}
+        onToggleHubStatus={handleToggleHub}
       />
     );
 
@@ -100,6 +110,7 @@ describe('Store Component Layer Unit Suite', () => {
     expect(screen.getByText('ST-MUM')).toBeInTheDocument();
     expect(screen.getByText('ACTIVE')).toBeInTheDocument();
     expect(screen.getByText('INACTIVE')).toBeInTheDocument();
+    expect(screen.getByText('DISTRIBUTION HUB')).toBeInTheDocument();
 
     const editBtn = screen.getByRole('button', {
       name: /edit store outlet mumbai flagship/i

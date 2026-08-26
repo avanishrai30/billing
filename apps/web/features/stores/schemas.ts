@@ -9,6 +9,8 @@ export const storeSchema = z.object({
   phone: z.string().optional(),
   businessId: z.string().optional(),
   status: z.enum(['active', 'inactive']).default('active'),
+  isHub: z.boolean().optional(),
+  hubPriority: z.number().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional()
 });
@@ -20,7 +22,9 @@ export const storeFormSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   businessId: z.string().optional(),
-  status: z.enum(['active', 'inactive']).default('active')
+  status: z.enum(['active', 'inactive']).default('active'),
+  isHub: z.boolean().optional(),
+  hubPriority: z.number().optional()
 });
 
 export type StoreFormValues = z.infer<typeof storeFormSchema>;

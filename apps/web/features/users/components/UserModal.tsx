@@ -9,6 +9,7 @@ import {
   FormField,
   Input,
   Select,
+  Badge,
   UserAvatar
 } from '../../../components/ui';
 import { userFormSchema, type UserFormValues } from '../schemas';
@@ -85,6 +86,10 @@ export function UserModal({
 
   React.useLayoutEffect(() => {
     if (isOpen) {
+      const initialAssignedStores = Array.isArray(user?.assignedStores) && user.assignedStores.length > 0
+        ? user.assignedStores
+        : (user?.assignedStoreId ? [user.assignedStoreId] : ['all']);
+
       reset({
         id: user?.id || undefined,
         name: user?.name || '',
@@ -94,8 +99,8 @@ export function UserModal({
         password: '',
         role: user?.role || '',
         category: user?.category || 'employee',
-        assignedStoreId: user?.assignedStoreId || 'all',
-        assignedStores: user?.assignedStores || ['all'],
+        assignedStoreId: user?.assignedStoreId || (initialAssignedStores[0] || 'all'),
+        assignedStores: initialAssignedStores,
         status: user?.status || 'active',
         permissions: user?.permissions || [],
         permissionGrants: user?.permissionGrants || [],
@@ -104,10 +109,35 @@ export function UserModal({
     }
   }, [isOpen, userSyncKey, reset]);
 
-  const handleStoreChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    setValue('assignedStoreId', val);
-    setValue('assignedStores', [val]);
+  const handleToggleStore = (storeId: string) => {
+    const current = (watch('assignedStores') || []).filter(s => s !== 'all');
+    let next: string[];
+    if (current.includes(storeId)) {
+      next = current.filter(s => s !== storeId);
+    } else {
+      next = [...current, storeId];
+    }
+
+    if (next.length === 0 && stores.length > 0) {
+      next = [stores[0].id];
+    }
+
+    setValue('assignedStores', next, { shouldDirty: true });
+    const currentPrimary = watch('assignedStoreId');
+    if (!next.includes(currentPrimary)) {
+      setValue('assignedStoreId', next[0] || 'all', { shouldDirty: true });
+    }
+  };
+
+  const handleSetAllStores = (isAll: boolean) => {
+    if (isAll) {
+      setValue('assignedStores', ['all'], { shouldDirty: true });
+      setValue('assignedStoreId', 'all', { shouldDirty: true });
+    } else {
+      const firstStore = stores[0]?.id || 'store-1';
+      setValue('assignedStores', [firstStore], { shouldDirty: true });
+      setValue('assignedStoreId', firstStore, { shouldDirty: true });
+    }
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -116,6 +146,18 @@ export function UserModal({
     setValue('category', nextCategory, { shouldDirty: true });
     if (!currentRoleTitle || defaultRoleTitles.has(currentRoleTitle)) {
       setValue('role', authorizationRoleLabels[nextCategory], { shouldDirty: true });
+    }
+
+    if (nextCategory === 'super admin') {
+      setValue('assignedStores', ['all'], { shouldDirty: true });
+      setValue('assignedStoreId', 'all', { shouldDirty: true });
+    } else if (nextCategory === 'employee' || nextCategory === 'auditor') {
+      const current = watch('assignedStores') || [];
+      if (current.includes('all') || current.length === 0) {
+        const firstStore = stores[0]?.id || 'store-1';
+        setValue('assignedStores', [firstStore], { shouldDirty: true });
+        setValue('assignedStoreId', firstStore, { shouldDirty: true });
+      }
     }
   };
 
@@ -297,22 +339,101 @@ export function UserModal({
           </FormField>
 
           {/* Store Scope Assignment */}
-          <FormField label="Store Scope Assignment">
-            <Select
-              aria-label="Store Scope Assignment"
-              value={watch('assignedStoreId')}
-              onChange={handleStoreChange}
-              options={[
-                { value: 'all', label: '🌐 All Stores (Master Enterprise Access)' },
-                ...stores.map((s) => ({
-                  value: s.id,
-                  label: `📍 ${s.name} (${s.code || s.address || 'Store'})`
-                }))
-              ]}
-              disabled={watchedCategory === 'super admin'}
-              className="text-xs"
-            />
-          </FormField>
+          <div className="sm:col-span-2 space-y-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-900">
+                Store Scope Assignment
+              </label>
+              {watchedCategory === 'super admin' ? (
+                <Badge variant="brand">GLOBAL ENTERPRISE</Badge>
+              ) : watchedCategory === 'admin' ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSetAllStores(true)}
+                    className={`text-[11px] px-2 py-0.5 rounded font-semibold transition-colors ${
+                      watch('assignedStores')?.includes('all')
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-slate-600 border border-slate-200'
+                    }`}
+                  >
+                    All Stores
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetAllStores(false)}
+                    className={`text-[11px] px-2 py-0.5 rounded font-semibold transition-colors ${
+                      !watch('assignedStores')?.includes('all')
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-slate-600 border border-slate-200'
+                    }`}
+                  >
+                    Select Stores
+                  </button>
+                </div>
+              ) : (
+                <span className="text-[11px] text-slate-500 font-mono">
+                  {(watch('assignedStores') || []).filter(s => s !== 'all').length} selected
+                </span>
+              )}
+            </div>
+
+            {watchedCategory === 'super admin' || (watchedCategory === 'admin' && watch('assignedStores')?.includes('all')) ? (
+              <p className="text-xs text-slate-600 bg-white border border-slate-200 rounded-lg p-2.5 flex items-center gap-2">
+                <span>🌐</span>
+                <span><strong>All Stores</strong> — Unrestricted enterprise access across all store branches and outlets.</span>
+              </p>
+            ) : (
+              <div className="space-y-3 pt-1">
+                <p className="text-[11px] text-slate-500">
+                  Select one or more physical stores this user is authorized to access and operate within:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+                  {stores.map((s) => {
+                    const isChecked = (watch('assignedStores') || []).includes(s.id);
+                    return (
+                      <label
+                        key={s.id}
+                        className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition-colors ${
+                          isChecked
+                            ? 'bg-blue-50/80 border-blue-200 text-blue-900 font-semibold'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleStore(s.id)}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="truncate flex-1" title={s.name}>
+                          {s.name} ({s.code || s.id})
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {(watch('assignedStores') || []).filter(s => s !== 'all').length > 1 && (
+                  <FormField label="Primary / Default Active Store">
+                    <Select
+                      aria-label="Primary Active Store"
+                      value={watch('assignedStoreId')}
+                      onChange={(e) => setValue('assignedStoreId', e.target.value, { shouldDirty: true })}
+                      options={stores
+                        .filter(s => (watch('assignedStores') || []).includes(s.id))
+                        .map(s => ({
+                          value: s.id,
+                          label: `📍 ${s.name} (${s.code || 'Store'})`
+                        }))
+                      }
+                      className="text-xs bg-white"
+                    />
+                  </FormField>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Account Status */}
           <FormField label="Account Status">

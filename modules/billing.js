@@ -1,6 +1,6 @@
 const express = require('express');
 const { getContext, verifyJWT } = require('./context');
-const { requirePermission, requireAnyPermission, requireStoreScope, getStoreScopeFilter, isSuperAdmin } = require('../services/authzService');
+const { requirePermission, requireAnyPermission, requireStoreScope, getStoreScopeFilter, isSuperAdmin, assertStoreAccess } = require('../services/authzService');
 const inventoryService = require('../services/inventoryService');
 const auditService = require('../services/auditService');
 const PDFDocument = require('pdfkit');
@@ -128,14 +128,14 @@ router.post('/', verifyJWT, requirePermission('invoices.create'), requireStoreSc
   }
 
   // 1. Check Store Authorization
-  if (req.user && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
-    if (req.user.assignedStoreId !== targetLocationId) {
-      return res.status(403).json({
-        success: false,
-        error: { code: "UNAUTHORIZED_STORE", message: `User is not authorized for store location '${targetLocationId}'` },
-        requestId
-      });
-    }
+  try {
+    assertStoreAccess(req.user, targetLocationId);
+  } catch (authErr) {
+    return res.status(403).json({
+      success: false,
+      error: { code: "STORE_ACCESS_DENIED", message: authErr.message },
+      requestId
+    });
   }
 
   try {

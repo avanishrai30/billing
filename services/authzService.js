@@ -370,10 +370,72 @@ function requireAnyPermission(permissions = []) {
 }
 
 /**
+ * Resolves list of authorized store IDs for a user.
+ * Returns ['*'] for Super Admin / Global Admin.
+ * Returns an array of store IDs (e.g. ['store-A', 'store-B']) for store-restricted users.
+ */
+function getAuthorizedStoreIds(user) {
+  if (!user) return [];
+  if (isSuperAdmin(user)) return ['*'];
+
+  const category = normalizeCategory(user);
+  const assignedStores = Array.isArray(user.assignedStores)
+    ? user.assignedStores.map(s => String(s).trim()).filter(Boolean)
+    : [];
+
+  const rawAssignedStoreId = String(user.assignedStoreId || '').trim();
+
+  // If user is super admin or admin with global scope
+  if (category === 'super admin' || (category === 'admin' && (rawAssignedStoreId === 'all' || assignedStores.includes('all')))) {
+    return ['*'];
+  }
+
+  const storeSet = new Set(assignedStores);
+  if (rawAssignedStoreId && rawAssignedStoreId !== 'all' && rawAssignedStoreId !== 'none') {
+    storeSet.add(rawAssignedStoreId);
+  }
+
+  return Array.from(storeSet);
+}
+
+/**
+ * Checks if user is authorized for a specific store.
+ */
+function hasStoreAccess(user, storeId) {
+  if (!user) return false;
+  if (isSuperAdmin(user)) return true;
+
+  const authStores = getAuthorizedStoreIds(user);
+  if (authStores.includes('*') || authStores.includes('all')) return true;
+  if (!storeId || storeId === 'all') return false;
+
+  return authStores.includes(storeId);
+}
+
+/**
+ * Asserts user is authorized for a specific store. Throws 403 if denied.
+ */
+function assertStoreAccess(user, storeId) {
+  if (!user) {
+    const err = new Error('Authentication required');
+    err.statusCode = 401;
+    err.code = 'UNAUTHORIZED';
+    throw err;
+  }
+
+  if (!hasStoreAccess(user, storeId)) {
+    const err = new Error(`Forbidden: You are not authorized to perform operations for store '${storeId}'`);
+    err.statusCode = 403;
+    err.code = 'STORE_ACCESS_DENIED';
+    throw err;
+  }
+}
+
+/**
  * Middleware: Enforces Store Scope on mutation endpoints
  */
 function requireStoreScope(targetLocationExtractor) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -381,7 +443,12 @@ function requireStoreScope(targetLocationExtractor) {
       });
     }
 
-    if (isSuperAdmin(req.user) || !req.user.assignedStoreId || req.user.assignedStoreId === 'all') {
+    if (isSuperAdmin(req.user)) {
+      return next();
+    }
+
+    const authStores = getAuthorizedStoreIds(req.user);
+    if (authStores.includes('*') || authStores.includes('all')) {
       return next();
     }
 
@@ -389,18 +456,18 @@ function requireStoreScope(targetLocationExtractor) {
       ? targetLocationExtractor(req)
       : (req.body.locationId || req.body.storeId || req.body.businessId || req.query.locationId || req.query.storeId);
 
-    if (targetLocationId && targetLocationId !== 'all' && targetLocationId !== req.user.assignedStoreId) {
-      auditService.writeAuditLog(
+    if (targetLocationId && targetLocationId !== 'all' && !authStores.includes(targetLocationId)) {
+      await auditService.writeAuditLog(
         'AUTHORIZATION_DENIED',
         'security',
         req.user.id || req.user.username,
         null,
         {
-          userStore: req.user.assignedStoreId,
+          authorizedStores: authStores,
           targetLocationId,
           endpoint: req.originalUrl || req.path,
           method: req.method,
-          reason: `Store scope mismatch: user assigned to '${req.user.assignedStoreId}', tried to access '${targetLocationId}'`
+          reason: `Store scope mismatch: user authorized for [${authStores.join(', ')}], tried to access '${targetLocationId}'`
         },
         req
       );
@@ -415,11 +482,25 @@ function requireStoreScope(targetLocationExtractor) {
  * Query helper: Generates MongoDB store filter for reads
  */
 function getStoreScopeFilter(user, fieldNames = ['locationId', 'storeId']) {
-  if (!user || isSuperAdmin(user) || !user.assignedStoreId || user.assignedStoreId === 'all') {
+  if (!user || isSuperAdmin(user)) {
     return {};
   }
-  const storeId = user.assignedStoreId;
-  const orConditions = fieldNames.map(f => ({ [f]: storeId }));
+  const authStores = getAuthorizedStoreIds(user);
+  if (authStores.includes('*') || authStores.includes('all')) {
+    return {};
+  }
+
+  if (authStores.length === 0) {
+    return { _id: null };
+  }
+
+  if (authStores.length === 1) {
+    const storeId = authStores[0];
+    const orConditions = fieldNames.map(f => ({ [f]: storeId }));
+    return orConditions.length === 1 ? orConditions[0] : { $or: orConditions };
+  }
+
+  const orConditions = fieldNames.map(f => ({ [f]: { $in: authStores } }));
   return orConditions.length === 1 ? orConditions[0] : { $or: orConditions };
 }
 
@@ -441,5 +522,8 @@ module.exports = {
   requireAnyPermission,
   requireStoreScope,
   getStoreScopeFilter,
+  getAuthorizedStoreIds,
+  hasStoreAccess,
+  assertStoreAccess,
   sendForbiddenResponse
 };

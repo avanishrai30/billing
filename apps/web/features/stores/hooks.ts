@@ -9,7 +9,9 @@ import type { StoreFormPayload } from './types';
 export const storeQueryKeys = {
   all: ['stores'] as const,
   list: () => ['stores', 'list'] as const,
-  detail: (id: string) => ['store', id] as const
+  summary: () => ['stores', 'summary'] as const,
+  detail: (id: string) => ['store', id] as const,
+  employees: (storeId: string) => ['stores', storeId, 'employees'] as const
 };
 
 export function useStoresQuery(options: { enabled?: boolean } = {}) {
@@ -35,13 +37,31 @@ export function useStoresQuery(options: { enabled?: boolean } = {}) {
       queryClient.invalidateQueries({ queryKey: ['stores'] });
     });
 
+    const unsubMembership = subscribe('store_membership_updated', (payload: any) => {
+      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      if (payload?.storeId) {
+        queryClient.invalidateQueries({ queryKey: storeQueryKeys.employees(payload.storeId) });
+      }
+    });
+
     return () => {
       unsubUpdated();
       unsubDeleted();
+      unsubMembership();
     };
   }, [enabled, subscribe, queryClient]);
 
   return query;
+}
+
+export function useStoreSummaryQuery(options: { enabled?: boolean } = {}) {
+  const enabled = options.enabled ?? true;
+  return useQuery({
+    queryKey: storeQueryKeys.summary(),
+    queryFn: () => storesApi.getStoreSummary(),
+    enabled,
+    staleTime: 60 * 1000
+  });
 }
 
 export function useStoreDetailQuery(id?: string) {
@@ -50,6 +70,15 @@ export function useStoreDetailQuery(id?: string) {
     queryFn: () => storesApi.getStoreById(id!),
     enabled: !!id,
     staleTime: 60 * 1000
+  });
+}
+
+export function useStoreEmployeesQuery(storeId?: string) {
+  return useQuery({
+    queryKey: storeQueryKeys.employees(storeId || ''),
+    queryFn: () => storesApi.getStoreEmployees(storeId!),
+    enabled: !!storeId,
+    staleTime: 30 * 1000
   });
 }
 
@@ -88,6 +117,47 @@ export function useDeleteStoreMutation() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['stores'] });
       queryClient.removeQueries({ queryKey: ['store', id] });
+    }
+  });
+}
+
+export function useAddStoreEmployeeMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ storeId, userId }: { storeId: string; userId: string }) =>
+      storesApi.addStoreEmployee(storeId, userId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: storeQueryKeys.employees(variables.storeId) });
+    }
+  });
+}
+
+export function useRemoveStoreEmployeeMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ storeId, userId }: { storeId: string; userId: string }) =>
+      storesApi.removeStoreEmployee(storeId, userId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: storeQueryKeys.employees(variables.storeId) });
+    }
+  });
+}
+
+export function useSetStoreHubStatusMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ storeId, isHub, hubPriority }: { storeId: string; isHub: boolean; hubPriority?: number }) =>
+      isHub ? storesApi.promoteToHub(storeId, hubPriority) : storesApi.demoteFromHub(storeId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['stores'] });
+      queryClient.invalidateQueries({ queryKey: ['store', variables.storeId] });
     }
   });
 }

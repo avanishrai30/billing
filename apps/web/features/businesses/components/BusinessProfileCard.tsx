@@ -40,7 +40,7 @@ export function BusinessProfileCard({ business, isLoading }: BusinessProfileCard
           <div className="flex items-center gap-2.5">
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">{business.name}</h2>
             <Badge variant="success" size="sm">
-              {business.status.toUpperCase()}
+              {(business.status || 'active').toUpperCase()}
             </Badge>
           </div>
           {business.subtitle && (

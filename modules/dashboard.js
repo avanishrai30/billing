@@ -1,6 +1,6 @@
 const express = require('express');
 const { getContext, verifyJWT } = require('./context');
-const { requirePermission, isSuperAdmin } = require('../services/authzService');
+const { requirePermission, isSuperAdmin, assertStoreAccess, getAuthorizedStoreIds } = require('../services/authzService');
 
 const router = express.Router();
 
@@ -15,10 +15,21 @@ router.get('/metrics', verifyJWT, requirePermission('dashboard.view'), async (re
 
   try {
     let activeStoreId = req.query.storeId || req.query.locationId || req.query.businessId;
+    const authStores = getAuthorizedStoreIds(req.user);
+    const isGlobal = authStores.includes('*') || authStores.includes('all');
 
-    // Enforce store scope for non-super admins
-    if (!isSuperAdmin(req.user) && req.user.assignedStoreId && req.user.assignedStoreId !== 'all') {
-      activeStoreId = req.user.assignedStoreId;
+    if (!isGlobal) {
+      if (activeStoreId && activeStoreId !== 'all') {
+        assertStoreAccess(req.user, activeStoreId);
+      } else if (activeStoreId === 'all') {
+        return res.status(403).json({
+          success: false,
+          error: { code: "STORE_ACCESS_DENIED", message: "Forbidden: Store-restricted users cannot access global enterprise metrics" },
+          requestId
+        });
+      } else {
+        activeStoreId = authStores[0] || 'none';
+      }
     }
 
     const invoiceMatch = {

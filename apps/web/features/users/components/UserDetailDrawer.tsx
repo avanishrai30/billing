@@ -143,24 +143,33 @@ export function UserDetailDrawer({
             Store Scope Privileges
           </h4>
           <div className="text-xs space-y-2">
-            {user.assignedStoreId === 'all' || !user.assignedStoreId ? (
+            {user.assignedStores?.includes('all') || user.assignedStoreId === 'all' ? (
               <div className="flex items-center gap-2 text-emerald-300 bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20">
                 <span>🌐</span>
                 <div>
                   <strong>All-Store Master Enterprise Access</strong>
                   <p className="text-[11px] text-emerald-400/80 mt-0.5">
-                    User is permitted to switch between all branches and query global data.
+                    User is permitted to switch between all branches and query global enterprise data.
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-amber-300 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
-                <Store className="h-4 w-4 shrink-0 text-amber-400" />
-                <div>
-                  <strong>Restricted to Branch: {storeObj?.name || user.assignedStoreId}</strong>
-                  <p className="text-[11px] text-amber-400/80 mt-0.5">
-                    User operations (sales, checkouts, stock reads) are automatically scoped to this store.
-                  </p>
+              <div className="space-y-2 text-amber-300 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                <div className="flex items-center gap-2">
+                  <Store className="h-4 w-4 shrink-0 text-amber-400" />
+                  <div>
+                    <strong>Restricted to Assigned Outlets ({(user.assignedStores || [user.assignedStoreId]).filter(Boolean).length}):</strong>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1 pl-6">
+                  {(user.assignedStores || (user.assignedStoreId ? [user.assignedStoreId] : [])).map((stId) => {
+                    const st = stores.find(s => s.id === stId);
+                    return (
+                      <span key={stId} className="px-2 py-0.5 rounded bg-amber-400/20 text-amber-200 text-[11px] font-mono border border-amber-400/30">
+                        📍 {st?.name || stId} ({st?.code || 'ST'})
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}

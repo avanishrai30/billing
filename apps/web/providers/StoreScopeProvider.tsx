@@ -16,6 +16,11 @@ export interface StoreScopeContextValue {
   effectiveStoreId: string | undefined; // undefined if 'all', or store ID string
   isAllStores: boolean;
   isRestricted: boolean;
+  canAccessAllStores: boolean;
+  isSingleStoreRestricted: boolean;
+  isMultiStoreRestricted: boolean;
+  userAssignedStores: string[];
+  allowedStores: StoreDoc[];
   stores: StoreDoc[];
   isLoadingStores: boolean;
   activeStore: StoreDoc | null;
@@ -32,18 +37,52 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
     enabled: isAuthenticated
   });
 
-  // Determine if the user is locked to an assigned store
-  const isRestricted = useMemo(() => {
-    if (!user) return false;
+  // Extract user's authoritative assigned stores
+  const { userAssignedStores, canAccessAllStores } = useMemo(() => {
+    if (!user) {
+      return { userAssignedStores: [], canAccessAllStores: false };
+    }
+
     const role = (user.role || '').toLowerCase();
     const category = (user.category || '').toLowerCase();
-    if (role.includes('super') || category === 'super admin') return false;
-    return !!(user.assignedStoreId && user.assignedStoreId !== 'all' && user.assignedStoreId !== 'none');
+    const isSuper =
+      role === 'super admin' ||
+      role === 'superadmin' ||
+      role === 'super_admin' ||
+      category === 'super admin' ||
+      category === 'superadmin' ||
+      category === 'owner';
+
+    const rawStores = Array.isArray(user.assignedStores) && user.assignedStores.length > 0
+      ? user.assignedStores
+      : (user.assignedStoreId ? [user.assignedStoreId] : []);
+
+    const hasGlobalScope = isSuper || (category === 'admin' && (rawStores.includes('all') || user.assignedStoreId === 'all'));
+
+    if (hasGlobalScope) {
+      return { userAssignedStores: ['all'], canAccessAllStores: true };
+    }
+
+    const sanitizedStores = rawStores.filter(s => s && s !== 'all' && s !== 'none');
+    return {
+      userAssignedStores: sanitizedStores.length > 0 ? sanitizedStores : (user.assignedStoreId ? [user.assignedStoreId] : []),
+      canAccessAllStores: false
+    };
   }, [user]);
 
-  const assignedStoreId = user?.assignedStoreId;
+  const isRestricted = !canAccessAllStores;
+  const isSingleStoreRestricted = isRestricted && userAssignedStores.length === 1;
+  const isMultiStoreRestricted = isRestricted && userAssignedStores.length > 1;
 
-  // Initialize selected store state
+  // Filter allowed stores based on user permissions
+  const allowedStores = useMemo(() => {
+    if (canAccessAllStores) {
+      return stores;
+    }
+    return stores.filter(s => userAssignedStores.includes(s.id));
+  }, [canAccessAllStores, stores, userAssignedStores]);
+
+  // Default initial store ID
   const [selectedStoreId, setSelectedStoreId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(STORE_SCOPE_STORAGE_KEY);
@@ -52,17 +91,26 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
     return 'all';
   });
 
-  // Sync state if user restriction changes
+  // Enforce valid store selection when user permissions or stores load
   useEffect(() => {
-    if (isRestricted && assignedStoreId) {
-      setSelectedStoreId(assignedStoreId);
-      realtimeManager.joinStore(assignedStoreId);
+    if (isRestricted && userAssignedStores.length > 0) {
+      if (selectedStoreId === 'all' || !userAssignedStores.includes(selectedStoreId)) {
+        const assignedId = user?.assignedStoreId;
+        const fallbackStore = assignedId && userAssignedStores.includes(assignedId)
+          ? assignedId
+          : userAssignedStores[0];
+        setSelectedStoreId(fallbackStore);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORE_SCOPE_STORAGE_KEY, fallbackStore);
+        }
+        realtimeManager.joinStore(fallbackStore);
+      }
     }
-  }, [isRestricted, assignedStoreId]);
+  }, [isRestricted, userAssignedStores, selectedStoreId, user?.assignedStoreId]);
 
-  // Fallback to 'all' if selected store is invalid or does not exist in stores list
+  // Fallback to 'all' if selected store is invalid in global admin mode
   useEffect(() => {
-    if (!isLoadingStores && !isRestricted && selectedStoreId !== 'all' && stores.length > 0) {
+    if (!isLoadingStores && canAccessAllStores && selectedStoreId !== 'all' && stores.length > 0) {
       const storeExists = stores.some((s) => s.id === selectedStoreId);
       if (!storeExists) {
         console.warn(
@@ -74,22 +122,26 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
         }
       }
     }
-  }, [isLoadingStores, isRestricted, selectedStoreId, stores]);
+  }, [isLoadingStores, canAccessAllStores, selectedStoreId, stores]);
 
   // Compute effective active store ID
   const activeStoreId = useMemo(() => {
-    if (isRestricted && assignedStoreId) {
-      return assignedStoreId;
+    if (isRestricted) {
+      if (userAssignedStores.length === 1) return userAssignedStores[0];
+      if (userAssignedStores.includes(selectedStoreId)) return selectedStoreId;
+      return user?.assignedStoreId || userAssignedStores[0] || 'none';
     }
     return selectedStoreId || 'all';
-  }, [isRestricted, assignedStoreId, selectedStoreId]);
+  }, [isRestricted, userAssignedStores, selectedStoreId, user?.assignedStoreId]);
 
   // Switch store handler with room transition
   const switchStore = useCallback(
     (newStoreId: string) => {
-      if (isRestricted && assignedStoreId && newStoreId !== assignedStoreId) {
-        console.warn(`[StoreScope] Restricted user cannot switch away from assigned store: ${assignedStoreId}`);
-        return;
+      if (isRestricted) {
+        if (newStoreId === 'all' || !userAssignedStores.includes(newStoreId)) {
+          console.warn(`[StoreScope] Restricted user cannot switch away from assigned store: ${userAssignedStores[0] || 'all'}`);
+          return;
+        }
       }
 
       setSelectedStoreId(newStoreId);
@@ -102,7 +154,7 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
         realtimeManager.joinStore(newStoreId);
       }
     },
-    [isRestricted, assignedStoreId]
+    [isRestricted, userAssignedStores]
   );
 
   // Active store object lookup
@@ -128,6 +180,11 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
       effectiveStoreId,
       isAllStores,
       isRestricted,
+      canAccessAllStores,
+      isSingleStoreRestricted,
+      isMultiStoreRestricted,
+      userAssignedStores,
+      allowedStores,
       stores,
       isLoadingStores,
       activeStore,
@@ -139,6 +196,11 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
       effectiveStoreId,
       isAllStores,
       isRestricted,
+      canAccessAllStores,
+      isSingleStoreRestricted,
+      isMultiStoreRestricted,
+      userAssignedStores,
+      allowedStores,
       stores,
       isLoadingStores,
       activeStore,
@@ -146,28 +208,13 @@ export function StoreScopeProvider({ children }: { children: React.ReactNode }) 
     ]
   );
 
-  return (
-    <StoreScopeContext.Provider value={value}>
-      {children}
-    </StoreScopeContext.Provider>
-  );
+  return <StoreScopeContext.Provider value={value}>{children}</StoreScopeContext.Provider>;
 }
 
 export function useStoreScope(): StoreScopeContextValue {
   const context = useContext(StoreScopeContext);
   if (!context) {
-    // Provide safe fallback context for testing or unmounted components
-    return {
-      scope: { mode: 'all', storeId: 'all' },
-      activeStoreId: 'all',
-      effectiveStoreId: undefined,
-      isAllStores: true,
-      isRestricted: false,
-      stores: [],
-      isLoadingStores: false,
-      activeStore: null,
-      switchStore: () => {}
-    };
+    throw new Error('useStoreScope must be used within a StoreScopeProvider');
   }
   return context;
 }
