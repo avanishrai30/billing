@@ -336,7 +336,7 @@ export default function POSTerminalPage() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-3.5 pb-4 min-w-0">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden min-w-0 space-y-3 pb-1">
       <BarcodeInput onBarcodeScanned={handleBarcodeScanned} />
 
       {/* POS Terminal Header */}
@@ -349,12 +349,12 @@ export default function POSTerminalPage() {
         />
       </div>
 
-      {/* Split Layout: Independent Left Catalog Scroll + Fixed Right Cart Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_480px] gap-4 sm:gap-5 items-start flex-1 min-h-0">
-        {/* Left Product Catalog Section with Sticky Controls */}
-        <div className="flex flex-col min-w-0 h-full overflow-hidden">
-          {/* Sticky Search & Category Bar */}
-          <div className="sticky top-0 z-10 bg-[var(--bg-canvas)] pt-0.5 pb-3 space-y-2.5 shrink-0">
+      {/* Split Layout: Independent Left Catalog Scroll + Viewport-Pinned Right Cart */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_460px] gap-4 items-start flex-1 min-h-0 overflow-hidden">
+        {/* Left Product Catalog Section */}
+        <div className="flex flex-col min-w-0 h-full min-h-0 overflow-hidden">
+          {/* Fixed Search & Category Toolbar */}
+          <div className="shrink-0 space-y-2 mb-2.5">
             <ProductSearch
               value={searchQuery}
               onChange={setSearchQuery}
@@ -368,8 +368,11 @@ export default function POSTerminalPage() {
             />
           </div>
 
-          {/* Independently Scrollable Product Grid */}
-          <div className="flex-1 overflow-y-auto pr-1 pb-8 min-h-0">
+          {/* Independently Scrollable Product Grid Region */}
+          <div
+            data-testid="pos-product-scroll"
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 pb-4"
+          >
             <ProductGrid
               products={filteredProducts}
               cartItems={cartItems}
@@ -388,7 +391,7 @@ export default function POSTerminalPage() {
         </div>
 
         {/* Right Fixed / Sticky Cart Checkout Panel (Desktop) */}
-        <div className="hidden lg:block h-[calc(100vh-148px)] sticky top-[76px]">
+        <div className="hidden lg:flex lg:flex-col lg:h-full lg:min-h-0 overflow-hidden">
           <Cart
             items={cartItems}
             totals={totals}

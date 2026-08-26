@@ -311,6 +311,84 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
       route.continue();
     });
 
+    await page.route('**/api/v1/inventory/command-center*', async (route) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          stores: [
+            { id: 'store-1', name: 'Mumbai Flagship', code: 'ST-MUM', isWarehouse: true },
+            { id: 'store-2', name: 'Pune Branch', code: 'ST-PUN', isWarehouse: false }
+          ],
+          networkBalances: [
+            {
+              productId: 'p1',
+              productName: 'A2 Pure Ghee 1L (Mumbai Stock)',
+              sku: 'GHEE-1L',
+              barcode: '8901234567890',
+              category: 'Dairy',
+              unit: 'tin',
+              sellingPrice: 650,
+              price: 650,
+              cost: 450,
+              reorderLevel: 10,
+              networkQuantity: 50,
+              networkReserved: 0,
+              networkAvailable: 50,
+              isOrphan: false,
+              locationBreakdown: [
+                { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: true, quantity: 50, reservedQuantity: 0, available: 50 },
+                { locationId: 'store-2', locationName: 'Pune Branch', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 }
+              ],
+              batches: []
+            },
+            {
+              productId: 'p2',
+              productName: 'Organic Honey 500g (Pune Stock)',
+              sku: 'HONEY-500',
+              barcode: '8901234567891',
+              category: 'Staples',
+              unit: 'jar',
+              sellingPrice: 350,
+              price: 350,
+              cost: 220,
+              reorderLevel: 10,
+              networkQuantity: 30,
+              networkReserved: 0,
+              networkAvailable: 30,
+              isOrphan: false,
+              locationBreakdown: [
+                { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: true, quantity: 0, reservedQuantity: 0, available: 0 },
+                { locationId: 'store-2', locationName: 'Pune Branch', isWarehouse: false, quantity: 30, reservedQuantity: 0, available: 30 }
+              ],
+              batches: []
+            }
+          ],
+          summary: {
+            totalProducts: 2,
+            catalogProducts: 2,
+            stockedProducts: 2,
+            networkStock: 80,
+            centralStock: 50,
+            storeStock: 30,
+            lowStockCount: 0,
+            outOfStockCount: 0,
+            expiringSoonCount: 0,
+            totalValuation: 29100
+          }
+        })
+      });
+    });
+
+    await page.route('**/api/v1/inventory/logs*', async (route) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [], pagination: { limit: 15, nextCursor: null } })
+      });
+    });
+
     await page.route('**/api/v1/inventory*', async (route) => {
       const url = new URL(route.request().url());
       const locationId = url.searchParams.get('locationId');

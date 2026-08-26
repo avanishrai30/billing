@@ -31,16 +31,16 @@ export function ProductGrid({
 }: ProductGridProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
         {Array.from({ length: 10 }).map((_, idx) => (
           <div
             key={idx}
-            className="bg-white border border-slate-200 rounded-xl p-3 space-y-2.5 shadow-[0_4px_16px_rgba(15,23,42,0.03)]"
+            className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-2 shadow-[0_2px_12px_rgba(15,23,42,0.03)]"
           >
-            <Skeleton variant="rectangular" className="w-full h-26 rounded-lg" />
+            <Skeleton variant="rectangular" className="w-full h-22 rounded-lg" />
             <Skeleton variant="text" className="w-1/2 h-3" />
             <Skeleton variant="text" className="w-full h-4" />
-            <div className="flex justify-between items-center pt-2">
+            <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
               <Skeleton variant="text" className="w-16 h-5" />
               <Skeleton variant="rectangular" className="w-22 h-8 rounded-lg" />
             </div>
@@ -74,7 +74,7 @@ export function ProductGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
       {products.map((prod) => (
         <ProductCard
           key={prod.id || prod._id || prod.sku}

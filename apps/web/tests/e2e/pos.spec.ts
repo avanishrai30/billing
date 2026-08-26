@@ -359,6 +359,14 @@ test.describe('Phase 6 POS Terminal Migration E2E Suite', () => {
     // 1. Verify First and Far Down items exist
     await expect(page.getByText('Catalog Item #1 Organic Special Grain')).toBeVisible();
 
+    // Verify Desktop Viewport does NOT scroll vertically at document level
+    const pageScrollMetrics = await page.evaluate(() => ({
+      documentScrollHeight: document.documentElement.scrollHeight,
+      windowInnerHeight: window.innerHeight,
+      documentScrollTop: document.documentElement.scrollTop
+    }));
+    expect(pageScrollMetrics.documentScrollHeight).toBeLessThanOrEqual(pageScrollMetrics.windowInnerHeight + 5);
+
     // 2. Add Item #1 to Cart
     const firstCard = page.getByTestId('product-card-prod-bulk-1');
     const addBtn = firstCard.getByRole('button', { name: /add catalog item #1 organic special grain to cart/i });
@@ -375,18 +383,35 @@ test.describe('Phase 6 POS Terminal Migration E2E Suite', () => {
     await firstCard.getByRole('button', { name: /decrease quantity/i }).click();
     await expect(firstCard.getByText('1 in cart')).toBeVisible();
 
+    // Verify Catalog Scroll Container owns the vertical scroll
+    const catalogScrollContainer = page.getByTestId('pos-product-scroll');
+    const scrollInfoBefore = await catalogScrollContainer.evaluate((el) => ({
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      scrollTop: el.scrollTop
+    }));
+    expect(scrollInfoBefore.scrollHeight).toBeGreaterThan(scrollInfoBefore.clientHeight);
+
+    // Scroll catalog down
+    await catalogScrollContainer.evaluate((el) => {
+      el.scrollTop = 500;
+    });
+
+    const scrollInfoAfter = await catalogScrollContainer.evaluate((el) => el.scrollTop);
+    expect(scrollInfoAfter).toBeGreaterThan(0);
+
     // 3. Scroll catalog area down to Item #50
     const catalogItem50 = page.getByText('Catalog Item #50 Organic Special Grain');
     await catalogItem50.scrollIntoViewIfNeeded();
     await expect(catalogItem50).toBeVisible();
 
-    // 4. Verify Search & Category Bar remains visible (sticky) while scrolled
+    // 4. Verify Search & Category Bar remains visible (fixed toolbar) while scrolled
     const searchInput = page.getByPlaceholder(/search by product name, sku, or scan barcode/i);
     await expect(searchInput).toBeVisible();
     const allTab = page.getByRole('tab', { name: 'All Products' });
     await expect(allTab).toBeVisible();
 
-    // 5. Verify Right Cart Panel and Pay & Settle button remain fully visible (sticky/fixed)
+    // 5. Verify Right Cart Panel and Pay & Settle button remain fully visible (pinned/fixed)
     const cartPanel = page.getByTestId('pos-cart-panel');
     await expect(cartPanel).toBeVisible();
     const payBtn = page.getByRole('button', { name: /pay & settle/i });
@@ -396,5 +421,20 @@ test.describe('Phase 6 POS Terminal Migration E2E Suite', () => {
     await searchInput.fill('Item #100');
     await expect(page.getByText('Catalog Item #100 Organic Special Grain')).toBeVisible();
     await expect(catalogItem50).not.toBeVisible();
+
+    // 7. Add 10 different products to cart to verify internal cart scrolling
+    await page.getByRole('button', { name: /clear search/i }).click();
+    for (let i = 2; i <= 12; i++) {
+      const card = page.getByTestId(`product-card-prod-bulk-${i}`);
+      const btn = card.getByRole('button', { name: new RegExp(`add catalog item #${i}`, 'i') });
+      await btn.click();
+    }
+
+    // Verify Cart Panel header and Pay & Settle are still visible even with 12 items
+    await expect(cartPanel.getByText('Current Sale Cart')).toBeVisible();
+    await expect(payBtn).toBeVisible();
+
+    // Capture Visual Screenshot of large catalog split scroll
+    await page.screenshot({ path: 'test-results/desktop-pos-split-pane.png', fullPage: true });
   });
 });

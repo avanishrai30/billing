@@ -45,19 +45,19 @@ export function Cart({
   return (
     <div
       data-testid="pos-cart-panel"
-      className="bg-white border border-slate-200 rounded-xl flex flex-col h-full overflow-hidden shadow-[0_10px_30px_rgba(15,23,42,0.04)]"
+      className="bg-white border border-slate-200 rounded-xl flex flex-col h-full min-h-0 overflow-hidden shadow-[0_4px_20px_rgba(15,23,42,0.04)]"
     >
       {/* Pinned Header */}
-      <div className="p-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">
+      <div className="p-3 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
-            <ShoppingCart className="w-4 h-4" />
+          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
+            <ShoppingCart className="w-3.5 h-3.5" />
           </div>
           <div>
             <h3 className="text-xs font-bold text-slate-950 leading-tight">
               Current Sale Cart
             </h3>
-            <span className="text-[11px] text-slate-500 font-mono">
+            <span className="text-[10px] text-slate-500 font-mono">
               {items.length} {items.length === 1 ? 'line item' : 'line items'}
             </span>
           </div>
@@ -75,7 +75,7 @@ export function Cart({
       </div>
 
       {/* Pinned Customer Selector */}
-      <div className="p-3 border-b border-slate-100 shrink-0 bg-white">
+      <div className="p-2.5 border-b border-slate-100 shrink-0 bg-white">
         <CustomerSelector
           customers={customers}
           selectedCustomer={customer}
@@ -84,15 +84,15 @@ export function Cart({
       </div>
 
       {/* Independently Scrollable Cart Items List */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2.5 space-y-2">
         {isCartEmpty ? (
-          <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center p-6 text-slate-500">
-            <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-3 text-slate-400">
-              <ShoppingCart className="w-6 h-6 stroke-[1.5]" />
+          <div className="h-full min-h-[160px] flex flex-col items-center justify-center text-center p-4 text-slate-500">
+            <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-2 text-slate-400">
+              <ShoppingCart className="w-5 h-5 stroke-[1.5]" />
             </div>
             <p className="text-xs font-bold text-slate-800">Cart is Empty</p>
-            <p className="text-[11px] text-slate-500 mt-1 max-w-[200px] leading-relaxed">
-              Select products from catalog or scan a barcode to add to current ticket.
+            <p className="text-[11px] text-slate-500 mt-0.5 max-w-[180px] leading-relaxed">
+              Select products from catalog or scan a barcode to add to ticket.
             </p>
           </div>
         ) : (
@@ -110,7 +110,7 @@ export function Cart({
       </div>
 
       {/* Pinned Bottom Valuation & Checkout Panel */}
-      <div className="p-3.5 border-t border-slate-200 bg-slate-50/90 shrink-0 space-y-3">
+      <div className="p-3 border-t border-slate-200 bg-slate-50/95 shrink-0 space-y-2.5">
         {!isCartEmpty && (
           <DiscountControl
             discount={discount}
@@ -124,7 +124,7 @@ export function Cart({
         <Button
           variant="primary"
           size="lg"
-          className="w-full justify-center shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
+          className="w-full justify-center shadow-[0_10px_22px_rgba(37,99,235,0.18)] text-xs font-semibold h-10"
           disabled={isCartEmpty}
           onClick={onOpenCheckout}
           rightIcon={<ArrowRight className="w-4 h-4" />}

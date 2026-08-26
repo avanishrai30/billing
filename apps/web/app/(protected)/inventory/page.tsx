@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAuthorization } from '../../../hooks/useAuthorization';
+import { useStoreScope } from '../../../providers/StoreScopeProvider';
 import { useInventoryCommandCenterQuery } from '../../../features/inventory/hooks';
 import {
   InventoryHeader,
@@ -23,6 +24,7 @@ import { AccessDeniedState } from '../../../components/ui';
 
 export default function InventoryPage() {
   const { user, hasPermission, isSuperAdmin } = useAuthorization();
+  const { activeStoreId } = useStoreScope();
 
   // Queries
   const { data: commandCenterData, isLoading: isLoadingCommandCenter } = useInventoryCommandCenterQuery();
@@ -39,20 +41,25 @@ export default function InventoryPage() {
 
   // Selected Location: 'network' (for super admin) or specific store ID
   const defaultLocation = useMemo(() => {
+    if (activeStoreId && activeStoreId !== 'all') {
+      return activeStoreId;
+    }
     if (!isSuperAdmin && user?.assignedStoreId && user.assignedStoreId !== 'all') {
       return user.assignedStoreId;
     }
     return 'network';
-  }, [isSuperAdmin, user]);
+  }, [activeStoreId, isSuperAdmin, user]);
 
   const [selectedLocation, setSelectedLocation] = useState<string>(defaultLocation);
 
-  // Sync selected location once stores load
+  // Sync selected location when topbar activeStoreId or user store changes
   React.useEffect(() => {
-    if (!isSuperAdmin && user?.assignedStoreId && user.assignedStoreId !== 'all') {
-      setSelectedLocation(user.assignedStoreId);
+    if (activeStoreId && activeStoreId !== 'all') {
+      setSelectedLocation(activeStoreId);
+    } else if (activeStoreId === 'all') {
+      setSelectedLocation('network');
     }
-  }, [isSuperAdmin, user]);
+  }, [activeStoreId]);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -96,11 +103,14 @@ export default function InventoryPage() {
     const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     return networkBalances.filter((item) => {
-      // 1. If single location selected, only show items with presence or allow zero items
+      // 1. If single location selected, only show items with presence or allow zero-stock network catalog items
       let onHand = item.networkQuantity;
       if (selectedLocation !== 'network') {
         const loc = item.locationBreakdown.find((l) => l.locationId === selectedLocation);
         onHand = loc ? loc.quantity : 0;
+        if (onHand <= 0 && item.networkQuantity > 0) {
+          return false;
+        }
       }
 
       // 2. Status Filter
