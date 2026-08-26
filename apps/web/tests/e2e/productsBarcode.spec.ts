@@ -448,6 +448,62 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     const printActionBtn = page.getByRole('button', { name: /Print \d+ Label/i });
     await expect(printActionBtn).toBeEnabled();
   });
+
+  test('9. TVS LP-46 Dlite Thermal Printer Profile & Die-Cut Gap Media Studio in Settings', async ({ page }) => {
+    await page.goto('/settings');
+    await expect(page.getByText('Settings & Configuration')).toBeVisible({ timeout: 10000 });
+
+    // Switch to Preferences tab
+    const prefTab = page.getByRole('button', { name: /Preferences/i });
+    await expect(prefTab).toBeVisible();
+    await prefTab.click();
+
+    await expect(page.getByText('Thermal Label Printer & Media')).toBeVisible({ timeout: 10000 });
+
+    // Confirm TVS LP-46 Dlite is available
+    await expect(page.getByText('TSPL-EZ Dialect')).toBeVisible();
+    await expect(page.getByText('Print Agent:')).toBeVisible();
+
+    // Confirm Media Format buttons (Die-Cut Labels, Continuous, Black Mark)
+    await expect(page.getByRole('button', { name: 'Die-Cut Labels' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continuous' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Transmissive Gap' })).toBeVisible();
+
+    // Select Die-Cut & Transmissive Gap
+    await page.getByRole('button', { name: 'Die-Cut Labels' }).click();
+    await page.getByRole('button', { name: 'Transmissive Gap' }).click();
+
+    // Verify Calibration & Feed Diagnostics section
+    await expect(page.getByText('Printer Gap Calibration & Hardware Diagnostics')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Calibrate Sensor' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Feed 1 Label' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Test Print' })).toBeVisible();
+
+    // Trigger Calibrate & Feed
+    await page.getByRole('button', { name: 'Calibrate Sensor' }).click();
+    await page.getByRole('button', { name: 'Feed 1 Label' }).click();
+  });
+
+  test('10. Barcode Studio displays TVS LP-46 Dlite 203 DPI TSPL-EZ live simulator info', async ({ page }) => {
+    await page.goto('/products');
+    const printBtn = page.locator('button[aria-label="Print barcode for A2 Gir Cow Cultured Ghee 500ml"]');
+    await expect(printBtn).toBeVisible({ timeout: 10000 });
+    await printBtn.click();
+
+    // Verify dialog opened with TVS LP-46 Dlite metadata in simulator
+    await expect(page.getByText('Print Barcode Labels')).toBeVisible();
+    await expect(page.getByText('Live Print Simulator')).toBeVisible();
+
+    // Check Simulator cards
+    await expect(page.getByText('TVS LP-46 Dlite').first()).toBeVisible();
+    await expect(page.getByText('TSPL-EZ').first()).toBeVisible();
+    await expect(page.getByText('203 DPI').first()).toBeVisible();
+    await expect(page.getByText(/Die-Cut \(2mm\)|Die-Cut/i).first()).toBeVisible();
+
+    // Verify print button trigger
+    const printActionBtn = page.getByRole('button', { name: /Print 3 Labels|Print 3 Physical Labels/i });
+    await expect(printActionBtn).toBeVisible();
+  });
 });
 
 

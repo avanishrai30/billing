@@ -219,4 +219,177 @@ describe('Canonical Label Expiry Date Formatter', () => {
   });
 });
 
+describe('Universal Thermal Printing Engine & Printer Adapters', () => {
+  const {
+    mmToDots,
+    dotsToMm,
+    buildProductLabelDocument,
+    validateDocumentBounds
+  } = require('../../lib/utils/labelDocument');
+  const {
+    TSPLAdapter,
+    ZPLAdapter,
+    EPLAdapter,
+    getPrinterAdapterForProfile
+  } = require('../../lib/utils/printerAdapters');
+  const {
+    TVS_LP46_DLITE_PROFILE
+  } = require('../../lib/utils/labelProfiles');
+
+  it('1. Accurately converts mm to dots and dots to mm across 203, 300, and 600 DPI', () => {
+    // 203 DPI (8 dots/mm)
+    expect(mmToDots(25.4, 203)).toBe(203);
+    expect(mmToDots(58, 203)).toBe(464);
+    expect(mmToDots(40, 203)).toBe(320);
+    expect(mmToDots(2, 203)).toBe(16);
+    expect(dotsToMm(203, 203)).toBeCloseTo(25.4, 1);
+
+    // 300 DPI (11.8 dots/mm)
+    expect(mmToDots(25.4, 300)).toBe(300);
+    expect(mmToDots(58, 300)).toBe(685);
+
+    // 600 DPI (23.6 dots/mm)
+    expect(mmToDots(25.4, 600)).toBe(600);
+  });
+
+  it('2. Canonical TVS LP-46 Dlite profile has correct defaults (203 DPI, TSPL-EZ, DIE_CUT, GAP)', () => {
+    expect(TVS_LP46_DLITE_PROFILE.manufacturer).toBe('TVS Electronics');
+    expect(TVS_LP46_DLITE_PROFILE.model).toBe('LP-46 Dlite');
+    expect(TVS_LP46_DLITE_PROFILE.dpi).toBe(203);
+    expect(TVS_LP46_DLITE_PROFILE.printerLanguage).toBe('TSPL-EZ');
+    expect(TVS_LP46_DLITE_PROFILE.mediaType).toBe('DIE_CUT');
+    expect(TVS_LP46_DLITE_PROFILE.sensorMode).toBe('GAP');
+    expect(TVS_LP46_DLITE_PROFILE.gapMm).toBe(2);
+  });
+
+  it('3. TSPLAdapter selects TVS LP-46 Dlite and generates valid TSPL command stream', () => {
+    const tsplAdapter = new TSPLAdapter();
+    expect(tsplAdapter.canHandle(TVS_LP46_DLITE_PROFILE)).toBe(true);
+
+    const doc = buildProductLabelDocument({
+      product: {
+        id: 'prd-1',
+        name: 'A2 Cow Cultured Ghee 500ml',
+        sku: 'GHEE-A2-500',
+        barcode: '8901234567890',
+        brand: 'VC ORGANIC',
+        sellingPrice: 650
+      },
+      profile: TVS_LP46_DLITE_PROFILE,
+      effectiveExpiry: '25/08/2027',
+      showPrice: true,
+      showBrand: true,
+      showLotExpiry: true
+    });
+
+    const output = tsplAdapter.render(doc, TVS_LP46_DLITE_PROFILE, 2);
+
+    expect(output).toContain('SIZE 58.0 mm, 40.0 mm');
+    expect(output).toContain('GAP 2.0 mm, 0 mm');
+    expect(output).toContain('DIRECTION 1');
+    expect(output).toContain('CLS');
+    expect(output).toContain('BARCODE');
+    expect(output).toContain('8901234567890');
+    expect(output).toContain('VC ORGANIC');
+    expect(output).toContain('A2 Cow Cultured Ghee 500ml');
+    expect(output).toContain('EXP: 25/08/2027');
+    expect(output).toContain('PRINT 2,1');
+  });
+
+  it('4. TSPLAdapter generates valid calibration, feed and diagnostic test labels', () => {
+    const tsplAdapter = new TSPLAdapter();
+
+    const cal = tsplAdapter.renderCalibration(TVS_LP46_DLITE_PROFILE);
+    expect(cal).toContain('GAP 2.0 mm, 0 mm');
+    expect(cal).toContain('GAPDETECT');
+    expect(cal).toContain('HOME');
+
+    const feed = tsplAdapter.renderFeed(TVS_LP46_DLITE_PROFILE, 1);
+    expect(feed).toBe('FEED 1\r\n');
+
+    const testLabel = tsplAdapter.renderTestLabel(TVS_LP46_DLITE_PROFILE);
+    expect(testLabel).toContain('TVS LP-46 Dlite (203 DPI)');
+    expect(testLabel).toContain('AIA000002');
+    expect(testLabel).toContain('BOX');
+  });
+
+  it('5. ZPLAdapter generates valid ZPL II commands for Zebra profiles', () => {
+    const zplAdapter = new ZPLAdapter();
+    const zebraProfile = {
+      ...TVS_LP46_DLITE_PROFILE,
+      id: 'zebra_test',
+      printerLanguage: 'ZPL' as const
+    };
+
+    expect(zplAdapter.canHandle(zebraProfile)).toBe(true);
+
+    const doc = buildProductLabelDocument({
+      product: {
+        id: 'prd-1',
+        name: 'Artisan Salt',
+        sku: 'SALT-01',
+        barcode: '8901234567890',
+        sellingPrice: 70
+      },
+      profile: zebraProfile
+    });
+
+    const output = zplAdapter.render(doc, zebraProfile, 1);
+    expect(output).toContain('^XA');
+    expect(output).toContain('^PW464');
+    expect(output).toContain('^LL320');
+    expect(output).toContain('^MNY'); // Transmissive gap
+    expect(output).toContain('^FD8901234567890^FS');
+    expect(output).toContain('^PQ1');
+    expect(output).toContain('^XZ');
+  });
+
+  it('6. EPLAdapter generates valid EPL commands', () => {
+    const eplAdapter = new EPLAdapter();
+    const eplProfile = {
+      ...TVS_LP46_DLITE_PROFILE,
+      id: 'epl_test',
+      printerLanguage: 'EPL' as const
+    };
+
+    expect(eplAdapter.canHandle(eplProfile)).toBe(true);
+
+    const doc = buildProductLabelDocument({
+      product: {
+        id: 'prd-1',
+        name: 'Artisan Salt',
+        sku: 'SALT-01',
+        barcode: '8901234567890',
+        sellingPrice: 70
+      },
+      profile: eplProfile
+    });
+
+    const output = eplAdapter.render(doc, eplProfile, 1);
+    expect(output).toContain('N');
+    expect(output).toContain('q464');
+    expect(output).toContain('Q320,16');
+    expect(output).toContain('P1');
+  });
+
+  it('7. Validates document bounding box boundaries preventing out-of-bounds overflow', () => {
+    const geometry = calculateLabelGeometry(TVS_LP46_DLITE_PROFILE);
+    const validDoc = buildProductLabelDocument({
+      product: {
+        id: 'prd-1',
+        name: 'Normal Product Name',
+        sku: 'SKU-001',
+        barcode: '8901234567890',
+        sellingPrice: 100
+      },
+      profile: TVS_LP46_DLITE_PROFILE
+    });
+
+    const validation = validateDocumentBounds(validDoc, geometry);
+    expect(validation.valid).toBe(true);
+    expect(validation.violations).toHaveLength(0);
+  });
+});
+
+
 

@@ -32,6 +32,12 @@ import {
   LABEL_PROFILE_PRESETS,
   type LabelProfile
 } from '../../../lib/utils/labelProfiles';
+import { buildProductLabelDocument } from '../../../lib/utils/labelDocument';
+import {
+  checkPrintAgentHealth,
+  sendNativePrintJob,
+  type PrintAgentHealth
+} from '../../../lib/utils/printAgent';
 import { usePrinterLabelPreferences } from '../../settings/hooks';
 import {
   useProductBatchesQuery,
@@ -76,9 +82,27 @@ export function ProductPrintBarcodeDialog({
     customProfile,
     printerName,
     printerType,
+    printerModelId,
+    printerLanguage,
+    mediaType,
+    sensorMode,
+    gapMm,
+    xOffsetMm,
+    yOffsetMm,
+    printAgentUrl,
     setSelectedProfileId,
     setCustomProfile
   } = usePrinterLabelPreferences();
+
+  // Local Print Agent health
+  const [agentHealth, setAgentHealth] = useState<PrintAgentHealth>({ connected: false });
+  const [isPrintingNative, setIsPrintingNative] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      checkPrintAgentHealth(printAgentUrl).then(setAgentHealth);
+    }
+  }, [isOpen, printAgentUrl]);
 
   // Print Configuration State
   const [selectedBatchId, setSelectedBatchId] = useState<string>('none');
@@ -273,7 +297,7 @@ export function ProductPrintBarcodeDialog({
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!product) return;
 
     if (!hasAssignedBarcode) {
@@ -287,6 +311,55 @@ export function ProductPrintBarcodeDialog({
     }
 
     const labelCount = Math.min(Math.max(1, quantity), 100);
+
+    // 1. If Local Print Agent is online, dispatch native TSPL/ZPL command stream directly
+    if (agentHealth.connected) {
+      setIsPrintingNative(true);
+      try {
+        const labelDoc = buildProductLabelDocument({
+          product,
+          profile: effectiveProfile,
+          selectedBatch,
+          effectiveExpiry,
+          showPrice,
+          showBrand,
+          showLotExpiry
+        });
+
+        const printResult = await sendNativePrintJob(
+          {
+            printerProfileId: effectiveProfile.id,
+            mediaProfile: {
+              widthMm: effectiveProfile.widthMm,
+              heightMm: effectiveProfile.heightMm,
+              gapMm: effectiveProfile.gapMm || 2,
+              sensorMode: (effectiveProfile.sensorMode as any) || 'GAP'
+            },
+            copies: labelCount,
+            document: labelDoc
+          },
+          effectiveProfile,
+          printAgentUrl
+        );
+
+        if (printResult.success) {
+          success(
+            'Labels Printed',
+            printResult.message || `Dispatched ${labelCount} native label(s) to ${printerName}`
+          );
+          onClose();
+          return;
+        } else {
+          toastError('Native Print Notice', `${printResult.message}. Falling back to browser print.`);
+        }
+      } catch (err: any) {
+        toastError('Native Print Error', err?.message || 'Failed to dispatch native job. Using browser print.');
+      } finally {
+        setIsPrintingNative(false);
+      }
+    }
+
+    // 2. High-fidelity physical popup browser printing fallback
     const barcodeSvgStr = generateBarcodeSvg(assignedBarcode, {
       width: barcodeFit.moduleWidthPx,
       height: barcodeFit.barHeightPx,
@@ -951,14 +1024,24 @@ export function ProductPrintBarcodeDialog({
               </span>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
               <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
-                <span className="block text-slate-500">Printer</span>
-                <span className="block truncate font-semibold text-slate-900">{printerName}</span>
+                <span className="block text-slate-400">Printer</span>
+                <span className="block truncate font-bold text-slate-900">{printerName || 'TVS LP-46 Dlite'}</span>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
-                <span className="block text-slate-500">Media</span>
-                <span className="block truncate font-semibold text-slate-900">{printerType}</span>
+                <span className="block text-slate-400">Media & Gap</span>
+                <span className="block truncate font-bold text-slate-900">
+                  {mediaType === 'CONTINUOUS' ? 'Continuous' : `Die-Cut (${effectiveProfile.gapMm ?? gapMm ?? 2}mm)`}
+                </span>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                <span className="block text-slate-400">Engine Dialect</span>
+                <span className="block truncate font-bold text-slate-900">{printerLanguage || 'TSPL-EZ'}</span>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                <span className="block text-slate-400">Resolution</span>
+                <span className="block truncate font-bold text-slate-900">{effectiveProfile.dpi || 203} DPI</span>
               </div>
             </div>
 

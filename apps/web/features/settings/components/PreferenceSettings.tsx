@@ -1,8 +1,36 @@
-import React, { useState } from 'react';
-import { Sliders, Image, CheckCircle2, Printer } from 'lucide-react';
-import { Input, Select } from '../../../components/ui';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Sliders,
+  Image,
+  CheckCircle2,
+  Printer,
+  Radio,
+  RefreshCw,
+  Zap,
+  HelpCircle,
+  Activity,
+  AlertTriangle,
+  Play
+} from 'lucide-react';
+import { Input, Select, Button, Badge } from '../../../components/ui';
 import { usePrinterLabelPreferences, useVisualPreferences } from '../hooks';
-import { LABEL_PROFILE_PRESETS } from '../../../lib/utils/labelProfiles';
+import {
+  LABEL_PROFILE_PRESETS,
+  PRINTER_MODEL_PROFILES,
+  TVS_LP46_DLITE_PROFILE,
+  calculateLabelGeometry,
+  calculateLabelTypography,
+  calculateBarcodeFit,
+  calculateTextFit
+} from '../../../lib/utils/labelProfiles';
+import { generateBarcodeSvg } from '../../../lib/utils/barcode';
+import {
+  checkPrintAgentHealth,
+  sendNativeCalibrate,
+  sendNativeFeed,
+  sendNativeTestPrint,
+  type PrintAgentHealth
+} from '../../../lib/utils/printAgent';
 
 export function PreferenceSettings() {
   const { showProductImages, setShowProductImages, isLoaded } = useVisualPreferences();
@@ -12,13 +40,37 @@ export function PreferenceSettings() {
     customProfile,
     printerName,
     printerType,
+    printerModelId,
+    printerLanguage,
+    mediaType,
+    sensorMode,
+    gapMm,
+    xOffsetMm,
+    yOffsetMm,
+    printAgentUrl,
     setSelectedProfileId,
     setCustomProfile,
     setPrinterName,
     setPrinterType,
+    updatePreferences,
     isLoaded: isPrinterLoaded
   } = usePrinterLabelPreferences();
+
   const [savedBadge, setSavedBadge] = useState(false);
+  const [agentHealth, setAgentHealth] = useState<PrintAgentHealth>({ connected: false });
+  const [isCheckingAgent, setIsCheckingAgent] = useState(false);
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
+
+  const checkAgent = useCallback(async () => {
+    setIsCheckingAgent(true);
+    const res = await checkPrintAgentHealth(printAgentUrl);
+    setAgentHealth(res);
+    setIsCheckingAgent(false);
+  }, [printAgentUrl]);
+
+  useEffect(() => {
+    checkAgent();
+  }, [checkAgent]);
 
   const handleToggle = (checked: boolean) => {
     setShowProductImages(checked);
@@ -31,6 +83,111 @@ export function PreferenceSettings() {
     setTimeout(() => setSavedBadge(false), 3000);
   };
 
+  const handleModelChange = (modelId: string) => {
+    const found = PRINTER_MODEL_PROFILES.find((p) => p.id === modelId);
+    if (found) {
+      updatePreferences({
+        printerModelId: found.id,
+        printerName: found.name,
+        printerType: found.manufacturer,
+        printerLanguage: found.language,
+        mediaType: found.defaultMediaType,
+        sensorMode: found.defaultSensor
+      });
+      handlePrinterPreferenceSaved();
+    }
+  };
+
+  const triggerCalibrate = async () => {
+    setActionStatus('Calibrating gap sensor on thermal printer...');
+    const res = await sendNativeCalibrate(selectedProfile, printAgentUrl);
+    setActionStatus(res.message);
+    setTimeout(() => setActionStatus(null), 4000);
+  };
+
+  const triggerFeed = async () => {
+    setActionStatus('Feeding label roll...');
+    const res = await sendNativeFeed(selectedProfile, 1, printAgentUrl);
+    setActionStatus(res.message);
+    setTimeout(() => setActionStatus(null), 4000);
+  };
+
+  const triggerTestPrint = async () => {
+    if (agentHealth.connected) {
+      setActionStatus('Dispatching native test label...');
+      const res = await sendNativeTestPrint(selectedProfile, printAgentUrl);
+      setActionStatus(res.message);
+      setTimeout(() => setActionStatus(null), 4000);
+    } else {
+      // High-fidelity physical popup preview fallback
+      const sampleBarcode = '890609529642';
+      const geometry = calculateLabelGeometry(selectedProfile);
+      const typography = calculateLabelTypography(selectedProfile);
+      const fit = calculateBarcodeFit(sampleBarcode, selectedProfile);
+      const svgStr = generateBarcodeSvg(sampleBarcode, {
+        width: fit.moduleWidthPx,
+        height: fit.barHeightPx,
+        includeText: selectedProfile.showBarcodeValue,
+        fontSize: fit.fontSizePx,
+        quietZone: fit.quietZoneModules
+      });
+      const prodFont = calculateTextFit('ADUKALE MADDUR VADE', geometry.textMaxWidthMm, typography.productFontMm);
+      const priceFont = calculateTextFit('₹395.00', geometry.textMaxWidthMm, typography.priceFontMm, 2);
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Test Label - ${selectedProfile.name}</title>
+            <style>
+              @page { size: ${geometry.widthMm}mm ${geometry.heightMm}mm; margin: 0; }
+              * { box-sizing: border-box; margin: 0; padding: 0; }
+              body { font-family: system-ui, sans-serif; color: #000; background: #fff; }
+              .print-label-card {
+                width: ${geometry.widthMm}mm;
+                height: ${geometry.heightMm}mm;
+                padding: ${selectedProfile.marginTopMm}mm ${selectedProfile.marginRightMm}mm ${selectedProfile.marginBottomMm}mm ${selectedProfile.marginLeftMm}mm;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: ${typography.rowGapMm}mm;
+                text-align: center;
+                background: #fff;
+                overflow: hidden;
+              }
+              .label-brand { font-size: ${typography.brandFontMm}mm; font-weight: 700; text-transform: uppercase; color: #444; }
+              .label-name { font-size: ${prodFont}mm; line-height: ${typography.productLineHeightMm}mm; font-weight: 700; }
+              .label-barcode { width: ${geometry.barcodeMaxWidthMm}mm; max-height: ${geometry.barcodeMaxHeightMm + 4}mm; display: flex; justify-content: center; align-items: center; }
+              .label-barcode svg { width: ${fit.displayWidthMm}mm; max-width: 100%; height: auto; }
+              .label-footer { width: ${geometry.textMaxWidthMm}mm; display: flex; flex-direction: column; align-items: center; gap: 0.2mm; }
+              .label-price { font-size: ${priceFont}mm; font-weight: 800; }
+              .label-meta { font-size: ${typography.metaFontMm}mm; line-height: ${typography.metaLineHeightMm}mm; font-weight: 600; color: #444; display: flex; flex-direction: column; align-items: center; }
+            </style>
+          </head>
+          <body onload="window.print();">
+            <div class="print-label-card">
+              <div class="label-brand">ADUKALE</div>
+              <div class="label-name">ADUKALE MADDUR VADE</div>
+              <div class="label-barcode">${svgStr}</div>
+              <div class="label-footer">
+                <div class="label-price">₹395.00</div>
+                <div class="label-meta">
+                  <div>Lot: LOT-OPENING</div>
+                  <div>EXP: 03/12/2026</div>
+                </div>
+              </div>
+            </div>
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+    }
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.04)] space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3 border-b border-slate-100 pb-4">
@@ -40,7 +197,7 @@ export function PreferenceSettings() {
             Display & Client Preferences
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Customize personal workstation preferences and visual behaviors.
+            Workstation preferences, thermal printer drivers, and die-cut gap media configuration.
           </p>
         </div>
 
@@ -52,6 +209,7 @@ export function PreferenceSettings() {
         )}
       </div>
 
+      {/* 1. Visual Thumbnails */}
       <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -66,7 +224,7 @@ export function PreferenceSettings() {
                 Product Image Thumbnails
               </label>
               <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
-                Display product images in Product Master, Inventory, and POS Terminal grids. When disabled or unavailable, the product code fallback is shown.
+                Display product images in Product Master, Inventory, and POS Terminal grids.
               </p>
             </div>
           </div>
@@ -84,65 +242,171 @@ export function PreferenceSettings() {
         </div>
       </div>
 
-      <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
-        <div className="flex items-start justify-between gap-4">
+      {/* 2. Thermal Printer & Die-Cut Media Studio */}
+      <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-5">
+        <div className="flex items-start justify-between flex-wrap gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5">
               <Printer className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-slate-900">Printers & Labels</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900">Thermal Label Printer & Media</h3>
+                <Badge variant="brand" size="sm">
+                  {printerLanguage} Dialect
+                </Badge>
+              </div>
               <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
-                Set the default workstation printer media used by Product Master barcode labels.
+                Hardware driver, transmissive gap sensor, and physical die-cut media calibration.
               </p>
             </div>
           </div>
-          <div className="text-[11px] font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg whitespace-nowrap">
-            {selectedProfile.widthMm} x {selectedProfile.heightMm} mm
+
+          {/* Local Print Agent Status Pill */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${
+                agentHealth.connected
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-amber-50 text-amber-800 border-amber-200'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  agentHealth.connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                }`}
+              />
+              <span>{agentHealth.connected ? 'Print Agent: Connected' : 'Print Agent: Offline'}</span>
+              <button
+                type="button"
+                onClick={checkAgent}
+                disabled={isCheckingAgent}
+                title="Refresh Agent Connection"
+                className="p-0.5 hover:opacity-75"
+              >
+                <RefreshCw className={`w-3 h-3 ${isCheckingAgent ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Printer Model & Protocol Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
           <div className="space-y-1">
-            <label htmlFor="printer-name" className="text-xs font-semibold text-slate-700">
-              Printer Name
-            </label>
-            <Input
-              id="printer-name"
-              value={printerName}
+            <label className="text-xs font-semibold text-slate-700">Printer Model</label>
+            <Select
+              value={printerModelId || 'tvs_lp46_dlite'}
               disabled={!isPrinterLoaded}
-              onChange={(event) => {
-                setPrinterName(event.target.value);
-                handlePrinterPreferenceSaved();
-              }}
-              placeholder="Generic Thermal Printer"
+              onChange={(e) => handleModelChange(e.target.value)}
+              options={PRINTER_MODEL_PROFILES.map((p) => ({
+                value: p.id,
+                label: p.name
+              }))}
             />
           </div>
+
           <div className="space-y-1">
-            <label htmlFor="printer-type" className="text-xs font-semibold text-slate-700">
-              Printer Type
-            </label>
+            <label className="text-xs font-semibold text-slate-700">Native Command Dialect</label>
             <Select
-              id="printer-type"
-              value={printerType}
+              value={printerLanguage}
               disabled={!isPrinterLoaded}
-              onChange={(event) => {
-                setPrinterType(event.target.value);
+              onChange={(e) => {
+                updatePreferences({ printerLanguage: e.target.value as any });
                 handlePrinterPreferenceSaved();
               }}
               options={[
-                { value: 'Generic Thermal', label: 'Generic Thermal' },
-                { value: 'Zebra', label: 'Zebra' },
-                { value: 'Xprinter', label: 'Xprinter' },
-                { value: 'TSC', label: 'TSC' }
+                { value: 'TSPL-EZ', label: 'TSPL-EZ (TVS LP-46 Dlite)' },
+                { value: 'TSPL', label: 'TSPL (TSC / Standard)' },
+                { value: 'ZPL', label: 'ZPL II (Zebra)' },
+                { value: 'EPL', label: 'EPL (Eltron)' },
+                { value: 'BROWSER', label: 'Browser Engine (Standard HTML)' }
               ]}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700">Interface & Port</label>
+            <Input
+              value="USB (Auto-detected)"
+              disabled
+              className="bg-slate-50 text-slate-600 font-mono text-xs"
             />
           </div>
         </div>
 
+        {/* Media Type & Transmissive Sensor Mode */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-3.5 rounded-xl border border-slate-200">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+              <Radio className="w-3.5 h-3.5 text-blue-600" />
+              Media Format
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'DIE_CUT', label: 'Die-Cut Labels' },
+                { id: 'CONTINUOUS', label: 'Continuous' },
+                { id: 'BLACK_MARK', label: 'Black Mark' }
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => {
+                    updatePreferences({ mediaType: m.id as any });
+                    handlePrinterPreferenceSaved();
+                  }}
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                    mediaType === m.id
+                      ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold ring-1 ring-blue-500'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-indigo-600" />
+              Sensor Sensing Mode
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'GAP', label: 'Transmissive Gap' },
+                { id: 'BLACK_MARK', label: 'Reflective Mark' },
+                { id: 'CONTINUOUS', label: 'No Sensor' }
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    updatePreferences({ sensorMode: s.id as any });
+                    handlePrinterPreferenceSaved();
+                  }}
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                    sensorMode === s.id
+                      ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold ring-1 ring-indigo-500'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Physical Label Media Presets & Custom Dimensions */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-700">Default Label Media</label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-700">Label Roll Dimensions</label>
+            <span className="text-[11px] text-slate-500">
+              Active: <strong className="text-slate-900 font-mono">{selectedProfile.widthMm} x {selectedProfile.heightMm} mm</strong> (Gap: {gapMm} mm)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
             {[...LABEL_PROFILE_PRESETS, customProfile].map((profile) => {
               const isSelected = selectedProfileId === profile.id;
               return (
@@ -159,7 +423,7 @@ export function PreferenceSettings() {
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                   }`}
                 >
-                  <span className="block text-xs font-bold">{profile.name}</span>
+                  <span className="block text-xs font-bold truncate">{profile.name}</span>
                   <span className="block text-[10px] font-mono text-slate-500">
                     {profile.widthMm} x {profile.heightMm} mm
                   </span>
@@ -169,142 +433,183 @@ export function PreferenceSettings() {
           </div>
         </div>
 
-        {selectedProfileId === 'custom' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border-t border-slate-200 pt-4">
-            {([
-              ['Width (mm)', 'widthMm', 20, 160],
-              ['Height (mm)', 'heightMm', 15, 120],
-              ['Margin Top (mm)', 'marginTopMm', 0, 20],
-              ['Margin Right (mm)', 'marginRightMm', 0, 20],
-              ['Margin Bottom (mm)', 'marginBottomMm', 0, 20],
-              ['Margin Left (mm)', 'marginLeftMm', 0, 20],
-              ['DPI', 'dpi', 152, 600]
-            ] as const).map(([label, key, min, max]) => (
-              <div key={String(key)} className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-700">{label}</label>
-                <Input
-                  type="number"
-                  min={Number(min)}
-                  max={Number(max)}
-                  value={Number(customProfile[key as keyof typeof customProfile]) || ''}
-                  onChange={(event) => {
-                    setCustomProfile({
-                      ...customProfile,
-                      [key]: Number(event.target.value)
-                    });
-                    handlePrinterPreferenceSaved();
-                  }}
-                  className="text-xs"
-                />
-              </div>
-            ))}
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-700">Orientation</label>
-              <Select
-                value={customProfile.orientation}
-                onChange={(event) => {
-                  setCustomProfile({
-                    ...customProfile,
-                    orientation: event.target.value as 'portrait' | 'landscape'
-                  });
-                  handlePrinterPreferenceSaved();
-                }}
-                options={[
-                  { value: 'portrait', label: 'Portrait' },
-                  { value: 'landscape', label: 'Landscape' }
-                ]}
-                className="text-xs"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Action Controls: Test Print & Live Simulator */}
-        <div className="pt-3 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3">
-          <div className="text-xs text-slate-500">
-            Active Media: <strong className="text-slate-800 font-mono">{selectedProfile.widthMm} x {selectedProfile.heightMm} mm</strong> ({selectedProfile.dpi || 203} DPI)
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const sampleBarcode = '890609529642';
-                const { calculateLabelGeometry, calculateLabelTypography, calculateBarcodeFit, calculateTextFit } = require('../../../lib/utils/labelProfiles');
-                const { generateBarcodeSvg } = require('../../../lib/utils/barcode');
-                const geometry = calculateLabelGeometry(selectedProfile);
-                const typography = calculateLabelTypography(selectedProfile);
-                const fit = calculateBarcodeFit(sampleBarcode, selectedProfile);
-                const svgStr = generateBarcodeSvg(sampleBarcode, {
-                  width: fit.moduleWidthPx,
-                  height: fit.barHeightPx,
-                  includeText: selectedProfile.showBarcodeValue,
-                  fontSize: fit.fontSizePx,
-                  quietZone: fit.quietZoneModules
-                });
-                const prodFont = calculateTextFit('ADUKALE MADDUR VADE', geometry.textMaxWidthMm, typography.productFontMm);
-                const priceFont = calculateTextFit('₹395.00', geometry.textMaxWidthMm, typography.priceFontMm, 2);
-
-                const printWindow = window.open('', '_blank');
-                if (printWindow) {
-                  printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                      <title>Test Label - ${selectedProfile.name}</title>
-                      <style>
-                        @page { size: ${geometry.widthMm}mm ${geometry.heightMm}mm; margin: 0; }
-                        * { box-sizing: border-box; margin: 0; padding: 0; }
-                        body { font-family: system-ui, sans-serif; color: #000; background: #fff; }
-                        .print-label-card {
-                          width: ${geometry.widthMm}mm;
-                          height: ${geometry.heightMm}mm;
-                          padding: ${selectedProfile.marginTopMm}mm ${selectedProfile.marginRightMm}mm ${selectedProfile.marginBottomMm}mm ${selectedProfile.marginLeftMm}mm;
-                          display: flex;
-                          flex-direction: column;
-                          align-items: center;
-                          justify-content: center;
-                          gap: ${typography.rowGapMm}mm;
-                          text-align: center;
-                          background: #fff;
-                          overflow: hidden;
-                        }
-                        .label-brand { font-size: ${typography.brandFontMm}mm; font-weight: 700; text-transform: uppercase; color: #444; }
-                        .label-name { font-size: ${prodFont}mm; line-height: ${typography.productLineHeightMm}mm; font-weight: 700; }
-                        .label-barcode { width: ${geometry.barcodeMaxWidthMm}mm; max-height: ${geometry.barcodeMaxHeightMm + 4}mm; display: flex; justify-content: center; align-items: center; }
-                        .label-barcode svg { width: ${fit.displayWidthMm}mm; max-width: 100%; height: auto; }
-                        .label-footer { width: ${geometry.textMaxWidthMm}mm; display: flex; flex-direction: column; align-items: center; gap: 0.2mm; }
-                        .label-price { font-size: ${priceFont}mm; font-weight: 800; }
-                        .label-meta { font-size: ${typography.metaFontMm}mm; line-height: ${typography.metaLineHeightMm}mm; font-weight: 600; color: #444; display: flex; flex-direction: column; align-items: center; }
-                      </style>
-                    </head>
-                    <body onload="window.print();">
-                      <div class="print-label-card">
-                        <div class="label-brand">ADUKALE</div>
-                        <div class="label-name">ADUKALE MADDUR VADE</div>
-                        <div class="label-barcode">${svgStr}</div>
-                        <div class="label-footer">
-                          <div class="label-price">₹395.00</div>
-                          <div class="label-meta">
-                            <div>Lot: LOT-OPENING</div>
-                            <div>EXP: 03/12/2026</div>
-                          </div>
-                        </div>
-                      </div>
-                    </body>
-                    </html>
-                  `);
-                  printWindow.document.close();
-                }
+        {/* Full Manual Dimensions & Offsets */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-slate-700">Label Width (mm)</label>
+            <Input
+              type="number"
+              min={20}
+              max={160}
+              value={selectedProfileId === 'custom' ? customProfile.widthMm : selectedProfile.widthMm}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setCustomProfile({ ...customProfile, widthMm: val });
+                setSelectedProfileId('custom');
+                handlePrinterPreferenceSaved();
               }}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              className="text-xs"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-slate-700">Label Height (mm)</label>
+            <Input
+              type="number"
+              min={15}
+              max={120}
+              value={selectedProfileId === 'custom' ? customProfile.heightMm : selectedProfile.heightMm}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setCustomProfile({ ...customProfile, heightMm: val });
+                setSelectedProfileId('custom');
+                handlePrinterPreferenceSaved();
+              }}
+              className="text-xs"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-slate-700">Inter-Label Gap (mm)</label>
+            <Input
+              type="number"
+              min={0}
+              max={20}
+              step={0.5}
+              value={gapMm}
+              onChange={(e) => {
+                updatePreferences({ gapMm: Number(e.target.value) });
+                handlePrinterPreferenceSaved();
+              }}
+              className="text-xs"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-slate-700">X Offset (mm)</label>
+            <Input
+              type="number"
+              min={-10}
+              max={10}
+              step={0.5}
+              value={xOffsetMm}
+              onChange={(e) => {
+                updatePreferences({ xOffsetMm: Number(e.target.value) });
+                handlePrinterPreferenceSaved();
+              }}
+              className="text-xs"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-slate-700">Y Offset (mm)</label>
+            <Input
+              type="number"
+              min={-10}
+              max={10}
+              step={0.5}
+              value={yOffsetMm}
+              onChange={(e) => {
+                updatePreferences({ yOffsetMm: Number(e.target.value) });
+                handlePrinterPreferenceSaved();
+              }}
+              className="text-xs"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-slate-700">Resolution (DPI)</label>
+            <Select
+              value={String(selectedProfile.dpi || 203)}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setCustomProfile({ ...customProfile, dpi: val });
+                setSelectedProfileId('custom');
+                handlePrinterPreferenceSaved();
+              }}
+              options={[
+                { value: '203', label: '203 DPI (8 dots/mm - Standard TVS)' },
+                { value: '300', label: '300 DPI (12 dots/mm)' },
+                { value: '600', label: '600 DPI (24 dots/mm)' }
+              ]}
+              className="text-xs"
+            />
+          </div>
+        </div>
+
+        {/* Calibration & Test Print Workflow Box */}
+        <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-blue-700" />
+              <h4 className="text-xs font-bold text-blue-950 uppercase tracking-wider">
+                Printer Gap Calibration & Hardware Diagnostics
+              </h4>
+            </div>
+            {actionStatus && (
+              <span className="text-xs font-semibold text-blue-800 bg-white px-2 py-0.5 rounded border border-blue-200 animate-fade-in">
+                {actionStatus}
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-slate-600 leading-relaxed">
+            1. Load the physical die-cut label roll into TVS LP-46 Dlite and close cover.{' '}
+            2. Measure physical label width, height, and inter-label gap (e.g. 58x40mm with 2mm gap).{' '}
+            3. Press <strong>Calibrate</strong> so the transmissive sensor locks the label gap boundary.{' '}
+            4. Press <strong>Feed</strong> to verify 1 single label advances cleanly.{' '}
+            5. Run <strong>Test Print</strong> to confirm scan-readiness and alignment.
+          </p>
+
+          <div className="flex items-center gap-2.5 pt-1 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={triggerCalibrate}
+              className="gap-1.5 bg-white text-slate-800 hover:bg-slate-50 border-slate-300"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+              Calibrate Sensor
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={triggerFeed}
+              className="gap-1.5 bg-white text-slate-800 hover:bg-slate-50 border-slate-300"
+            >
+              <Play className="w-3.5 h-3.5 text-indigo-600" />
+              Feed 1 Label
+            </Button>
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={triggerTestPrint}
+              className="gap-1.5 shadow-2xs"
             >
               <Printer className="w-3.5 h-3.5" />
               Test Print
-            </button>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                updatePreferences({
+                  ...TVS_LP46_DLITE_PROFILE,
+                  selectedProfileId: 'label_58x40'
+                });
+                handlePrinterPreferenceSaved();
+              }}
+              className="text-xs ml-auto"
+            >
+              Reset to TVS LP-46 Default
+            </Button>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
