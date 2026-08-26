@@ -151,9 +151,13 @@ export interface ProductBatchDoc {
 }
 
 export type BarcodeLabelTemplate =
-  | 'standard_shelf' // 50mm x 30mm standard retail shelf tag
-  | 'sticker_38x25'   // 38mm x 25mm barcode sticker
-  | 'compact_tag';    // 25mm x 15mm compact price tag
+  | 'label_58x30'
+  | 'label_58x40'
+  | 'label_60x40'
+  | 'label_70x40'
+  | 'label_80x50'
+  | 'label_100x50'
+  | 'custom';
 
 export interface PrintBarcodeConfig {
   productId: string;

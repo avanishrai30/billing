@@ -246,14 +246,13 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     await expect(page.getByText('🏢 Manufacturer').first()).toBeVisible();
     await expect(page.getByText('Barcode: 8901234567890')).toBeVisible();
 
-    // Verify 3 Template Cards exist
-    await expect(page.getByText('Standard Shelf Tag').first()).toBeVisible();
-    await expect(page.getByText('Product Sticker').first()).toBeVisible();
-    await expect(page.getByText('Compact Tag').first()).toBeVisible();
+    // Verify Preset Media Profiles exist
+    await expect(page.getByText('58 x 40 mm').first()).toBeVisible();
+    await expect(page.getByText('80 x 50 mm').first()).toBeVisible();
 
-    // Click Product Sticker template card
-    await page.getByText('Product Sticker').first().click();
-    await expect(page.getByText('38 × 25 mm').first()).toBeVisible();
+    // Click 80 x 50 mm profile card
+    await page.getByText('80 x 50 mm').first().click();
+    await expect(page.getByText('80 x 50 mm').first()).toBeVisible();
 
     // Quantity Stepper: increase to 5
     const plusBtn = page.getByRole('button', { name: 'Increase label quantity' });
@@ -409,5 +408,37 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     await expect(simulator.getByText('Lot: LOT-2026-08')).toBeVisible();
     await expect(simulator.getByText('EXP: 2027-08-31')).toBeVisible();
   });
+
+  test('8. Auto-sizing Barcode Label & Printer Profile switching (58x30, 58x40, 80x50, Custom)', async ({ page }) => {
+    const printBtn = page.locator('button[aria-label="Print barcode for A2 Gir Cow Cultured Ghee 500ml"]');
+    await expect(printBtn).toBeVisible({ timeout: 10000 });
+    await printBtn.click();
+
+    // 1. Initial 58x40 mm profile
+    await expect(page.getByText('58 x 40 mm').first()).toBeVisible();
+    await expect(page.getByText('Live Print Simulator')).toBeVisible();
+
+    // 2. Select 58x30 mm profile
+    await page.getByText('58 x 30 mm').first().click();
+    await expect(page.getByText('58 x 30 mm').first()).toBeVisible();
+
+    // 3. Select 80x50 mm profile
+    await page.getByText('80 x 50 mm').first().click();
+    await expect(page.getByText('80 x 50 mm').first()).toBeVisible();
+
+    // 4. Select Custom profile
+    await page.getByRole('dialog').getByText('Custom', { exact: true }).click();
+    await expect(page.getByText('Custom media').first()).toBeVisible();
+
+    // 5. Toggle Price and Brand fields
+    const priceToggle = page.getByRole('button', { name: /Price/i });
+    await priceToggle.click(); // toggle off
+    await priceToggle.click(); // toggle on
+
+    // 6. Verify print action button is ready
+    const printActionBtn = page.getByRole('button', { name: /Print \d+ Label/i });
+    await expect(printActionBtn).toBeEnabled();
+  });
 });
+
 

@@ -8,6 +8,16 @@ import {
   CODE_SWITCH_TO_C,
   STOP_CODE
 } from '../../lib/utils/barcode';
+import {
+  calculateBarcodeFit,
+  calculateLabelGeometry,
+  calculateLabelScale,
+  calculateLabelTypography,
+  calculateTextFit,
+  LABEL_PROFILE_PRESETS,
+  mmToPx,
+  pxToMm
+} from '../../lib/utils/labelProfiles';
 
 describe('Code 128 Auto Barcode Vector Engine (ISO/IEC 15417)', () => {
   it('1. Correctly selects Start B for alphanumeric and short numeric codes', () => {
@@ -63,3 +73,119 @@ describe('Code 128 Auto Barcode Vector Engine (ISO/IEC 15417)', () => {
     expect(generateBarcodeSvg('   ')).toBe('');
   });
 });
+
+describe('Printer Profile Label Geometry', () => {
+  it('calculates printable geometry from physical millimeter media', () => {
+    const profile = LABEL_PROFILE_PRESETS.find((preset) => preset.id === 'label_58x40')!;
+    const geometry = calculateLabelGeometry(profile);
+
+    expect(geometry.widthMm).toBe(58);
+    expect(geometry.heightMm).toBe(40);
+    expect(geometry.printableWidthMm).toBe(53);
+    expect(geometry.printableHeightMm).toBe(35);
+    expect(geometry.barcodeMaxWidthMm).toBeLessThanOrEqual(geometry.contentWidthMm);
+  });
+
+  it('supports every required standard preset and custom-sized geometry', () => {
+    const ids = LABEL_PROFILE_PRESETS.map((preset) => preset.id);
+
+    expect(ids).toEqual([
+      'label_58x30',
+      'label_58x40',
+      'label_60x40',
+      'label_70x40',
+      'label_80x50',
+      'label_100x50'
+    ]);
+
+    const custom = calculateLabelGeometry({
+      ...LABEL_PROFILE_PRESETS[1],
+      id: 'custom',
+      name: 'Custom',
+      widthMm: 72,
+      heightMm: 38,
+      marginLeftMm: 3,
+      marginRightMm: 3,
+      marginTopMm: 2,
+      marginBottomMm: 2
+    });
+
+    expect(custom.widthMm).toBe(72);
+    expect(custom.heightMm).toBe(38);
+    expect(custom.printableWidthMm).toBe(66);
+  });
+
+  it('converts millimeters and pixels using the selected printer DPI', () => {
+    const px = mmToPx(25.4, 203);
+
+    expect(px).toBeCloseTo(203, 5);
+    expect(pxToMm(px, 203)).toBeCloseTo(25.4, 5);
+  });
+
+  it('calculates scan-safe barcode fit and warns when module width is too small', () => {
+    const safeFit = calculateBarcodeFit('890609529642', LABEL_PROFILE_PRESETS[1]);
+    const unsafeFit = calculateBarcodeFit('AIA-VERY-LONG-BARCODE-VALUE-THAT-CANNOT-FIT', {
+      ...LABEL_PROFILE_PRESETS[0],
+      widthMm: 25,
+      heightMm: 15,
+      marginLeftMm: 2,
+      marginRightMm: 2
+    });
+
+    expect(safeFit.safe).toBe(true);
+    expect(safeFit.moduleWidthPx).toBeGreaterThan(0);
+    expect(unsafeFit.safe).toBe(false);
+    expect(unsafeFit.warnings[0]).toContain('Barcode cannot safely fit');
+  });
+
+  it('fits long product names and keeps screen preview proportional', () => {
+    const profile = LABEL_PROFILE_PRESETS[0];
+    const geometry = calculateLabelGeometry(profile);
+    const type = calculateLabelTypography(profile);
+    const fittedFont = calculateTextFit(
+      'Extra Long Organic Product Name With Multiple Descriptors 500ml',
+      geometry.textMaxWidthMm,
+      type.productFontMm
+    );
+    const scale = calculateLabelScale(profile, 300, 220);
+
+    expect(fittedFont).toBeLessThanOrEqual(type.productFontMm);
+    expect(fittedFont).toBeGreaterThanOrEqual(1.45);
+    expect(scale).toBeGreaterThan(0);
+  });
+
+  it('preserves aspect ratio without distortion across all 6 presets', () => {
+    const presets = LABEL_PROFILE_PRESETS;
+    for (const preset of presets) {
+      const fit = calculateBarcodeFit('890609529642', preset);
+      const geometry = calculateLabelGeometry(preset);
+
+      expect(fit.displayWidthMm).toBeLessThanOrEqual(geometry.printableWidthMm);
+      expect(fit.displayHeightMm).toBeLessThanOrEqual(geometry.printableHeightMm);
+      expect(fit.safe).toBe(true);
+      expect(fit.barHeightPx).toBeGreaterThan(0);
+    }
+  });
+
+  it('handles short barcodes gracefully without exceeding max module width', () => {
+    const fitShort = calculateBarcodeFit('1234', LABEL_PROFILE_PRESETS[1]);
+    const fitStandard = calculateBarcodeFit('890609529642', LABEL_PROFILE_PRESETS[1]);
+
+    expect(fitShort.safe).toBe(true);
+    expect(fitShort.moduleWidthPx).toBeLessThanOrEqual(mmToPx(0.66, 203));
+    expect(fitShort.displayWidthMm).toBeLessThanOrEqual(fitStandard.displayWidthMm);
+  });
+
+  it('calculates landscape orientation geometry correctly', () => {
+    const landscapeProfile = {
+      ...LABEL_PROFILE_PRESETS[1],
+      orientation: 'landscape' as const
+    };
+    const geometry = calculateLabelGeometry(landscapeProfile);
+
+    expect(geometry.widthMm).toBeGreaterThanOrEqual(geometry.heightMm);
+    expect(geometry.widthMm).toBe(58);
+    expect(geometry.heightMm).toBe(40);
+  });
+});
+

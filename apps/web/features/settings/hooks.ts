@@ -3,6 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsApi } from './api';
 import type { SaveBrandingPayload, StoreProfileFormValues } from './types';
 import { storeQueryKeys } from '../stores/hooks';
+import {
+  DEFAULT_LABEL_PROFILE_ID,
+  LABEL_PROFILE_STORAGE_KEY,
+  CUSTOM_LABEL_PROFILE,
+  getLabelProfileById,
+  normalizeLabelProfile,
+  type LabelProfile
+} from '../../lib/utils/labelProfiles';
 
 export const settingsQueryKeys = {
   all: ['settings'] as const,
@@ -94,6 +102,118 @@ export function useVisualPreferences() {
   return {
     showProductImages,
     setShowProductImages,
+    isLoaded
+  };
+}
+
+/**
+ * Custom hook for workstation printer and label media preferences.
+ */
+export function usePrinterLabelPreferences() {
+  const [selectedProfileId, setSelectedProfileIdState] = useState<string>(DEFAULT_LABEL_PROFILE_ID);
+  const [customProfile, setCustomProfileState] = useState<LabelProfile>(CUSTOM_LABEL_PROFILE);
+  const [printerName, setPrinterNameState] = useState<string>('Generic Thermal Printer');
+  const [printerType, setPrinterTypeState] = useState<string>('Generic Thermal');
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LABEL_PROFILE_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as {
+          selectedProfileId?: string;
+          customProfile?: LabelProfile;
+          printerName?: string;
+          printerType?: string;
+        };
+        if (parsed.selectedProfileId) {
+          setSelectedProfileIdState(parsed.selectedProfileId);
+        }
+        if (parsed.customProfile) {
+          setCustomProfileState(normalizeLabelProfile({ ...CUSTOM_LABEL_PROFILE, ...parsed.customProfile }));
+        }
+        if (parsed.printerName) {
+          setPrinterNameState(parsed.printerName);
+        }
+        if (parsed.printerType) {
+          setPrinterTypeState(parsed.printerType);
+        }
+      }
+    } catch {
+      // Ignore localStorage exceptions in private browsing
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  const persist = useCallback((next: {
+    selectedProfileId: string;
+    customProfile: LabelProfile;
+    printerName: string;
+    printerType: string;
+  }) => {
+    try {
+      localStorage.setItem(LABEL_PROFILE_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const selectedProfile = selectedProfileId === 'custom'
+    ? customProfile
+    : getLabelProfileById(selectedProfileId);
+
+  const setSelectedProfileId = useCallback((nextId: string) => {
+    setSelectedProfileIdState(nextId);
+    persist({
+      selectedProfileId: nextId,
+      customProfile,
+      printerName,
+      printerType
+    });
+  }, [customProfile, persist, printerName, printerType]);
+
+  const setCustomProfile = useCallback((nextProfile: LabelProfile) => {
+    const normalized = normalizeLabelProfile({ ...CUSTOM_LABEL_PROFILE, ...nextProfile, id: 'custom', name: 'Custom' });
+    setCustomProfileState(normalized);
+    persist({
+      selectedProfileId,
+      customProfile: normalized,
+      printerName,
+      printerType
+    });
+  }, [persist, printerName, printerType, selectedProfileId]);
+
+  const setPrinterName = useCallback((nextName: string) => {
+    setPrinterNameState(nextName);
+    persist({
+      selectedProfileId,
+      customProfile,
+      printerName: nextName,
+      printerType
+    });
+  }, [customProfile, persist, printerType, selectedProfileId]);
+
+  const setPrinterType = useCallback((nextType: string) => {
+    setPrinterTypeState(nextType);
+    persist({
+      selectedProfileId,
+      customProfile,
+      printerName,
+      printerType: nextType
+    });
+  }, [customProfile, persist, printerName, selectedProfileId]);
+
+  return {
+    selectedProfileId,
+    selectedProfile: normalizeLabelProfile(selectedProfile),
+    customProfile,
+    printerName,
+    printerType,
+    setSelectedProfileId,
+    setCustomProfile,
+    setPrinterName,
+    setPrinterType,
     isLoaded
   };
 }

@@ -3,19 +3,14 @@
 import React, { useState, useMemo } from 'react';
 import {
   Printer,
-  Barcode as BarcodeIcon,
   Layers,
-  Calendar,
   AlertCircle,
   Plus,
   Minus,
   Tag,
   Sparkles,
   Check,
-  Building2,
-  SlidersHorizontal,
-  Package,
-  Scale
+  SlidersHorizontal
 } from 'lucide-react';
 import {
   Dialog,
@@ -27,13 +22,23 @@ import {
 } from '../../../components/ui';
 import { generateBarcodeSvg } from '../../../lib/utils/barcode';
 import {
+  calculateBarcodeFit,
+  calculateLabelGeometry,
+  calculateLabelScale,
+  calculateLabelTypography,
+  calculateTextFit,
+  LABEL_PROFILE_PRESETS,
+  type LabelProfile
+} from '../../../lib/utils/labelProfiles';
+import { usePrinterLabelPreferences } from '../../settings/hooks';
+import {
   useProductBatchesQuery,
   useProductDetailQuery,
   useCreateProductBatchMutation,
   useGenerateBarcodeMutation,
   useSaveProductMutation
 } from '../hooks';
-import type { ProductDoc, ProductBatchDoc, BarcodeLabelTemplate } from '../types';
+import type { ProductDoc, ProductBatchDoc } from '../types';
 
 export interface ProductPrintBarcodeDialogProps {
   isOpen: boolean;
@@ -41,37 +46,13 @@ export interface ProductPrintBarcodeDialogProps {
   product: ProductDoc | null;
 }
 
-interface TemplateMeta {
-  id: BarcodeLabelTemplate;
-  name: string;
-  dimensions: string;
-  description: string;
-  aspectRatio: string;
-}
-
-const TEMPLATES: TemplateMeta[] = [
-  {
-    id: 'standard_shelf',
-    name: 'Standard Shelf Tag',
-    dimensions: '50 × 30 mm',
-    description: 'Retail shelf tag with price, brand, and barcode',
-    aspectRatio: '5 / 3'
-  },
-  {
-    id: 'sticker_38x25',
-    name: 'Product Sticker',
-    dimensions: '38 × 25 mm',
-    description: 'Adhesive label for jars, boxes & bottles',
-    aspectRatio: '3.8 / 2.5'
-  },
-  {
-    id: 'compact_tag',
-    name: 'Compact Tag',
-    dimensions: '25 × 15 mm',
-    description: 'Mini price tag for small retail items',
-    aspectRatio: '2.5 / 1.5'
-  }
-];
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 
 export function ProductPrintBarcodeDialog({
   isOpen,
@@ -87,11 +68,19 @@ export function ProductPrintBarcodeDialog({
   const createBatchMutation = useCreateProductBatchMutation();
   const generateBarcodeMutation = useGenerateBarcodeMutation();
   const saveProductMutation = useSaveProductMutation();
+  const {
+    selectedProfileId,
+    selectedProfile,
+    customProfile,
+    printerName,
+    printerType,
+    setSelectedProfileId,
+    setCustomProfile
+  } = usePrinterLabelPreferences();
 
   // Print Configuration State
   const [selectedBatchId, setSelectedBatchId] = useState<string>('none');
   const [quantity, setQuantity] = useState<number>(3);
-  const [template, setTemplate] = useState<BarcodeLabelTemplate>('standard_shelf');
   const [showPrice, setShowPrice] = useState<boolean>(true);
   const [showLotExpiry, setShowLotExpiry] = useState<boolean>(true);
   const [showBrand, setShowBrand] = useState<boolean>(true);
@@ -151,9 +140,17 @@ export function ProductPrintBarcodeDialog({
     return (skuExpiryInput.trim() || productDefaultExpiry);
   }, [isBatchSelected, selectedBatch, skuExpiryInput, productDefaultExpiry]);
 
-  const currentTemplateMeta = useMemo(() => {
-    return TEMPLATES.find((t) => t.id === template) || TEMPLATES[0];
-  }, [template]);
+  const effectiveProfile = useMemo<LabelProfile>(() => ({
+    ...selectedProfile,
+    showPrice: selectedProfile.showPrice && showPrice,
+    showLot: selectedProfile.showLot && showLotExpiry,
+    showExpiry: selectedProfile.showExpiry && showLotExpiry
+  }), [selectedProfile, showLotExpiry, showPrice]);
+
+  const labelGeometry = useMemo(() => calculateLabelGeometry(effectiveProfile), [effectiveProfile]);
+  const labelTypography = useMemo(() => calculateLabelTypography(effectiveProfile), [effectiveProfile]);
+  const barcodeFit = useMemo(() => calculateBarcodeFit(assignedBarcode, effectiveProfile), [assignedBarcode, effectiveProfile]);
+  const previewScale = useMemo(() => calculateLabelScale(effectiveProfile, 300, 220), [effectiveProfile]);
 
   const handleOpenAddBatch = () => {
     setIsAddingBatch(true);
@@ -281,12 +278,18 @@ export function ProductPrintBarcodeDialog({
       return;
     }
 
+    if (!barcodeFit.safe) {
+      toastError('Barcode Cannot Safely Fit', barcodeFit.warnings[0] || 'Choose a larger label before printing.');
+      return;
+    }
+
     const labelCount = Math.min(Math.max(1, quantity), 100);
     const barcodeSvgStr = generateBarcodeSvg(assignedBarcode, {
-      width: template === 'compact_tag' ? 1.1 : 1.4,
-      height: template === 'compact_tag' ? 26 : 36,
-      includeText: true,
-      fontSize: 10
+      width: barcodeFit.moduleWidthPx,
+      height: barcodeFit.barHeightPx,
+      includeText: effectiveProfile.showBarcodeValue,
+      fontSize: barcodeFit.fontSizePx,
+      quietZone: barcodeFit.quietZoneModules
     });
 
     const lotText = selectedBatch?.lotNumber ? `Lot: ${selectedBatch.lotNumber}` : '';
@@ -294,24 +297,30 @@ export function ProductPrintBarcodeDialog({
     const metaParts = [];
     if (selectedBatch?.lotNumber) metaParts.push(lotText);
     if (effectiveExpiry) metaParts.push(expText);
-    const metaText = metaParts.join(' • ');
-
     const priceText = showPrice
       ? `₹${(product.sellingPrice || product.price || 0).toFixed(2)}${product.sellingMode === 'loose' ? ` / ${product.unit || 'kg'}` : ''}`
       : '';
     const brandText = showBrand ? (product.brand || "VC ORGANIC'S") : '';
+    const productFontMm = calculateTextFit(product.name, labelGeometry.textMaxWidthMm, labelTypography.productFontMm);
+    const priceFontMm = priceText
+      ? calculateTextFit(priceText, labelGeometry.textMaxWidthMm, labelTypography.priceFontMm, 2)
+      : labelTypography.priceFontMm;
 
     let labelCardsHtml = '';
     for (let i = 0; i < labelCount; i++) {
       labelCardsHtml += `
-        <div class="print-label-card template-${template}">
-          ${brandText ? `<div class="label-brand">${brandText}</div>` : ''}
-          <div class="label-name">${product.name}</div>
-          <div class="label-sku">SKU: ${product.sku}</div>
+        <div class="print-label-card ${i === labelCount - 1 ? 'is-last' : ''}">
+          ${brandText ? `<div class="label-brand">${escapeHtml(brandText)}</div>` : ''}
+          <div class="label-name">${escapeHtml(product.name)}</div>
           <div class="label-barcode">${barcodeSvgStr}</div>
           <div class="label-footer">
-            ${priceText ? `<div class="label-price">${priceText}</div>` : ''}
-            ${showLotExpiry && metaText ? `<div class="label-meta">${metaText}</div>` : ''}
+            ${priceText ? `<div class="label-price">${escapeHtml(priceText)}</div>` : ''}
+            ${showLotExpiry && (selectedBatch?.lotNumber || effectiveExpiry) ? `
+              <div class="label-meta">
+                ${selectedBatch?.lotNumber ? `<div class="label-meta-item">Lot: ${escapeHtml(selectedBatch.lotNumber)}</div>` : ''}
+                ${effectiveExpiry ? `<div class="label-meta-item">EXP: ${escapeHtml(effectiveExpiry)}</div>` : ''}
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -331,8 +340,8 @@ export function ProductPrintBarcodeDialog({
         <meta charset="utf-8">
         <style>
           @page {
-            margin: 4mm;
-            size: auto;
+            size: ${labelGeometry.widthMm}mm ${labelGeometry.heightMm}mm;
+            margin: 0;
           }
           * {
             box-sizing: border-box;
@@ -343,75 +352,104 @@ export function ProductPrintBarcodeDialog({
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: #000;
             background: #fff;
-            padding: 10px;
+            padding: 0;
           }
           .labels-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 8px;
+            display: block;
           }
           .print-label-card {
-            border: 1px dashed #bbb;
-            border-radius: 4px;
-            padding: 8px;
+            width: ${labelGeometry.widthMm}mm;
+            height: ${labelGeometry.heightMm}mm;
+            padding: ${effectiveProfile.marginTopMm}mm ${effectiveProfile.marginRightMm}mm ${effectiveProfile.marginBottomMm}mm ${effectiveProfile.marginLeftMm}mm;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            gap: ${labelTypography.rowGapMm}mm;
             text-align: center;
             background: #fff;
+            overflow: hidden;
             page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: always;
+          }
+          .print-label-card.is-last {
+            page-break-after: auto;
           }
           .label-brand {
-            font-size: 8px;
+            font-size: ${labelTypography.brandFontMm}mm;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
             color: #444;
-          }
-          .label-name {
-            font-size: 11px;
-            font-weight: 700;
-            margin: 2px 0;
-            max-width: 100%;
+            max-width: ${labelGeometry.textMaxWidthMm}mm;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
+          .label-name {
+            font-size: ${productFontMm}mm;
+            line-height: ${labelTypography.productLineHeightMm}mm;
+            font-weight: 700;
+            max-width: ${labelGeometry.textMaxWidthMm}mm;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+          }
           .label-sku {
-            font-size: 9px;
+            font-size: ${labelTypography.skuFontMm}mm;
             font-family: monospace;
             color: #555;
+            max-width: ${labelGeometry.textMaxWidthMm}mm;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
           .label-barcode {
-            margin: 4px 0;
-            width: 100%;
+            width: ${labelGeometry.barcodeMaxWidthMm}mm;
+            max-height: ${labelGeometry.barcodeMaxHeightMm + 4}mm;
             display: flex;
             justify-content: center;
+            align-items: center;
+            overflow: hidden;
+          }
+          .label-barcode svg {
+            width: ${barcodeFit.displayWidthMm}mm;
+            max-width: 100%;
+            height: auto;
           }
           .label-footer {
-            width: 100%;
+            width: ${labelGeometry.textMaxWidthMm}mm;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
-            margin-top: 2px;
+            gap: ${Math.max(0.35, labelTypography.rowGapMm * 0.55)}mm;
+            overflow: hidden;
           }
           .label-price {
-            font-size: 12px;
+            font-size: ${priceFontMm}mm;
             font-weight: 800;
             color: #000;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.05;
+            max-width: ${labelGeometry.textMaxWidthMm}mm;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
           .label-meta {
-            font-size: 8px;
+            font-size: ${labelTypography.metaFontMm}mm;
+            line-height: ${labelTypography.metaLineHeightMm}mm;
             font-weight: 600;
             color: #444;
+            max-width: ${labelGeometry.textMaxWidthMm}mm;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
           @media print {
-            body {
-              padding: 0;
-            }
             .print-label-card {
-              border: 1px dotted #ccc;
+              border: 0;
             }
           }
         </style>
@@ -428,26 +466,51 @@ export function ProductPrintBarcodeDialog({
   // Footer summary text
   const footerSummary = useMemo(() => {
     const parts = [
-      currentTemplateMeta.name,
-      currentTemplateMeta.dimensions,
+      selectedProfile.name,
+      `${labelGeometry.widthMm} x ${labelGeometry.heightMm} mm`,
       selectedBatch
         ? `Batch ${selectedBatch.lotNumber}`
         : (productDefaultExpiry ? `Default EXP ${productDefaultExpiry}` : 'Master Barcode'),
       `${quantity} Label${quantity > 1 ? 's' : ''}`
     ];
     return parts.join(' • ');
-  }, [currentTemplateMeta, selectedBatch, productDefaultExpiry, quantity]);
+  }, [labelGeometry.heightMm, labelGeometry.widthMm, productDefaultExpiry, quantity, selectedBatch, selectedProfile.name]);
 
   if (!product) return null;
 
   const livePreviewSvg = hasAssignedBarcode
     ? generateBarcodeSvg(assignedBarcode, {
-        width: template === 'compact_tag' ? 1.15 : 1.4,
-        height: template === 'compact_tag' ? 26 : 38,
-        includeText: true,
-        fontSize: 11
+        width: barcodeFit.moduleWidthPx,
+        height: barcodeFit.barHeightPx,
+        includeText: effectiveProfile.showBarcodeValue,
+        fontSize: barcodeFit.fontSizePx,
+        quietZone: barcodeFit.quietZoneModules
       })
     : '';
+
+  const previewLotText = selectedBatch?.lotNumber ? `Lot: ${selectedBatch.lotNumber}` : '';
+  const previewExpText = effectiveExpiry ? `EXP: ${effectiveExpiry}` : '';
+  const previewMetaText = [previewLotText, previewExpText].filter(Boolean).join(' • ');
+  const previewPriceText = showPrice
+    ? `₹${(product.sellingPrice || product.price || 0).toFixed(2)}${product.sellingMode === 'loose' ? ` / ${product.unit || 'kg'}` : ''}`
+    : '';
+  const previewBrandText = showBrand ? (product.brand || "VC ORGANIC'S") : '';
+  const previewProductFontMm = calculateTextFit(product.name, labelGeometry.textMaxWidthMm, labelTypography.productFontMm);
+  const previewPriceFontMm = previewPriceText
+    ? calculateTextFit(previewPriceText, labelGeometry.textMaxWidthMm, labelTypography.priceFontMm, 2)
+    : labelTypography.priceFontMm;
+  const previewOuterStyle: React.CSSProperties = {
+    width: `${labelGeometry.widthMm * previewScale}mm`,
+    height: `${labelGeometry.heightMm * previewScale}mm`
+  };
+  const labelCanvasStyle: React.CSSProperties = {
+    width: `${labelGeometry.widthMm}mm`,
+    height: `${labelGeometry.heightMm}mm`,
+    padding: `${effectiveProfile.marginTopMm}mm ${effectiveProfile.marginRightMm}mm ${effectiveProfile.marginBottomMm}mm ${effectiveProfile.marginLeftMm}mm`,
+    gap: `${labelTypography.rowGapMm}mm`,
+    transform: `scale(${previewScale})`,
+    transformOrigin: 'top left'
+  };
 
   const batchOptions = [
     {
@@ -474,7 +537,7 @@ export function ProductPrintBarcodeDialog({
         <Button
           variant="primary"
           onClick={handlePrint}
-          disabled={!hasAssignedBarcode}
+          disabled={!hasAssignedBarcode || !barcodeFit.safe}
           leftIcon={<Printer className="w-4 h-4" />}
           className="w-full sm:w-auto"
         >
@@ -558,21 +621,21 @@ export function ProductPrintBarcodeDialog({
             </div>
           </div>
 
-          {/* 2. Label Template Cards */}
+          {/* 2. Label Media Profile */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5 text-blue-600" />
-              Label Template
+              Label Media Profile
             </label>
 
-            <div className="grid grid-cols-3 gap-2">
-              {TEMPLATES.map((tmpl) => {
-                const isSelected = template === tmpl.id;
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[...LABEL_PROFILE_PRESETS, customProfile].map((profile) => {
+                const isSelected = selectedProfileId === profile.id;
                 return (
                   <button
-                    key={tmpl.id}
+                    key={profile.id}
                     type="button"
-                    onClick={() => setTemplate(tmpl.id)}
+                    onClick={() => setSelectedProfileId(profile.id)}
                     className={`text-left p-2.5 rounded-xl border transition-colors cursor-pointer flex flex-col justify-between ${
                       isSelected
                         ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-500 shadow-xs'
@@ -581,20 +644,57 @@ export function ProductPrintBarcodeDialog({
                   >
                     <div>
                       <div className="text-[11px] font-bold text-slate-900 leading-tight">
-                        {tmpl.name}
+                        {profile.name}
                       </div>
                       <div className="text-[10px] font-mono text-blue-700 font-semibold mt-0.5">
-                        {tmpl.dimensions}
+                        {profile.widthMm} x {profile.heightMm} mm
                       </div>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[9px] text-slate-400 truncate">{tmpl.description.slice(0, 18)}...</span>
+                      <span className="text-[9px] text-slate-400 truncate">
+                        {profile.id === 'custom' ? 'Custom media' : `${profile.dpi || 203} DPI`}
+                      </span>
                       {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />}
                     </div>
                   </button>
                 );
               })}
             </div>
+
+            {selectedProfileId === 'custom' && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                {([
+                  ['Width', 'widthMm', 20, 160],
+                  ['Height', 'heightMm', 15, 120],
+                  ['DPI', 'dpi', 152, 600],
+                  ['Margin', 'marginTopMm', 0, 20]
+                ] as const).map(([label, key, min, max]) => (
+                  <div key={String(key)} className="space-y-1">
+                    <label className="text-[10px] font-semibold text-slate-600">{label}</label>
+                    <Input
+                      type="number"
+                      min={Number(min)}
+                      max={Number(max)}
+                      value={Number(customProfile[key as keyof typeof customProfile]) || ''}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        const nextProfile = {
+                          ...customProfile,
+                          [key]: nextValue
+                        };
+                        if (key === 'marginTopMm') {
+                          nextProfile.marginRightMm = nextValue;
+                          nextProfile.marginBottomMm = nextValue;
+                          nextProfile.marginLeftMm = nextValue;
+                        }
+                        setCustomProfile(nextProfile);
+                      }}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 3. Batch / Expiry Selection */}
@@ -835,7 +935,7 @@ export function ProductPrintBarcodeDialog({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Studio Print Simulator */}
+        {/* RIGHT COLUMN: Physical Print Simulator */}
         <div className="md:col-span-5 flex flex-col justify-between bg-slate-100/90 border border-slate-200/90 rounded-2xl p-4 shadow-inner min-h-[320px]">
           <div>
             <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200 text-slate-600">
@@ -844,50 +944,103 @@ export function ProductPrintBarcodeDialog({
                 Live Print Simulator
               </span>
               <span className="font-mono text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-semibold">
-                {currentTemplateMeta.dimensions}
+                {labelGeometry.widthMm} x {labelGeometry.heightMm} mm
               </span>
             </div>
 
-            {/* Rendered Physical Label Container */}
-            <div className="mt-4 flex items-center justify-center p-2">
-              <div
-                className="w-full max-w-[260px] bg-white text-slate-900 rounded-xl p-4 shadow-sm border border-dashed border-slate-300 flex flex-col items-center text-center space-y-1.5 select-none transition-colors"
-                style={{ minHeight: template === 'compact_tag' ? '140px' : '180px' }}
-              >
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+              <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                <span className="block text-slate-500">Printer</span>
+                <span className="block truncate font-semibold text-slate-900">{printerName}</span>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                <span className="block text-slate-500">Media</span>
+                <span className="block truncate font-semibold text-slate-900">{printerType}</span>
+              </div>
+            </div>
+
+            {barcodeFit.warnings.length > 0 && (
+              <div className={`mt-3 rounded-lg border px-3 py-2 text-[11px] leading-snug ${
+                barcodeFit.safe
+                  ? 'border-amber-200 bg-amber-50 text-amber-800'
+                  : 'border-rose-200 bg-rose-50 text-rose-800'
+              }`}>
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                  <span>{barcodeFit.warnings[0]}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Scaled physical label canvas */}
+            <div className="mt-4 flex items-center justify-center p-2 overflow-hidden">
+              <div style={previewOuterStyle}>
+                <div
+                  className="bg-white text-slate-900 rounded-md shadow-sm border border-dashed border-slate-300 flex flex-col items-center justify-center text-center select-none transition-colors overflow-hidden"
+                  style={labelCanvasStyle}
+                >
                 {hasAssignedBarcode ? (
                   <>
                     {showBrand && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                        {product.brand || "VC ORGANIC'S"}
+                      <span
+                        className="font-bold uppercase text-slate-500 max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
+                        style={{ fontSize: `${labelTypography.brandFontMm}mm` }}
+                      >
+                        {previewBrandText}
                       </span>
                     )}
-                    <div className="font-bold text-xs text-slate-900 truncate max-w-[220px]">
+                    <div
+                      className="font-bold text-slate-900 max-w-full overflow-hidden"
+                      style={{
+                        fontSize: `${previewProductFontMm}mm`,
+                        lineHeight: `${labelTypography.productLineHeightMm}mm`,
+                        display: '-webkit-box',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 2
+                      }}
+                    >
                       {product.name}
-                    </div>
-                    <div className="text-[10px] font-mono text-slate-600">
-                      SKU: {product.sku}
                     </div>
 
                     {/* SVG Vector Barcode Output */}
                     <div
-                      className="w-full flex justify-center py-1"
+                      className="flex justify-center items-center overflow-hidden"
+                      style={{
+                        width: `${labelGeometry.barcodeMaxWidthMm}mm`,
+                        maxHeight: `${labelGeometry.barcodeMaxHeightMm + 4}mm`
+                      }}
                       dangerouslySetInnerHTML={{ __html: livePreviewSvg }}
                     />
 
                     {showPrice && (
-                      <div className="text-sm font-extrabold text-slate-950 font-mono">
-                        ₹{(product.sellingPrice || product.price || 0).toFixed(2)}
-                        {product.sellingMode === 'loose' ? ` / ${product.unit || 'kg'}` : ''}
+                      <div
+                        className="font-extrabold text-slate-950 font-mono max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
+                        style={{ fontSize: `${previewPriceFontMm}mm`, lineHeight: 1.05 }}
+                      >
+                        {previewPriceText}
                       </div>
                     )}
 
-                    {showLotExpiry && (selectedBatch || productDefaultExpiry) && (
-                      <div className="text-[10px] font-semibold text-slate-600 bg-slate-100 rounded-md px-2 py-0.5 w-full flex items-center justify-center gap-1 flex-wrap">
-                        {selectedBatch?.lotNumber && <span>Lot: {selectedBatch.lotNumber}</span>}
-                        {selectedBatch?.lotNumber && effectiveExpiry && <span>•</span>}
-                        {effectiveExpiry && <span>EXP: {effectiveExpiry}</span>}
-                        {!selectedBatch && productDefaultExpiry && (
-                          <span className="text-[9px] text-blue-600 font-normal ml-0.5">(SKU Default)</span>
+                    {showLotExpiry && (selectedBatch || effectiveExpiry) && (
+                      <div
+                        className="font-semibold text-slate-600 max-w-full overflow-hidden flex flex-col items-center gap-[0.2mm]"
+                        style={{
+                          fontSize: `${labelTypography.metaFontMm}mm`,
+                          lineHeight: `${labelTypography.metaLineHeightMm}mm`
+                        }}
+                      >
+                        {selectedBatch?.lotNumber && (
+                          <span className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                            Lot: {selectedBatch.lotNumber}
+                          </span>
+                        )}
+                        {effectiveExpiry && (
+                          <span className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                            <span>EXP: {effectiveExpiry}</span>
+                            {!selectedBatch && productDefaultExpiry && (
+                              <span className="text-blue-600 font-normal ml-0.5"> (SKU Default)</span>
+                            )}
+                          </span>
                         )}
                       </div>
                     )}
@@ -901,13 +1054,19 @@ export function ProductPrintBarcodeDialog({
                     </div>
                   </div>
                 )}
+                </div>
               </div>
             </div>
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-slate-200 text-center text-[11px] text-slate-500">
             {hasAssignedBarcode ? (
-              <>Preview rendered at scaled ratio for <strong className="text-slate-800">{currentTemplateMeta.name}</strong>.</>
+              <>
+                Preview uses <strong className="text-slate-800">{selectedProfile.name}</strong> at {selectedProfile.dpi || 203} DPI.
+                <span className="block font-mono text-[10px] text-slate-400">
+                  Module {barcodeFit.moduleWidthPx.toFixed(2)}px / min {barcodeFit.minModuleWidthMm}mm
+                </span>
+              </>
             ) : (
               <span className="text-amber-700">Assign barcode to enable printing.</span>
             )}
