@@ -37,8 +37,6 @@ export default function InventoryPage() {
     return commandCenterData?.networkBalances || [];
   }, [commandCenterData]);
 
-  const summary = commandCenterData?.summary;
-
   // Selected Location: 'network' (for super admin) or specific store ID
   const defaultLocation = useMemo(() => {
     if (activeStoreId && activeStoreId !== 'all') {
@@ -61,6 +59,16 @@ export default function InventoryPage() {
     }
   }, [activeStoreId]);
 
+  // Ensure store-restricted users fallback to permitted stores if 'network' is not accessible
+  React.useEffect(() => {
+    if (!isSuperAdmin && selectedLocation === 'network' && stores.length > 0) {
+      const fallbackStore = stores.find((s) => s.id === user?.assignedStoreId) || stores[0];
+      if (fallbackStore) {
+        setSelectedLocation(fallbackStore.id);
+      }
+    }
+  }, [isSuperAdmin, selectedLocation, stores, user]);
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | StockStatus>('ALL');
@@ -76,6 +84,60 @@ export default function InventoryPage() {
   const canView = hasPermission('inventory.view');
   const canAdjust = hasPermission('inventory.adjust');
   const canTransfer = hasPermission('inventory.transfer');
+
+  // Dynamic Location/Network Summary
+  const summary = useMemo(() => {
+    if (!commandCenterData?.summary) return undefined;
+    const base = commandCenterData.summary;
+    if (selectedLocation === 'network') {
+      return base;
+    }
+
+    const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    let locationStock = 0;
+    let stockedProducts = 0;
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
+    let expiringSoonCount = 0;
+    let locationValuation = 0;
+
+    for (const item of networkBalances) {
+      if (item.isOrphan) continue;
+      const loc = item.locationBreakdown.find((l) => l.locationId === selectedLocation);
+      const q = loc ? loc.quantity : 0;
+      const avail = loc ? loc.available : 0;
+      const batches = (item.batches || []).filter((b) => b.locationId === selectedLocation);
+
+      locationStock += q;
+      locationValuation += (q * (item.cost || 0));
+
+      if (avail > 0) {
+        stockedProducts++;
+      }
+      if (avail <= 0) {
+        outOfStockCount++;
+      } else if (avail <= (item.reorderLevel || 10)) {
+        lowStockCount++;
+      }
+
+      if (batches.some((b) => b.expiryDate && b.expiryDate <= thirtyDaysIso && b.remainingQuantity > 0)) {
+        expiringSoonCount++;
+      }
+    }
+
+    return {
+      ...base,
+      catalogProducts: base.catalogProducts ?? base.totalProducts,
+      stockedProducts,
+      networkStock: base.networkStock,
+      centralStock: base.centralStock,
+      storeStock: base.storeStock,
+      lowStockCount,
+      outOfStockCount,
+      expiringSoonCount,
+      totalValuation: Math.round(locationValuation * 100) / 100
+    };
+  }, [commandCenterData, selectedLocation, networkBalances]);
 
   if (!canView) {
     return (
@@ -99,18 +161,21 @@ export default function InventoryPage() {
   }, [networkBalances]);
 
   // Filtered Items based on active tab and search/filter criteria
+  // All active Product Master items remain visible for any selected location (LEFT JOIN overlay)
   const filteredItems = useMemo(() => {
     const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     return networkBalances.filter((item) => {
-      // 1. If single location selected, only show items with presence or allow zero-stock network catalog items
+      // 1. Determine location quantity and batches
       let onHand = item.networkQuantity;
+      let available = item.networkAvailable;
+      let locationBatches = item.batches || [];
+
       if (selectedLocation !== 'network') {
         const loc = item.locationBreakdown.find((l) => l.locationId === selectedLocation);
         onHand = loc ? loc.quantity : 0;
-        if (onHand <= 0 && item.networkQuantity > 0) {
-          return false;
-        }
+        available = loc ? loc.available : 0;
+        locationBatches = (item.batches || []).filter((b) => b.locationId === selectedLocation);
       }
 
       // 2. Status Filter
@@ -121,8 +186,8 @@ export default function InventoryPage() {
           return false;
         }
 
-        const baseStatus = deriveStockStatus(onHand, item.reorderLevel);
-        const hasExpiringBatch = item.batches.some(
+        const baseStatus = deriveStockStatus(available, item.reorderLevel);
+        const hasExpiringBatch = locationBatches.some(
           (b) => b.expiryDate && b.expiryDate <= thirtyDaysIso && b.remainingQuantity > 0
         );
 
@@ -130,6 +195,12 @@ export default function InventoryPage() {
           return true;
         } else if (statusFilter === 'EXPIRING_SOON') {
           if (!hasExpiringBatch) return false;
+        } else if (statusFilter === 'HEALTHY') {
+          if (available <= 0) return false;
+        } else if (statusFilter === 'OUT_OF_STOCK') {
+          if (available > 0) return false;
+        } else if (statusFilter === 'LOW_STOCK') {
+          if (baseStatus !== 'LOW_STOCK') return false;
         } else if (baseStatus !== statusFilter) {
           return false;
         }

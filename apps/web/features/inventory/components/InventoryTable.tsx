@@ -118,24 +118,26 @@ export function InventoryTable({
         </TableHeader>
         <TableBody>
           {items.map((item) => {
-            // Determine on-hand and reserved based on view mode
+            // Determine on-hand, reserved, available and batches based on view mode
             let onHand = item.networkQuantity;
             let reserved = item.networkReserved;
             let available = item.networkAvailable;
+            let locationBatches = item.batches || [];
 
             if (!isNetworkView) {
               const loc = item.locationBreakdown.find((l) => l.locationId === selectedLocation);
               onHand = loc ? loc.quantity : 0;
               reserved = loc ? loc.reservedQuantity : 0;
               available = loc ? loc.available : 0;
+              locationBatches = (item.batches || []).filter((b) => b.locationId === selectedLocation);
             }
 
-            const baseStatus: StockStatus = deriveStockStatus(onHand, item.reorderLevel);
+            const baseStatus: StockStatus = deriveStockStatus(available, item.reorderLevel);
             const val = calculateStockValuation(onHand, item.cost || 0);
 
-            // Check if any batch is expiring soon
+            // Check if any batch is expiring soon for the active location
             const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-            const hasExpiringBatch = item.batches.some(
+            const hasExpiringBatch = locationBatches.some(
               (b) => b.expiryDate && b.expiryDate <= thirtyDaysIso && b.remainingQuantity > 0
             );
 
@@ -245,19 +247,19 @@ export function InventoryTable({
 
                 {/* Batch & Expiry */}
                 <TableCell>
-                  {item.batches && item.batches.length > 0 ? (
+                  {locationBatches && locationBatches.length > 0 ? (
                     <div className="flex flex-col gap-1">
                       <span className="text-xs font-mono font-semibold text-slate-800">
-                        {item.batches[0].lotNumber}
+                        {locationBatches[0].lotNumber}
                       </span>
-                      {item.batches[0].expiryDate && (
+                      {locationBatches[0].expiryDate && (
                         <span className="text-[10px] text-slate-500">
-                          EXP {new Date(item.batches[0].expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          EXP {new Date(locationBatches[0].expiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                       )}
-                      {item.batches.length > 1 && (
+                      {locationBatches.length > 1 && (
                         <span className="text-[10px] font-bold text-blue-600">
-                          +{item.batches.length - 1} more lots
+                          +{locationBatches.length - 1} more lots
                         </span>
                       )}
                     </div>

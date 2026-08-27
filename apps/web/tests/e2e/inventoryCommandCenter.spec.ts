@@ -743,7 +743,8 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
     await expect(page.getByText('Central Stock')).toBeVisible();
 
     await page.getByRole('button', { name: /VC ORGANIC'S WAREHOUSE/i }).click();
-    await expect(page.getByText('Production Parity Product')).not.toBeVisible();
+    await expect(page.getByText('Production Parity Product')).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Production Parity Product' }).getByText('Out of Stock')).toBeVisible();
 
     await srsTab.click();
     await expect(page.getByText('Production Parity Product')).toBeVisible();
