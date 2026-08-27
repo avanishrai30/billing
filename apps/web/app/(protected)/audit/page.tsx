@@ -22,7 +22,7 @@ const PAGE_SIZE = 100;
 export default function AuditPage() {
   const { user: currentUser, hasPermission } = useAuth();
   const canView = hasPermission('audit.view');
-  const { activeStoreId, isRestricted } = useStoreScope();
+  const { isRestricted } = useStoreScope();
   const { data: stores = [] } = useStoresQuery();
 
   // Filter States
@@ -40,13 +40,14 @@ export default function AuditPage() {
   const [activeLog, setActiveLog] = useState<AuditLogDoc | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Sync store filter with active store scope if user selected a store
+  // Global audit defaults to the enterprise stream. A concrete storeId is sent
+  // only for an explicit filter or a truly store-restricted user.
   const effectiveStoreId = isRestricted
-    ? currentUser?.assignedStoreId || 'all'
+    ? currentUser?.assignedStoreId && currentUser.assignedStoreId !== 'all'
+      ? currentUser.assignedStoreId
+      : undefined
     : storeFilter !== 'all'
     ? storeFilter
-    : activeStoreId !== 'all'
-    ? activeStoreId
     : undefined;
 
   // Query Params
@@ -66,6 +67,7 @@ export default function AuditPage() {
     data = [],
     isLoading: isLoadingLogs,
     isRefetching,
+    error: auditError,
     refetch
   } = useAuditLogsQuery(queryParams);
 
@@ -85,12 +87,15 @@ export default function AuditPage() {
         const q = search.toLowerCase().trim();
         const matchUser = (log.user || log.performedBy || '').toLowerCase().includes(q);
         const matchAction = (log.action || '').toLowerCase().includes(q);
+        const matchEventType = (log.eventType || '').toLowerCase().includes(q);
         const matchEntity = (log.entity || '').toLowerCase().includes(q);
         const matchEntityId = (log.entityId || '').toLowerCase().includes(q);
         const matchDetails = (log.details || '').toLowerCase().includes(q);
         const matchIp = (log.ip || '').toLowerCase().includes(q);
+        const matchRequest = (log.requestId || '').toLowerCase().includes(q);
+        const matchScope = `${log.businessId || ''} ${log.businessName || ''}`.toLowerCase().includes(q);
 
-        if (!matchUser && !matchAction && !matchEntity && !matchEntityId && !matchDetails && !matchIp) {
+        if (!matchUser && !matchAction && !matchEventType && !matchEntity && !matchEntityId && !matchDetails && !matchIp && !matchRequest && !matchScope) {
           return false;
         }
       }
@@ -161,9 +166,15 @@ export default function AuditPage() {
         onReset={handleResetFilters}
       />
 
+      {auditError && !isLoadingLogs && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          Audit logs could not be loaded: {(auditError as Error).message || 'Request failed'}
+        </div>
+      )}
+
       {/* Audit Log Table */}
       <AuditTable
-        logs={filteredLogs}
+        logs={auditError ? [] : filteredLogs}
         isLoading={isLoadingLogs}
         onViewLog={handleInspectLog}
         onClearFilters={handleResetFilters}

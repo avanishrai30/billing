@@ -1,6 +1,27 @@
 import { apiClient } from '../../lib/api/client';
 import type { AuditLogDoc, AuditQueryParams } from './types';
 
+type AuditLogsResponse =
+  | AuditLogDoc[]
+  | { success?: boolean; auditLogs?: AuditLogDoc[]; data?: AuditLogDoc[]; results?: AuditLogDoc[]; error?: unknown }
+  | null
+  | undefined;
+
+export function normalizeAuditLogsResponse(response: AuditLogsResponse): AuditLogDoc[] {
+  if (Array.isArray(response)) return response;
+  if (!response || typeof response !== 'object') return [];
+
+  if (Array.isArray(response.auditLogs)) return response.auditLogs;
+  if (Array.isArray(response.data)) return response.data;
+  if (Array.isArray(response.results)) return response.results;
+
+  if ('success' in response && response.success === false) {
+    return [];
+  }
+
+  throw new Error('Malformed audit log response: expected a raw array or an object containing auditLogs.');
+}
+
 export const auditApi = {
   /**
    * Fetch immutable audit logs
@@ -20,10 +41,7 @@ export const auditApi = {
     const queryString = query.toString();
     const endpoint = queryString ? `/api/v1/audit-logs?${queryString}` : '/api/v1/audit-logs';
 
-    const res = await apiClient.get<AuditLogDoc[] | { success: boolean; auditLogs: AuditLogDoc[] }>(endpoint);
-
-    if (Array.isArray(res)) return res;
-    if (res && 'auditLogs' in res && Array.isArray(res.auditLogs)) return res.auditLogs;
-    return [];
+    const res = await apiClient.get<AuditLogsResponse>(endpoint);
+    return normalizeAuditLogsResponse(res);
   }
 };

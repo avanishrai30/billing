@@ -110,7 +110,10 @@ const mockDashboardResponse = {
 };
 
 test.describe('Phase 14B Security & Immutable Audit Trail E2E Suite', () => {
+  let auditRequests: string[];
+
   test.beforeEach(async ({ page }) => {
+    auditRequests = [];
     await page.addInitScript(() => {
       localStorage.setItem('aiavro_jwt_token', 'mock-valid-token');
       localStorage.setItem(
@@ -174,6 +177,7 @@ test.describe('Phase 14B Security & Immutable Audit Trail E2E Suite', () => {
     });
 
     await page.route('**/api/v1/audit-logs*', async (route) => {
+      auditRequests.push(route.request().url());
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -198,6 +202,9 @@ test.describe('Phase 14B Security & Immutable Audit Trail E2E Suite', () => {
     await expect(page.getByText('POS SALE', { exact: true })).toBeVisible();
     await expect(page.getByText('LOGIN SUCCESS', { exact: true })).toBeVisible();
     await expect(page.getByText('STOCK ADJUST', { exact: true })).toBeVisible();
+    await expect(page.getByText('All Outlets')).toBeVisible();
+    expect(auditRequests[0]).not.toContain('storeId=');
+    await expect(page.getByText(/3 Events Loaded/)).toBeVisible();
 
     // 2. Filter by search query
     await page.getByPlaceholder(/search by actor/i).fill('INV-1001');
@@ -206,6 +213,12 @@ test.describe('Phase 14B Security & Immutable Audit Trail E2E Suite', () => {
 
     // Reset search
     await page.getByPlaceholder(/search by actor/i).fill('');
+    await page.getByPlaceholder(/search by actor/i).fill('All Outlets');
+    await expect(page.getByText('LOGIN SUCCESS', { exact: true })).toBeVisible();
+    await expect(page.getByText('POS SALE', { exact: true })).not.toBeVisible();
+    await page.getByPlaceholder(/search by actor/i).fill('');
+    await page.getByText('Refresh Ledger').click();
+    await expect(page.getByText(/3 Events Loaded/)).toBeVisible();
 
     // 3. Inspect Detail Drawer
     await page.getByLabel('Inspect audit log details for inventory_updated').click();
