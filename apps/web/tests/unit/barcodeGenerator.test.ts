@@ -654,7 +654,8 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
         name: 'A2 Cow Cultured Ghee 500ml',
         sku: 'GHEE-A2-500',
         barcode: '8901234567890',
-        sellingPrice: 650
+        sellingPrice: 650,
+        purchasePrice: 450
       },
       profile: TVS_LP46_DLITE_PROFILE
     });
@@ -715,7 +716,8 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
         name: 'A2 Ghee',
         sku: 'GHEE-1',
         barcode: '8901234567890',
-        sellingPrice: 500
+        sellingPrice: 500,
+        purchasePrice: 350
       },
       selectedBatch: null,
       effectiveExpiry: '25/08/2026',
@@ -741,7 +743,8 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
         name: 'A2 Ghee',
         sku: 'GHEE-1',
         barcode: '8901234567890',
-        sellingPrice: 500
+        sellingPrice: 500,
+        purchasePrice: 350
       },
       selectedBatch: null,
       effectiveExpiry: '25/08/2026',
