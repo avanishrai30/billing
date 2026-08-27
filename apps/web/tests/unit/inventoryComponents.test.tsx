@@ -18,10 +18,10 @@ import type {
 
 describe('Phase 33 Multi-Store Inventory Command Center Component Suite', () => {
   const sampleStores: CommandCenterStore[] = [
-    { id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', isWarehouse: true },
-    { id: 'store-1', name: 'Store 1 — Indiranagar', code: 'ST-IND', isWarehouse: false },
-    { id: 'store-2', name: 'Store 2 — Koramangala', code: 'ST-KOR', isWarehouse: false },
-    { id: 'store-3', name: 'Store 3 — Whitefield', code: 'ST-WHI', isWarehouse: false }
+    { id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', type: 'WAREHOUSE', locationType: 'WAREHOUSE', isHub: true, status: 'active', isWarehouse: true },
+    { id: 'store-1', name: 'Store 1 — Indiranagar', code: 'ST-IND', type: 'STORE', locationType: 'STORE', isHub: false, status: 'active', isWarehouse: false },
+    { id: 'store-2', name: 'Store 2 — Koramangala', code: 'ST-KOR', type: 'STORE', locationType: 'STORE', isHub: false, status: 'active', isWarehouse: false },
+    { id: 'store-3', name: 'Store 3 — Whitefield', code: 'ST-WHI', type: 'STORE', locationType: 'STORE', isHub: false, status: 'active', isWarehouse: false }
   ];
 
   const sampleSummary: CommandCenterSummary = {

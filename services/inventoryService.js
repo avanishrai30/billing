@@ -23,14 +23,45 @@ async function assertProductMasterExists(productId) {
 }
 
 function inferLocationTypeFromRecord(location = {}, fallback = 'STORE') {
-  const explicit = String(location.locationType || '').trim().toUpperCase();
+  const explicit = String(location.locationType || location.type || '').trim().toUpperCase();
   if (explicit === 'WAREHOUSE' || explicit === 'STORE') return explicit;
+  const code = String(location.code || '').trim().toUpperCase();
   const name = String(location.name || '').toLowerCase();
-  if (location.isWarehouse === true || location.id === 'central-warehouse' || name.includes('warehouse')) {
+  if (
+    location.isWarehouse === true ||
+    location.isHub === true ||
+    location.id === 'central-warehouse' ||
+    code === 'WAREHOUSE' ||
+    code.startsWith('WH') ||
+    name.includes('warehouse')
+  ) {
     return 'WAREHOUSE';
   }
   const fallbackType = String(fallback || 'STORE').trim().toUpperCase();
   return fallbackType === 'WAREHOUSE' ? 'WAREHOUSE' : 'STORE';
+}
+
+function normalizeInventoryLocation(location = {}) {
+  const locationType = inferLocationTypeFromRecord(location);
+  const name = String(location.name || location.locationName || location.id || 'Location').trim();
+  const fallbackCode = locationType === 'WAREHOUSE'
+    ? 'WAREHOUSE'
+    : `ST-${name.substring(0, 3).toUpperCase()}`;
+  return {
+    id: location.id,
+    name,
+    code: location.code || fallbackCode,
+    type: locationType,
+    status: location.status === 'inactive' ? 'inactive' : 'active',
+    locationType,
+    isHub: location.isHub === true || locationType === 'WAREHOUSE',
+    isWarehouse: locationType === 'WAREHOUSE'
+  };
+}
+
+function sortInventoryLocations(a, b) {
+  if (a.isWarehouse !== b.isWarehouse) return a.isWarehouse ? -1 : 1;
+  return String(a.name || '').localeCompare(String(b.name || ''));
 }
 
 async function resolveLocationType(db, locationId, fallback = 'STORE') {
@@ -874,25 +905,26 @@ const inventoryService = {
       : { status: { $ne: 'inactive' } };
     const rawStores = await db.collection('stores').find(storeFilter).sort({ name: 1 }).toArray();
 
-    // Normalize stores with a designated Central Warehouse
-    let stores = rawStores.map(s => ({
-      id: s.id,
-      name: s.name,
-      code: s.code || `ST-${s.name.substring(0, 3).toUpperCase()}`,
-      locationType: inferLocationTypeFromRecord(s),
-      isHub: !!s.isHub,
-      isWarehouse: inferLocationTypeFromRecord(s) === 'WAREHOUSE'
-    }));
+    // Normalize active stores into canonical inventory locations. Inventory is
+    // left-joined onto this list so zero-stock locations stay visible.
+    let stores = rawStores
+      .map(normalizeInventoryLocation)
+      .filter(s => s.id)
+      .sort(sortInventoryLocations);
 
     if (canViewAll && !stores.some(s => s.isWarehouse)) {
-      if (stores.length > 0) {
-        stores[0].isWarehouse = true;
-        stores[0].locationType = 'WAREHOUSE';
-      } else {
-        stores = [
-          { id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', locationType: 'WAREHOUSE', isHub: true, isWarehouse: true }
-        ];
-      }
+      stores = [
+        normalizeInventoryLocation({
+          id: 'central-warehouse',
+          name: 'Central Warehouse',
+          code: 'WAREHOUSE',
+          type: 'WAREHOUSE',
+          status: 'active',
+          isHub: true,
+          isWarehouse: true
+        }),
+        ...stores
+      ];
     }
 
     // 2. Fetch Product Masters. Active products form the base display model,
@@ -996,6 +1028,8 @@ const inventoryService = {
         return {
           locationId: st.id,
           locationName: st.name,
+          type: st.type,
+          status: st.status,
           locationType: st.locationType,
           isWarehouse: st.isWarehouse,
           isHub: st.isHub,
@@ -1011,14 +1045,17 @@ const inventoryService = {
       invList.forEach(r => {
         const loc = r.locationId || r.storeId || 'all';
         if (!stores.some(st => st.id === loc)) {
+          const inferredType = inferLocationTypeFromRecord(r);
           const q = parseFloat(r.quantity) || 0;
           const res = parseFloat(r.reservedQuantity) || 0;
           locationBreakdown.push({
             locationId: loc,
             locationName: loc === 'all' ? 'Unassigned' : loc,
-            locationType: r.locationType || 'STORE',
-            isWarehouse: false,
-            isHub: false,
+            type: inferredType,
+            status: 'active',
+            locationType: inferredType,
+            isWarehouse: inferredType === 'WAREHOUSE',
+            isHub: inferredType === 'WAREHOUSE',
             quantity: q,
             reservedQuantity: res,
             available: Math.max(0, q - res),

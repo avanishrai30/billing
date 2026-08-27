@@ -4,10 +4,18 @@ const { requirePermission, requireAnyPermission, isSuperAdmin, assertStoreAccess
 const storeService = require('../services/storeService');
 
 function normalizeLocationType(store = {}) {
-  const raw = String(store.locationType || '').trim().toUpperCase();
+  const raw = String(store.locationType || store.type || '').trim().toUpperCase();
   if (raw === 'WAREHOUSE' || raw === 'STORE') return raw;
+  const code = String(store.code || '').trim().toUpperCase();
   const name = String(store.name || '').toLowerCase();
-  if (store.isWarehouse === true || store.id === 'central-warehouse' || name.includes('warehouse')) {
+  if (
+    store.isWarehouse === true ||
+    store.isHub === true ||
+    store.id === 'central-warehouse' ||
+    code === 'WAREHOUSE' ||
+    code.startsWith('WH') ||
+    name.includes('warehouse')
+  ) {
     return 'WAREHOUSE';
   }
   return 'STORE';
@@ -20,12 +28,14 @@ function normalizeStoreRecord(store, employeeCount = 0) {
     id: store.id,
     name: store.name,
     code: store.code || `ST-${(store.name || 'OUT').substring(0, 3).toUpperCase()}`,
+    type: locationType,
     locationType,
     status: store.status || 'active',
     address: store.address || '',
     phone: store.phone || '',
     businessId: store.businessId || 'biz_primary',
-    isHub: store.isHub === true,
+    isHub: store.isHub === true || locationType === 'WAREHOUSE',
+    isWarehouse: locationType === 'WAREHOUSE',
     hubPriority: typeof store.hubPriority === 'number' ? store.hubPriority : (parseInt(store.hubPriority) || 1),
     employeeCount: typeof employeeCount === 'number' ? employeeCount : 0,
     createdAt: store.createdAt || new Date().toISOString(),

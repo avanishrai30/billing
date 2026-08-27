@@ -52,7 +52,7 @@ export default function InventoryPage() {
 
   const [selectedLocation, setSelectedLocation] = useState<string>(defaultLocation);
 
-  // Sync selected location when topbar activeStoreId or user store changes
+  // Sync selected location when topbar activeStoreId or user store changes.
   React.useEffect(() => {
     if (activeStoreId && activeStoreId !== 'all') {
       setSelectedLocation(activeStoreId);
@@ -193,6 +193,10 @@ export default function InventoryPage() {
     }));
   }, [stores]);
 
+  const centralWarehouseId = useMemo(() => {
+    return stores.find((s) => s.isWarehouse)?.id;
+  }, [stores]);
+
   return (
     <div className="space-y-4 pb-10">
       {/* Header & Location Navigation */}
@@ -270,7 +274,7 @@ export default function InventoryPage() {
         selectedItem={activeItem}
         products={productSelectorList}
         storeOptions={storeOptions}
-        defaultLocationId={selectedLocation === 'network' ? (stores[0]?.id || 'store-1') : selectedLocation}
+        defaultLocationId={selectedLocation === 'network' ? (centralWarehouseId || stores[0]?.id || 'store-1') : selectedLocation}
       />
     </div>
   );

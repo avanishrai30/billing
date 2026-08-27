@@ -145,6 +145,40 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     });
   }
 
+  async function seedProductionLikeStores() {
+    await mockDb.collection('stores').insertOne({
+      id: 'st-1787728871789',
+      name: "VC ORGANIC'S WAREHOUSE",
+      code: 'WAREHOUSE',
+      status: 'active',
+      isHub: true
+    });
+    await mockDb.collection('stores').insertOne({
+      id: 'st-srs',
+      name: 'VC ORGANIC SRS',
+      code: 'SRS',
+      status: 'active',
+      locationType: 'STORE',
+      isHub: false
+    });
+    await mockDb.collection('stores').insertOne({
+      id: 'st-temple-stall',
+      name: 'VC ORGANIC Temple Stall',
+      code: 'TEMPLE',
+      status: 'active',
+      locationType: 'STORE',
+      isHub: false
+    });
+    await mockDb.collection('stores').insertOne({
+      id: 'st-banswadi',
+      name: "VC ORGANIC'S Banswadi",
+      code: 'BANSWADI',
+      status: 'active',
+      locationType: 'STORE',
+      isHub: false
+    });
+  }
+
   test('1. Concurrency Test: 10 simultaneous sales of stock = 10 must leave stock = 0 with no lost updates', async () => {
     const productId = 'prod-concurrency-1';
     await seedProduct(productId);
@@ -466,7 +500,65 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     expect(data.summary.replenishmentRequiredCount).toBe(1);
   });
 
-  test('12. Canonical stock transfer records lifecycle and emits legacy plus location realtime rooms', async () => {
+  test('12. Command Center preserves production warehouse and zero-stock store locations', async () => {
+    await seedProductionLikeStores();
+    await mockDb.collection('products').insertOne({
+      id: 'prod-production-parity',
+      name: 'Production Parity Product',
+      sku: 'SKU-PROD-PARITY',
+      reorderLevel: 10,
+      purchasePrice: 100,
+      isArchived: false,
+      status: 'active'
+    });
+    await inventoryService.adjustStock('prod-production-parity', 'st-srs', 115, 'OPENING', 'prod-srs', 'test-runner');
+    await inventoryService.adjustStock('prod-production-parity', 'st-temple-stall', 2, 'OPENING', 'prod-temple', 'test-runner');
+
+    const data = await inventoryService.getInventoryCommandCenter({
+      category: 'super admin',
+      assignedStoreId: 'all',
+      assignedStores: ['all']
+    });
+    const item = data.networkBalances.find(row => row.productId === 'prod-production-parity');
+
+    expect(data.stores[0]).toMatchObject({
+      id: 'st-1787728871789',
+      name: "VC ORGANIC'S WAREHOUSE",
+      code: 'WAREHOUSE',
+      type: 'WAREHOUSE',
+      locationType: 'WAREHOUSE',
+      isHub: true,
+      isWarehouse: true
+    });
+    expect(data.stores).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'st-1787728871789',
+        name: "VC ORGANIC'S WAREHOUSE",
+        code: 'WAREHOUSE',
+        type: 'WAREHOUSE',
+        locationType: 'WAREHOUSE',
+        isHub: true,
+        isWarehouse: true
+      }),
+      expect.objectContaining({ id: 'st-banswadi', name: "VC ORGANIC'S Banswadi", type: 'STORE', isWarehouse: false }),
+      expect.objectContaining({ id: 'st-srs', name: 'VC ORGANIC SRS', type: 'STORE', isWarehouse: false }),
+      expect.objectContaining({ id: 'st-temple-stall', name: 'VC ORGANIC Temple Stall', type: 'STORE', isWarehouse: false })
+    ]));
+    expect(item.networkQuantity).toBe(117);
+    expect(item.locationBreakdown).toEqual(expect.arrayContaining([
+      expect.objectContaining({ locationId: 'st-1787728871789', quantity: 0, type: 'WAREHOUSE', isWarehouse: true }),
+      expect.objectContaining({ locationId: 'st-srs', quantity: 115, type: 'STORE', isWarehouse: false }),
+      expect.objectContaining({ locationId: 'st-temple-stall', quantity: 2, type: 'STORE', isWarehouse: false }),
+      expect.objectContaining({ locationId: 'st-banswadi', quantity: 0, type: 'STORE', isWarehouse: false })
+    ]));
+    expect(data.summary).toMatchObject({
+      networkStock: 117,
+      centralStock: 0,
+      storeStock: 117
+    });
+  });
+
+  test('13. Canonical stock transfer records lifecycle and emits legacy plus location realtime rooms', async () => {
     const emittedEvents = [];
     const mockIo = {
       to(room) {
@@ -528,7 +620,7 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     })).resolves.toMatchObject({ stockTransfer: expect.objectContaining({ id: 'transfer-fixed-1', status: 'COMPLETED' }) });
   });
 
-  test('13. Read-only architecture audit reports drift without mutating data', async () => {
+  test('14. Read-only architecture audit reports drift without mutating data', async () => {
     await seedStores();
     await seedProduct('prod-valid-audit');
     await mockDb.collection('inventory').insertOne({

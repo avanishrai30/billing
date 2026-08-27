@@ -7,15 +7,91 @@ import type {
   StockTransferPayload,
   StockTransferResponse,
   StockAvailabilityResponse,
-  CommandCenterData
+  CommandCenterData,
+  CommandCenterStore,
+  LocationStockBreakdown
 } from './types';
+
+function inferLocationType(location: {
+  type?: string;
+  locationType?: string;
+  code?: string;
+  name?: string;
+  id?: string;
+  isWarehouse?: boolean;
+  isHub?: boolean;
+}): 'WAREHOUSE' | 'STORE' {
+  const explicit = String(location.locationType || location.type || '').trim().toUpperCase();
+  if (explicit === 'WAREHOUSE' || explicit === 'STORE') return explicit;
+
+  const code = String(location.code || '').trim().toUpperCase();
+  const name = String(location.name || '').toLowerCase();
+  if (
+    location.isWarehouse === true ||
+    location.isHub === true ||
+    location.id === 'central-warehouse' ||
+    code === 'WAREHOUSE' ||
+    code.startsWith('WH') ||
+    name.includes('warehouse')
+  ) {
+    return 'WAREHOUSE';
+  }
+
+  return 'STORE';
+}
+
+function normalizeLocation(location: Partial<CommandCenterStore>): CommandCenterStore {
+  const type = inferLocationType(location);
+  const name = String(location.name || location.id || 'Location').trim();
+  return {
+    id: String(location.id || ''),
+    name,
+    code: String(location.code || (type === 'WAREHOUSE' ? 'WAREHOUSE' : `ST-${name.substring(0, 3).toUpperCase()}`)),
+    type,
+    status: location.status === 'inactive' ? 'inactive' : 'active',
+    locationType: type,
+    isHub: location.isHub === true || type === 'WAREHOUSE',
+    isWarehouse: type === 'WAREHOUSE'
+  };
+}
+
+function normalizeBreakdown(location: LocationStockBreakdown): LocationStockBreakdown {
+  const type = inferLocationType({
+    id: location.locationId,
+    name: location.locationName,
+    type: location.type,
+    locationType: location.locationType,
+    isHub: location.isHub,
+    isWarehouse: location.isWarehouse
+  });
+  return {
+    ...location,
+    type,
+    status: location.status === 'inactive' ? 'inactive' : 'active',
+    locationType: type,
+    isHub: location.isHub === true || type === 'WAREHOUSE',
+    isWarehouse: type === 'WAREHOUSE'
+  };
+}
+
+function normalizeCommandCenterData(data: CommandCenterData): CommandCenterData {
+  return {
+    ...data,
+    stores: (data.stores || []).map(normalizeLocation),
+    networkBalances: (data.networkBalances || []).map(item => ({
+      ...item,
+      locationBreakdown: (item.locationBreakdown || []).map(normalizeBreakdown)
+    }))
+  };
+}
 
 export const inventoryApi = {
   /**
    * Fetch Multi-Store Inventory Command Center consolidated data (Phase 33)
    */
   async getCommandCenter(): Promise<CommandCenterData> {
-    return apiClient.get<CommandCenterData>('/api/v1/inventory/command-center');
+    const data = await apiClient.get<CommandCenterData>('/api/v1/inventory/command-center');
+    return normalizeCommandCenterData(data);
   },
 
   /**

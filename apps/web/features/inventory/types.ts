@@ -18,6 +18,8 @@ export type StockStatus = 'HEALTHY' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'EXPIRING_S
 export interface LocationStockBreakdown {
   locationId: string;
   locationName: string;
+  type?: 'WAREHOUSE' | 'STORE';
+  status?: 'active' | 'inactive';
   locationType?: 'WAREHOUSE' | 'STORE' | string;
   isWarehouse: boolean;
   isHub?: boolean;
@@ -82,12 +84,18 @@ export interface CommandCenterSummary {
   totalValuation: number;
 }
 
-export interface CommandCenterStore {
+export interface InventoryLocation {
   id: string;
   name: string;
+  code?: string;
+  type: 'WAREHOUSE' | 'STORE';
+  isHub: boolean;
+  status: 'active' | 'inactive';
+}
+
+export interface CommandCenterStore extends InventoryLocation {
   code: string;
   locationType?: 'WAREHOUSE' | 'STORE' | string;
-  isHub?: boolean;
   isWarehouse: boolean;
 }
 

@@ -83,6 +83,57 @@ const mockCommandCenterData = {
   }
 };
 
+const productionLikeStores = [
+  { id: 'st-1787728871789', name: "VC ORGANIC'S WAREHOUSE", code: 'WAREHOUSE', type: 'WAREHOUSE', locationType: 'WAREHOUSE', isHub: true, isWarehouse: true, status: 'active' },
+  { id: 'st-srs', name: 'VC ORGANIC SRS', code: 'SRS', type: 'STORE', locationType: 'STORE', isHub: false, isWarehouse: false, status: 'active' },
+  { id: 'st-temple-stall', name: 'VC ORGANIC Temple Stall', code: 'TEMPLE', type: 'STORE', locationType: 'STORE', isHub: false, isWarehouse: false, status: 'active' },
+  { id: 'st-banswadi', name: "VC ORGANIC'S Banswadi", code: 'BANSWADI', type: 'STORE', locationType: 'STORE', isHub: false, isWarehouse: false, status: 'active' }
+];
+
+const productionLikeCommandCenterData = {
+  success: true,
+  stores: productionLikeStores,
+  networkBalances: [
+    {
+      productId: 'prod-production-parity',
+      productName: 'Production Parity Product',
+      sku: 'SKU-PROD-PARITY',
+      barcode: '890000000117',
+      brand: 'VC Organics',
+      category: 'Grocery',
+      unit: 'units',
+      cost: 100,
+      price: 140,
+      reorderLevel: 10,
+      isOrphan: false,
+      defaultExpiryDate: null,
+      networkQuantity: 117,
+      networkReserved: 0,
+      networkAvailable: 117,
+      locationBreakdown: [
+        { locationId: 'st-1787728871789', locationName: "VC ORGANIC'S WAREHOUSE", type: 'WAREHOUSE', locationType: 'WAREHOUSE', isWarehouse: true, isHub: true, quantity: 0, reservedQuantity: 0, available: 0 },
+        { locationId: 'st-srs', locationName: 'VC ORGANIC SRS', type: 'STORE', locationType: 'STORE', isWarehouse: false, isHub: false, quantity: 115, reservedQuantity: 0, available: 115 },
+        { locationId: 'st-temple-stall', locationName: 'VC ORGANIC Temple Stall', type: 'STORE', locationType: 'STORE', isWarehouse: false, isHub: false, quantity: 2, reservedQuantity: 0, available: 2 },
+        { locationId: 'st-banswadi', locationName: "VC ORGANIC'S Banswadi", type: 'STORE', locationType: 'STORE', isWarehouse: false, isHub: false, quantity: 0, reservedQuantity: 0, available: 0 }
+      ],
+      batches: []
+    }
+  ],
+  summary: {
+    totalProducts: 1,
+    catalogProducts: 1,
+    stockedProducts: 1,
+    networkStock: 117,
+    centralStock: 0,
+    storeStock: 117,
+    lowStockCount: 0,
+    outOfStockCount: 0,
+    expiringSoonCount: 0,
+    replenishmentRequiredCount: 0,
+    totalValuation: 11700
+  }
+};
+
 test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibility E2E Suite', () => {
   test('1. Multi-Store Stock Visibility: Network consolidated view, Central Warehouse hub & Store tabs with location breakdown', async ({ page }) => {
     // Inject Super Admin Session
@@ -591,5 +642,119 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
     await expect(page.getByText('30').first()).toBeVisible();
     await page.getByRole('button', { name: /network consolidated/i }).click();
     await expect(page.getByText('100').first()).toBeVisible();
+  });
+
+  test('5. Production-like store names keep zero-stock Central Warehouse visible for global users', async ({ page }) => {
+    const consoleErrors: string[] = [];
+    const apiErrors: string[] = [];
+    const superAdmin = {
+      id: 'usr-superadmin',
+      name: 'Super Administrator',
+      username: 'superadmin',
+      role: 'SUPER ADMIN',
+      category: 'super admin',
+      assignedStoreId: 'all',
+      assignedStores: ['all'],
+      status: 'active',
+      permissions: ['*']
+    };
+
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        consoleErrors.push(message.text());
+      }
+    });
+    page.on('response', (response) => {
+      if (response.url().includes('/api/v1/') && response.status() >= 400) {
+        apiErrors.push(`${response.status()} ${response.url()}`);
+      }
+    });
+
+    await page.addInitScript((userData) => {
+      localStorage.setItem('aiavro_jwt_token', 'mock-valid-superadmin-token');
+      localStorage.setItem('aiavro_logged_in_user', JSON.stringify(userData));
+      localStorage.setItem('aiavro_selected_store_id', 'st-srs');
+    }, superAdmin);
+
+    await page.route('**/api/v1/auth/verify', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, user: superAdmin })
+      });
+    });
+
+    await page.route('**/api/v1/rbac/me/permissions', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, effectivePermissions: ['*'] })
+      });
+    });
+
+    await page.route('**/api/v1/public/settings', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ title: "VC ORGANIC'S" })
+      });
+    });
+
+    await page.route('**/api/v1/stores', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(productionLikeStores)
+      });
+    });
+
+    await page.route('**/api/v1/inventory/command-center', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(productionLikeCommandCenterData)
+      });
+    });
+
+    await page.route('**/api/v1/inventory/logs*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [], pagination: { limit: 15, nextCursor: null } })
+      });
+    });
+
+    await page.goto('/inventory');
+
+    const networkTab = page.getByRole('button', { name: /network consolidated/i });
+    const srsTab = page.getByRole('button', { name: /VC ORGANIC SRS/i });
+    await expect(networkTab).toBeVisible();
+    await expect(page.getByRole('button', { name: /VC ORGANIC'S WAREHOUSE/i })).toBeVisible();
+    await expect(srsTab).toBeVisible();
+    await expect(srsTab).toHaveClass(/bg-emerald-700/);
+    await expect(page.getByRole('button', { name: /VC ORGANIC Temple Stall/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /VC ORGANIC'S Banswadi/i })).toBeVisible();
+    await expect(page.getByText('Production Parity Product')).toBeVisible();
+    await expect(page.getByText('115').first()).toBeVisible();
+
+    await networkTab.click();
+    await expect(networkTab).toHaveClass(/bg-slate-900/);
+    await expect(page.getByText('117').first()).toBeVisible();
+    await expect(page.getByText('Central Stock')).toBeVisible();
+
+    await page.getByRole('button', { name: /VC ORGANIC'S WAREHOUSE/i }).click();
+    await expect(page.getByText('Production Parity Product')).not.toBeVisible();
+
+    await srsTab.click();
+    await expect(page.getByText('Production Parity Product')).toBeVisible();
+    await expect(page.getByText('115').first()).toBeVisible();
+
+    await expect(page.getByRole('button', { name: /VC ORGANIC'S WAREHOUSE/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /network consolidated/i })).toBeVisible();
+    await expect.poll(async () => {
+      return page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    }).toBe(true);
+    expect(apiErrors).toEqual([]);
+    expect(consoleErrors).toEqual([]);
   });
 });
