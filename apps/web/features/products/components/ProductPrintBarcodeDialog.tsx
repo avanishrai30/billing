@@ -22,7 +22,9 @@ import {
   AlignCenter,
   AlignRight,
   AlignVerticalJustifyCenter,
-  AlignHorizontalJustifyCenter
+  AlignHorizontalJustifyCenter,
+  Trash2,
+  Copy
 } from 'lucide-react';
 import {
   Dialog,
@@ -57,10 +59,13 @@ import {
   calculateResize,
   calculateRotation,
   createDefaultLabelDesign,
+  deleteElement,
   detectCollisions,
   distributeElements,
+  duplicateElement,
   getDesignElementText,
   getElementBounds,
+  getPrinterSupportedDpis,
   hitTestElement,
   mmToScreen,
   screenToMm,
@@ -100,6 +105,8 @@ const escapeHtml = (value: string) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+
+const roundMm = (val: number) => Math.round(val * 100) / 100;
 
 function useElementSize<T extends HTMLElement>() {
   const ref = React.useRef<T | null>(null);
@@ -180,8 +187,6 @@ export function ProductPrintBarcodeDialog({
     selectedProfile,
     customProfile,
     printerName,
-    printerType,
-    printerModelId,
     printerLanguage,
     mediaType,
     sensorMode,
@@ -196,6 +201,8 @@ export function ProductPrintBarcodeDialog({
   // Local Print Agent health
   const [agentHealth, setAgentHealth] = useState<PrintAgentHealth>({ connected: false });
   const [isPrintingNative, setIsPrintingNative] = useState(false);
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -213,12 +220,6 @@ export function ProductPrintBarcodeDialog({
   const [barcodeRotation, setBarcodeRotation] = useState<BarcodeRotation>(0);
   const [layoutMode, setLayoutMode] = useState<'auto' | 'manual'>('auto');
   const [designDpi, setDesignDpi] = useState<number>(selectedProfile.dpi || 203);
-  const [brandScale, setBrandScale] = useState<number>(1);
-  const [productScale, setProductScale] = useState<number>(1);
-  const [priceScale, setPriceScale] = useState<number>(1);
-  const [metaScale, setMetaScale] = useState<number>(1);
-  const [barcodeScale, setBarcodeScale] = useState<number>(1);
-  const [barcodeTextScale, setBarcodeTextScale] = useState<number>(1);
   const [previewViewportRef, previewViewportSize] = useElementSize<HTMLDivElement>();
 
   React.useEffect(() => {
@@ -288,33 +289,23 @@ export function ProductPrintBarcodeDialog({
     dpi: designDpi,
     orientation: labelOrientation === 'vertical' ? 90 : 0,
     barcodeRotation,
-    brandScale,
-    productScale,
-    priceScale,
-    metaScale,
-    barcodeScale,
-    barcodeTextScale,
     showPrice: selectedProfile.showPrice && showPrice,
     showLot: selectedProfile.showLot && showLotExpiry,
     showExpiry: selectedProfile.showExpiry && showLotExpiry
   }), [
     barcodeRotation,
-    barcodeScale,
-    barcodeTextScale,
-    brandScale,
     designDpi,
     labelOrientation,
-    metaScale,
-    priceScale,
-    productScale,
     selectedProfile,
     showLotExpiry,
     showPrice
   ]);
 
+  const supportedDpis = useMemo(() => getPrinterSupportedDpis(effectiveProfile), [effectiveProfile]);
   const labelGeometry = useMemo(() => calculateLabelGeometry(effectiveProfile), [effectiveProfile]);
   const labelTypography = useMemo(() => calculateLabelTypography(effectiveProfile), [effectiveProfile]);
   const barcodeFit = useMemo(() => calculateBarcodeFit(assignedBarcode, effectiveProfile), [assignedBarcode, effectiveProfile]);
+
   const defaultLabelDesign = useMemo(() => {
     if (!product) return null;
     return createDefaultLabelDesign({
@@ -327,6 +318,7 @@ export function ProductPrintBarcodeDialog({
       showLotExpiry
     });
   }, [effectiveExpiry, effectiveProfile, product, selectedBatch, showBrand, showLotExpiry, showPrice]);
+
   const [labelDesign, setLabelDesign] = useState<LabelDesign | null>(null);
   const [designScopeKey, setDesignScopeKey] = useState('');
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
@@ -358,6 +350,7 @@ export function ProductPrintBarcodeDialog({
       showLotExpiry,
       selectedBatchId
     ].join(':');
+
     if (designScopeKey !== nextScopeKey || layoutMode === 'auto') {
       setLabelDesign(defaultLabelDesign);
       setDesignScopeKey(nextScopeKey);
@@ -389,13 +382,16 @@ export function ProductPrintBarcodeDialog({
     [activeDesign, selectedElementIds]
   );
   const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
+
   const designCollisions = useMemo(() => detectCollisions(activeDesign?.elements || []), [activeDesign]);
   const designBoundsWarnings = useMemo(
     () => activeDesign ? validateLabelDesign(activeDesign, effectiveProfile) : [],
     [activeDesign, effectiveProfile]
   );
+
   const labelBaseWidthPx = useMemo(() => mmToPx(labelGeometry.widthMm, 96), [labelGeometry.widthMm]);
   const labelBaseHeightPx = useMemo(() => mmToPx(labelGeometry.heightMm, 96), [labelGeometry.heightMm]);
+
   const previewFit = useMemo(() => calculatePreviewFit({
     labelWidthPx: labelBaseWidthPx,
     labelHeightPx: labelBaseHeightPx,
@@ -404,6 +400,7 @@ export function ProductPrintBarcodeDialog({
     paddingPx: 20,
     maxScale: 2.6
   }), [labelBaseHeightPx, labelBaseWidthPx, previewViewportSize.height, previewViewportSize.width]);
+
   const compatibleAgentPrinter = useMemo(() => {
     if (!agentHealth.connected) return null;
     return (agentHealth.printers || []).find((detected) => {
@@ -413,24 +410,44 @@ export function ProductPrintBarcodeDialog({
         resolved.language.replace('-', '') === String(effectiveProfile.printerLanguage || '').replace('-', '');
     }) || null;
   }, [agentHealth.connected, agentHealth.printers, effectiveProfile.printerLanguage]);
+
   const compatibleAgentPrinterName = useMemo(() => {
     if (!compatibleAgentPrinter) return null;
     if (typeof compatibleAgentPrinter === 'string') return compatibleAgentPrinter;
     const detected = compatibleAgentPrinter as DetectedPrinter;
     return detected.model || detected.name || detected.id || null;
   }, [compatibleAgentPrinter]);
+
+  const printerDisplayName = useMemo(() => {
+    if (compatibleAgentPrinterName) return compatibleAgentPrinterName;
+    if (printerName) return printerName;
+    if (selectedProfileId === 'tvs_lp46_dlite' || selectedProfile.name?.toLowerCase().includes('tvs')) {
+      return 'TVS LP-46 Dlite';
+    }
+    return selectedProfile.name || 'TVS LP-46 Dlite';
+  }, [compatibleAgentPrinterName, printerName, selectedProfile.name, selectedProfileId]);
+
   const canUseNativePrinter = Boolean(
     agentHealth.connected &&
     compatibleAgentPrinterName &&
     effectiveProfile.printerLanguage &&
     effectiveProfile.printerLanguage !== 'BROWSER'
   );
+
+  const hasVisibleBarcode = useMemo(() => {
+    if (!activeDesign) return true;
+    return activeDesign.elements.some((el) => el.type === 'barcode' && el.visible !== false);
+  }, [activeDesign]);
+
   const designWarnings = useMemo(() => {
     const warnings: string[] = [];
     if (![203, 300, 600].includes(designDpi)) {
       warnings.push('Unsupported printer DPI. Use 203, 300, or 600.');
     }
-    if (!barcodeFit.safe) {
+    if (!hasVisibleBarcode) {
+      warnings.push('Label has no barcode element. Scannable barcode printing is disabled.');
+    }
+    if (!barcodeFit.safe && hasVisibleBarcode) {
       warnings.push(barcodeFit.warnings[0] || 'Barcode cannot safely fit on this label.');
     }
     if (designBoundsWarnings.length > 0) {
@@ -447,20 +464,15 @@ export function ProductPrintBarcodeDialog({
       }
     }
     return warnings;
-  }, [barcodeFit.safe, barcodeFit.warnings, designBoundsWarnings, designCollisions.length, designDpi, previewFit.heightPx, previewFit.widthPx, previewViewportSize.height, previewViewportSize.width]);
-  const hasBlockingDesignError = !barcodeFit.safe || ![203, 300, 600].includes(designDpi);
+  }, [barcodeFit.safe, barcodeFit.warnings, designBoundsWarnings, designCollisions.length, designDpi, hasVisibleBarcode, previewFit.heightPx, previewFit.widthPx, previewViewportSize.height, previewViewportSize.width]);
+
+  const hasBlockingDesignError = !hasVisibleBarcode || !barcodeFit.safe || ![203, 300, 600].includes(designDpi);
 
   const resetDesignLayout = () => {
     setLayoutMode('auto');
     setLabelOrientation('horizontal');
     setBarcodeRotation(0);
     setDesignDpi(selectedProfile.dpi || 203);
-    setBrandScale(1);
-    setProductScale(1);
-    setPriceScale(1);
-    setMetaScale(1);
-    setBarcodeScale(1);
-    setBarcodeTextScale(1);
     if (defaultLabelDesign) {
       setLabelDesign(defaultLabelDesign);
       setSelectedElementIds(defaultLabelDesign.elements[0] ? [defaultLabelDesign.elements[0].id] : []);
@@ -471,15 +483,16 @@ export function ProductPrintBarcodeDialog({
 
   const commitDesign = React.useCallback((updater: (current: LabelDesign) => LabelDesign) => {
     setLabelDesign((current) => {
-      if (!current) return current;
-      const next = updater(current);
-      if (next === current) return current;
-      setUndoStack((stack) => [...stack.slice(-19), current]);
+      const base = current || defaultLabelDesign;
+      if (!base) return null;
+      const next = updater(base);
+      if (next === base) return base;
+      setUndoStack((stack) => [...stack.slice(-24), base]);
       setRedoStack([]);
       setLayoutMode('manual');
       return next;
     });
-  }, []);
+  }, [defaultLabelDesign]);
 
   const previewTransform = useMemo(() => ({
     scale: previewFit.scale * editorZoom,
@@ -495,31 +508,121 @@ export function ProductPrintBarcodeDialog({
     }));
   }, [commitDesign]);
 
-  const handleUndo = () => {
+  const handleDeleteSelected = React.useCallback(() => {
+    if (selectedElementIds.length === 0 || !activeDesign) return;
+    commitDesign((current) => ({
+      ...current,
+      elements: current.elements.filter((el) => !selectedElementIds.includes(el.id))
+    }));
+    setSelectedElementIds([]);
+  }, [activeDesign, commitDesign, selectedElementIds]);
+
+  const handleDuplicateSelected = React.useCallback(() => {
+    if (!selectedElement || !activeDesign) return;
+    const result = duplicateElement(
+      activeDesign,
+      selectedElement.id,
+      labelGeometry.widthMm,
+      labelGeometry.heightMm
+    );
+    if (result.newElementId) {
+      commitDesign(() => result.design);
+      setSelectedElementIds([result.newElementId]);
+    }
+  }, [activeDesign, commitDesign, labelGeometry.heightMm, labelGeometry.widthMm, selectedElement]);
+
+  const handleToggleLockSelected = React.useCallback(() => {
+    if (!selectedElement) return;
+    updateElement(selectedElement.id, { locked: !selectedElement.locked });
+  }, [selectedElement, updateElement]);
+
+  const handleUndo = React.useCallback(() => {
     setUndoStack((stack) => {
       const previous = stack[stack.length - 1];
       if (!previous) return stack;
       setLabelDesign((current) => {
         if (!current) return current;
-        setRedoStack((redo) => [current, ...redo].slice(0, 20));
+        setRedoStack((redo) => [current, ...redo].slice(0, 25));
         return previous;
       });
       return stack.slice(0, -1);
     });
-  };
+  }, []);
 
-  const handleRedo = () => {
+  const handleRedo = React.useCallback(() => {
     setRedoStack((stack) => {
       const next = stack[0];
       if (!next) return stack;
       setLabelDesign((current) => {
         if (!current) return current;
-        setUndoStack((undo) => [...undo.slice(-19), current]);
+        setUndoStack((undo) => [...undo.slice(-24), current]);
         return next;
       });
       return stack.slice(1);
     });
-  };
+  }, []);
+
+  // Keyboard Shortcuts: Delete, Duplicate, Undo, Redo, Deselect
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (selectedElementIds.length > 0) {
+          event.preventDefault();
+          handleDeleteSelected();
+        }
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd') {
+        if (selectedElement) {
+          event.preventDefault();
+          handleDuplicateSelected();
+        }
+      }
+
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        handleUndo();
+      }
+
+      if (
+        ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'z') ||
+        ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'y')
+      ) {
+        event.preventDefault();
+        handleRedo();
+      }
+
+      if (event.key === 'Escape') {
+        if (selectedElementIds.length > 0) {
+          setSelectedElementIds([]);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    handleDeleteSelected,
+    handleDuplicateSelected,
+    handleRedo,
+    handleUndo,
+    isOpen,
+    selectedElement,
+    selectedElementIds.length
+  ]);
 
   const handleSaveDesign = () => {
     if (!activeDesign) return;
@@ -560,7 +663,7 @@ export function ProductPrintBarcodeDialog({
   };
 
   const handleCanvasPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!activeDesign || layoutMode === 'auto') return;
+    if (!activeDesign) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const pointMm = screenToMm({
       x: event.clientX - rect.left,
@@ -579,18 +682,18 @@ export function ProductPrintBarcodeDialog({
     setSelectedElementIds(nextSelection);
     if (hit.locked) return;
     const originals = Object.fromEntries(
-      activeDesign.elements
+      (activeDesign?.elements || [])
         .filter((element) => nextSelection.includes(element.id) && !element.locked)
         .map((element) => [element.id, element])
     );
-    setUndoStack((stack) => [...stack.slice(-19), activeDesign]);
+    setUndoStack((stack) => [...stack.slice(-24), activeDesign!]);
     setRedoStack([]);
     setEditorAction({
       kind: 'drag',
       startClientX: event.clientX,
       startClientY: event.clientY,
       originals,
-      beforeDesign: activeDesign,
+      beforeDesign: activeDesign!,
       historyCaptured: true
     });
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -604,7 +707,6 @@ export function ProductPrintBarcodeDialog({
     };
 
     if (editorAction.kind === 'drag') {
-      const movedIds = new Set(Object.keys(editorAction.originals));
       setLabelDesign((current) => current ? {
         ...current,
         elements: current.elements.map((element) => {
@@ -617,7 +719,7 @@ export function ProductPrintBarcodeDialog({
           };
         })
       } : current);
-      if (movedIds.size > 0) setLayoutMode('manual');
+      setLayoutMode('manual');
       return;
     }
 
@@ -658,7 +760,7 @@ export function ProductPrintBarcodeDialog({
 
   const handleCanvasPointerUp = () => {
     if (editorAction && !editorAction.historyCaptured) {
-      setUndoStack((stack) => [...stack.slice(-19), editorAction.beforeDesign]);
+      setUndoStack((stack) => [...stack.slice(-24), editorAction.beforeDesign]);
       setRedoStack([]);
     }
     setEditorAction(null);
@@ -714,7 +816,6 @@ export function ProductPrintBarcodeDialog({
     }
   };
 
-  // Explicit action to generate and assign AIA Barcode
   const handleAssignBarcode = async () => {
     if (!product) return;
     try {
@@ -732,7 +833,7 @@ export function ProductPrintBarcodeDialog({
           reorderLevel: product.reorderLevel ?? 0,
           maxStock: product.maxStock ?? 100,
           defaultExpiryDate: product.defaultExpiryDate || product.doe || undefined,
-          barcodes: (product.barcodes || []).map(b => ({
+          barcodes: (product.barcodes || []).map((b) => ({
             barcode: b.barcode,
             type: (b.type || 'ALTERNATE') as 'PRIMARY' | 'ALTERNATE' | 'VARIANT',
             source: (b.source || 'MANUAL') as 'EXTERNAL' | 'AIAVRO' | 'MANUAL',
@@ -740,7 +841,7 @@ export function ProductPrintBarcodeDialog({
             variantId: b.variantId,
             variantName: b.variantName
           })),
-          variants: (product.variants || []).map(v => ({
+          variants: (product.variants || []).map((v) => ({
             ...v,
             status: v.status || 'active'
           }))
@@ -791,20 +892,19 @@ export function ProductPrintBarcodeDialog({
     }
 
     if (hasBlockingDesignError) {
-      toastError('Barcode Cannot Safely Fit', barcodeFit.warnings[0] || 'Choose a larger label before printing.');
+      toastError('Cannot Print Label', designWarnings[0] || 'Resolve design errors before printing.');
       return;
     }
 
     const labelCount = Math.min(Math.max(1, quantity), 100);
 
-    // 1. If Local Print Agent is online, dispatch native TSPL/ZPL command stream directly
     if (canUseNativePrinter) {
       setIsPrintingNative(true);
       try {
         const labelDoc = buildProductLabelDocument({
           product,
           profile: effectiveProfile,
-          design: activeDesign,
+          design: activeDesign!,
           selectedBatch,
           effectiveExpiry,
           showPrice,
@@ -832,7 +932,7 @@ export function ProductPrintBarcodeDialog({
         if (printResult.success) {
           success(
             'Labels Printed',
-            printResult.message || `Dispatched ${labelCount} native label(s) to ${printerName}`
+            printResult.message || `Dispatched ${labelCount} native label(s) to ${printerDisplayName}`
           );
           onClose();
           return;
@@ -844,21 +944,19 @@ export function ProductPrintBarcodeDialog({
       } finally {
         setIsPrintingNative(false);
       }
-    } else if (agentHealth.connected) {
-      toastError('Native Print Notice', 'Print Agent is online but no compatible printer was discovered. Using browser print.');
     }
 
-    // 2. High-fidelity physical popup browser printing fallback
     const printLabelDoc = buildProductLabelDocument({
       product,
       profile: effectiveProfile,
-      design: activeDesign,
+      design: activeDesign!,
       selectedBatch,
       effectiveExpiry,
       showPrice,
       showBrand,
       showLotExpiry
     });
+
     const renderPrintElement = (element: typeof printLabelDoc.elements[number]) => {
       if (element.type === 'barcode') {
         const svg = generateBarcodeSvg(element.value, {
@@ -909,61 +1007,57 @@ export function ProductPrintBarcodeDialog({
           }
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #000;
             background: #fff;
-            padding: 0;
-          }
-          .labels-grid {
-            display: block;
+            color: #000;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .print-label-card {
             width: ${labelGeometry.widthMm}mm;
             height: ${labelGeometry.heightMm}mm;
-            position: relative;
-            background: #fff;
-            page-break-inside: avoid;
-            break-inside: avoid;
             page-break-after: always;
+            break-after: page;
+            position: relative;
+            overflow: hidden;
+            background: #fff;
           }
           .print-label-card.is-last {
             page-break-after: auto;
+            break-after: auto;
           }
           .label-element {
             position: absolute;
-            transform-origin: center;
-          }
-          .label-text-element {
-            color: #000;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            font-variant-numeric: tabular-nums;
-            overflow-wrap: anywhere;
-          }
-          .label-barcode-element,
-          .label-barcode-element svg {
-            display: block;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
           }
           .label-barcode-element svg {
             width: 100%;
             height: 100%;
+            display: block;
           }
-          @media print {
-            .print-label-card {
-              border: 0;
-            }
+          .label-text-element {
+            word-break: break-word;
           }
         </style>
       </head>
-      <body onload="window.print();">
-        <div class="labels-grid">${labelCardsHtml}</div>
+      <body>
+        ${labelCardsHtml}
+        <script>
+          window.onload = function() {
+            window.focus();
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
       </body>
       </html>
     `);
     printWindow.document.close();
     success('Print Initiated', `Dispatched ${labelCount} label(s) for ${product.name}`);
   };
-
-  const [isCalibrating, setIsCalibrating] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
 
   const handleTestPrint = async () => {
     setIsTesting(true);
@@ -1000,10 +1094,10 @@ export function ProductPrintBarcodeDialog({
   // Footer summary text
   const footerSummary = useMemo(() => {
     const parts = [
-      compatibleAgentPrinterName || printerName || selectedProfile.name,
+      printerDisplayName,
       `${labelGeometry.widthMm} x ${labelGeometry.heightMm} mm`,
       labelOrientation === 'vertical' ? 'Vertical' : 'Horizontal',
-      `${effectiveProfile.dpi || 203} DPI`,
+      `${designDpi} DPI`,
       selectedBatch
         ? `Batch ${selectedBatch.lotNumber}`
         : (productDefaultExpiry ? `Default EXP ${formatDisplayDate(productDefaultExpiry)}` : 'Master Barcode'),
@@ -1011,16 +1105,14 @@ export function ProductPrintBarcodeDialog({
     ];
     return parts.join(' • ');
   }, [
-    compatibleAgentPrinterName,
+    designDpi,
     labelGeometry.heightMm,
     labelGeometry.widthMm,
     labelOrientation,
-    printerName,
+    printerDisplayName,
     productDefaultExpiry,
     quantity,
-    selectedBatch,
-    effectiveProfile.dpi,
-    selectedProfile.name
+    selectedBatch
   ]);
 
   if (!product) return null;
@@ -1035,50 +1127,18 @@ export function ProductPrintBarcodeDialog({
       })
     : '';
 
-  const previewLotText = selectedBatch?.lotNumber ? `Lot: ${selectedBatch.lotNumber}` : '';
-  const previewExpText = effectiveExpiry ? `EXP: ${effectiveExpiry}` : '';
-  const previewMetaText = [previewLotText, previewExpText].filter(Boolean).join(' • ');
-  const previewPriceText = showPrice
-    ? `₹${(product.sellingPrice || product.price || 0).toFixed(2)}${product.sellingMode === 'loose' ? ` / ${product.unit || 'kg'}` : ''}`
-    : '';
-  const previewBrandText = showBrand ? (product.brand || "VC ORGANIC'S") : '';
-  const previewProductFontMm = calculateTextFit(product.name, labelGeometry.textMaxWidthMm, labelTypography.productFontMm);
-  const previewPriceFontMm = previewPriceText
-    ? calculateTextFit(previewPriceText, labelGeometry.textMaxWidthMm, labelTypography.priceFontMm, 2)
-    : labelTypography.priceFontMm;
-  const barcodeBoxWidthPx = mmToPx(barcodeFit.displayWidthMm, 96);
-  const barcodeBoxHeightPx = mmToPx(barcodeFit.displayHeightMm, 96);
-  const barcodePreviewStyle: React.CSSProperties = {
-    width: `${barcodeRotation === 90 || barcodeRotation === 270 ? barcodeBoxHeightPx : barcodeBoxWidthPx}px`,
-    height: `${barcodeRotation === 90 || barcodeRotation === 270 ? barcodeBoxWidthPx : barcodeBoxHeightPx}px`,
-    maxWidth: `${mmToPx(labelGeometry.barcodeMaxWidthMm, 96)}px`,
-    maxHeight: `${mmToPx(labelGeometry.barcodeMaxHeightMm + 3, 96)}px`
-  };
-  const barcodeSvgStyle: React.CSSProperties = {
-    width: `${barcodeBoxWidthPx}px`,
-    height: `${barcodeBoxHeightPx}px`,
-    transform: `translate(-50%, -50%) rotate(${barcodeRotation}deg)`,
-    transformOrigin: 'center'
-  };
   const previewOuterStyle: React.CSSProperties = {
-    width: `${previewFit.widthPx * editorZoom}px`,
-    height: `${previewFit.heightPx * editorZoom}px`
+    width: `${previewFit.widthPx}px`,
+    height: `${previewFit.heightPx}px`
   };
+
   const labelCanvasStyle: React.CSSProperties = {
     width: `${labelBaseWidthPx}px`,
     height: `${labelBaseHeightPx}px`,
     position: 'relative',
-    transform: `scale(${previewTransform.scale})`,
+    transform: `scale(${previewFit.scale * editorZoom})`,
     transformOrigin: 'top left'
   };
-  const selectedBounds = selectedElements.length > 0
-    ? {
-        xMm: Math.min(...selectedElements.map((element) => element.xMm)),
-        yMm: Math.min(...selectedElements.map((element) => element.yMm)),
-        rightMm: Math.max(...selectedElements.map((element) => element.xMm + element.widthMm)),
-        bottomMm: Math.max(...selectedElements.map((element) => element.yMm + element.heightMm))
-      }
-    : null;
 
   const batchOptions = [
     {
@@ -1093,16 +1153,35 @@ export function ProductPrintBarcodeDialog({
     }))
   ];
 
-  const scaleControls = [
-    ['Product', productScale, setProductScale],
-    ['Price', priceScale, setPriceScale],
-    ['Brand', brandScale, setBrandScale],
-    ['Lot / Expiry', metaScale, setMetaScale],
-    ['Barcode', barcodeScale, setBarcodeScale],
-    ['Barcode Text', barcodeTextScale, setBarcodeTextScale]
-  ] as const;
+  // Quick Physical Sizing Helpers (Bi-directional Source of Truth)
+  const productElement = activeDesign?.elements.find((el) => el.type === 'product' && el.visible !== false);
+  const priceElement = activeDesign?.elements.find((el) => el.type === 'price' && el.visible !== false);
+  const brandElement = activeDesign?.elements.find((el) => el.type === 'brand' && el.visible !== false);
+  const barcodeElement = activeDesign?.elements.find((el) => el.type === 'barcode' && el.visible !== false);
 
-  const editorElements = activeDesign?.elements.filter((element) => {
+  const handleQuickFontSizeChange = (type: LabelDesignElementType, newSizeMm: number) => {
+    const targetElement = activeDesign?.elements.find((el) => el.type === type && el.visible !== false);
+    if (!targetElement) return;
+    const heightFactor = type === 'product' ? 2.5 : 1.3;
+    updateElement(targetElement.id, {
+      fontSizeMm: roundMm(newSizeMm),
+      lineHeightMm: roundMm(newSizeMm * 1.15),
+      heightMm: roundMm(newSizeMm * heightFactor)
+    });
+  };
+
+  const handleQuickBarcodeWidthChange = (newWidthMm: number) => {
+    const targetElement = activeDesign?.elements.find((el) => el.type === 'barcode' && el.visible !== false);
+    if (!targetElement) return;
+    const aspect = targetElement.widthMm / Math.max(0.1, targetElement.heightMm);
+    const nextHeight = targetElement.lockAspectRatio !== false ? newWidthMm / aspect : targetElement.heightMm;
+    updateElement(targetElement.id, {
+      widthMm: roundMm(newWidthMm),
+      heightMm: roundMm(nextHeight)
+    });
+  };
+
+  const editorElements = (activeDesign?.elements || []).filter((element) => {
     if (element.visible === false) return false;
     if (element.type === 'brand') return showBrand;
     if (element.type === 'price') return showPrice;
@@ -1110,13 +1189,12 @@ export function ProductPrintBarcodeDialog({
     if (element.type === 'expiry') return showLotExpiry && Boolean(effectiveExpiry);
     if (element.type === 'barcode' || element.type === 'barcodeValue') return hasAssignedBarcode;
     return true;
-  }) || [];
+  });
 
   const handleElementPointerDown = (
     event: React.PointerEvent<HTMLDivElement>,
     element: LabelDesignElement
   ) => {
-    if (!activeDesign || layoutMode === 'auto') return;
     event.stopPropagation();
     const nextSelection = event.shiftKey || event.metaKey
       ? selectedElementIds.includes(element.id)
@@ -1126,18 +1204,18 @@ export function ProductPrintBarcodeDialog({
     setSelectedElementIds(nextSelection);
     if (element.locked) return;
     const originals = Object.fromEntries(
-      activeDesign.elements
+      (activeDesign?.elements || [])
         .filter((candidate) => nextSelection.includes(candidate.id) && !candidate.locked)
         .map((candidate) => [candidate.id, candidate])
     );
-    setUndoStack((stack) => [...stack.slice(-19), activeDesign]);
+    setUndoStack((stack) => [...stack.slice(-24), activeDesign!]);
     setRedoStack([]);
     setEditorAction({
       kind: 'drag',
       startClientX: event.clientX,
       startClientY: event.clientY,
       originals,
-      beforeDesign: activeDesign,
+      beforeDesign: activeDesign!,
       historyCaptured: true
     });
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -1151,7 +1229,7 @@ export function ProductPrintBarcodeDialog({
     event.stopPropagation();
     if (element.locked || !activeDesign) return;
     setSelectedElementIds([element.id]);
-    setUndoStack((stack) => [...stack.slice(-19), activeDesign]);
+    setUndoStack((stack) => [...stack.slice(-24), activeDesign]);
     setRedoStack([]);
     setEditorAction({
       kind: 'resize',
@@ -1171,7 +1249,7 @@ export function ProductPrintBarcodeDialog({
     event.stopPropagation();
     if (element.locked || !activeDesign) return;
     setSelectedElementIds([element.id]);
-    setUndoStack((stack) => [...stack.slice(-19), activeDesign]);
+    setUndoStack((stack) => [...stack.slice(-24), activeDesign]);
     setRedoStack([]);
     setEditorAction({
       kind: 'rotate',
@@ -1200,11 +1278,11 @@ export function ProductPrintBarcodeDialog({
   };
 
   const updateTextFontSize = (element: LabelDesignElement, fontSizeMm: number) => {
-    const heightFactor = element.type === 'product' ? 2.7 : 1.3;
+    const heightFactor = element.type === 'product' ? 2.5 : 1.3;
     updateElement(element.id, {
-      fontSizeMm,
-      lineHeightMm: fontSizeMm * 1.15,
-      heightMm: fontSizeMm * heightFactor
+      fontSizeMm: roundMm(fontSizeMm),
+      lineHeightMm: roundMm(fontSizeMm * 1.15),
+      heightMm: roundMm(fontSizeMm * heightFactor)
     });
   };
 
@@ -1222,34 +1300,43 @@ export function ProductPrintBarcodeDialog({
       transform: `rotate(${element.rotation}deg)`,
       transformOrigin: 'center',
       position: 'absolute',
-      zIndex: isSelected ? 20 : element.type === 'barcode' ? 8 : element.type === 'barcodeValue' ? 6 : 4
+      zIndex: isSelected ? 25 : element.type === 'barcode' ? 8 : element.type === 'barcodeValue' ? 6 : 4
     };
 
     const selectionChrome = isSelected && (
       <>
-        <div className="pointer-events-none absolute inset-0 rounded-[2px] border border-blue-600 ring-2 ring-blue-500/20" />
-        {resizeHandles.map((handle) => (
-          <button
-            key={handle}
-            type="button"
-            aria-label={`Resize ${labelElementName[element.type]} ${handle}`}
-            onPointerDown={(event) => startResize(event, element, handle)}
-            className={`absolute h-2.5 w-2.5 rounded-full border border-white bg-blue-600 shadow-sm ${
-              handle === 'nw' ? '-left-1.5 -top-1.5 cursor-nwse-resize' :
-              handle === 'ne' ? '-right-1.5 -top-1.5 cursor-nesw-resize' :
-              handle === 'se' ? '-right-1.5 -bottom-1.5 cursor-nwse-resize' :
-              '-left-1.5 -bottom-1.5 cursor-nesw-resize'
-            }`}
-          />
-        ))}
-        <button
-          type="button"
-          aria-label={`Rotate ${labelElementName[element.type]}`}
-          onPointerDown={(event) => startRotate(event, element)}
-          className="absolute left-1/2 -top-7 h-4 w-4 -translate-x-1/2 rounded-full border border-blue-600 bg-white text-blue-700 shadow-sm"
-        >
-          <RotateCw className="h-3 w-3" />
-        </button>
+        <div className="pointer-events-none absolute inset-0 rounded-[2px] border-2 border-blue-600 ring-2 ring-blue-500/20" />
+        <div className="pointer-events-none absolute -top-5 left-0 whitespace-nowrap rounded bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-xs z-30 flex items-center gap-1">
+          <span>{labelElementName[element.type] || element.id}</span>
+          <span className="font-mono opacity-85">({element.widthMm.toFixed(1)}×{element.heightMm.toFixed(1)}mm)</span>
+          {element.locked && <Lock className="w-2.5 h-2.5 ml-0.5 inline" />}
+        </div>
+        {!element.locked && (
+          <>
+            {resizeHandles.map((handle) => (
+              <button
+                key={handle}
+                type="button"
+                aria-label={`Resize ${labelElementName[element.type] || element.id} ${handle}`}
+                onPointerDown={(event) => startResize(event, element, handle)}
+                className={`absolute h-2.5 w-2.5 rounded-full border border-white bg-blue-600 shadow-sm z-30 ${
+                  handle === 'nw' ? '-left-1.5 -top-1.5 cursor-nwse-resize' :
+                  handle === 'ne' ? '-right-1.5 -top-1.5 cursor-nesw-resize' :
+                  handle === 'se' ? '-right-1.5 -bottom-1.5 cursor-nwse-resize' :
+                  '-left-1.5 -bottom-1.5 cursor-nesw-resize'
+                }`}
+              />
+            ))}
+            <button
+              type="button"
+              aria-label={`Rotate ${labelElementName[element.type] || element.id}`}
+              onPointerDown={(event) => startRotate(event, element)}
+              className="absolute left-1/2 -top-7 h-4 w-4 -translate-x-1/2 rounded-full border border-blue-600 bg-white text-blue-700 shadow-sm flex items-center justify-center z-30 cursor-grab"
+            >
+              <RotateCw className="h-2.5 w-2.5" />
+            </button>
+          </>
+        )}
       </>
     );
 
@@ -1260,7 +1347,7 @@ export function ProductPrintBarcodeDialog({
           data-testid={`label-element-${element.id}`}
           role="button"
           tabIndex={0}
-          aria-label={labelElementName[element.type]}
+          aria-label={labelElementName[element.type] || element.id}
           onPointerDown={(event) => handleElementPointerDown(event, element)}
           className={`group flex items-center justify-center rounded-[2px] ${element.locked ? 'cursor-not-allowed' : 'cursor-move'}`}
           style={{
@@ -1283,14 +1370,14 @@ export function ProductPrintBarcodeDialog({
     }
 
     const text = getDesignElementText({ element, product, selectedBatch, effectiveExpiry });
-    const showSkuDefaultCue = element.type === 'expiry' && !selectedBatch && productDefaultExpiry;
+    const showSkuDefaultCue = element.type === 'expiry' && !selectedBatch && Boolean(productDefaultExpiry);
     return (
       <div
         key={element.id}
         data-testid={`label-element-${element.id}`}
         role="button"
         tabIndex={0}
-        aria-label={labelElementName[element.type]}
+        aria-label={labelElementName[element.type] || element.id}
         onPointerDown={(event) => handleElementPointerDown(event, element)}
         className={`flex items-center rounded-[2px] px-0.5 text-slate-950 ${element.locked ? 'cursor-not-allowed' : 'cursor-move'}`}
         style={{
@@ -1351,7 +1438,7 @@ export function ProductPrintBarcodeDialog({
           leftIcon={<Printer className="w-4 h-4" />}
           className="w-full sm:w-auto"
         >
-          {canUseNativePrinter ? `Print ${quantity} Label${quantity > 1 ? 's' : ''}` : 'Use Browser Print'}
+          Print {quantity} Label{quantity > 1 ? 's' : ''}
         </Button>
       </div>
     </div>
@@ -1367,9 +1454,7 @@ export function ProductPrintBarcodeDialog({
       maxWidth="5xl"
     >
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 py-1">
-        {/* LEFT COLUMN: Configuration Controls */}
         <div className="lg:col-span-5 space-y-4 min-w-0">
-          {/* 1. Product Identity Card */}
           <div className="bg-slate-50/90 border border-slate-200/90 rounded-xl p-3.5 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 truncate pr-2">
@@ -1431,7 +1516,6 @@ export function ProductPrintBarcodeDialog({
             </div>
           </div>
 
-          {/* 2. Label Media Profile */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5 text-blue-600" />
@@ -1484,10 +1568,10 @@ export function ProductPrintBarcodeDialog({
                   ] as const).map(([label, key, min, max]) => (
                     <div key={String(key)} className="space-y-1">
                       <label className="text-[10px] font-semibold text-slate-600">{label}</label>
-                        <Input
-                          type="number"
-                          aria-label={`Custom label ${label}`}
-                          min={Number(min)}
+                      <Input
+                        type="number"
+                        aria-label={`Custom label ${label}`}
+                        min={Number(min)}
                         max={Number(max)}
                         value={Number(customProfile[key as keyof typeof customProfile]) || ''}
                         onChange={(event) => {
@@ -1550,47 +1634,241 @@ export function ProductPrintBarcodeDialog({
             </div>
 
             <div className="grid grid-cols-3 gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1">
-              {[203, 300, 600].map((dpi) => (
-                <button
-                  key={dpi}
-                  type="button"
-                  onClick={() => setDesignDpi(dpi)}
-                  className={`h-8 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
-                    designDpi === dpi
-                      ? 'bg-white text-blue-700 shadow-xs border border-slate-200'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  {dpi} DPI
-                </button>
-              ))}
+              {[203, 300, 600].map((dpi) => {
+                const isSupported = supportedDpis.includes(dpi);
+                const isSelected = designDpi === dpi;
+                return (
+                  <button
+                    key={dpi}
+                    type="button"
+                    disabled={!isSupported}
+                    onClick={() => {
+                      if (isSupported) {
+                        setDesignDpi(dpi);
+                        commitDesign((current) => ({ ...current, dpi }));
+                      }
+                    }}
+                    title={!isSupported ? `Unavailable for ${printerDisplayName}` : `${dpi} DPI`}
+                    className={`h-8 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-white text-blue-700 shadow-xs border border-slate-200 ring-1 ring-blue-400'
+                        : isSupported
+                        ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                        : 'text-slate-300 bg-slate-50 cursor-not-allowed border border-transparent'
+                    }`}
+                  >
+                    {dpi} DPI {!isSupported && '(N/A)'}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="space-y-2">
-              {scaleControls.map(([label, value, setValue]) => (
-                <div key={label} className="grid grid-cols-[82px_1fr_44px] items-center gap-2">
-                  <label className="text-[11px] font-medium text-slate-600">{label}</label>
-                  <input
-                    type="range"
-                    min={label === 'Barcode' ? 50 : 70}
-                    max={label === 'Barcode' ? 145 : 170}
-                    step={5}
-                    value={Math.round(value * 100)}
-                    onChange={(event) => setValue(Number(event.target.value) / 100)}
-                    className="h-2 w-full accent-blue-600"
-                    aria-label={`${label} size`}
-                  />
-                  <span className="text-right text-[10px] font-mono font-semibold text-slate-700">
-                    {Math.round(value * 100)}%
-                  </span>
+            <div className="space-y-2.5">
+              {productElement && (
+                <div
+                  onClick={() => setSelectedElementIds([productElement.id])}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                    selectedElementIds.includes(productElement.id) ? 'border-blue-300 bg-blue-50/40' : 'border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[11px] mb-1">
+                    <span className="font-medium text-slate-700">Product Size</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {(productElement.fontSizeMm || labelTypography.productFontMm).toFixed(1)} mm
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Decrease product font size"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickFontSizeChange('product', Math.max(1.8, (productElement.fontSizeMm || labelTypography.productFontMm) - 0.2));
+                      }}
+                      className="h-6 w-6 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="range"
+                      aria-label="Product size"
+                      min={2.0}
+                      max={9.0}
+                      step={0.1}
+                      value={productElement.fontSizeMm || labelTypography.productFontMm}
+                      onChange={(e) => handleQuickFontSizeChange('product', Number(e.target.value))}
+                      className="h-2 w-full accent-blue-600"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Increase product font size"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickFontSizeChange('product', Math.min(9.0, (productElement.fontSizeMm || labelTypography.productFontMm) + 0.2));
+                      }}
+                      className="h-6 w-6 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {priceElement && showPrice && (
+                <div
+                  onClick={() => setSelectedElementIds([priceElement.id])}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                    selectedElementIds.includes(priceElement.id) ? 'border-blue-300 bg-blue-50/40' : 'border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[11px] mb-1">
+                    <span className="font-medium text-slate-700">Price Size</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {(priceElement.fontSizeMm || labelTypography.priceFontMm).toFixed(1)} mm
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Decrease price font size"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickFontSizeChange('price', Math.max(1.8, (priceElement.fontSizeMm || labelTypography.priceFontMm) - 0.2));
+                      }}
+                      className="h-6 w-6 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="range"
+                      aria-label="Price size"
+                      min={2.0}
+                      max={9.0}
+                      step={0.1}
+                      value={priceElement.fontSizeMm || labelTypography.priceFontMm}
+                      onChange={(e) => handleQuickFontSizeChange('price', Number(e.target.value))}
+                      className="h-2 w-full accent-blue-600"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Increase price font size"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickFontSizeChange('price', Math.min(9.0, (priceElement.fontSizeMm || labelTypography.priceFontMm) + 0.2));
+                      }}
+                      className="h-6 w-6 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {brandElement && showBrand && (
+                <div
+                  onClick={() => setSelectedElementIds([brandElement.id])}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                    selectedElementIds.includes(brandElement.id) ? 'border-blue-300 bg-blue-50/40' : 'border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[11px] mb-1">
+                    <span className="font-medium text-slate-700">Brand Size</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      {(brandElement.fontSizeMm || labelTypography.brandFontMm).toFixed(1)} mm
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Decrease brand font size"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickFontSizeChange('brand', Math.max(1.5, (brandElement.fontSizeMm || labelTypography.brandFontMm) - 0.2));
+                      }}
+                      className="h-6 w-6 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="range"
+                      aria-label="Brand size"
+                      min={1.5}
+                      max={7.0}
+                      step={0.1}
+                      value={brandElement.fontSizeMm || labelTypography.brandFontMm}
+                      onChange={(e) => handleQuickFontSizeChange('brand', Number(e.target.value))}
+                      className="h-2 w-full accent-blue-600"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Increase brand font size"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickFontSizeChange('brand', Math.min(7.0, (brandElement.fontSizeMm || labelTypography.brandFontMm) + 0.2));
+                      }}
+                      className="h-6 w-6 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {barcodeElement && hasAssignedBarcode && (
+                <div
+                  onClick={() => setSelectedElementIds([barcodeElement.id])}
+                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                    selectedElementIds.includes(barcodeElement.id) ? 'border-blue-300 bg-blue-50/40' : 'border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[11px] mb-1">
+                    <span className="font-medium text-slate-700">Barcode Size</span>
+                    <span className="font-mono font-bold text-slate-900">
+                      W: {barcodeElement.widthMm.toFixed(1)}mm • H: {barcodeElement.heightMm.toFixed(1)}mm
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Decrease barcode width"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickBarcodeWidthChange(Math.max(15, barcodeElement.widthMm - 1));
+                      }}
+                      className="h-6 w-6 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="range"
+                      aria-label="Barcode size"
+                      min={15}
+                      max={labelGeometry.contentWidthMm}
+                      step={0.5}
+                      value={barcodeElement.widthMm}
+                      onChange={(e) => handleQuickBarcodeWidthChange(Number(e.target.value))}
+                      className="h-2 w-full accent-blue-600"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Increase barcode width"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickBarcodeWidthChange(Math.min(labelGeometry.contentWidthMm, barcodeElement.widthMm + 1));
+                      }}
+                      className="h-6 w-6 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-2 text-[10px] text-slate-500">
               <span>Mode <strong className="block text-slate-800">{layoutMode === 'auto' ? 'Auto Reflow' : 'Manual Tuning'}</strong></span>
               <span>DPI <strong className="block font-mono text-slate-800">{designDpi}</strong></span>
-              <span>Barcode <strong className="block font-mono text-slate-800">{Math.round(barcodeScale * 100)}%</strong></span>
+              <span>Layout <strong className="block font-mono text-slate-800">{activeDesign?.elements.filter(e => e.visible !== false).length || 0} items</strong></span>
             </div>
           </div>
 
@@ -1640,7 +1918,6 @@ export function ProductPrintBarcodeDialog({
             </div>
           </div>
 
-          {/* 3. Batch / Expiry Selection */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
@@ -1670,7 +1947,6 @@ export function ProductPrintBarcodeDialog({
               disabled={isLoadingBatches}
             />
 
-            {/* Selected Batch Summary Card or Editable SKU Default Expiry Card */}
             {selectedBatch ? (
               <div className="bg-slate-100/70 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -1749,7 +2025,6 @@ export function ProductPrintBarcodeDialog({
             )}
           </div>
 
-          {/* Quick Add Batch Subform */}
           {isAddingBatch && (
             <form onSubmit={handleCreateBatch} className="bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-3">
               <div className="text-xs font-bold text-blue-900">Record New Batch / Lot</div>
@@ -1795,9 +2070,7 @@ export function ProductPrintBarcodeDialog({
             </form>
           )}
 
-          {/* 4. Quantity Stepper & Field Toggles */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
-            {/* Quantity Stepper */}
             <div className="sm:col-span-6 space-y-1">
               <label className="text-xs font-semibold text-slate-800 block">
                 Number of Labels
@@ -1836,7 +2109,6 @@ export function ProductPrintBarcodeDialog({
               </span>
             </div>
 
-            {/* Content Field Toggles */}
             <div className="sm:col-span-6 space-y-1.5">
               <label className="text-xs font-semibold text-slate-800 block">
                 Print Fields
@@ -1889,7 +2161,6 @@ export function ProductPrintBarcodeDialog({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Physical Print Simulator */}
         <div className="lg:col-span-7 flex min-w-0 flex-col justify-between bg-slate-100/90 border border-slate-200/90 rounded-2xl p-4 shadow-inner min-h-[420px]">
           <div>
             <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200 text-slate-600">
@@ -1905,7 +2176,7 @@ export function ProductPrintBarcodeDialog({
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
               <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                 <span className="block text-slate-400">Printer</span>
-                <span className="block break-words font-bold text-slate-900">{compatibleAgentPrinterName || printerName || 'TVS LP-46 Dlite'}</span>
+                <span className="block break-words font-bold text-slate-900">{printerDisplayName}</span>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                 <span className="block text-slate-400">Media & Gap</span>
@@ -1915,18 +2186,30 @@ export function ProductPrintBarcodeDialog({
               </div>
               <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                 <span className="block text-slate-400">Engine Dialect</span>
-                <span className="block break-words font-bold text-slate-900">{printerLanguage || 'TSPL-EZ'}</span>
+                <span className="block break-words font-bold text-slate-900">{effectiveProfile.printerLanguage || printerLanguage || 'TSPL-EZ'}</span>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                 <span className="block text-slate-400">Resolution</span>
-                <span className="block break-words font-bold text-slate-900">{effectiveProfile.dpi || 203} DPI</span>
+                <span className="block break-words font-bold text-slate-900">{designDpi} DPI</span>
               </div>
             </div>
 
-            <div className="mt-2 text-[10px] text-slate-500">
-              Native print: <strong className="text-slate-800">
-                {canUseNativePrinter ? 'ready' : agentHealth.connected ? 'agent online, no compatible printer' : 'browser fallback'}
-              </strong>
+            <div className="mt-2 text-[10px] text-slate-500 flex items-center justify-between flex-wrap gap-1">
+              <span>
+                Native thermal printing:{' '}
+                <strong className={canUseNativePrinter ? 'text-emerald-700' : 'text-slate-700'}>
+                  {canUseNativePrinter
+                    ? `● Ready (${compatibleAgentPrinterName})`
+                    : agentHealth.connected
+                    ? '○ Agent online, no compatible printer'
+                    : '○ Unavailable (Print Agent offline)'}
+                </strong>
+              </span>
+              {!canUseNativePrinter && (
+                <span className="text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                  Browser Print Available
+                </span>
+              )}
             </div>
 
             <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] text-slate-600">
@@ -1962,8 +2245,24 @@ export function ProductPrintBarcodeDialog({
             )}
 
             <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-1.5">
-              <button type="button" onClick={handleUndo} disabled={undoStack.length === 0} className="h-7 rounded-md px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40">Undo</button>
-              <button type="button" onClick={handleRedo} disabled={redoStack.length === 0} className="h-7 rounded-md px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40">Redo</button>
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={undoStack.length === 0}
+                className="h-7 rounded-md px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                title="Undo (Ctrl+Z)"
+              >
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={handleRedo}
+                disabled={redoStack.length === 0}
+                className="h-7 rounded-md px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                title="Redo (Ctrl+Y)"
+              >
+                Redo
+              </button>
               <span className="h-5 w-px bg-slate-200" />
               <button type="button" onClick={() => setEditorZoom((value) => Math.max(0.5, Number((value - 0.1).toFixed(2))))} className="h-7 rounded-md px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Zoom -</button>
               <button type="button" onClick={() => setEditorZoom(1)} className="h-7 rounded-md px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100">100%</button>
@@ -1974,9 +2273,32 @@ export function ProductPrintBarcodeDialog({
               <button type="button" onClick={() => commitDesign((current) => ({ ...current, snapEnabled: !current.snapEnabled }))} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeDesign?.snapEnabled ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'}`}>Snap</button>
               <button type="button" onClick={() => setLayoutMode('auto')} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${layoutMode === 'auto' ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'}`}>Auto Layout</button>
               <button type="button" onClick={() => setLayoutMode('manual')} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${layoutMode === 'manual' ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'}`}>Manual Design</button>
+
+              {selectedElement && (
+                <>
+                  <span className="h-5 w-px bg-slate-200" />
+                  <button
+                    type="button"
+                    onClick={handleDuplicateSelected}
+                    className="h-7 rounded-md px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 inline-flex items-center gap-1"
+                    title="Duplicate element (Ctrl+D)"
+                  >
+                    <Copy className="w-3 h-3 text-slate-500" />
+                    Duplicate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteSelected}
+                    className="h-7 rounded-md px-2 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 inline-flex items-center gap-1"
+                    title="Delete element (Delete/Backspace)"
+                  >
+                    <Trash2 className="w-3 h-3 text-rose-600" />
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
 
-            {/* Scaled physical label canvas */}
             <div
               ref={previewViewportRef}
               data-testid="barcode-preview-viewport"
@@ -1996,59 +2318,47 @@ export function ProductPrintBarcodeDialog({
                   className="bg-white text-slate-900 rounded-md shadow-sm border border-dashed border-slate-300 select-none transition-colors"
                   style={labelCanvasStyle}
                 >
-                {hasAssignedBarcode ? (
-                  <>
-                    {activeDesign?.gridEnabled && (
+                  {hasAssignedBarcode ? (
+                    <>
+                      {activeDesign?.gridEnabled && (
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0 opacity-60"
+                          style={{
+                            backgroundImage: 'linear-gradient(to right, rgba(148,163,184,0.25) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.25) 1px, transparent 1px)',
+                            backgroundSize: `${mmToPx(5, 96)}px ${mmToPx(5, 96)}px`
+                          }}
+                        />
+                      )}
                       <div
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 opacity-60"
+                        className="pointer-events-none absolute border border-blue-400/40"
                         style={{
-                          backgroundImage: 'linear-gradient(to right, rgba(148,163,184,0.25) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.25) 1px, transparent 1px)',
-                          backgroundSize: `${mmToPx(5, 96)}px ${mmToPx(5, 96)}px`
+                          left: mmToPx(effectiveProfile.marginLeftMm || 0, 96),
+                          top: mmToPx(effectiveProfile.marginTopMm || 0, 96),
+                          width: mmToPx(labelGeometry.contentWidthMm, 96),
+                          height: mmToPx(labelGeometry.contentHeightMm, 96)
                         }}
                       />
-                    )}
-                    <div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute border border-blue-400/40"
-                      style={{
-                        left: mmToPx(effectiveProfile.marginLeftMm || 0, 96),
-                        top: mmToPx(effectiveProfile.marginTopMm || 0, 96),
-                        width: mmToPx(labelGeometry.contentWidthMm, 96),
-                        height: mmToPx(labelGeometry.contentHeightMm, 96)
-                      }}
-                    />
-                    {editorElements.map(renderEditorElement)}
-                    {selectedBounds && (
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute border border-dashed border-blue-500"
-                        style={{
-                          left: mmToPx(selectedBounds.xMm, 96),
-                          top: mmToPx(selectedBounds.yMm, 96),
-                          width: mmToPx(selectedBounds.rightMm - selectedBounds.xMm, 96),
-                          height: mmToPx(selectedBounds.bottomMm - selectedBounds.yMm, 96)
-                        }}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <div className="p-4 text-center space-y-2 my-auto">
-                    <AlertCircle className="w-7 h-7 text-amber-500 mx-auto" />
-                    <div className="text-xs font-bold text-slate-800">No Barcode Assigned</div>
-                    <div className="text-[11px] text-slate-500 leading-tight">
-                      Assign an external code or generate an AIA sequence to preview.
+                      {editorElements.map(renderEditorElement)}
+                    </>
+                  ) : (
+                    <div className="p-4 text-center space-y-2 my-auto">
+                      <AlertCircle className="w-7 h-7 text-amber-500 mx-auto" />
+                      <div className="text-xs font-bold text-slate-800">No Barcode Assigned</div>
+                      <div className="text-[11px] text-slate-500 leading-tight">
+                        Assign an external code or generate an AIA sequence to preview.
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 xl:grid-cols-[1fr_220px] gap-3">
+            <div className="mt-3 grid grid-cols-1 xl:grid-cols-[1fr_240px] gap-3">
               <div className="rounded-lg border border-slate-200 bg-white p-2.5">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-800">Alignment</span>
+                  <span className="text-[11px] font-bold text-slate-800">Alignment & Distribution</span>
                   <span className="font-mono text-[10px] text-slate-500">
                     {selectedElement ? `${selectedElement.xMm.toFixed(1)}, ${selectedElement.yMm.toFixed(1)} mm` : `${selectedElementIds.length} selected`}
                   </span>
@@ -2069,58 +2379,293 @@ export function ProductPrintBarcodeDialog({
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-[11px] font-bold text-slate-800">Inspector</span>
                   {selectedElement && (
-                    <button type="button" onClick={() => updateElement(selectedElement.id, { locked: !selectedElement.locked })} className="text-slate-500 hover:text-slate-800" aria-label={selectedElement.locked ? 'Unlock element' : 'Lock element'}>
-                      {selectedElement.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleDuplicateSelected}
+                        className="text-slate-500 hover:text-slate-800 p-0.5"
+                        title="Duplicate element"
+                        aria-label="Duplicate element"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleToggleLockSelected}
+                        className="text-slate-500 hover:text-slate-800 p-0.5"
+                        aria-label={selectedElement.locked ? 'Unlock element' : 'Lock element'}
+                        title={selectedElement.locked ? 'Unlock' : 'Lock'}
+                      >
+                        {selectedElement.locked ? <Lock className="h-3.5 w-3.5 text-amber-600" /> : <Unlock className="h-3.5 w-3.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteSelected}
+                        className="text-rose-600 hover:text-rose-800 p-0.5"
+                        title="Delete element"
+                        aria-label="Delete element"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   )}
                 </div>
+
                 {selectedElement ? (
                   <div className="space-y-2">
-                    <div className="text-[11px] font-semibold text-blue-700">{labelElementName[selectedElement.type]}</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-blue-700">
+                        {labelElementName[selectedElement.type] || selectedElement.id}
+                      </span>
+                      <label className="flex items-center gap-1 text-[10px] text-slate-500 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedElement.visible !== false}
+                          onChange={(e) => updateElement(selectedElement.id, { visible: e.target.checked })}
+                          className="rounded text-blue-600"
+                        />
+                        Visible
+                      </label>
+                    </div>
+
                     {selectedElement.type !== 'barcode' ? (
                       <>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Font Size <Input aria-label="Font Size" type="number" value={selectedElement.fontSizeMm || 0} step="0.1" onChange={(event) => updateTextFontSize(selectedElement, Number(event.target.value))} className="h-7 text-xs" /></label>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Weight <Select aria-label="Weight" value={selectedElement.fontWeight || 'normal'} onChange={(event) => updateElement(selectedElement.id, { fontWeight: event.target.value as LabelDesignElement['fontWeight'] })} options={[{ value: 'normal', label: 'Normal' }, { value: 'semibold', label: 'Semibold' }, { value: 'bold', label: 'Bold' }, { value: 'extrabold', label: 'Extrabold' }]} className="h-7 text-xs" /></label>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Alignment <Select aria-label="Alignment" value={selectedElement.alignment || 'center'} onChange={(event) => updateElement(selectedElement.id, { alignment: event.target.value as LabelDesignElement['alignment'] })} options={[{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }, { value: 'right', label: 'Right' }]} className="h-7 text-xs" /></label>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Letter Spacing <Input aria-label="Letter Spacing" type="number" value={selectedElement.letterSpacingMm || 0} step="0.05" onChange={(event) => updateElement(selectedElement.id, { letterSpacingMm: Number(event.target.value) })} className="h-7 text-xs" /></label>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Line Height <Input aria-label="Line Height" type="number" value={selectedElement.lineHeightMm || 0} step="0.1" onChange={(event) => updateElement(selectedElement.id, { lineHeightMm: Number(event.target.value) })} className="h-7 text-xs" /></label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Font Size
+                          <Input
+                            aria-label="Font Size"
+                            type="number"
+                            value={selectedElement.fontSizeMm || 0}
+                            step="0.1"
+                            onChange={(event) => updateTextFontSize(selectedElement, Number(event.target.value))}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Weight
+                          <Select
+                            aria-label="Weight"
+                            value={selectedElement.fontWeight || 'normal'}
+                            onChange={(event) => updateElement(selectedElement.id, { fontWeight: event.target.value as LabelDesignElement['fontWeight'] })}
+                            options={[
+                              { value: 'normal', label: 'Normal' },
+                              { value: 'semibold', label: 'Semibold' },
+                              { value: 'bold', label: 'Bold' },
+                              { value: 'extrabold', label: 'Extrabold' }
+                            ]}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Alignment
+                          <Select
+                            aria-label="Alignment"
+                            value={selectedElement.alignment || 'center'}
+                            onChange={(event) => updateElement(selectedElement.id, { alignment: event.target.value as LabelDesignElement['alignment'] })}
+                            options={[
+                              { value: 'left', label: 'Left' },
+                              { value: 'center', label: 'Center' },
+                              { value: 'right', label: 'Right' }
+                            ]}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Letter Spacing
+                          <Input
+                            aria-label="Letter Spacing"
+                            type="number"
+                            value={selectedElement.letterSpacingMm || 0}
+                            step="0.05"
+                            onChange={(event) => updateElement(selectedElement.id, { letterSpacingMm: Number(event.target.value) })}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Line Height
+                          <Input
+                            aria-label="Line Height"
+                            type="number"
+                            value={selectedElement.lineHeightMm || 0}
+                            step="0.1"
+                            onChange={(event) => updateElement(selectedElement.id, { lineHeightMm: Number(event.target.value) })}
+                            className="h-7 text-xs"
+                          />
+                        </label>
                       </>
                     ) : (
                       <>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Format <Select aria-label="Format" value={selectedElement.barcodeFormat || barcodeFit.format} onChange={(event) => updateElement(selectedElement.id, { barcodeFormat: event.target.value as LabelDesignElement['barcodeFormat'] })} options={[{ value: 'CODE128', label: 'CODE128' }, { value: 'EAN13', label: 'EAN13' }, { value: 'EAN8', label: 'EAN8' }, { value: 'UPC', label: 'UPC' }]} className="h-7 text-xs" /></label>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Module Width <Input aria-label="Module Width" type="number" value={selectedElement.moduleWidthMm || 0} step="0.01" onChange={(event) => updateElement(selectedElement.id, { moduleWidthMm: Number(event.target.value) })} className="h-7 text-xs" /></label>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Barcode Text <Input aria-label="Barcode Text" value={assignedBarcode} readOnly className="h-7 text-xs" /></label>
-                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">Quiet Zone <Input aria-label="Quiet Zone" type="number" value={selectedElement.quietZoneModules || barcodeFit.quietZoneModules} onChange={(event) => updateElement(selectedElement.id, { quietZoneModules: Number(event.target.value) })} className="h-7 text-xs" /></label>
-                        <label className="flex items-center justify-between gap-2 text-[10px] text-slate-600">Lock Aspect Ratio <input aria-label="Lock Aspect Ratio" type="checkbox" checked={selectedElement.lockAspectRatio !== false} onChange={(event) => updateElement(selectedElement.id, { lockAspectRatio: event.target.checked })} /></label>
-                        <label className="flex items-center justify-between gap-2 text-[10px] text-slate-600">Auto Fit <input aria-label="Auto Fit" type="checkbox" checked={selectedElement.autoFit !== false} onChange={(event) => updateElement(selectedElement.id, { autoFit: event.target.checked })} /></label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Format
+                          <Select
+                            aria-label="Format"
+                            value={selectedElement.barcodeFormat || barcodeFit.format}
+                            onChange={(event) => updateElement(selectedElement.id, { barcodeFormat: event.target.value as LabelDesignElement['barcodeFormat'] })}
+                            options={[
+                              { value: 'CODE128', label: 'CODE128' },
+                              { value: 'EAN13', label: 'EAN13' },
+                              { value: 'EAN8', label: 'EAN8' },
+                              { value: 'UPC', label: 'UPC' }
+                            ]}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Module Width
+                          <Input
+                            aria-label="Module Width"
+                            type="number"
+                            value={selectedElement.moduleWidthMm || 0}
+                            step="0.01"
+                            onChange={(event) => updateElement(selectedElement.id, { moduleWidthMm: Number(event.target.value) })}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Barcode Text
+                          <Input
+                            aria-label="Barcode Text"
+                            value={assignedBarcode}
+                            readOnly
+                            className="h-7 text-xs bg-slate-50"
+                          />
+                        </label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Quiet Zone
+                          <Input
+                            aria-label="Quiet Zone"
+                            type="number"
+                            value={selectedElement.quietZoneModules || barcodeFit.quietZoneModules}
+                            onChange={(event) => updateElement(selectedElement.id, { quietZoneModules: Number(event.target.value) })}
+                            className="h-7 text-xs"
+                          />
+                        </label>
+                        <label className="flex items-center justify-between gap-2 text-[10px] text-slate-600 cursor-pointer">
+                          Lock Aspect Ratio
+                          <input
+                            aria-label="Lock Aspect Ratio"
+                            type="checkbox"
+                            checked={selectedElement.lockAspectRatio !== false}
+                            onChange={(event) => updateElement(selectedElement.id, { lockAspectRatio: event.target.checked })}
+                            className="rounded text-blue-600"
+                          />
+                        </label>
+                        <label className="flex items-center justify-between gap-2 text-[10px] text-slate-600 cursor-pointer">
+                          Auto Fit
+                          <input
+                            aria-label="Auto Fit"
+                            type="checkbox"
+                            checked={selectedElement.autoFit !== false}
+                            onChange={(event) => updateElement(selectedElement.id, { autoFit: event.target.checked })}
+                            className="rounded text-blue-600"
+                          />
+                        </label>
                       </>
                     )}
+
                     {(['xMm', 'yMm', 'widthMm', 'heightMm', 'rotation'] as const).map((key) => (
                       <label key={key} className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
                         {key === 'xMm' ? 'X' : key === 'yMm' ? 'Y' : key === 'widthMm' ? 'Width' : key === 'heightMm' ? 'Height' : 'Rotation'}
-                        <Input aria-label={key === 'xMm' ? 'X' : key === 'yMm' ? 'Y' : key === 'widthMm' ? 'Width' : key === 'heightMm' ? 'Height' : 'Rotation'} type="number" value={Number(selectedElement[key]).toFixed(key === 'rotation' ? 0 : 1)} step={key === 'rotation' ? 1 : 0.1} onChange={(event) => updateElement(selectedElement.id, { [key]: Number(event.target.value) } as Partial<LabelDesignElement>)} className="h-7 text-xs" />
+                        <Input
+                          aria-label={key === 'xMm' ? 'X' : key === 'yMm' ? 'Y' : key === 'widthMm' ? 'Width' : key === 'heightMm' ? 'Height' : 'Rotation'}
+                          type="number"
+                          value={Number(selectedElement[key]).toFixed(key === 'rotation' ? 0 : 1)}
+                          step={key === 'rotation' ? 1 : 0.1}
+                          onChange={(event) => updateElement(selectedElement.id, { [key]: Number(event.target.value) } as Partial<LabelDesignElement>)}
+                          className="h-7 text-xs"
+                        />
                       </label>
                     ))}
-                    <button type="button" onClick={handleResetElement} className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 px-2 text-[10px] font-semibold text-slate-600 hover:bg-slate-50"><RotateCcw className="h-3 w-3" /> Reset Element</button>
+
+                    <div className="pt-1 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={handleResetElement}
+                        className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 px-2 text-[10px] font-semibold text-slate-600 hover:bg-slate-50"
+                      >
+                        <RotateCcw className="h-3 w-3" /> Reset Element
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteSelected}
+                        className="inline-flex h-7 items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 text-[10px] font-semibold text-rose-700 hover:bg-rose-100"
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </button>
+                    </div>
+
+                    <div className="mt-2 rounded-md border border-slate-100 bg-slate-50 p-2 text-[10px] font-mono text-slate-600 space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>Bounds:</span>
+                        <strong className="text-slate-800">X: {selectedElement.xMm.toFixed(2)}mm, Y: {selectedElement.yMm.toFixed(2)}mm</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Size:</span>
+                        <strong className="text-slate-800">W: {selectedElement.widthMm.toFixed(2)}mm, H: {selectedElement.heightMm.toFixed(2)}mm</strong>
+                      </div>
+                      {selectedElement.fontSizeMm && (
+                        <div className="flex justify-between">
+                          <span>Font:</span>
+                          <strong className="text-slate-800">{selectedElement.fontSizeMm.toFixed(2)}mm</strong>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span>Rotation:</span>
+                        <strong className="text-slate-800">{selectedElement.rotation}°</strong>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-[11px] text-slate-500">Select an element on the label.</div>
+                  <div className="text-[11px] text-slate-500 py-3 text-center">
+                    Click any element on the label canvas to inspect and edit its physical properties.
+                  </div>
                 )}
               </div>
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-2">
-              <Input aria-label="Design name" placeholder="Named label design" value={newDesignName} onChange={(event) => setNewDesignName(event.target.value)} className="h-8 min-w-[160px] flex-1 text-xs" />
-              <Button type="button" size="sm" variant="outline" onClick={handleSaveDesign} leftIcon={<Save className="h-3.5 w-3.5" />}>Save Design</Button>
-              <Select aria-label="Saved design" value={selectedSavedDesignId} onChange={(event) => setSelectedSavedDesignId(event.target.value)} options={[{ value: '', label: 'Saved designs' }, ...savedDesigns.map((item) => ({ value: item.id, label: item.name }))]} className="h-8 min-w-[160px] text-xs" />
-              <Button type="button" size="sm" variant="secondary" onClick={handleLoadDesign} disabled={!selectedSavedDesignId}>Load</Button>
+              <Input
+                aria-label="Design name"
+                placeholder="Named label design"
+                value={newDesignName}
+                onChange={(event) => setNewDesignName(event.target.value)}
+                className="h-8 min-w-[160px] flex-1 text-xs"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleSaveDesign}
+                leftIcon={<Save className="h-3.5 w-3.5" />}
+              >
+                Save Design
+              </Button>
+              <Select
+                aria-label="Saved design"
+                value={selectedSavedDesignId}
+                onChange={(event) => setSelectedSavedDesignId(event.target.value)}
+                options={[
+                  { value: '', label: 'Saved designs' },
+                  ...savedDesigns.map((item) => ({ value: item.id, label: item.name }))
+                ]}
+                className="h-8 min-w-[160px] text-xs"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={handleLoadDesign}
+                disabled={!selectedSavedDesignId}
+              >
+                Load
+              </Button>
             </div>
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-slate-200 text-center text-[11px] text-slate-500">
             {hasAssignedBarcode ? (
               <>
-                Preview uses <strong className="text-slate-800">{selectedProfile.name}</strong> at {selectedProfile.dpi || 203} DPI.
+                Preview uses <strong className="text-slate-800">{printerDisplayName}</strong> at {designDpi} DPI.
                 <span className="block font-mono text-[10px] text-slate-400">
                   Module {barcodeFit.moduleWidthPx.toFixed(2)}px / min {barcodeFit.minModuleWidthMm}mm
                 </span>

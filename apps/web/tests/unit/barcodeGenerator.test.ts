@@ -28,8 +28,11 @@ import {
   calculateResize,
   calculateRotation,
   createDefaultLabelDesign,
+  deleteElement,
   detectCollisions,
   distributeElements,
+  duplicateElement,
+  getPrinterSupportedDpis,
   hitTestElement,
   mmToScreen,
   screenToMm,
@@ -702,5 +705,77 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
     expect(custom.physicalMedia?.alongFeedMm).toBe(35);
     expect(geometry.widthMm).toBe(80);
     expect(geometry.heightMm).toBe(35);
+  });
+
+  it('11. deleteElement removes element by ID and returns new design', () => {
+    const design = createDefaultLabelDesign({
+      profile: TVS_LP46_DLITE_PROFILE,
+      product: {
+        id: 'prd-1',
+        name: 'A2 Ghee',
+        sku: 'GHEE-1',
+        barcode: '8901234567890',
+        sellingPrice: 500
+      },
+      selectedBatch: null,
+      effectiveExpiry: '25/08/2026',
+      showPrice: true,
+      showBrand: true,
+      showLotExpiry: true
+    });
+
+    const initialCount = design.elements.length;
+    const priceEl = design.elements.find(e => e.type === 'price');
+    expect(priceEl).toBeDefined();
+
+    const updated = deleteElement(design, priceEl!.id);
+    expect(updated.elements.length).toBe(initialCount - 1);
+    expect(updated.elements.find(e => e.id === priceEl!.id)).toBeUndefined();
+  });
+
+  it('12. duplicateElement clones element with offset and returns new element ID', () => {
+    const design = createDefaultLabelDesign({
+      profile: TVS_LP46_DLITE_PROFILE,
+      product: {
+        id: 'prd-1',
+        name: 'A2 Ghee',
+        sku: 'GHEE-1',
+        barcode: '8901234567890',
+        sellingPrice: 500
+      },
+      selectedBatch: null,
+      effectiveExpiry: '25/08/2026',
+      showPrice: true,
+      showBrand: true,
+      showLotExpiry: true
+    });
+
+    const productEl = design.elements.find(e => e.type === 'product');
+    expect(productEl).toBeDefined();
+
+    const result = duplicateElement(design, productEl!.id, 58, 40);
+    expect(result.newElementId).toBeDefined();
+    expect(result.design.elements.length).toBe(design.elements.length + 1);
+
+    const clone = result.design.elements.find(e => e.id === result.newElementId);
+    expect(clone).toBeDefined();
+    expect(clone!.type).toBe('product');
+    expect(clone!.xMm).toBe(Math.min(58 - clone!.widthMm, productEl!.xMm + 2));
+    expect(clone!.yMm).toBe(Math.min(40 - clone!.heightMm, productEl!.yMm + 2));
+  });
+
+  it('13. getPrinterSupportedDpis returns only [203] for TVS LP-46 Dlite and all standard DPIs for custom/generic', () => {
+    const tvsDpis = getPrinterSupportedDpis(TVS_LP46_DLITE_PROFILE);
+    expect(tvsDpis).toEqual([203]);
+
+    const genericProfile = {
+      ...TVS_LP46_DLITE_PROFILE,
+      id: 'generic_thermal',
+      name: 'Generic 300DPI Thermal',
+      dpi: 300,
+      supportedDpis: [203, 300]
+    };
+    const genericDpis = getPrinterSupportedDpis(genericProfile);
+    expect(genericDpis).toEqual([203, 300]);
   });
 });

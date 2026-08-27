@@ -23,7 +23,7 @@ export type LabelDesignElementType =
 export type LabelDesignTextAlign = 'left' | 'center' | 'right';
 
 export type LabelDesignElement = {
-  id: LabelDesignElementType;
+  id: string;
   type: LabelDesignElementType;
   xMm: number;
   yMm: number;
@@ -501,3 +501,61 @@ export function getDesignElementText(input: {
   if (element.type === 'expiry') return effectiveExpiry ? `EXP: ${formatDisplayDate(effectiveExpiry)}` : '';
   return '';
 }
+
+export function duplicateElement(
+  design: LabelDesign,
+  elementId: string,
+  labelWidthMm?: number,
+  labelHeightMm?: number
+): { design: LabelDesign; newElementId: string | null } {
+  const source = design.elements.find((el) => el.id === elementId);
+  if (!source) return { design, newElementId: null };
+
+  const newId = `${source.type}-copy-${Date.now().toString(36)}`;
+  const maxX = (labelWidthMm ?? 100) - source.widthMm;
+  const maxY = (labelHeightMm ?? 100) - source.heightMm;
+
+  const clone: LabelDesignElement = {
+    ...source,
+    id: newId,
+    xMm: roundMm(clamp(source.xMm + 2, 0, Math.max(0, maxX))),
+    yMm: roundMm(clamp(source.yMm + 2, 0, Math.max(0, maxY))),
+    locked: false,
+    visible: true
+  };
+
+  return {
+    design: {
+      ...design,
+      elements: [...design.elements, clone]
+    },
+    newElementId: newId
+  };
+}
+
+export function deleteElement(
+  design: LabelDesign,
+  elementId: string
+): LabelDesign {
+  return {
+    ...design,
+    elements: design.elements.filter((el) => el.id !== elementId)
+  };
+}
+
+export function getPrinterSupportedDpis(profile?: LabelProfile | null): number[] {
+  if (!profile) return [203, 300, 600];
+  if (Array.isArray((profile as any).supportedDpis) && (profile as any).supportedDpis.length > 0) {
+    return (profile as any).supportedDpis;
+  }
+  if (profile.id === 'tvs_lp46_dlite' || profile.name?.toLowerCase().includes('tvs')) {
+    return [203];
+  }
+  return [203, 300, 600];
+}
+
+export function isDpiSupported(dpi: number, profile?: LabelProfile | null): boolean {
+  const supported = getPrinterSupportedDpis(profile);
+  return supported.includes(dpi);
+}
+
