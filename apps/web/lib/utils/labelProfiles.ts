@@ -71,6 +71,12 @@ export type LabelProfile = {
   barcodeHeightRatio?: number;
   barcodeWidthRatio?: number;
   fontScale?: number;
+  brandScale?: number;
+  productScale?: number;
+  priceScale?: number;
+  metaScale?: number;
+  barcodeScale?: number;
+  barcodeTextScale?: number;
 };
 
 export type LabelGeometry = {
@@ -561,8 +567,14 @@ export function normalizeLabelProfile(profile: LabelProfile): LabelProfile {
     autoFit: profile.autoFit !== false,
     barcodeFormat: profile.barcodeFormat || 'AUTO',
     fontScale: clamp(Number(profile.fontScale) || 1, 0.75, 1.4),
-    barcodeHeightRatio: clamp(Number(profile.barcodeHeightRatio) || 0.36, 0.22, 0.5),
-    barcodeWidthRatio: clamp(Number(profile.barcodeWidthRatio) || 0.9, 0.65, 0.96)
+    brandScale: clamp(Number(profile.brandScale) || 1, 0.65, 1.8),
+    productScale: clamp(Number(profile.productScale) || 1, 0.65, 1.9),
+    priceScale: clamp(Number(profile.priceScale) || 1, 0.65, 2),
+    metaScale: clamp(Number(profile.metaScale) || 1, 0.65, 1.9),
+    barcodeScale: clamp(Number(profile.barcodeScale) || 1, 0.5, 1.45),
+    barcodeTextScale: clamp(Number(profile.barcodeTextScale) || 1, 0.65, 1.8),
+    barcodeHeightRatio: clamp(Number(profile.barcodeHeightRatio) || 0.4, 0.22, 0.58),
+    barcodeWidthRatio: clamp(Number(profile.barcodeWidthRatio) || 0.92, 0.65, 0.98)
   };
 }
 
@@ -591,8 +603,8 @@ export function calculateLabelGeometry(inputProfile: LabelProfile): LabelGeometr
     printableHeightMm,
     contentWidthMm,
     contentHeightMm,
-    barcodeMaxWidthMm: Math.max(1, contentWidthMm * (profile.barcodeWidthRatio || 0.9)),
-    barcodeMaxHeightMm: Math.max(8, contentHeightMm * (profile.barcodeHeightRatio || 0.36)),
+    barcodeMaxWidthMm: Math.max(1, contentWidthMm * (profile.barcodeWidthRatio || 0.92) * (profile.barcodeScale || 1)),
+    barcodeMaxHeightMm: Math.max(8, contentHeightMm * (profile.barcodeHeightRatio || 0.4) * (profile.barcodeScale || 1)),
     textMaxWidthMm: contentWidthMm
   };
 }
@@ -680,15 +692,15 @@ export function calculateLabelTypography(inputProfile: LabelProfile): LabelTypog
   const base = scale * Math.min(heightFactor, widthFactor);
 
   return {
-    brandFontMm: clamp(1.8 * base, 1.4, 2.5),
-    productFontMm: clamp(2.45 * base, 1.75, 3.2),
-    productLineHeightMm: clamp(3.05 * base, 2.2, 3.8),
+    brandFontMm: clamp(2.05 * base * (profile.brandScale || 1), 1.5, 3.4),
+    productFontMm: clamp(3.05 * base * (profile.productScale || 1), 1.9, 5.4),
+    productLineHeightMm: clamp(3.55 * base * (profile.productScale || 1), 2.4, 6.2),
     skuFontMm: clamp(1.65 * base, 1.3, 2.25),
-    barcodeValueFontMm: clamp(1.85 * base, 1.4, 2.45),
-    priceFontMm: clamp(3.25 * base, 2.35, 4.6),
-    metaFontMm: clamp(1.8 * base, 1.35, 2.35),
-    metaLineHeightMm: clamp(2.35 * base, 1.8, 2.95),
-    rowGapMm: clamp(0.8 * base, 0.45, 1.15)
+    barcodeValueFontMm: clamp(2.15 * base * (profile.barcodeTextScale || 1), 1.45, 3.6),
+    priceFontMm: clamp(4.1 * base * (profile.priceScale || 1), 2.6, 6),
+    metaFontMm: clamp(2.15 * base * (profile.metaScale || 1), 1.45, 3.5),
+    metaLineHeightMm: clamp(2.6 * base * (profile.metaScale || 1), 1.9, 4.1),
+    rowGapMm: clamp(0.65 * base, 0.32, 1)
   };
 }
 

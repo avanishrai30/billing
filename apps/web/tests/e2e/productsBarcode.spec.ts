@@ -93,7 +93,7 @@ async function expectBarcodePreviewContained(page: Page) {
   const viewport = page.getByTestId('barcode-preview-viewport');
   const outer = page.getByTestId('barcode-preview-outer');
   const canvas = page.getByTestId('barcode-label-canvas');
-  const barcodeBox = page.getByTestId('barcode-svg-box');
+  const barcodeBox = page.getByTestId('label-element-barcode');
 
   await expect(viewport).toBeVisible();
   await expect(outer).toBeVisible();
@@ -295,13 +295,14 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     await plusBtn.click(); // from 3 to 5
 
     // Verify button updates dynamically
-    const printActionBtn = page.getByRole('button', { name: 'Print 5 Labels' });
+    const printActionBtn = page.getByRole('button', { name: /Print 5 Labels|Use Browser Print/ });
     await expect(printActionBtn).toBeVisible();
 
     // Verify Live Simulator renders barcode SVG and lot metadata
     const liveSim = page.getByText('Live Print Simulator');
     await expect(liveSim).toBeVisible();
     await expect(page.getByText('8901234567890').first()).toBeVisible();
+    await expectBarcodePreviewContained(page);
   });
 
   test('2. Displays AIAVRO generated barcode source badge for own product', async ({ page }) => {
@@ -311,7 +312,7 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
 
     await expect(page.getByText('Barcode: AIA000042')).toBeVisible();
     await expect(page.getByText('⚡ AIAVRO').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Print 3 Labels' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Print 3 Labels|Use Browser Print/ })).toBeVisible();
   });
 
   test('3. Third-party product without barcode displays clean empty state and offers AIA generation', async ({ page }) => {
@@ -328,7 +329,7 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     await expect(generateBtn).toBeVisible();
 
     // Print button should be disabled when unassigned
-    const printActionBtn = page.getByRole('button', { name: /Print \d+ Label/ });
+    const printActionBtn = page.getByRole('button', { name: /Print \d+ Label|Use Browser Print/ });
     await expect(printActionBtn).toBeDisabled();
   });
 
@@ -461,26 +462,100 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     // 1. Initial 58x40 mm profile
     await expect(page.getByText('58 x 40 mm').first()).toBeVisible();
     await expect(page.getByText('Live Print Simulator')).toBeVisible();
+    await expect(page.getByText('Label Designer')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Auto Layout' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Manual Design' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: '203 DPI', exact: true })).toBeVisible();
+    await expectBarcodePreviewContained(page);
+
+    // 1a. Interact with the physical-label editor, not just the controls.
+    await page.getByRole('button', { name: 'Manual Design' }).first().click();
+    const productElement = page.getByTestId('label-element-product');
+    await productElement.click();
+    const xInput = page.locator('input[aria-label="X"]').last();
+    const fontSizeInput = page.locator('input[aria-label="Font Size"]').last();
+    const productBoxBefore = await productElement.boundingBox();
+    const initialX = await xInput.inputValue();
+    expect(productBoxBefore).not.toBeNull();
+    await page.mouse.move(productBoxBefore!.x + productBoxBefore!.width / 2, productBoxBefore!.y + productBoxBefore!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(productBoxBefore!.x + productBoxBefore!.width / 2 + 42, productBoxBefore!.y + productBoxBefore!.height / 2 + 10);
+    await page.mouse.up();
+    await expect.poll(async () => xInput.inputValue()).not.toBe(initialX);
+
+    const fontBefore = Number(await fontSizeInput.inputValue());
+    await fontSizeInput.fill(String(fontBefore + 0.8));
+    const productBoxAfterFont = await productElement.boundingBox();
+    expect(productBoxAfterFont?.height || 0).toBeGreaterThan(productBoxBefore?.height || 0);
+
+    const barcodeElement = page.getByTestId('label-element-barcode');
+    const barcodeBox = await barcodeElement.boundingBox();
+    expect(barcodeBox).not.toBeNull();
+    await page.mouse.click(barcodeBox!.x + 4, barcodeBox!.y + 4);
+    await expect(page.getByLabel('Format')).toBeVisible();
+    const widthInput = page.locator('input[aria-label="Width"]').last();
+    const widthBefore = Number(await widthInput.inputValue());
+    const resizeHandle = page.getByLabel(/^Resize Barcode se$/);
+    const resizeBox = await resizeHandle.boundingBox();
+    expect(resizeBox).not.toBeNull();
+    await page.mouse.move(resizeBox!.x + resizeBox!.width / 2, resizeBox!.y + resizeBox!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(resizeBox!.x + resizeBox!.width / 2 + 36, resizeBox!.y + resizeBox!.height / 2 + 16);
+    await page.mouse.up();
+    await expect.poll(async () => Number(await widthInput.inputValue())).toBeGreaterThan(widthBefore);
+
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect.poll(async () => Number(await widthInput.inputValue())).toBeCloseTo(widthBefore, 0);
+    await page.getByRole('button', { name: 'Redo' }).click();
+    await expect.poll(async () => Number(await widthInput.inputValue())).toBeGreaterThan(widthBefore);
+
+    const designName = `E2E Label ${Date.now()}`;
+    await page.getByLabel('Design name').fill(designName);
+    await page.getByRole('button', { name: 'Save Design' }).click();
+    await expect(page.getByText('Label Design Saved')).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await printBtn.click();
+    await page.getByLabel('Saved design').selectOption({ label: designName });
+    await page.getByRole('button', { name: 'Load' }).click();
+    await expect(page.getByTestId('label-element-barcode')).toBeVisible();
 
     // 2. Select 58x30 mm profile
     await page.getByText('58 x 30 mm').first().click();
     await expect(page.getByText('58 x 30 mm').first()).toBeVisible();
+    await expectBarcodePreviewContained(page);
 
     // 3. Select 80x50 mm profile
     await page.getByText('80 x 50 mm').first().click();
     await expect(page.getByText('80 x 50 mm').first()).toBeVisible();
+    await expectBarcodePreviewContained(page);
 
     // 4. Select Custom profile
     await page.getByRole('dialog').getByText('Custom', { exact: true }).click();
-    await expect(page.getByText('Custom media').first()).toBeVisible();
+    await expect(page.getByText('Custom media dimensions').first()).toBeVisible();
+    await page.getByLabel('Custom label Width').fill('120');
+    await page.getByLabel('Custom label Height').fill('30');
+    await expectBarcodePreviewContained(page);
+    await page.getByLabel('Custom label Height').fill('120');
+    await page.getByLabel('Custom label Width').fill('30');
+    await expectBarcodePreviewContained(page);
 
-    // 5. Toggle Price and Brand fields
-    const priceToggle = page.getByRole('button', { name: /Price/i });
+    // 5. Orientation, barcode rotation and DPI recalculate live without cropping
+    await page.getByRole('button', { name: 'Vertical', exact: true }).click();
+    await expect(page.getByText('30 x 120 mm').first()).toBeVisible();
+    await expectBarcodePreviewContained(page);
+    await page.getByRole('button', { name: '90°' }).click();
+    await expectBarcodePreviewContained(page);
+    await page.getByRole('button', { name: '300 DPI' }).click();
+    await expect(page.getByText('300 DPI').first()).toBeVisible();
+    await expectBarcodePreviewContained(page);
+
+    // 6. Toggle Price and Brand fields
+    const priceToggle = page.locator('button').filter({ hasText: /^Price$/ }).first();
     await priceToggle.click(); // toggle off
     await priceToggle.click(); // toggle on
 
-    // 6. Verify print action button is ready
-    const printActionBtn = page.getByRole('button', { name: /Print \d+ Label/i });
+    // 7. Verify print action button is ready
+    const printActionBtn = page.getByRole('button', { name: /Print \d+ Label|Use Browser Print/i });
     await expect(printActionBtn).toBeEnabled();
   });
 
@@ -536,8 +611,7 @@ test.describe('Product Multi-Source Barcodes & Label Printing Studio (Phase 30.3
     await expect(page.getByText(/Die-Cut \(2mm\)|Die-Cut/i).first()).toBeVisible();
 
     // Verify print button trigger
-    const printActionBtn = page.getByRole('button', { name: /Print 3 Labels|Print 3 Physical Labels/i });
+    const printActionBtn = page.getByRole('button', { name: /Print 3 Labels|Use Browser Print|Print 3 Physical Labels/i });
     await expect(printActionBtn).toBeVisible();
   });
 });
-

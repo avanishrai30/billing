@@ -8,6 +8,10 @@ import {
   type LabelProfile,
   type LabelGeometry
 } from './labelProfiles';
+import {
+  getDesignElementText,
+  type LabelDesign
+} from './labelDesign';
 import type { ProductDoc, ProductBatchDoc } from '../../features/products/types';
 
 export type LabelElementType = 'text' | 'barcode' | 'line';
@@ -124,6 +128,7 @@ export function validateDocumentBounds(
 export type BuildLabelDocumentOptions = {
   product: ProductDoc;
   profile: LabelProfile;
+  design?: LabelDesign | null;
   selectedBatch?: ProductBatchDoc | null;
   effectiveExpiry?: string | null;
   showPrice?: boolean;
@@ -143,13 +148,67 @@ export function buildProductLabelDocument(options: BuildLabelDocumentOptions): L
     effectiveExpiry,
     showPrice = true,
     showBrand = true,
-    showLotExpiry = true
+    showLotExpiry = true,
+    design = null
   } = options;
 
   const geometry = calculateLabelGeometry(profile);
   const typography = calculateLabelTypography(profile);
   const barcodeValue = (product.barcode || '').trim();
   const barcodeFit = calculateBarcodeFit(barcodeValue, profile);
+
+  if (design) {
+    const designElements: LabelElement[] = design.elements
+      .filter((element) => element.visible !== false)
+      .map((element) => {
+        if (element.type === 'barcode') {
+          return {
+            type: 'barcode',
+            id: element.id,
+            value: barcodeValue,
+            format: element.barcodeFormat || barcodeFit.format,
+            xMm: element.xMm,
+            yMm: element.yMm,
+            widthMm: element.widthMm,
+            heightMm: element.heightMm,
+            showHumanReadableText: false,
+            quietZoneModules: element.quietZoneModules ?? barcodeFit.quietZoneModules,
+            moduleWidthMm: element.moduleWidthMm ?? dotsToMm(barcodeFit.moduleWidthPx, profile.dpi || 203),
+            rotation: (Math.round(element.rotation / 90) * 90 % 360) as 0 | 90 | 180 | 270
+          } satisfies LabelBarcodeElement;
+        }
+
+        const value = getDesignElementText({
+          element,
+          product,
+          selectedBatch,
+          effectiveExpiry
+        });
+
+        return {
+          type: 'text',
+          id: element.id,
+          value,
+          xMm: element.xMm,
+          yMm: element.yMm,
+          widthMm: element.widthMm,
+          heightMm: element.heightMm,
+          fontSizeMm: element.fontSizeMm || typography.metaFontMm,
+          lineHeightMm: element.lineHeightMm || (element.fontSizeMm || typography.metaFontMm) * 1.15,
+          align: element.alignment || 'center',
+          weight: element.fontWeight === 'extrabold' ? 800 : element.fontWeight === 'bold' ? 'bold' : element.fontWeight === 'semibold' ? 600 : 'normal',
+          maxLines: element.type === 'product' ? 2 : 1
+        } satisfies LabelTextElement;
+      });
+
+    return {
+      widthMm: geometry.widthMm,
+      heightMm: geometry.heightMm,
+      dpi: design.dpi || profile.dpi || 203,
+      orientation: design.orientation,
+      elements: designElements
+    };
+  }
 
   const elements: LabelElement[] = [];
   const contentWidth = geometry.contentWidthMm;

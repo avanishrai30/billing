@@ -23,6 +23,19 @@ import {
   pxToMm
 } from '../../lib/utils/labelProfiles';
 import { calculatePreviewFit } from '../../lib/utils/previewFit';
+import {
+  alignElements,
+  calculateResize,
+  calculateRotation,
+  createDefaultLabelDesign,
+  detectCollisions,
+  distributeElements,
+  hitTestElement,
+  mmToScreen,
+  screenToMm,
+  validateLabelDesign,
+  type LabelDesignElement
+} from '../../lib/utils/labelDesign';
 
 describe('Code 128 Auto Barcode Vector Engine (ISO/IEC 15417)', () => {
   it('1. Correctly selects Start B for alphanumeric and short numeric codes', () => {
@@ -280,6 +293,127 @@ describe('Printer Profile Label Geometry', () => {
       model: 'LP46 D-Lite',
       dpi: 203
     })?.id).toBe('tvs_lp46_dlite');
+  });
+});
+
+describe('Barcode Studio Physical Label Design Editor', () => {
+  const product = {
+    id: 'prd-editor',
+    name: 'A2 Cow Cultured Ghee 500ml',
+    sku: 'GHEE-A2-500',
+    barcode: '8901234567890',
+    brand: 'VC ORGANIC',
+    sellingPrice: 650,
+    purchasePrice: 500,
+    sellingMode: 'packaged' as const
+  };
+
+  it('converts screen pixels to physical millimeters and back independent of DPI', () => {
+    const transform = { scale: 1.75, originXPx: 12, originYPx: 8, pxPerMm: 96 / 25.4 };
+    const mm = screenToMm({ x: 78.14, y: 41.07 }, transform);
+    const screen = mmToScreen(mm, transform);
+
+    expect(mm.x).toBeCloseTo(10, 1);
+    expect(mm.y).toBeCloseTo(5, 1);
+    expect(screen.x).toBeCloseTo(78.14, 1);
+    expect(screen.y).toBeCloseTo(41.07, 1);
+  });
+
+  it('creates canonical label designs for 203, 300 and 600 DPI without storing pixels', () => {
+    for (const dpi of [203, 300, 600]) {
+      const design = createDefaultLabelDesign({
+        product,
+        profile: { ...LABEL_PROFILE_PRESETS[1], dpi }
+      });
+
+      expect(design.dpi).toBe(dpi);
+      expect(design.elements.every((element) => Number.isFinite(element.xMm) && Number.isFinite(element.widthMm))).toBe(true);
+      expect(JSON.stringify(design)).not.toContain('Px');
+    }
+  });
+
+  it('supports horizontal, vertical and extreme aspect ratio layouts inside bounds', () => {
+    const cases = [
+      { ...LABEL_PROFILE_PRESETS[0], widthMm: 58, heightMm: 30, orientation: 0 as const },
+      { ...LABEL_PROFILE_PRESETS[1], widthMm: 40, heightMm: 58, orientation: 90 as const },
+      { ...LABEL_PROFILE_PRESETS[1], widthMm: 120, heightMm: 25, orientation: 0 as const },
+      { ...LABEL_PROFILE_PRESETS[1], widthMm: 25, heightMm: 120, orientation: 90 as const }
+    ];
+
+    for (const profile of cases) {
+      const design = createDefaultLabelDesign({ product, profile });
+      expect(validateLabelDesign(design, profile)).toEqual([]);
+    }
+  });
+
+  it('hit-tests visible elements and ignores empty space', () => {
+    const design = createDefaultLabelDesign({ product, profile: LABEL_PROFILE_PRESETS[1] });
+    const productElement = design.elements.find((element) => element.id === 'product')!;
+
+    expect(hitTestElement({ x: productElement.xMm + 1, y: productElement.yMm + 1 }, design.elements)?.id).toBe('product');
+    expect(hitTestElement({ x: 500, y: 500 }, design.elements)).toBeNull();
+  });
+
+  it('resizes barcode with aspect preservation by default and allows unlock', () => {
+    const design = createDefaultLabelDesign({ product, profile: LABEL_PROFILE_PRESETS[1] });
+    const barcode = design.elements.find((element) => element.id === 'barcode')!;
+    const locked = calculateResize({
+      element: barcode,
+      handle: 'se',
+      deltaMm: { x: 8, y: 1 },
+      labelWidthMm: 58,
+      labelHeightMm: 40,
+      preserveAspectRatio: true,
+      snapEnabled: false
+    });
+    const unlocked = calculateResize({
+      element: { ...barcode, lockAspectRatio: false },
+      handle: 'se',
+      deltaMm: { x: 8, y: 1 },
+      labelWidthMm: 58,
+      labelHeightMm: 40,
+      preserveAspectRatio: false,
+      snapEnabled: false
+    });
+
+    expect(locked.widthMm / locked.heightMm).toBeCloseTo(barcode.widthMm / barcode.heightMm, 1);
+    expect(unlocked.widthMm / unlocked.heightMm).not.toBeCloseTo(barcode.widthMm / barcode.heightMm, 1);
+  });
+
+  it('snaps resize values to millimeter grid and calculates rotation', () => {
+    const element: LabelDesignElement = {
+      id: 'product',
+      type: 'product',
+      xMm: 2.2,
+      yMm: 3.2,
+      widthMm: 20.2,
+      heightMm: 5.2,
+      rotation: 0
+    };
+    const resized = calculateResize({
+      element,
+      handle: 'se',
+      deltaMm: { x: 2.4, y: 2.4 },
+      labelWidthMm: 58,
+      labelHeightMm: 40,
+      snapEnabled: true
+    });
+
+    expect(resized.widthMm).toBe(23);
+    expect(resized.heightMm).toBe(8);
+    expect(calculateRotation({ center: { x: 10, y: 10 }, pointer: { x: 20, y: 10 }, snapDegrees: 45 })).toBe(90);
+  });
+
+  it('aligns, distributes, detects collisions and validates bounds', () => {
+    const elements: LabelDesignElement[] = [
+      { id: 'brand', type: 'brand', xMm: 2, yMm: 2, widthMm: 10, heightMm: 5, rotation: 0 },
+      { id: 'product', type: 'product', xMm: 4, yMm: 4, widthMm: 10, heightMm: 5, rotation: 0 },
+      { id: 'price', type: 'price', xMm: 20, yMm: 12, widthMm: 10, heightMm: 5, rotation: 0 }
+    ];
+
+    expect(detectCollisions(elements)).toEqual([['brand', 'product']]);
+    expect(alignElements(elements, ['brand', 'product'], 'left').map((element) => element.xMm).slice(0, 2)).toEqual([2, 2]);
+    expect(distributeElements(elements, ['brand', 'product', 'price'], 'horizontal')[1].xMm).toBeGreaterThan(2);
   });
 });
 
