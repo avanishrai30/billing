@@ -26,17 +26,6 @@ export default function InventoryPage() {
   const { user, hasPermission, isSuperAdmin } = useAuthorization();
   const { activeStoreId } = useStoreScope();
 
-  // Queries
-  const { data: commandCenterData, isLoading: isLoadingCommandCenter } = useInventoryCommandCenterQuery();
-
-  const stores: CommandCenterStore[] = useMemo(() => {
-    return commandCenterData?.stores || [];
-  }, [commandCenterData]);
-
-  const networkBalances: NetworkInventoryItem[] = useMemo(() => {
-    return commandCenterData?.networkBalances || [];
-  }, [commandCenterData]);
-
   // Selected Location: 'network' (for super admin) or specific store ID
   const defaultLocation = useMemo(() => {
     if (activeStoreId && activeStoreId !== 'all') {
@@ -49,6 +38,17 @@ export default function InventoryPage() {
   }, [activeStoreId, isSuperAdmin, user]);
 
   const [selectedLocation, setSelectedLocation] = useState<string>(defaultLocation);
+
+  // Queries (scoped by selectedLocation to guarantee store cache isolation)
+  const { data: commandCenterData, isLoading: isLoadingCommandCenter } = useInventoryCommandCenterQuery(selectedLocation);
+
+  const stores: CommandCenterStore[] = useMemo(() => {
+    return commandCenterData?.stores || [];
+  }, [commandCenterData]);
+
+  const networkBalances: NetworkInventoryItem[] = useMemo(() => {
+    return commandCenterData?.networkBalances || [];
+  }, [commandCenterData]);
 
   // Sync selected location when topbar activeStoreId or user store changes.
   React.useEffect(() => {
@@ -160,10 +160,18 @@ export default function InventoryPage() {
     return Array.from(set).sort();
   }, [networkBalances]);
 
+  // Check if current view is strictly store-scoped (via topbar store selector or user assignment)
+  const isStoreScopedMode = Boolean(
+    (activeStoreId && activeStoreId !== 'all') ||
+    (!isSuperAdmin && user?.assignedStoreId && user.assignedStoreId !== 'all')
+  );
+
   // Filtered Items based on active tab and search/filter criteria
   // All active Product Master items remain visible for any selected location (LEFT JOIN overlay)
   const filteredItems = useMemo(() => {
     const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const isNetworkView = selectedLocation === 'network' || selectedLocation === 'all';
+    const isWarehouseView = stores.some((s) => s.id === selectedLocation && s.isWarehouse);
 
     return networkBalances.filter((item) => {
       // 1. Determine location quantity and batches
@@ -171,11 +179,23 @@ export default function InventoryPage() {
       let available = item.networkAvailable;
       let locationBatches = item.batches || [];
 
-      if (selectedLocation !== 'network') {
+      if (!isNetworkView) {
         const loc = item.locationBreakdown.find((l) => l.locationId === selectedLocation);
         onHand = loc ? loc.quantity : 0;
         available = loc ? loc.available : 0;
         locationBatches = (item.batches || []).filter((b) => b.locationId === selectedLocation);
+
+        // Store-level isolation: When viewing a retail store (not Central Warehouse Hub and not Network Consolidated),
+        // products that have zero stock here but are stocked in other stores
+        // must not leak across store boundaries into this store's inventory view.
+        if (!isWarehouseView && onHand <= 0) {
+          const isStockedInOtherStores = item.locationBreakdown.some(
+            (l) => l.locationId !== selectedLocation && l.quantity > 0
+          );
+          if (isStockedInOtherStores) {
+            return false;
+          }
+        }
       }
 
       // 2. Status Filter

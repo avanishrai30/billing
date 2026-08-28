@@ -89,8 +89,11 @@ export const inventoryApi = {
   /**
    * Fetch Multi-Store Inventory Command Center consolidated data (Phase 33)
    */
-  async getCommandCenter(): Promise<CommandCenterData> {
-    const data = await apiClient.get<CommandCenterData>('/api/v1/inventory/command-center');
+  async getCommandCenter(locationId?: string): Promise<CommandCenterData> {
+    const query = locationId && locationId !== 'all' && locationId !== 'network'
+      ? `?locationId=${encodeURIComponent(locationId)}`
+      : '';
+    const data = await apiClient.get<CommandCenterData>(`/api/v1/inventory/command-center${query}`);
     return normalizeCommandCenterData(data);
   },
 

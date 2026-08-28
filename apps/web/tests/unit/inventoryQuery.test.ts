@@ -15,9 +15,15 @@ describe('Inventory API & Query Keys Unit Tests', () => {
   });
 
   it('1. Generates deterministic query keys', () => {
-    expect(inventoryQueryKeys.commandCenter).toEqual([
+    expect(inventoryQueryKeys.commandCenter('store-1')).toEqual([
       'inventory',
-      'command-center'
+      'command-center',
+      'store-1'
+    ]);
+    expect(inventoryQueryKeys.commandCenter()).toEqual([
+      'inventory',
+      'command-center',
+      'all'
     ]);
     expect(inventoryQueryKeys.summary('store-1')).toEqual([
       'inventory',

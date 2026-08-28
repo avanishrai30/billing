@@ -183,7 +183,7 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
     });
 
     // Mock Command Center endpoint
-    await page.route('**/api/v1/inventory/command-center', async (route) => {
+    await page.route('**/api/v1/inventory/command-center*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -286,7 +286,7 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
       });
     });
 
-    await page.route('**/api/v1/inventory/command-center', async (route) => {
+    await page.route('**/api/v1/inventory/command-center*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -430,7 +430,7 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
       });
     });
 
-    await page.route('**/api/v1/inventory/command-center', async (route) => {
+    await page.route('**/api/v1/inventory/command-center*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -535,7 +535,7 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
       });
     });
 
-    await page.route('**/api/v1/inventory/command-center', async (route) => {
+    await page.route('**/api/v1/inventory/command-center*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -708,7 +708,7 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
       });
     });
 
-    await page.route('**/api/v1/inventory/command-center', async (route) => {
+    await page.route('**/api/v1/inventory/command-center*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

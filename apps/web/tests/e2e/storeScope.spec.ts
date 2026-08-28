@@ -116,6 +116,25 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
       }
     ];
 
+    mockBusinesses = [
+      {
+        id: 'biz-1',
+        name: 'VC Organic Billing Pvt Ltd',
+        subtitle: 'Pure Organic Farm Produce',
+        owner: 'Avanish Rai',
+        gstin: '27AAAAA0000A1Z5',
+        phone: '9876543210',
+        email: 'admin@vcorganic.com',
+        address: '102 Green Acres, Bandra West, Mumbai',
+        bankName: 'HDFC Bank Ltd',
+        accountNo: '50200012345678',
+        ifsc: 'HDFC0000123',
+        upiId: 'vcorganic@hdfcbank',
+        status: 'active',
+        createdAt: new Date().toISOString()
+      }
+    ];
+
     // Authenticate as Super Admin by default
     await page.addInitScript(() => {
       localStorage.setItem('aiavro_jwt_token', 'mock-valid-token');
@@ -133,11 +152,50 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
       );
     });
 
+    const superAdminUser = {
+      id: 'usr-1',
+      name: 'Super Admin',
+      username: 'admin',
+      role: 'SUPER ADMIN',
+      category: 'super admin',
+      assignedStoreId: 'all',
+      status: 'active',
+      permissions: ['*']
+    };
+
     await page.route('**/api/v1/auth/verify', async (route) => {
+      const authHeader = route.request().headers()['authorization'] || '';
+      if (authHeader.includes('mock-cashier-token')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            user: {
+              id: 'usr-2',
+              name: 'Rohan Cashier',
+              username: 'cashier',
+              role: 'CASHIER',
+              category: 'cashier',
+              assignedStoreId: 'store-1',
+              status: 'active',
+              permissions: ['dashboard.view', 'pos.view']
+            }
+          })
+        });
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true })
+        body: JSON.stringify({ success: true, user: superAdminUser })
+      });
+    });
+
+    await page.route('**/api/v1/rbac/me/permissions', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, effectivePermissions: ['*'] })
       });
     });
 
@@ -318,7 +376,7 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
         body: JSON.stringify({
           success: true,
           stores: [
-            { id: 'store-1', name: 'Mumbai Flagship', code: 'ST-MUM', isWarehouse: true },
+            { id: 'store-1', name: 'Mumbai Flagship', code: 'ST-MUM', isWarehouse: false },
             { id: 'store-2', name: 'Pune Branch', code: 'ST-PUN', isWarehouse: false }
           ],
           networkBalances: [
@@ -338,7 +396,7 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
               networkAvailable: 50,
               isOrphan: false,
               locationBreakdown: [
-                { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: true, quantity: 50, reservedQuantity: 0, available: 50 },
+                { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: false, quantity: 50, reservedQuantity: 0, available: 50 },
                 { locationId: 'store-2', locationName: 'Pune Branch', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 }
               ],
               batches: []
@@ -359,7 +417,7 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
               networkAvailable: 30,
               isOrphan: false,
               locationBreakdown: [
-                { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: true, quantity: 0, reservedQuantity: 0, available: 0 },
+                { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 },
                 { locationId: 'store-2', locationName: 'Pune Branch', isWarehouse: false, quantity: 30, reservedQuantity: 0, available: 30 }
               ],
               batches: []
