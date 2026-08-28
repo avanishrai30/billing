@@ -125,19 +125,21 @@ export default function InventoryPage() {
       }
     }
 
+    const isWarehouseView = stores.some((s) => s.id === selectedLocation && s.isWarehouse);
+
     return {
       ...base,
       catalogProducts: base.catalogProducts ?? base.totalProducts,
       stockedProducts,
-      networkStock: base.networkStock,
-      centralStock: base.centralStock,
-      storeStock: base.storeStock,
+      networkStock: locationStock,
+      centralStock: isWarehouseView ? locationStock : 0,
+      storeStock: isWarehouseView ? 0 : locationStock,
       lowStockCount,
       outOfStockCount,
       expiringSoonCount,
       totalValuation: Math.round(locationValuation * 100) / 100
     };
-  }, [commandCenterData, selectedLocation, networkBalances]);
+  }, [commandCenterData, selectedLocation, networkBalances, stores]);
 
   if (!canView) {
     return (
@@ -171,7 +173,6 @@ export default function InventoryPage() {
   const filteredItems = useMemo(() => {
     const thirtyDaysIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const isNetworkView = selectedLocation === 'network' || selectedLocation === 'all';
-    const isWarehouseView = stores.some((s) => s.id === selectedLocation && s.isWarehouse);
 
     return networkBalances.filter((item) => {
       // 1. Determine location quantity and batches
@@ -184,18 +185,6 @@ export default function InventoryPage() {
         onHand = loc ? loc.quantity : 0;
         available = loc ? loc.available : 0;
         locationBatches = (item.batches || []).filter((b) => b.locationId === selectedLocation);
-
-        // Store-level isolation: When viewing a retail store (not Central Warehouse Hub and not Network Consolidated),
-        // products that have zero stock here but are stocked in other stores
-        // must not leak across store boundaries into this store's inventory view.
-        if (!isWarehouseView && onHand <= 0) {
-          const isStockedInOtherStores = item.locationBreakdown.some(
-            (l) => l.locationId !== selectedLocation && l.quantity > 0
-          );
-          if (isStockedInOtherStores) {
-            return false;
-          }
-        }
       }
 
       // 2. Status Filter
@@ -306,6 +295,7 @@ export default function InventoryPage() {
       <InventorySummaryCards
         summary={summary}
         isLoading={isLoadingCommandCenter}
+        selectedLocation={selectedLocation}
       />
 
       {/* Filter Toolbar */}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { inventoryApi } from './api';
 import { useRealtime } from '../../hooks/useRealtime';
 import type {
@@ -35,6 +35,7 @@ export function useInventoryCommandCenterQuery(locationId?: string) {
   const query = useQuery<CommandCenterData, Error>({
     queryKey: inventoryQueryKeys.commandCenter(locationId),
     queryFn: () => inventoryApi.getCommandCenter(locationId),
+    placeholderData: keepPreviousData,
     staleTime: 30 * 1000
   });
 

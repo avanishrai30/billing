@@ -700,7 +700,7 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
     await page.addInitScript((userData) => {
       localStorage.setItem('aiavro_jwt_token', 'mock-valid-superadmin-token');
       localStorage.setItem('aiavro_logged_in_user', JSON.stringify(userData));
-      localStorage.setItem('aiavro_selected_store_id', 'st-srs');
+      localStorage.setItem('aiavro_selected_store_id', 'all');
     }, superAdmin);
 
     await page.route('**/api/v1/auth/verify', async (route) => {
@@ -755,23 +755,51 @@ test.describe('Phase 33 — Inventory Command Center & Multi-Store Stock Visibil
 
     const networkTab = page.getByRole('button', { name: /network consolidated/i });
     const srsTab = page.getByRole('button', { name: /VC ORGANIC SRS/i });
-    await expect(networkTab).toBeVisible();
-    await expect(page.getByRole('button', { name: /VC ORGANIC'S WAREHOUSE/i })).toBeVisible();
-    await expect(srsTab).toBeVisible();
-    await expect(srsTab).toHaveClass(/bg-emerald-700/);
-    await expect(page.getByRole('button', { name: /VC ORGANIC Temple Stall/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /VC ORGANIC'S Banswadi/i })).toBeVisible();
-    await expect(page.getByText('Production Parity Product')).toBeVisible();
-    await expect(page.getByText('115').first()).toBeVisible();
+    const warehouseTab = page.getByRole('button', { name: /VC ORGANIC'S WAREHOUSE/i });
+    const templeTab = page.getByRole('button', { name: /VC ORGANIC Temple Stall/i });
+    const banswadiTab = page.getByRole('button', { name: /VC ORGANIC'S Banswadi/i });
 
-    await networkTab.click();
+    await expect(networkTab).toBeVisible();
     await expect(networkTab).toHaveClass(/bg-slate-900/);
+    await expect(warehouseTab).toBeVisible();
+    await expect(srsTab).toBeVisible();
+    await expect(templeTab).toBeVisible();
+    await expect(banswadiTab).toBeVisible();
+
+    // 1. Network Consolidated view (Initial)
+    await expect(page.getByText('Production Parity Product')).toBeVisible();
     await expect(page.getByText('117').first()).toBeVisible();
     await expect(page.getByText('Central Stock')).toBeVisible();
 
-    await page.getByRole('button', { name: /VC ORGANIC'S WAREHOUSE/i }).click();
+    // 2. Switch to SRS tab (Stock = 115)
+    await srsTab.click();
+    await expect(srsTab).toHaveClass(/bg-emerald-700/);
+    await expect(page.getByText('Production Parity Product')).toBeVisible();
+    await expect(page.getByText('115').first()).toBeVisible();
+
+    // 3. Switch to Central Warehouse tab (Stock = 0, product still visible as Product Master left join)
+    await warehouseTab.click();
+    await expect(warehouseTab).toHaveClass(/bg-emerald-700/);
     await expect(page.getByText('Production Parity Product')).toBeVisible();
     await expect(page.getByRole('row').filter({ hasText: 'Production Parity Product' }).getByText('Out of Stock')).toBeVisible();
+
+    // 4. Verify Temple Stall tab (Stock = 2)
+    await templeTab.click();
+    await expect(templeTab).toHaveClass(/bg-emerald-700/);
+    await expect(page.getByText('Production Parity Product')).toBeVisible();
+    await expect(page.getByText('2.00').first().or(page.getByText('2').first())).toBeVisible();
+
+    // 5. Verify Banswadi tab (Stock = 0, product still visible as Product Master left join)
+    await banswadiTab.click();
+    await expect(banswadiTab).toHaveClass(/bg-emerald-700/);
+    await expect(page.getByText('Production Parity Product')).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Production Parity Product' }).getByText('Out of Stock')).toBeVisible();
+
+    // Search for product in zero-stock location -> remains searchable
+    const searchInput = page.getByPlaceholder(/search by product name, sku/i);
+    await searchInput.fill('Parity');
+    await expect(page.getByText('Production Parity Product')).toBeVisible();
+    await searchInput.fill('');
 
     await srsTab.click();
     await expect(page.getByText('Production Parity Product')).toBeVisible();

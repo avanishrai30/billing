@@ -8,9 +8,10 @@ import type { CommandCenterSummary } from '../types';
 export interface InventorySummaryCardsProps {
   summary?: CommandCenterSummary;
   isLoading: boolean;
+  selectedLocation?: string;
 }
 
-export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCardsProps) {
+export function InventorySummaryCards({ summary, isLoading, selectedLocation = 'network' }: InventorySummaryCardsProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -30,6 +31,7 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
     );
   }
 
+  const isNetworkView = selectedLocation === 'network' || selectedLocation === 'all';
   const networkStock = summary?.networkStock ?? 0;
   const centralStock = summary?.centralStock ?? 0;
   const storeStock = summary?.storeStock ?? 0;
@@ -51,7 +53,7 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
     {
       label: 'Network Stock',
       value: networkStock.toLocaleString('en-IN', { maximumFractionDigits: 2 }),
-      subtext: `${stockedProducts.toLocaleString('en-IN')} stocked products`,
+      subtext: isNetworkView ? `${stockedProducts.toLocaleString('en-IN')} stocked products` : `${stockedProducts.toLocaleString('en-IN')} stocked items`,
       icon: Layers,
       color: 'text-slate-900',
       bg: 'bg-slate-100 border-slate-200'
@@ -67,7 +69,7 @@ export function InventorySummaryCards({ summary, isLoading }: InventorySummaryCa
     {
       label: 'Store Stock',
       value: storeStock.toLocaleString('en-IN', { maximumFractionDigits: 2 }),
-      subtext: 'Retail outlets total',
+      subtext: isNetworkView ? 'Retail outlets total' : 'Selected outlet stock',
       icon: Store,
       color: 'text-blue-700',
       bg: 'bg-blue-50 border-blue-200'

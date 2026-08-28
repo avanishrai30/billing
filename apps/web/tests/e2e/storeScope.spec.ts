@@ -370,66 +370,85 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
     });
 
     await page.route('**/api/v1/inventory/command-center*', async (route) => {
+      const url = new URL(route.request().url());
+      const locationId = url.searchParams.get('locationId');
+
+      const p1 = {
+        productId: 'p1',
+        productName: 'A2 Pure Ghee 1L (Mumbai Stock)',
+        sku: 'GHEE-1L',
+        barcode: '8901234567890',
+        category: 'Dairy',
+        unit: 'tin',
+        sellingPrice: 650,
+        price: 650,
+        cost: 450,
+        reorderLevel: 10,
+        networkQuantity: 50,
+        networkReserved: 0,
+        networkAvailable: 50,
+        isOrphan: false,
+        locationBreakdown: [
+          { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: false, quantity: 50, reservedQuantity: 0, available: 50 },
+          { locationId: 'store-2', locationName: 'Pune Branch', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 }
+        ],
+        batches: []
+      };
+
+      const p2 = {
+        productId: 'p2',
+        productName: 'Organic Honey 500g (Pune Stock)',
+        sku: 'HONEY-500',
+        barcode: '8901234567891',
+        category: 'Staples',
+        unit: 'jar',
+        sellingPrice: 350,
+        price: 350,
+        cost: 220,
+        reorderLevel: 10,
+        networkQuantity: 30,
+        networkReserved: 0,
+        networkAvailable: 30,
+        isOrphan: false,
+        locationBreakdown: [
+          { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 },
+          { locationId: 'store-2', locationName: 'Pune Branch', isWarehouse: false, quantity: 30, reservedQuantity: 0, available: 30 }
+        ],
+        batches: []
+      };
+
+      const allStores = [
+        { id: 'store-1', name: 'Mumbai Flagship', code: 'ST-MUM', isWarehouse: false },
+        { id: 'store-2', name: 'Pune Branch', code: 'ST-PUN', isWarehouse: false }
+      ];
+
+      let stores = allStores;
+      let networkBalances = [p1, p2];
+
+      if (locationId === 'store-1') {
+        stores = [allStores[0]];
+        networkBalances = [p1];
+      } else if (locationId === 'store-2') {
+        stores = [allStores[1]];
+        networkBalances = [p2];
+      }
+
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          stores: [
-            { id: 'store-1', name: 'Mumbai Flagship', code: 'ST-MUM', isWarehouse: false },
-            { id: 'store-2', name: 'Pune Branch', code: 'ST-PUN', isWarehouse: false }
-          ],
-          networkBalances: [
-            {
-              productId: 'p1',
-              productName: 'A2 Pure Ghee 1L (Mumbai Stock)',
-              sku: 'GHEE-1L',
-              barcode: '8901234567890',
-              category: 'Dairy',
-              unit: 'tin',
-              sellingPrice: 650,
-              price: 650,
-              cost: 450,
-              reorderLevel: 10,
-              networkQuantity: 50,
-              networkReserved: 0,
-              networkAvailable: 50,
-              isOrphan: false,
-              locationBreakdown: [
-                { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: false, quantity: 50, reservedQuantity: 0, available: 50 },
-                { locationId: 'store-2', locationName: 'Pune Branch', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 }
-              ],
-              batches: []
-            },
-            {
-              productId: 'p2',
-              productName: 'Organic Honey 500g (Pune Stock)',
-              sku: 'HONEY-500',
-              barcode: '8901234567891',
-              category: 'Staples',
-              unit: 'jar',
-              sellingPrice: 350,
-              price: 350,
-              cost: 220,
-              reorderLevel: 10,
-              networkQuantity: 30,
-              networkReserved: 0,
-              networkAvailable: 30,
-              isOrphan: false,
-              locationBreakdown: [
-                { locationId: 'store-1', locationName: 'Mumbai Flagship', isWarehouse: false, quantity: 0, reservedQuantity: 0, available: 0 },
-                { locationId: 'store-2', locationName: 'Pune Branch', isWarehouse: false, quantity: 30, reservedQuantity: 0, available: 30 }
-              ],
-              batches: []
-            }
-          ],
+          locations: stores,
+          products: networkBalances,
+          stores,
+          networkBalances,
           summary: {
-            totalProducts: 2,
-            catalogProducts: 2,
-            stockedProducts: 2,
-            networkStock: 80,
-            centralStock: 50,
-            storeStock: 30,
+            totalProducts: networkBalances.length,
+            catalogProducts: networkBalances.length,
+            stockedProducts: networkBalances.length,
+            networkStock: locationId === 'store-1' ? 50 : locationId === 'store-2' ? 30 : 80,
+            centralStock: 0,
+            storeStock: locationId === 'store-1' ? 50 : locationId === 'store-2' ? 30 : 80,
             lowStockCount: 0,
             outOfStockCount: 0,
             expiringSoonCount: 0,
@@ -612,9 +631,12 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
 
     const subtitleInput = bizModal.getByPlaceholder(/pure organic farm products/i);
     await subtitleInput.fill('Farm Fresh Organic Groceries');
-    await bizModal.getByRole('button', { name: /save changes/i }).click();
+    const [updateResponse] = await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/api/v1/businesses') && res.request().method() === 'PATCH'),
+      bizModal.getByRole('button', { name: /save changes/i }).click()
+    ]);
+    expect(updateResponse.status()).toBe(200);
     await expect(bizModal).not.toBeVisible();
-    await page.waitForLoadState('networkidle');
 
     await expect(page.getByText('Farm Fresh Organic Groceries')).toBeVisible();
 
