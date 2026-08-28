@@ -614,6 +614,7 @@ test.describe('Phase 11C Cross-Module Store Scope Regression & Hardening Suite',
     await subtitleInput.fill('Farm Fresh Organic Groceries');
     await bizModal.getByRole('button', { name: /save changes/i }).click();
     await expect(bizModal).not.toBeVisible();
+    await page.waitForLoadState('networkidle');
 
     await expect(page.getByText('Farm Fresh Organic Groceries')).toBeVisible();
 

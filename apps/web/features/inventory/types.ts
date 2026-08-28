@@ -101,6 +101,8 @@ export interface CommandCenterStore extends InventoryLocation {
 
 export interface CommandCenterData {
   success: boolean;
+  locations: CommandCenterStore[];
+  products: NetworkInventoryItem[];
   stores: CommandCenterStore[];
   networkBalances: NetworkInventoryItem[];
   summary: CommandCenterSummary;

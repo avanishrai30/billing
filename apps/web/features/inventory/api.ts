@@ -75,13 +75,18 @@ function normalizeBreakdown(location: LocationStockBreakdown): LocationStockBrea
 }
 
 function normalizeCommandCenterData(data: CommandCenterData): CommandCenterData {
+  const locations = ((data.locations || data.stores || []) as CommandCenterStore[]).map(normalizeLocation);
+  const products = ((data.products || data.networkBalances || []) as CommandCenterData['products']).map(item => ({
+    ...item,
+    locationBreakdown: (item.locationBreakdown || []).map(normalizeBreakdown)
+  }));
+
   return {
     ...data,
-    stores: (data.stores || []).map(normalizeLocation),
-    networkBalances: (data.networkBalances || []).map(item => ({
-      ...item,
-      locationBreakdown: (item.locationBreakdown || []).map(normalizeBreakdown)
-    }))
+    locations,
+    products,
+    stores: locations,
+    networkBalances: products
   };
 }
 

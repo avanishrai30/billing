@@ -43,6 +43,8 @@ describe('Inventory API & Query Keys Unit Tests', () => {
   it('2. inventoryApi.getCommandCenter requests GET /api/v1/inventory/command-center', async () => {
     const mockData = {
       success: true,
+      locations: [{ id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', isWarehouse: true }],
+      products: [],
       stores: [{ id: 'central-warehouse', name: 'Central Warehouse', code: 'WH-01', isWarehouse: true }],
       networkBalances: [],
       summary: {
@@ -63,6 +65,8 @@ describe('Inventory API & Query Keys Unit Tests', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/api/v1/inventory/command-center');
     expect(res.success).toBe(true);
     expect(res.summary.networkStock).toBe(100);
+    expect(res.locations).toBe(res.stores);
+    expect(res.products).toBe(res.networkBalances);
     expect(res.stores[0]).toMatchObject({
       id: 'central-warehouse',
       type: 'WAREHOUSE',
@@ -76,9 +80,35 @@ describe('Inventory API & Query Keys Unit Tests', () => {
   it('3. inventoryApi.getCommandCenter normalizes production warehouse metadata from code and hub flag', async () => {
     (apiClient.get as jest.Mock).mockResolvedValueOnce({
       success: true,
+      locations: [
+        { id: 'st-1787728871789', name: "VC ORGANIC'S WAREHOUSE", code: 'WAREHOUSE', isHub: true },
+        { id: 'st-srs', name: 'VC ORGANIC SRS', code: 'SRS' }
+      ],
       stores: [
         { id: 'st-1787728871789', name: "VC ORGANIC'S WAREHOUSE", code: 'WAREHOUSE', isHub: true },
         { id: 'st-srs', name: 'VC ORGANIC SRS', code: 'SRS' }
+      ],
+      products: [
+        {
+          productId: 'prod-production-parity',
+          productName: 'Production Parity Product',
+          sku: 'SKU-PROD-PARITY',
+          barcode: '890000000117',
+          category: 'Grocery',
+          unit: 'units',
+          cost: 100,
+          price: 140,
+          reorderLevel: 10,
+          isOrphan: false,
+          networkQuantity: 117,
+          networkReserved: 0,
+          networkAvailable: 117,
+          locationBreakdown: [
+            { locationId: 'st-1787728871789', locationName: "VC ORGANIC'S WAREHOUSE", isHub: true, quantity: 0, reservedQuantity: 0, available: 0 },
+            { locationId: 'st-srs', locationName: 'VC ORGANIC SRS', quantity: 115, reservedQuantity: 0, available: 115 }
+          ],
+          batches: []
+        }
       ],
       networkBalances: [
         {
@@ -135,6 +165,8 @@ describe('Inventory API & Query Keys Unit Tests', () => {
       expect.objectContaining({ locationId: 'st-1787728871789', type: 'WAREHOUSE', isWarehouse: true }),
       expect.objectContaining({ locationId: 'st-srs', type: 'STORE', isWarehouse: false })
     ]));
+    expect(res.locations).toEqual(res.stores);
+    expect(res.products).toEqual(res.networkBalances);
   });
 
   it('4. inventoryApi.getSummary requests GET /api/v1/inventory/summary with store param', async () => {

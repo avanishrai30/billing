@@ -92,6 +92,33 @@ const productionLikeStores = [
 
 const productionLikeCommandCenterData = {
   success: true,
+  locations: productionLikeStores,
+  products: [
+    {
+      productId: 'prod-production-parity',
+      productName: 'Production Parity Product',
+      sku: 'SKU-PROD-PARITY',
+      barcode: '890000000117',
+      brand: 'VC Organics',
+      category: 'Grocery',
+      unit: 'units',
+      cost: 100,
+      price: 140,
+      reorderLevel: 10,
+      isOrphan: false,
+      defaultExpiryDate: null,
+      networkQuantity: 117,
+      networkReserved: 0,
+      networkAvailable: 117,
+      locationBreakdown: [
+        { locationId: 'st-1787728871789', locationName: "VC ORGANIC'S WAREHOUSE", type: 'WAREHOUSE', locationType: 'WAREHOUSE', isWarehouse: true, isHub: true, quantity: 0, reservedQuantity: 0, available: 0 },
+        { locationId: 'st-srs', locationName: 'VC ORGANIC SRS', type: 'STORE', locationType: 'STORE', isWarehouse: false, isHub: false, quantity: 115, reservedQuantity: 0, available: 115 },
+        { locationId: 'st-temple-stall', locationName: 'VC ORGANIC Temple Stall', type: 'STORE', locationType: 'STORE', isWarehouse: false, isHub: false, quantity: 2, reservedQuantity: 0, available: 2 },
+        { locationId: 'st-banswadi', locationName: "VC ORGANIC'S Banswadi", type: 'STORE', locationType: 'STORE', isWarehouse: false, isHub: false, quantity: 0, reservedQuantity: 0, available: 0 }
+      ],
+      batches: []
+    }
+  ],
   stores: productionLikeStores,
   networkBalances: [
     {

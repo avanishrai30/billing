@@ -117,6 +117,20 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     });
   }
 
+  async function seedProductMasters(count) {
+    for (let i = 1; i <= count; i += 1) {
+      await mockDb.collection('products').insertOne({
+        id: `prod-master-${String(i).padStart(3, '0')}`,
+        name: `Product Master ${String(i).padStart(3, '0')}`,
+        sku: `SKU-${String(i).padStart(3, '0')}`,
+        reorderLevel: 10,
+        purchasePrice: 50,
+        isArchived: false,
+        status: 'active'
+      });
+    }
+  }
+
   async function seedStores() {
     await mockDb.collection('stores').insertOne({
       id: 'central-warehouse',
@@ -500,27 +514,25 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
     expect(data.summary.replenishmentRequiredCount).toBe(1);
   });
 
-  test('12. Command Center preserves production warehouse and zero-stock store locations', async () => {
+  test('12. Command Center returns canonical staging contract for production-like locations', async () => {
     await seedProductionLikeStores();
-    await mockDb.collection('products').insertOne({
-      id: 'prod-production-parity',
-      name: 'Production Parity Product',
-      sku: 'SKU-PROD-PARITY',
-      reorderLevel: 10,
-      purchasePrice: 100,
-      isArchived: false,
-      status: 'active'
-    });
-    await inventoryService.adjustStock('prod-production-parity', 'st-srs', 115, 'OPENING', 'prod-srs', 'test-runner');
-    await inventoryService.adjustStock('prod-production-parity', 'st-temple-stall', 2, 'OPENING', 'prod-temple', 'test-runner');
+    await seedProductMasters(355);
+    await inventoryService.adjustStock('prod-master-001', 'st-srs', 115, 'OPENING', 'prod-srs', 'test-runner');
+    await inventoryService.adjustStock('prod-master-001', 'st-temple-stall', 2, 'OPENING', 'prod-temple', 'test-runner');
 
     const data = await inventoryService.getInventoryCommandCenter({
       category: 'super admin',
       assignedStoreId: 'all',
       assignedStores: ['all']
     });
-    const item = data.networkBalances.find(row => row.productId === 'prod-production-parity');
+    const item = data.products.find(row => row.productId === 'prod-master-001');
+    const zeroStockItem = data.products.find(row => row.productId === 'prod-master-355');
 
+    expect(Object.keys(data).sort()).toEqual(['locations', 'networkBalances', 'products', 'stores', 'success', 'summary']);
+    expect(data.locations).toBe(data.stores);
+    expect(data.products).toBe(data.networkBalances);
+    expect(data.locations).toHaveLength(4);
+    expect(data.products).toHaveLength(355);
     expect(data.stores[0]).toMatchObject({
       id: 'st-1787728871789',
       name: "VC ORGANIC'S WAREHOUSE",
@@ -544,6 +556,18 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
       expect.objectContaining({ id: 'st-srs', name: 'VC ORGANIC SRS', type: 'STORE', isWarehouse: false }),
       expect.objectContaining({ id: 'st-temple-stall', name: 'VC ORGANIC Temple Stall', type: 'STORE', isWarehouse: false })
     ]));
+    expect(zeroStockItem).toMatchObject({
+      productId: 'prod-master-355',
+      networkQuantity: 0,
+      networkAvailable: 0,
+      batches: []
+    });
+    expect(zeroStockItem.locationBreakdown).toEqual(expect.arrayContaining([
+      expect.objectContaining({ locationId: 'st-1787728871789', quantity: 0, available: 0 }),
+      expect.objectContaining({ locationId: 'st-srs', quantity: 0, available: 0 }),
+      expect.objectContaining({ locationId: 'st-temple-stall', quantity: 0, available: 0 }),
+      expect.objectContaining({ locationId: 'st-banswadi', quantity: 0, available: 0 })
+    ]));
     expect(item.networkQuantity).toBe(117);
     expect(item.locationBreakdown).toEqual(expect.arrayContaining([
       expect.objectContaining({ locationId: 'st-1787728871789', quantity: 0, type: 'WAREHOUSE', isWarehouse: true }),
@@ -552,10 +576,38 @@ describe('Inventory Architecture & Ledger Hardening (Stage 07)', () => {
       expect.objectContaining({ locationId: 'st-banswadi', quantity: 0, type: 'STORE', isWarehouse: false })
     ]));
     expect(data.summary).toMatchObject({
+      totalProducts: 355,
+      catalogProducts: 355,
       networkStock: 117,
       centralStock: 0,
       storeStock: 117
     });
+
+    const srsData = await inventoryService.getInventoryCommandCenter({
+      category: 'employee',
+      assignedStoreId: 'st-srs',
+      assignedStores: ['st-srs']
+    });
+    const templeData = await inventoryService.getInventoryCommandCenter({
+      category: 'employee',
+      assignedStoreId: 'st-temple-stall',
+      assignedStores: ['st-temple-stall']
+    });
+    const banswadiData = await inventoryService.getInventoryCommandCenter({
+      category: 'employee',
+      assignedStoreId: 'st-banswadi',
+      assignedStores: ['st-banswadi']
+    });
+
+    expect(srsData.locations).toEqual([expect.objectContaining({ id: 'st-srs' })]);
+    expect(templeData.locations).toEqual([expect.objectContaining({ id: 'st-temple-stall' })]);
+    expect(banswadiData.locations).toEqual([expect.objectContaining({ id: 'st-banswadi' })]);
+    expect(srsData.products.find(row => row.productId === 'prod-master-001').networkQuantity).toBe(115);
+    expect(templeData.products.find(row => row.productId === 'prod-master-001').networkQuantity).toBe(2);
+    expect(banswadiData.products.find(row => row.productId === 'prod-master-001').networkQuantity).toBe(0);
+    expect(banswadiData.products.find(row => row.productId === 'prod-master-001').locationBreakdown).toEqual([
+      expect.objectContaining({ locationId: 'st-banswadi', quantity: 0, available: 0 })
+    ]);
   });
 
   test('13. Canonical stock transfer records lifecycle and emits legacy plus location realtime rooms', async () => {

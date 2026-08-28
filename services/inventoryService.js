@@ -1137,8 +1137,13 @@ const inventoryService = {
       return (a.productName || '').localeCompare(b.productName || '');
     });
 
+    const locations = stores;
+    const commandProducts = networkBalances;
+
     return {
       success: true,
+      locations,
+      products: commandProducts,
       stores,
       networkBalances,
       summary: {
