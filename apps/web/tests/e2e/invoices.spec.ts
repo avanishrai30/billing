@@ -398,4 +398,30 @@ test.describe('Phase 8 Invoices & Sales Ledger E2E Suite', () => {
     // Capture Mobile Visual Baseline Screenshot (430x932)
     await page.screenshot({ path: 'test-results/mobile-invoices.png', fullPage: true });
   });
+
+  test('3. Receipt Designer supports live template editing and default persistence', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/invoices');
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('button', { name: /customize receipt/i }).click();
+    await expect(page.getByTestId('receipt-designer')).toBeVisible();
+    await expect(page.getByTestId('receipt-preview-frame')).toBeVisible();
+
+    await page.getByRole('button', { name: /58 mm/i }).click();
+    await page.getByLabel('Item SKU').check();
+    await page.getByLabel('Discount row').uncheck();
+    await page.getByRole('button', { name: /save default/i }).click();
+
+    const saved = await page.evaluate(() => {
+      const raw = localStorage.getItem('vc-organic-receipt-template');
+      return raw ? JSON.parse(raw) : null;
+    });
+
+    expect(saved.paperWidthMm).toBe(58);
+    expect(saved.transaction.showItemSku).toBe(true);
+    expect(saved.transaction.showDiscount).toBe(false);
+    expect(saved.items).toBeUndefined();
+    expect(saved.customerName).toBeUndefined();
+  });
 });

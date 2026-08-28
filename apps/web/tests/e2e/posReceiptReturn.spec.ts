@@ -271,10 +271,18 @@ test.describe('POS Phone-First Customer, Thermal Receipt & Return/Exchange Suite
     await expect(page.getByText('#INV-2026-AUTO-1', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: /print again/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /new sale/i })).toBeVisible();
+    expect(checkoutBody.receiptTemplateId).toBe('vc-organic-signature');
+    expect(checkoutBody.receiptTemplate.paperWidthMm).toBe(80);
+    expect(checkoutBody.items[0].sku).toBe('AIA-GHEE-1L');
+    expect(checkoutBody.items[0].barcode).toBe('8901234567890');
 
     // Click View Receipt to verify receipt preview
     await page.getByRole('button', { name: /view receipt/i }).click();
-    await expect(page.getByText('GRAND TOTAL', { exact: true })).toBeVisible();
+    const receiptFrame = page.frameLocator('[data-testid="pos-receipt-preview-frame"]');
+    await expect(receiptFrame.getByText('GRAND TOTAL', { exact: true })).toBeVisible();
+    await expect(receiptFrame.getByText('Invoice # INV-2026-AUTO-1')).toBeVisible();
+    await expect(receiptFrame.getByText('Rajesh Sharma')).not.toBeVisible();
+    await expect(receiptFrame.getByText('9822011223')).not.toBeVisible();
 
     // Click New Sale resets the cart
     await page.getByRole('button', { name: /new sale/i }).click();

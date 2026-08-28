@@ -5,3 +5,4 @@ export * from './InvoiceFilters';
 export * from './InvoiceTable';
 export * from './InvoiceDetailDrawer';
 export * from './InvoiceVoidDialog';
+export * from './ReceiptDesigner';

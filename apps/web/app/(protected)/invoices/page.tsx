@@ -10,7 +10,8 @@ import {
   InvoiceFilters,
   InvoiceTable,
   InvoiceDetailDrawer,
-  InvoiceVoidDialog
+  InvoiceVoidDialog,
+  ReceiptDesigner
 } from '../../../features/invoices/components';
 import { calculateInvoiceSummary } from '../../../features/invoices/calculations';
 import { useStoreScope } from '../../../providers/StoreScopeProvider';
@@ -39,6 +40,7 @@ export default function InvoicesPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [paymentModeFilter, setPaymentModeFilter] = useState<string>('ALL');
+  const [showReceiptDesigner, setShowReceiptDesigner] = useState(false);
 
   // Drawer / Dialog state
   const [activeDetailInvoice, setActiveDetailInvoice] = useState<Invoice | null>(null);
@@ -147,7 +149,10 @@ export default function InvoicesPage() {
           setPage(1);
         }}
         canCreatePOS={canCreatePOS}
+        onCustomizeReceipt={() => setShowReceiptDesigner((value) => !value)}
       />
+
+      {showReceiptDesigner && <ReceiptDesigner />}
 
       {/* Summary KPI Cards */}
       <InvoiceSummary metrics={summaryMetrics} isLoading={isLoading} />

@@ -7,6 +7,17 @@ export type InvoicePaymentMode = 'CASH' | 'UPI' | 'CARD' | 'BANK';
 
 export type InvoiceStatus = 'COMPLETED' | 'PAID' | 'PENDING' | 'VOIDED';
 
+export interface InvoiceReceiptTemplate {
+  id: string;
+  name: string;
+  paperWidthMm: 58 | 80;
+  header?: Record<string, boolean>;
+  transaction?: Record<string, unknown>;
+  footer?: { text?: string };
+  style?: Record<string, unknown>;
+  behavior?: Record<string, boolean>;
+}
+
 export interface InvoiceLineItem {
   productId: string;
   name: string;
@@ -52,6 +63,19 @@ export interface Invoice {
 
   cashier?: string;
   cashierName?: string;
+  receiptTemplateId?: string;
+  receiptTemplate?: InvoiceReceiptTemplate;
+  receiptSnapshot?: {
+    businessName?: string;
+    storeId?: string;
+    storeName?: string;
+    storeAddress?: string;
+    storePhone?: string;
+    storeGstin?: string;
+    cashierName?: string;
+    cashierUsername?: string;
+    capturedAt?: string;
+  };
   notes?: string;
   isArchived?: boolean;
   voidedAt?: string;

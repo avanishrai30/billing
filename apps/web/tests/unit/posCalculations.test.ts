@@ -6,7 +6,13 @@ import {
   calculatePOSLine,
   calculatePOSTotals
 } from '../../features/pos/calculations';
-import { generateCanonicalReceipt } from '../../lib/utils/receiptDocument';
+import {
+  COMPACT_RECEIPT_TEMPLATE,
+  DEFAULT_RECEIPT_TEMPLATE,
+  formatReceiptHtml,
+  formatReceiptText,
+  generateCanonicalReceipt
+} from '../../lib/utils/receiptDocument';
 
 describe('POS Calculations, Phone Normalization, and Canonical Receipts', () => {
   describe('Phone-First Normalization', () => {
@@ -107,6 +113,93 @@ describe('POS Calculations, Phone Normalization, and Canonical Receipts', () => 
       expect(receipt.items.length).toBe(2);
       expect(receipt.grandTotal).toBe(1609);
       expect(receipt.paymentMode).toBe('UPI');
+    });
+
+    test('7. Renders receipt without customer identity and omits zero discount/tax rows', () => {
+      const receipt = generateCanonicalReceipt({
+        invoiceNumber: 'INV-NO-CUSTOMER-1',
+        customerName: 'Rajesh Sharma',
+        customerPhone: '9822011223',
+        cashierName: 'Nithin',
+        paymentMode: 'CASH',
+        amountPaid: 1200,
+        items: [{ name: 'A2 Cow Ghee', sku: 'GHEE-1L', quantity: 1, price: 1200, lineTotal: 1200 }],
+        subtotal: 1200,
+        tax: 0,
+        discount: 0,
+        grandTotal: 1200
+      }, { name: "VC ORGANIC'S SRS" });
+
+      const text = formatReceiptText(receipt, 42, {
+        ...DEFAULT_RECEIPT_TEMPLATE,
+        transaction: { ...DEFAULT_RECEIPT_TEMPLATE.transaction, showItemSku: true }
+      });
+      const html = formatReceiptHtml(receipt, 80, DEFAULT_RECEIPT_TEMPLATE);
+
+      expect(text).toContain('INV-NO-CUSTOMER-1');
+      expect(text).toContain('Cashier: Nithin');
+      expect(text).toContain('SKU GHEE-1L');
+      expect(text).not.toContain('Rajesh Sharma');
+      expect(text).not.toContain('9822011223');
+      expect(text).not.toContain('Discount:');
+      expect(text).not.toContain('CGST:');
+      expect(text).not.toContain('SGST:');
+      expect(html).not.toContain('Rajesh Sharma');
+      expect(html).not.toContain('9822011223');
+      expect(html).toContain('<svg');
+      expect(html).toContain('Invoice # INV-NO-CUSTOMER-1');
+      expect(html).toContain('size: 80mm auto');
+    });
+
+    test('8. Renders tax/discount only when present and supports 58mm compact output', () => {
+      const receipt = generateCanonicalReceipt({
+        invoiceNumber: 'INV-TAXED-1',
+        createdBy: 'Rajesh',
+        paymentMode: 'UPI',
+        amountPaid: 1120,
+        items: [{ name: 'Wild Forest Honey', quantity: 1, price: 1200, tax: 20, lineTotal: 1200 }],
+        subtotal: 1200,
+        tax: 20,
+        discount: 100,
+        grandTotal: 1120
+      }, { name: 'VC ORGANIC Temple Stall' });
+
+      const text = formatReceiptText(receipt, 32, COMPACT_RECEIPT_TEMPLATE);
+      const html = formatReceiptHtml(receipt, 58, COMPACT_RECEIPT_TEMPLATE);
+
+      expect(text).toContain('Discount:');
+      expect(text).toContain('CGST:');
+      expect(text).toContain('SGST:');
+      expect(text).toContain('GRAND TOTAL:');
+      expect(html).toContain('size: 58mm auto');
+      expect(html).toContain('VC ORGANIC Temple Stall');
+      expect(html).toContain('INV-TAXED-1');
+    });
+
+    test('9. Prefers committed receipt snapshot over current store context', () => {
+      const receipt = generateCanonicalReceipt(
+        {
+          invoiceNumber: 'INV-SNAPSHOT-1',
+          createdBy: 'Current User',
+          receiptSnapshot: {
+            businessName: 'VC ORGANIC',
+            storeName: "VC ORGANIC'S SRS",
+            storeAddress: 'Committed SRS address',
+            cashierName: 'Sale Cashier'
+          },
+          items: [{ name: 'A2 Cow Ghee', quantity: 1, price: 500, lineTotal: 500 }],
+          subtotal: 500,
+          tax: 0,
+          discount: 0,
+          grandTotal: 500,
+          paymentMode: 'CASH'
+        },
+        { name: 'Currently Selected Temple Stall' }
+      );
+
+      expect(receipt.storeName).toBe("VC ORGANIC'S SRS");
+      expect(receipt.storeAddress).toBe('Committed SRS address');
+      expect(receipt.cashierName).toBe('Sale Cashier');
     });
   });
 });

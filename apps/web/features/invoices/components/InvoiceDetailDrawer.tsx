@@ -7,8 +7,9 @@ import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { getPaymentModeBadgeConfig, formatInvoiceNumber } from '../calculations';
 import { invoicesApi } from '../api';
 import { posApi } from '../../pos/api';
-import { generateCanonicalReceipt, dispatchReceiptPrint } from '../../../lib/utils/receiptDocument';
+import { generateCanonicalReceipt, dispatchReceiptPrint, loadReceiptTemplate } from '../../../lib/utils/receiptDocument';
 import type { Invoice } from '../types';
+import type { ReceiptTemplate } from '../../pos/types';
 
 export interface InvoiceDetailDrawerProps {
   isOpen: boolean;
@@ -58,8 +59,12 @@ export function InvoiceDetailDrawer({
   const handleThermalPrint = async () => {
     setIsPrinting(true);
     try {
+      const template = (invoice.receiptTemplate || loadReceiptTemplate()) as Partial<ReceiptTemplate>;
       const receipt = generateCanonicalReceipt(invoice);
-      await dispatchReceiptPrint(receipt);
+      await dispatchReceiptPrint(receipt, {
+        paperWidthMm: template.paperWidthMm,
+        template
+      });
     } catch {} finally {
       setIsPrinting(false);
     }

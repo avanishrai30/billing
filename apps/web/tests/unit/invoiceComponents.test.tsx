@@ -6,7 +6,8 @@ import {
   InvoiceSummary,
   InvoiceFilters,
   InvoiceTable,
-  InvoiceStatusBadge
+  InvoiceStatusBadge,
+  ReceiptDesigner
 } from '../../features/invoices/components';
 import type { Invoice, InvoiceSummaryMetrics } from '../../features/invoices/types';
 
@@ -166,5 +167,27 @@ describe('Invoice Component Layer Unit Suite', () => {
 
     rerender(<InvoiceStatusBadge status="VOIDED" isArchived={true} />);
     expect(screen.getByText('Voided')).toBeInTheDocument();
+  });
+
+  it('6. ReceiptDesigner updates and saves template-only receipt configuration', () => {
+    localStorage.clear();
+
+    render(<ReceiptDesigner />);
+
+    expect(screen.getByText('Receipt Designer')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /58 mm/i }));
+    fireEvent.click(screen.getByLabelText('Item SKU'));
+
+    fireEvent.change(screen.getByDisplayValue('VC Organic Signature'), {
+      target: { value: 'compact-pos' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save default/i }));
+
+    const saved = JSON.parse(localStorage.getItem('vc-organic-receipt-template') || '{}');
+    expect(saved.id).toBe('compact-pos');
+    expect(saved.paperWidthMm).toBe(58);
+    expect(saved.transaction.showInvoiceBarcode).toBe(true);
+    expect(saved).not.toHaveProperty('items');
+    expect(saved).not.toHaveProperty('customerName');
   });
 });

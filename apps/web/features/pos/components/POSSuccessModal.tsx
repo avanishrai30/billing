@@ -1,10 +1,16 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { CheckCircle2, Printer, RefreshCw, Eye, Plus, AlertTriangle, FileText, Download } from 'lucide-react';
+import { CheckCircle2, Printer, Eye, Plus } from 'lucide-react';
 import { Dialog, Button, Badge } from '../../../components/ui';
-import { generateCanonicalReceipt, dispatchReceiptPrint, formatReceiptHtml } from '../../../lib/utils/receiptDocument';
-import type { POSInvoiceDoc, POSReceiptData } from '../types';
+import {
+  DEFAULT_RECEIPT_TEMPLATE,
+  generateCanonicalReceipt,
+  dispatchReceiptPrint,
+  formatReceiptHtml,
+  loadReceiptTemplate
+} from '../../../lib/utils/receiptDocument';
+import type { POSInvoiceDoc, POSReceiptData, ReceiptTemplate } from '../types';
 
 export interface POSSuccessModalProps {
   isOpen: boolean;
@@ -26,7 +32,14 @@ export function POSSuccessModal({
   const [printStatus, setPrintStatus] = useState<'idle' | 'printing' | 'success' | 'offline' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [showPreview, setShowPreview] = useState(false);
+  const [receiptTemplate, setReceiptTemplate] = useState<ReceiptTemplate>(DEFAULT_RECEIPT_TEMPLATE);
   const autoPrintedInvoicesRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (isOpen) {
+      setReceiptTemplate(invoice?.receiptTemplate || loadReceiptTemplate());
+    }
+  }, [isOpen, invoice]);
 
   const receiptData: POSReceiptData | null = React.useMemo(() => {
     if (!invoice) return null;
@@ -39,7 +52,10 @@ export function POSSuccessModal({
     setStatusMessage('Dispatching receipt to thermal printer...');
 
     try {
-      const res = await dispatchReceiptPrint(receiptData);
+      const res = await dispatchReceiptPrint(receiptData, {
+        paperWidthMm: receiptTemplate.paperWidthMm,
+        template: receiptTemplate
+      });
       if (res.success) {
         setPrintStatus('success');
         setStatusMessage(res.method === 'native' ? 'Receipt printed on thermal printer ✓' : 'Receipt sent to printer ✓');
@@ -51,18 +67,25 @@ export function POSSuccessModal({
       setPrintStatus('offline');
       setStatusMessage('Printer offline — sale recorded in ledger.');
     }
-  }, [receiptData]);
+  }, [receiptData, receiptTemplate]);
 
   // Auto-print on first mount if enabled
   useEffect(() => {
     const invoiceKey = invoice?.invoiceNumber || invoice?.id;
-    if (isOpen && invoice && invoiceKey && autoPrint && !autoPrintedInvoicesRef.current.has(invoiceKey)) {
+    if (
+      isOpen &&
+      invoice &&
+      invoiceKey &&
+      autoPrint &&
+      receiptTemplate.behavior.autoPrintAfterSale &&
+      !autoPrintedInvoicesRef.current.has(invoiceKey)
+    ) {
       autoPrintedInvoicesRef.current.add(invoiceKey);
       handlePrint();
     } else if (isOpen) {
       setPrintStatus('idle');
     }
-  }, [isOpen, invoice, autoPrint, handlePrint]);
+  }, [isOpen, invoice, autoPrint, receiptTemplate.behavior.autoPrintAfterSale, handlePrint]);
 
   if (!invoice || !receiptData) return null;
 
@@ -154,46 +177,17 @@ export function POSSuccessModal({
 
         {/* Inline Thermal Receipt Preview */}
         {showPreview && (
-          <div className="bg-white border border-slate-300 rounded-xl p-4 shadow-inner max-h-72 overflow-y-auto font-mono text-[11px] leading-tight text-slate-900">
-            <div className="text-center font-bold text-xs uppercase mb-1">{receiptData.businessName}</div>
-            <div className="text-center text-slate-600 mb-2">{receiptData.storeName}</div>
-            <div className="border-t border-dashed border-slate-400 my-2" />
-            <div className="flex justify-between">
-              <span>Inv: #{receiptData.receiptNumber}</span>
-              <span>{new Date(receiptData.date).toLocaleDateString('en-IN')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Cust: {receiptData.customerName}</span>
-              <span>{receiptData.customerPhone || ''}</span>
-            </div>
-            <div className="border-t border-dashed border-slate-400 my-2" />
-            <div className="space-y-1">
-              {receiptData.items.map((it, idx) => (
-                <div key={idx} className="flex justify-between">
-                  <span className="truncate pr-2">{it.name} x{it.quantity}</span>
-                  <span className="shrink-0 font-semibold">₹{it.lineTotal.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-dashed border-slate-400 my-2" />
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>₹{receiptData.subtotal.toFixed(2)}</span>
-            </div>
-            {receiptData.tax > 0 && (
-              <div className="flex justify-between">
-                <span>GST Tax</span>
-                <span>₹{receiptData.tax.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="border-t-2 border-slate-900 my-1" />
-            <div className="flex justify-between font-bold text-xs">
-              <span>GRAND TOTAL</span>
-              <span>₹{receiptData.grandTotal.toFixed(2)}</span>
-            </div>
-            <div className="border-t-2 border-slate-900 my-1" />
-            <div className="text-center text-[10px] text-slate-500 mt-2">
-              {receiptData.termsAndConditions}
+          <div className="bg-slate-100 border border-slate-300 rounded-xl p-3 shadow-inner max-h-80 overflow-auto">
+            <div
+              className="mx-auto bg-white border border-slate-300 shadow-sm"
+              style={{ width: `${Math.min(receiptTemplate.paperWidthMm * 4, 360)}px` }}
+            >
+              <iframe
+                title="Thermal receipt preview"
+                data-testid="pos-receipt-preview-frame"
+                className="block h-[520px] w-full bg-white"
+                srcDoc={formatReceiptHtml(receiptData, receiptTemplate.paperWidthMm, receiptTemplate)}
+              />
             </div>
           </div>
         )}

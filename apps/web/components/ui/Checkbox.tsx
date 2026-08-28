@@ -26,10 +26,10 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             type="checkbox"
             checked={checked}
             disabled={disabled}
-            className="peer sr-only"
+            className="peer absolute inset-0 z-10 h-4 w-4 cursor-pointer opacity-0 disabled:cursor-not-allowed"
             {...props}
           />
-          <div className="w-4 h-4 rounded-md border border-slate-300 bg-white peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500/30 transition-colors flex items-center justify-center">
+          <div className="pointer-events-none w-4 h-4 rounded-md border border-slate-300 bg-white peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500/30 transition-colors flex items-center justify-center">
             <Check className="w-3 h-3 text-white stroke-[3] opacity-0 peer-checked:opacity-100 transition-opacity" />
           </div>
         </div>
@@ -45,4 +45,3 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
 );
 
 Checkbox.displayName = 'Checkbox';
-

@@ -14,6 +14,15 @@ function getTransactionKey(body = {}, fallback) {
   return body.transactionId || body.clientTransactionId || body.returnId || body.exchangeId || fallback;
 }
 
+function clonePlainObject(value) {
+  if (!value || typeof value !== 'object') return null;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return null;
+  }
+}
+
 async function rollbackAddedStock(items, locationId, referenceId, performedBy, notes) {
   const rollbackFailures = [];
 
@@ -334,6 +343,8 @@ router.post('/', verifyJWT, requirePermission('invoices.create'), requireStoreSc
         productId: prodId,
         variantId: item.variantId || null,
         name: product.name || item.name || prodId,
+        sku: product.sku || item.sku || '',
+        barcode: product.barcode || item.barcode || '',
         unit: product.unit || item.unit || 'unit',
         quantity: qty,
         price: unitPrice,
@@ -358,6 +369,12 @@ router.post('/', verifyJWT, requirePermission('invoices.create'), requireStoreSc
       customerName: invoiceData.customerName,
       customerPhone: invoiceData.customerPhone
     });
+    const storeSnapshot = await db.collection('stores').findOne({
+      $or: [{ id: targetLocationId }, { storeId: targetLocationId }, { code: targetLocationId }]
+    }) || await db.collection('businesses').findOne({
+      $or: [{ id: targetLocationId }, { storeId: targetLocationId }, { code: targetLocationId }]
+    }) || {};
+    const receiptTemplateSnapshot = clonePlainObject(invoiceData.receiptTemplate);
 
     if (customerSnapshot.customerId && invoiceData.customerId && customerSnapshot.customerId !== invoiceData.customerId) {
       return res.status(409).json({
@@ -403,6 +420,20 @@ router.post('/', verifyJWT, requirePermission('invoices.create'), requireStoreSc
       paymentMethod: normalizedPaymentMode,
       amountPaid,
       changeDue,
+      receiptTemplateId: invoiceData.receiptTemplateId || receiptTemplateSnapshot?.id || 'vc-organic-signature',
+      receiptTemplate: receiptTemplateSnapshot,
+      receiptSnapshot: {
+        businessName: invoiceData.businessName || storeSnapshot.businessName || storeSnapshot.business || 'VC ORGANIC',
+        storeId: targetLocationId,
+        storeName: invoiceData.storeName || storeSnapshot.name || storeSnapshot.storeName || targetLocationId,
+        storeAddress: invoiceData.storeAddress || storeSnapshot.address || storeSnapshot.location || '',
+        storePhone: invoiceData.storePhone || storeSnapshot.phone || storeSnapshot.contactPhone || '',
+        storeGstin: invoiceData.storeGstin || storeSnapshot.gstin || storeSnapshot.gst || '',
+        cashierName: invoiceData.cashierName || req.user?.name || username,
+        cashierUsername: username,
+        receiptTemplateId: invoiceData.receiptTemplateId || receiptTemplateSnapshot?.id || 'vc-organic-signature',
+        capturedAt: new Date().toISOString()
+      },
       status: 'COMPLETED',
       createdBy: username,
       isArchived: false,

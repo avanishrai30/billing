@@ -144,7 +144,13 @@ describe('POS production hardening real route integration', () => {
       status: 'active',
       tokenVersion: 1
     });
-    await db.collection('stores').insertOne({ id: storeId, name: 'VC ORGANIC SRS' });
+    await db.collection('stores').insertOne({
+      id: storeId,
+      name: 'VC ORGANIC SRS',
+      address: 'SRS Outlet, Bengaluru',
+      phone: '9876543210',
+      gstin: '29AAAAA0000A1Z5'
+    });
     await db.collection('businesses').insertOne({ id: storeId, name: 'VC ORGANIC SRS' });
     await db.collection('customers').insertOne({
       id: 'cust-rajesh',
@@ -214,6 +220,14 @@ describe('POS production hardening real route integration', () => {
         customerPhone: '+91 98220 11223',
         paymentMode: 'CASH',
         amountPaid: 1500,
+        receiptTemplateId: 'vc-organic-signature',
+        receiptTemplate: {
+          id: 'vc-organic-signature',
+          name: 'VC Organic Signature',
+          paperWidthMm: 80,
+          header: { showCashier: true },
+          transaction: { showInvoiceBarcode: true }
+        },
         items: [{ productId: 'prod-ghee', quantity: 2, price: 1, gst: 99 }],
         discount: 0
       });
@@ -227,6 +241,21 @@ describe('POS production hardening real route integration', () => {
     expect(res.body.invoice.grandTotal).toBe(1365);
     expect(res.body.invoice.amountPaid).toBe(1500);
     expect(res.body.invoice.changeDue).toBe(135);
+    expect(res.body.invoice.items[0].sku).toBe('GHEE-1L');
+    expect(res.body.invoice.items[0].barcode).toBe('8901234567890');
+    expect(res.body.invoice.receiptTemplateId).toBe('vc-organic-signature');
+    expect(res.body.invoice.receiptTemplate.paperWidthMm).toBe(80);
+    expect(res.body.invoice.receiptSnapshot).toMatchObject({
+      businessName: 'VC ORGANIC',
+      storeId,
+      storeName: 'VC ORGANIC SRS',
+      storeAddress: 'SRS Outlet, Bengaluru',
+      storePhone: '9876543210',
+      storeGstin: '29AAAAA0000A1Z5',
+      cashierName: 'Super Admin',
+      cashierUsername: 'admin',
+      receiptTemplateId: 'vc-organic-signature'
+    });
 
     const inventory = await db.collection('inventory').findOne({ productId: 'prod-ghee', locationId: storeId });
     expect(inventory.quantity).toBe(8);

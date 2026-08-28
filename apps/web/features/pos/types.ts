@@ -72,6 +72,8 @@ export interface POSCheckoutItem {
   productId: string;
   variantId?: string | null;
   name: string;
+  sku?: string;
+  barcode?: string;
   unit: string;
   quantity: number;
   price: number;
@@ -95,6 +97,8 @@ export interface POSCheckoutPayload {
   paymentMethod?: PaymentMode;
   amountPaid?: number;
   changeDue?: number;
+  receiptTemplateId?: string;
+  receiptTemplate?: ReceiptTemplate;
   items: POSCheckoutItem[];
   subtotal: number;
   discount: number;
@@ -116,6 +120,19 @@ export interface POSInvoiceDoc {
   paymentMode: PaymentMode;
   amountPaid?: number;
   changeDue?: number;
+  receiptTemplateId?: string;
+  receiptTemplate?: ReceiptTemplate;
+  receiptSnapshot?: {
+    businessName?: string;
+    storeId?: string;
+    storeName?: string;
+    storeAddress?: string;
+    storePhone?: string;
+    storeGstin?: string;
+    cashierName?: string;
+    cashierUsername?: string;
+    capturedAt?: string;
+  };
   items: POSCheckoutItem[];
   subtotal: number;
   discount: number;
@@ -237,6 +254,51 @@ export interface POSReceiptOptions {
   showTerms?: boolean;
 }
 
+export type ReceiptTemplatePreset = 'classic' | 'vc-organic-signature' | 'compact';
+export type ReceiptBarcodeType = 'CODE128' | 'QR';
+export type ReceiptAlignment = 'left' | 'center' | 'right';
+export type ReceiptDensity = 'compact' | 'standard' | 'spacious';
+
+export interface ReceiptTemplate {
+  id: string;
+  name: string;
+  preset: ReceiptTemplatePreset;
+  paperWidthMm: 58 | 80;
+  header: {
+    showLogo: boolean;
+    showBusinessName: boolean;
+    showStoreName: boolean;
+    showAddress: boolean;
+    showGstin: boolean;
+    showContact: boolean;
+    showCashier: boolean;
+    showDateTime: boolean;
+  };
+  transaction: {
+    showInvoiceNumber: boolean;
+    showInvoiceBarcode: boolean;
+    barcodeType: ReceiptBarcodeType;
+    showItemSku: boolean;
+    showQuantity: boolean;
+    showRate: boolean;
+    showDiscount: boolean;
+    showTax: boolean;
+  };
+  footer: {
+    text: string;
+  };
+  style: {
+    alignment: ReceiptAlignment;
+    density: ReceiptDensity;
+    logoSize: 'sm' | 'md' | 'lg';
+    businessNameBold: boolean;
+    businessNameScale: number;
+  };
+  behavior: {
+    autoPrintAfterSale: boolean;
+  };
+}
+
 export interface POSReceiptData {
   businessName: string;
   businessLogo?: string | null;
@@ -252,6 +314,7 @@ export interface POSReceiptData {
   customerPhone?: string;
   items: Array<{
     name: string;
+    sku?: string;
     quantity: number;
     unit: string;
     unitPrice: number;

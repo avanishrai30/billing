@@ -25,6 +25,7 @@ import {
   calculatePOSTotals
 } from '../../../features/pos/calculations';
 import { posApi } from '../../../features/pos/api';
+import { loadReceiptTemplate } from '../../../lib/utils/receiptDocument';
 import { Drawer, useToast, AccessDeniedState, Badge, Button } from '../../../components/ui';
 import { ArrowLeftRight, X } from 'lucide-react';
 import type {
@@ -351,11 +352,14 @@ export default function POSTerminalPage() {
     }
 
     // Standard Sale Flow
+    const receiptTemplate = loadReceiptTemplate();
     const payload: POSCheckoutPayload = {
       transactionId: `TXN-${Date.now()}`,
       invoiceNumber: `INV-${Date.now()}`,
       locationId: effectiveLocationId,
       storeId: effectiveLocationId,
+      receiptTemplateId: receiptTemplate.id,
+      receiptTemplate,
       customerId: selectedCustomer?.id,
       customerName: selectedCustomer?.name,
       customerPhone: selectedCustomer?.phone,
@@ -366,6 +370,8 @@ export default function POSTerminalPage() {
       items: cartItems.map((it) => ({
         productId: it.productId,
         name: it.name,
+        sku: it.sku,
+        barcode: products.find((product) => product.id === it.productId)?.barcode,
         unit: it.unit,
         quantity: it.quantity,
         price: it.price,

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FileText, ShoppingCart, Download } from 'lucide-react';
+import { FileText, ShoppingCart, ReceiptText } from 'lucide-react';
 import { Button, Badge } from '../../../components/ui';
 
 export interface InvoiceHeaderProps {
@@ -10,13 +10,15 @@ export interface InvoiceHeaderProps {
   storeOptions: Array<{ value: string; label: string }>;
   onSelectLocation: (loc: string) => void;
   canCreatePOS?: boolean;
+  onCustomizeReceipt?: () => void;
 }
 
 export function InvoiceHeader({
   selectedLocation,
   storeOptions,
   onSelectLocation,
-  canCreatePOS = true
+  canCreatePOS = true,
+  onCustomizeReceipt
 }: InvoiceHeaderProps) {
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-xs">
@@ -55,6 +57,17 @@ export function InvoiceHeader({
               </option>
             ))}
           </select>
+        )}
+
+        {onCustomizeReceipt && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onCustomizeReceipt}
+            leftIcon={<ReceiptText className="w-3.5 h-3.5" />}
+          >
+            Customize Receipt
+          </Button>
         )}
 
         {canCreatePOS && (
