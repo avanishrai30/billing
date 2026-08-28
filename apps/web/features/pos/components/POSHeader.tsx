@@ -9,13 +9,15 @@ export interface POSHeaderProps {
   cashierName: string;
   itemCount: number;
   onOpenMobileCart?: () => void;
+  onOpenReturnStudio?: () => void;
 }
 
 export function POSHeader({
   storeName,
   cashierName,
   itemCount,
-  onOpenMobileCart
+  onOpenMobileCart,
+  onOpenReturnStudio
 }: POSHeaderProps) {
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
@@ -44,10 +46,21 @@ export function POSHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {onOpenReturnStudio && (
+          <button
+            type="button"
+            data-testid="return-exchange-btn"
+            onClick={onOpenReturnStudio}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold cursor-pointer transition-colors"
+          >
+            <span>Return / Exchange</span>
+          </button>
+        )}
+
         <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700">
           <Wifi className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Realtime Sync Connected</span>
+          <span>Realtime Sync</span>
         </div>
 
         {onOpenMobileCart && (

@@ -6,7 +6,8 @@ import {
   usePOSProductsQuery,
   usePOSCustomersQuery,
   usePOSStoresQuery,
-  useCreateInvoiceMutation
+  useCreateInvoiceMutation,
+  useExchangeMutation
 } from '../../../features/pos/hooks';
 import {
   POSHeader,
@@ -15,20 +16,24 @@ import {
   ProductGrid,
   Cart,
   PaymentPanel,
-  BarcodeInput
+  BarcodeInput,
+  POSSuccessModal,
+  ReturnExchangeModal
 } from '../../../features/pos/components';
 import {
   calculatePOSLine,
   calculatePOSTotals
 } from '../../../features/pos/calculations';
 import { posApi } from '../../../features/pos/api';
-import { Drawer, useToast, AccessDeniedState } from '../../../components/ui';
+import { Drawer, useToast, AccessDeniedState, Badge, Button } from '../../../components/ui';
+import { ArrowLeftRight, X } from 'lucide-react';
 import type {
   POSProduct,
   POSCartItem,
   POSCustomer,
   PaymentMode,
-  POSCheckoutPayload
+  POSCheckoutPayload,
+  POSInvoiceDoc
 } from '../../../features/pos/types';
 
 export default function POSTerminalPage() {
@@ -41,6 +46,7 @@ export default function POSTerminalPage() {
   const { data: stores = [] } = usePOSStoresQuery();
 
   const createInvoiceMutation = useCreateInvoiceMutation();
+  const exchangeMutation = useExchangeMutation();
 
   // Local State
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +56,15 @@ export default function POSTerminalPage() {
   const [cartDiscount, setCartDiscount] = useState<number>(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+  const [isReturnStudioOpen, setIsReturnStudioOpen] = useState(false);
+  const [completedInvoice, setCompletedInvoice] = useState<POSInvoiceDoc | null>(null);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [exchangeSession, setExchangeSession] = useState<{
+    originalInvoice: any;
+    returnedItems: Array<{ productId: string; name: string; quantity: number; price: number; gst?: number; lineTotal: number }>;
+    returnCredit: number;
+  } | null>(null);
+
 
   if (!canCreate) {
     return (
@@ -236,6 +251,7 @@ export default function POSTerminalPage() {
     setCartItems([]);
     setCartDiscount(0);
     setSelectedCustomer(null);
+    setExchangeSession(null);
   }, []);
 
   // Barcode / SKU Scanner Handler
@@ -275,9 +291,10 @@ export default function POSTerminalPage() {
     [products, handleAddToCart, info, toastError]
   );
 
-  // Complete Checkout Handler
+  // Complete Checkout / Exchange Handler
   const handleConfirmPayment = async ({
     paymentMode,
+    amountPaid,
     notes
   }: {
     paymentMode: PaymentMode;
@@ -289,6 +306,51 @@ export default function POSTerminalPage() {
       return;
     }
 
+    // Atomic Exchange Flow
+    if (exchangeSession) {
+      try {
+        const origInv = exchangeSession.originalInvoice;
+        const res = await exchangeMutation.mutateAsync({
+          invoiceId: origInv.invoiceNumber || origInv.id,
+          payload: {
+            returnedItems: exchangeSession.returnedItems.map((it) => ({
+              productId: it.productId,
+              quantity: it.quantity
+            })),
+            replacementItems: cartItems.map((it) => ({
+              productId: it.productId,
+              name: it.name,
+              unit: it.unit,
+              quantity: it.quantity,
+              price: it.price,
+              cost: it.cost,
+              gst: it.gst
+            })),
+            paymentMode,
+            reason: 'Customer Item Exchange',
+            notes
+          }
+        });
+
+        if (res.success) {
+          success(
+            'Exchange Completed',
+            `Exchange #${res.exchangeId} processed. Net difference: ₹${res.netDifference?.toFixed(2)}.`
+          );
+          setCompletedInvoice(res.replacementInvoice);
+          setIsSuccessModalOpen(true);
+          handleClearCart();
+          setIsCheckoutOpen(false);
+          setIsMobileCartOpen(false);
+          return;
+        }
+      } catch (err: any) {
+        toastError('Exchange Failed', err?.message || 'Failed to process exchange.');
+        return;
+      }
+    }
+
+    // Standard Sale Flow
     const payload: POSCheckoutPayload = {
       transactionId: `TXN-${Date.now()}`,
       invoiceNumber: `INV-${Date.now()}`,
@@ -299,6 +361,8 @@ export default function POSTerminalPage() {
       customerPhone: selectedCustomer?.phone,
       paymentMode,
       paymentMethod: paymentMode,
+      amountPaid,
+      changeDue: Math.max(0, Math.round((amountPaid - totals.grandTotal) * 100) / 100),
       items: cartItems.map((it) => ({
         productId: it.productId,
         name: it.name,
@@ -326,6 +390,14 @@ export default function POSTerminalPage() {
           'Sale Completed',
           `Invoice #${invNum} generated and inventory decremented.`
         );
+        setCompletedInvoice(res.invoice || {
+          ...payload,
+          id: invNum,
+          invoiceNumber: invNum,
+          status: 'COMPLETED',
+          createdAt: new Date().toISOString()
+        } as POSInvoiceDoc);
+        setIsSuccessModalOpen(true);
         handleClearCart();
         setIsCheckoutOpen(false);
         setIsMobileCartOpen(false);
@@ -334,6 +406,7 @@ export default function POSTerminalPage() {
       toastError('Checkout Failed', err?.message || 'Failed to complete retail invoice sale.');
     }
   };
+
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden min-w-0 space-y-3 pb-1">
@@ -346,8 +419,33 @@ export default function POSTerminalPage() {
           cashierName={user?.name || user?.username || 'Cashier'}
           itemCount={cartItems.length}
           onOpenMobileCart={() => setIsMobileCartOpen(true)}
+          onOpenReturnStudio={() => setIsReturnStudioOpen(true)}
         />
       </div>
+
+      {/* Active Exchange Session Banner */}
+      {exchangeSession && (
+        <div className="shrink-0 p-3 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-between gap-3 text-xs shadow-xs">
+          <div className="flex items-center gap-2">
+            <ArrowLeftRight className="w-4 h-4 text-purple-600 shrink-0" />
+            <span className="font-semibold text-purple-950">Active Exchange Mode:</span>
+            <span className="text-purple-800">
+              Returning {exchangeSession.returnedItems.length} item(s) from invoice #{exchangeSession.originalInvoice?.invoiceNumber}
+            </span>
+            <Badge variant="info" size="sm">
+              Credit: ₹{exchangeSession.returnCredit.toFixed(2)}
+            </Badge>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setExchangeSession(null)}
+            leftIcon={<X className="w-3.5 h-3.5" />}
+          >
+            Cancel Exchange
+          </Button>
+        </div>
+      )}
 
       {/* Split Layout: Independent Left Catalog Scroll + Viewport-Pinned Right Cart */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_460px] gap-4 items-start flex-1 min-h-0 overflow-hidden">
@@ -448,7 +546,37 @@ export default function POSTerminalPage() {
         customer={selectedCustomer}
         itemCount={cartItems.length}
         onConfirmPayment={handleConfirmPayment}
-        isLoading={createInvoiceMutation.isPending}
+        isLoading={createInvoiceMutation.isPending || exchangeMutation.isPending}
+      />
+
+      {/* Post-Sale Thermal Receipt & Auto-Print Modal */}
+      <POSSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        invoice={completedInvoice}
+        storeName={storeName}
+        autoPrint={true}
+        onNewSale={() => {
+          setIsSuccessModalOpen(false);
+          handleClearCart();
+        }}
+      />
+
+      {/* Return & Exchange Studio Modal */}
+      <ReturnExchangeModal
+        isOpen={isReturnStudioOpen}
+        onClose={() => setIsReturnStudioOpen(false)}
+        onInitiateExchange={(session) => {
+          setExchangeSession(session);
+          if (session.originalInvoice?.customerPhone) {
+            setSelectedCustomer({
+              id: session.originalInvoice.customerId || 'walk-in',
+              name: session.originalInvoice.customerName || 'Walk-in Customer',
+              phone: session.originalInvoice.customerPhone
+            });
+          }
+          info('Exchange Session Started', `Credit of ₹${session.returnCredit.toFixed(2)} applied. Add replacement items to cart.`);
+        }}
       />
     </div>
   );

@@ -74,6 +74,9 @@ const auditService = {
         'inventory_updated': { action: 'update', view: 'inventory' },
         'inventory_transfer': { action: 'transfer', view: 'inventory' },
         'invoice_created': { action: 'billing', view: 'billing' },
+        'STOCK_SALE': { action: 'billing', view: 'billing' },
+        'RETURN_COMPLETED': { action: 'billing', view: 'billing' },
+        'EXCHANGE_COMPLETED': { action: 'billing', view: 'billing' },
         'invoice_voided': { action: 'delete', view: 'invoices' },
         'franchise_created': { action: 'create', view: 'businesses' },
         'franchise_deleted': { action: 'delete', view: 'businesses' },
@@ -126,6 +129,12 @@ const auditService = {
         detailsString = `Transferred ${after?.quantity || 0} units of product ID ${entityId} from store ${after?.fromStoreId} to ${after?.toStoreId}`;
       } else if (eventType === 'invoice_created') {
         detailsString = `Completed POS transaction for customer '${after?.customerName || 'Walk-In'}'. Created Invoice #${entityId} (Total: ₹${after?.grandTotal || 0})`;
+      } else if (eventType === 'STOCK_SALE') {
+        detailsString = `Completed POS sale for customer '${after?.customerName || 'Walk-In'}'. Created Invoice #${entityId} (Total: ₹${after?.grandTotal || 0})`;
+      } else if (eventType === 'RETURN_COMPLETED') {
+        detailsString = `Completed POS return #${entityId} for Invoice #${after?.originalInvoiceNumber || after?.originalInvoiceId || 'N/A'} (Refund: ₹${after?.refundAmount || 0})`;
+      } else if (eventType === 'EXCHANGE_COMPLETED') {
+        detailsString = `Completed POS exchange #${entityId} for Invoice #${after?.originalInvoiceNumber || 'N/A'} (Net Difference: ₹${after?.netDifference || 0})`;
       } else if (eventType === 'invoice_voided') {
         detailsString = `Voided Invoice #${entityId} and reverted items back to warehouse stock`;
       } else if (eventType === 'user_deactivated') {

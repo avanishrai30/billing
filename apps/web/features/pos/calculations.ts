@@ -50,7 +50,6 @@ export function calculatePOSLine(input: LineCalculationInput): LineCalculationRe
     lineTotal
   };
 }
-
 /**
  * Computes aggregate totals across all cart items plus any cart-level discount.
  */
@@ -102,5 +101,127 @@ export function calculatePOSTotals(
     taxableTotal,
     taxTotal,
     grandTotal
+  };
+}
+
+/**
+ * Normalizes Indian and international phone numbers into a canonical 10-digit format for lookups.
+ * Handles formats like:
+ * "+91 98220 11223" -> "9822011223"
+ * "919822011223"   -> "9822011223"
+ * "09822011223"    -> "9822011223"
+ * "98220-11223"    -> "9822011223"
+ */
+export function normalizeCustomerPhone(raw?: string | null): string {
+  if (!raw) return '';
+  const digits = String(raw).replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return digits.slice(2);
+  }
+  if (digits.length === 11 && digits.startsWith('0')) {
+    return digits.slice(1);
+  }
+  if (digits.length > 10) {
+    return digits.slice(-10);
+  }
+  return digits;
+}
+
+/**
+ * Formats a 10-digit phone for human readable presentation.
+ */
+export function formatPhoneDisplay(phone?: string | null): string {
+  const norm = normalizeCustomerPhone(phone);
+  if (!norm) return '';
+  if (norm.length === 10) {
+    return `+91 ${norm.slice(0, 5)} ${norm.slice(5)}`;
+  }
+  return phone || norm;
+}
+
+/**
+ * Computes returnable item quantities given an original invoice and prior return transactions.
+ */
+export function calculateReturnableQuantities(
+  invoice: any,
+  priorReturns: any[] = []
+): any[] {
+  if (!invoice || !Array.isArray(invoice.items)) return [];
+
+  const returnedQtyMap: Record<string, number> = {};
+  for (const ret of priorReturns) {
+    for (const item of ret.returnedItems || []) {
+      const pid = item.productId || item.id;
+      returnedQtyMap[pid] = (returnedQtyMap[pid] || 0) + (Number(item.quantity) || 0);
+    }
+  }
+
+  return invoice.items.map((it: any) => {
+    const pid = it.productId || it.id;
+    const soldQty = Number(it.quantity) || 0;
+    const returnedQty = returnedQtyMap[pid] || 0;
+    const returnableQty = Math.max(0, soldQty - returnedQty);
+
+    return {
+      ...it,
+      productId: pid,
+      soldQuantity: soldQty,
+      alreadyReturnedQuantity: returnedQty,
+      returnableQuantity: returnableQty
+    };
+  });
+}
+
+/**
+ * Computes exchange financial totals: return credit vs replacement cost and net difference.
+ */
+export function calculateExchangeTotals(
+  returnItems: Array<{ price: number; quantity: number; gst?: number }>,
+  replacementItems: Array<{ price: number; quantity: number; gst?: number }>,
+  discount: number = 0
+): {
+  returnCredit: number;
+  replacementSubtotal: number;
+  replacementTax: number;
+  replacementGrandTotal: number;
+  netDifference: number;
+  netPayable: number;
+  refundDue: number;
+} {
+  let returnCredit = 0;
+  for (const it of returnItems) {
+    const p = Math.max(0, Number(it.price) || 0);
+    const q = Math.max(0, Number(it.quantity) || 0);
+    const g = Math.max(0, Number(it.gst) || 0);
+    const gross = p * q;
+    const tax = (gross * g) / 100;
+    returnCredit += gross + tax;
+  }
+  returnCredit = Math.round(returnCredit * 100) / 100;
+
+  let replacementSubtotal = 0;
+  let replacementTax = 0;
+  for (const it of replacementItems) {
+    const p = Math.max(0, Number(it.price) || 0);
+    const q = Math.max(0, Number(it.quantity) || 0);
+    const g = Math.max(0, Number(it.gst) || 0);
+    const gross = p * q;
+    const tax = (gross * g) / 100;
+    replacementSubtotal += gross;
+    replacementTax += tax;
+  }
+
+  const d = Math.max(0, Number(discount) || 0);
+  const replacementGrandTotal = Math.max(0, Math.round((replacementSubtotal + replacementTax - d) * 100) / 100);
+  const netDifference = Math.round((replacementGrandTotal - returnCredit) * 100) / 100;
+
+  return {
+    returnCredit,
+    replacementSubtotal: Math.round(replacementSubtotal * 100) / 100,
+    replacementTax: Math.round(replacementTax * 100) / 100,
+    replacementGrandTotal,
+    netDifference,
+    netPayable: netDifference > 0 ? netDifference : 0,
+    refundDue: netDifference < 0 ? Math.abs(netDifference) : 0
   };
 }

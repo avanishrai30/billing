@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
-import { Download, Ban, FileText, User, Store, Calendar, CreditCard, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Ban, FileText, User, Store, Calendar, CreditCard, ShieldCheck, Printer, RotateCcw } from 'lucide-react';
 import { Drawer, Button, Badge } from '../../../components/ui';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { getPaymentModeBadgeConfig, formatInvoiceNumber } from '../calculations';
 import { invoicesApi } from '../api';
+import { posApi } from '../../pos/api';
+import { generateCanonicalReceipt, dispatchReceiptPrint } from '../../../lib/utils/receiptDocument';
 import type { Invoice } from '../types';
 
 export interface InvoiceDetailDrawerProps {
@@ -23,9 +25,21 @@ export function InvoiceDetailDrawer({
   canVoid = false,
   onOpenVoid
 }: InvoiceDetailDrawerProps) {
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [returnsHistory, setReturnsHistory] = useState<any[]>([]);
+
+  const invoiceNo = invoice ? formatInvoiceNumber(invoice) : '';
+
+  useEffect(() => {
+    if (isOpen && invoiceNo) {
+      posApi.getInvoiceReturns(invoiceNo).then((res) => {
+        setReturnsHistory(res || []);
+      }).catch(() => setReturnsHistory([]));
+    }
+  }, [isOpen, invoiceNo]);
+
   if (!invoice) return null;
 
-  const invoiceNo = formatInvoiceNumber(invoice);
   const isVoided = invoice.status === 'VOIDED' || invoice.isArchived;
   const payConfig = getPaymentModeBadgeConfig(invoice.paymentMode || invoice.paymentMethod);
   const items = invoice.items || [];
@@ -40,6 +54,16 @@ export function InvoiceDetailDrawer({
         timeStyle: 'short'
       })
     : 'N/A';
+
+  const handleThermalPrint = async () => {
+    setIsPrinting(true);
+    try {
+      const receipt = generateCanonicalReceipt(invoice);
+      await dispatchReceiptPrint(receipt);
+    } catch {} finally {
+      setIsPrinting(false);
+    }
+  };
 
   return (
     <Drawer
@@ -60,6 +84,16 @@ export function InvoiceDetailDrawer({
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              isLoading={isPrinting}
+              onClick={handleThermalPrint}
+              leftIcon={<Printer className="w-3.5 h-3.5" />}
+            >
+              Print Receipt
+            </Button>
+
             <a
               href={invoicesApi.getPdfUrl(invoiceNo)}
               target="_blank"
@@ -90,6 +124,7 @@ export function InvoiceDetailDrawer({
             )}
           </div>
         </div>
+
 
         {/* Header Metadata Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 shadow-xs">
@@ -205,6 +240,39 @@ export function InvoiceDetailDrawer({
             </span>
           </div>
         </div>
+
+        {/* Returns & Exchanges History */}
+        {returnsHistory.length > 0 && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 space-y-2 text-xs">
+            <div className="font-bold text-amber-950 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <RotateCcw className="w-4 h-4 text-amber-700" />
+                <span>Returns & Exchanges Recorded ({returnsHistory.length})</span>
+              </div>
+              <Badge variant="warning" size="sm">
+                Total Refunded: ₹{returnsHistory.reduce((acc, r) => acc + (Number(r.refundAmount) || 0), 0).toFixed(2)}
+              </Badge>
+            </div>
+
+            <div className="divide-y divide-amber-200/70 border border-amber-200 rounded-lg overflow-hidden bg-white">
+              {returnsHistory.map((ret) => (
+                <div key={ret.returnId || ret.id} className="p-2.5 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-semibold text-slate-900">#{ret.returnId}</span>
+                    <span className="text-[11px] text-slate-500">{new Date(ret.createdAt || ret.timestamp).toLocaleDateString('en-IN')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-600">
+                    <span>{ret.reason || 'Customer Return'} ({ret.refundMethod || 'CASH'})</span>
+                    <span className="font-semibold text-rose-700">- ₹{Number(ret.refundAmount || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    Items: {(ret.returnedItems || []).map((it: any) => `${it.name} x${it.quantity}`).join(', ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Void / Audit Memo if voided */}
         {isVoided && (

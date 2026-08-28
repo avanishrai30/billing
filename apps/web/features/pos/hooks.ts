@@ -77,7 +77,6 @@ export function usePOSStoresQuery() {
     staleTime: 10 * 60 * 1000
   });
 }
-
 export function useCreateInvoiceMutation() {
   const queryClient = useQueryClient();
 
@@ -100,6 +99,55 @@ export function useCreateCustomerMutation() {
       posApi.createCustomer(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: posQueryKeys.customers() });
+    }
+  });
+}
+
+export function useReturnMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      invoiceId,
+      payload
+    }: {
+      invoiceId: string;
+      payload: {
+        returnedItems: Array<{ productId: string; quantity: number }>;
+        refundMethod?: string;
+        reason?: string;
+        notes?: string;
+      };
+    }) => posApi.createReturn(invoiceId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pos', 'products'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics'] });
+    }
+  });
+}
+
+export function useExchangeMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      invoiceId,
+      payload
+    }: {
+      invoiceId: string;
+      payload: {
+        returnedItems: Array<{ productId: string; quantity: number }>;
+        replacementItems: Array<{ productId: string; quantity: number; price: number; cost?: number; gst?: number; name?: string; unit?: string }>;
+        paymentMode?: string;
+        reason?: string;
+        notes?: string;
+      };
+    }) => posApi.createExchange(invoiceId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pos', 'products'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics'] });
     }
   });
 }

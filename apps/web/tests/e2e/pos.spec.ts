@@ -307,12 +307,16 @@ test.describe('Phase 6 POS Terminal Migration E2E Suite', () => {
     const confirmPayBtn = paymentModal.getByRole('button', { name: /complete sale/i });
     await confirmPayBtn.click();
 
+    // Dismiss POS Success Modal
+    const newSaleBtn = page.getByRole('button', { name: /new sale/i });
+    await expect(newSaleBtn).toBeVisible();
+    await newSaleBtn.click();
+
     // Verify Cart is Reset
     await expect(cartPanel.getByText('Cart is Empty')).toBeVisible();
 
     // 10. Cross-Module Isolation: Navigate back to Dashboard and verify integrity
     await page.getByRole('link', { name: 'Dashboard' }).click();
-    await page.waitForLoadState('networkidle');
     await expect(
       page.getByRole('heading', { name: /business intelligence & operational kpis/i })
     ).toBeVisible();

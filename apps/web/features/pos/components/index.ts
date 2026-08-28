@@ -10,3 +10,5 @@ export * from './CartTotals';
 export * from './PaymentPanel';
 export * from './Cart';
 export * from './BarcodeInput';
+export * from './POSSuccessModal';
+export * from './ReturnExchangeModal';

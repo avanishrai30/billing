@@ -93,6 +93,8 @@ export interface POSCheckoutPayload {
   customerPhone?: string;
   paymentMode: PaymentMode;
   paymentMethod?: PaymentMode;
+  amountPaid?: number;
+  changeDue?: number;
   items: POSCheckoutItem[];
   subtotal: number;
   discount: number;
@@ -112,12 +114,24 @@ export interface POSInvoiceDoc {
   customerName?: string;
   customerPhone?: string;
   paymentMode: PaymentMode;
+  amountPaid?: number;
+  changeDue?: number;
   items: POSCheckoutItem[];
   subtotal: number;
   discount: number;
   tax: number;
   grandTotal: number;
-  status: 'COMPLETED' | 'PENDING' | 'VOIDED';
+  status: 'COMPLETED' | 'PENDING' | 'VOIDED' | 'RETURNED' | 'PARTIALLY_RETURNED';
+  returnStatus?: 'RETURNED' | 'PARTIALLY_RETURNED';
+  returnsCount?: number;
+  hasReturnableItems?: boolean;
+  totalReturnableQty?: number;
+  exchangeReference?: {
+    originalInvoiceNumber: string;
+    returnId: string;
+    returnCredit: number;
+    netDifference: number;
+  };
   createdAt: string;
   updatedAt?: string;
 }
@@ -128,4 +142,128 @@ export interface POSInvoiceResponse {
   duplicate?: boolean;
   message?: string;
   requestId?: string;
+}
+
+export interface POSReturnItem {
+  productId: string;
+  variantId?: string | null;
+  name: string;
+  unit: string;
+  quantity: number;
+  soldQuantity?: number;
+  alreadyReturnedQuantity?: number;
+  returnableQuantity?: number;
+  price: number;
+  sellingPrice: number;
+  cost?: number;
+  tax?: number;
+  gst?: number;
+  lineTotal: number;
+}
+
+export interface POSReturnPayload {
+  returnedItems: Array<{
+    productId: string;
+    quantity: number;
+  }>;
+  refundMethod?: PaymentMode | 'ORIGINAL_PAYMENT' | 'STORE_CREDIT';
+  reason?: string;
+  notes?: string;
+}
+
+export interface POSReturnDoc {
+  returnId: string;
+  id: string;
+  originalInvoiceId: string;
+  originalInvoiceNumber: string;
+  exchangeInvoiceNumber?: string;
+  isExchange?: boolean;
+  storeId: string;
+  locationId: string;
+  customerId?: string | null;
+  customerName: string;
+  customerPhone?: string | null;
+  returnedItems: POSReturnItem[];
+  refundAmount: number;
+  refundMethod: string;
+  reason?: string;
+  notes?: string;
+  cashier: string;
+  createdBy: string;
+  createdAt: string;
+  timestamp?: string;
+}
+
+export interface POSReturnResponse {
+  success: boolean;
+  return: POSReturnDoc;
+  message?: string;
+}
+
+export interface POSExchangePayload {
+  returnedItems: Array<{
+    productId: string;
+    quantity: number;
+  }>;
+  replacementItems: Array<{
+    productId: string;
+    quantity: number;
+    price: number;
+    cost?: number;
+    gst?: number;
+    name?: string;
+    unit?: string;
+  }>;
+  paymentMode?: PaymentMode;
+  reason?: string;
+  notes?: string;
+}
+
+export interface POSExchangeResponse {
+  success: boolean;
+  exchangeId: string;
+  return: POSReturnDoc;
+  replacementInvoice: POSInvoiceDoc;
+  netDifference: number;
+  message?: string;
+}
+
+export interface POSReceiptOptions {
+  autoPrint?: boolean;
+  paperWidthMm?: number; // 58 or 80
+  showLogo?: boolean;
+  showGstin?: boolean;
+  showCustomer?: boolean;
+  showTerms?: boolean;
+}
+
+export interface POSReceiptData {
+  businessName: string;
+  businessLogo?: string | null;
+  storeName: string;
+  storeAddress?: string;
+  storePhone?: string;
+  storeGstin?: string;
+  receiptNumber: string;
+  transactionId?: string;
+  date: string;
+  cashierName: string;
+  customerName: string;
+  customerPhone?: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    lineTotal: number;
+    taxAmount?: number;
+  }>;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  grandTotal: number;
+  paymentMode: PaymentMode;
+  amountPaid: number;
+  changeDue: number;
+  termsAndConditions?: string;
 }

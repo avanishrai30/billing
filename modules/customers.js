@@ -1,6 +1,7 @@
 const express = require('express');
 const { getContext, verifyJWT, writeAuditLog } = require('./context');
 const { requirePermission, requireAnyPermission } = require('../services/authzService');
+const { normalizeCustomerPhone, findCustomersByCanonicalPhone } = require('../services/customerIdentityService');
 
 const router = express.Router();
 
@@ -37,9 +38,27 @@ router.post('/', verifyJWT, requireAnyPermission(['customers.create', 'customers
 
   try {
     const custId = cust.id || `cust-${Date.now()}`;
+    const phoneCanonical = normalizeCustomerPhone(cust.phone);
+    const duplicateMatches = await findCustomersByCanonicalPhone(db, phoneCanonical);
+    const conflictingMatches = duplicateMatches.filter(existing => existing.id !== custId);
+
+    if (conflictingMatches.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: "DUPLICATE_CUSTOMER_PHONE",
+          message: "A customer with this phone number already exists",
+          matches: conflictingMatches.map(c => ({ id: c.id, name: c.name, phone: c.phone }))
+        }
+      });
+    }
+
     const custDoc = {
       ...cust,
       id: custId,
+      phone: phoneCanonical || cust.phone,
+      phoneCanonical,
+      normalizedPhone: phoneCanonical,
       updatedAt: new Date().toISOString()
     };
 
@@ -68,6 +87,27 @@ router.patch('/:id', verifyJWT, requirePermission('customers.update'), async (re
   delete updates._id;
 
   try {
+    if (updates.phone !== undefined) {
+      const phoneCanonical = normalizeCustomerPhone(updates.phone);
+      const duplicateMatches = await findCustomersByCanonicalPhone(db, phoneCanonical);
+      const conflictingMatches = duplicateMatches.filter(existing => existing.id !== custId);
+
+      if (conflictingMatches.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: {
+            code: "DUPLICATE_CUSTOMER_PHONE",
+            message: "A customer with this phone number already exists",
+            matches: conflictingMatches.map(c => ({ id: c.id, name: c.name, phone: c.phone }))
+          }
+        });
+      }
+
+      updates.phone = phoneCanonical || updates.phone;
+      updates.phoneCanonical = phoneCanonical;
+      updates.normalizedPhone = phoneCanonical;
+    }
+
     const result = await db.collection('customers').findOneAndUpdate(
       { id: custId },
       { $set: updates },

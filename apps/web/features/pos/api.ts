@@ -119,5 +119,75 @@ export const posApi = {
     } catch {
       return [];
     }
+  },
+
+  /**
+   * Searches eligible original sales by receipt number, customer phone, or barcode
+   * GET /api/v1/invoices/search-returns?query=...
+   */
+  async searchReturnInvoices(query: string): Promise<any[]> {
+    if (!query || !query.trim()) return [];
+    try {
+      const res = await apiClient.get<{ success: boolean; invoices: any[] }>(
+        `/api/v1/invoices/search-returns?query=${encodeURIComponent(query.trim())}`
+      );
+      return res?.invoices || [];
+    } catch {
+      return [];
+    }
+  },
+
+  /**
+   * Processes POS partial/full return
+   * POST /api/v1/invoices/:id/return
+   */
+  async createReturn(
+    invoiceId: string,
+    payload: {
+      returnedItems: Array<{ productId: string; quantity: number }>;
+      refundMethod?: string;
+      reason?: string;
+      notes?: string;
+    }
+  ): Promise<{ success: boolean; return: any; message?: string }> {
+    return apiClient.post<{ success: boolean; return: any; message?: string }>(
+      `/api/v1/invoices/${encodeURIComponent(invoiceId)}/return`,
+      payload
+    );
+  },
+
+  /**
+   * Processes POS atomic Exchange
+   * POST /api/v1/invoices/:id/exchange
+   */
+  async createExchange(
+    invoiceId: string,
+    payload: {
+      returnedItems: Array<{ productId: string; quantity: number }>;
+      replacementItems: Array<{ productId: string; quantity: number; price: number; cost?: number; gst?: number; name?: string; unit?: string }>;
+      paymentMode?: string;
+      reason?: string;
+      notes?: string;
+    }
+  ): Promise<{ success: boolean; exchangeId: string; return: any; replacementInvoice: any; netDifference: number; message?: string }> {
+    return apiClient.post<{ success: boolean; exchangeId: string; return: any; replacementInvoice: any; netDifference: number; message?: string }>(
+      `/api/v1/invoices/${encodeURIComponent(invoiceId)}/exchange`,
+      payload
+    );
+  },
+
+  /**
+   * Fetches return records for an invoice
+   * GET /api/v1/invoices/:id/returns
+   */
+  async getInvoiceReturns(invoiceId: string): Promise<any[]> {
+    try {
+      const res = await apiClient.get<{ success: boolean; returns: any[] }>(
+        `/api/v1/invoices/${encodeURIComponent(invoiceId)}/returns`
+      );
+      return res?.returns || [];
+    } catch {
+      return [];
+    }
   }
 };

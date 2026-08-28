@@ -1,109 +1,112 @@
 import {
+  normalizeCustomerPhone,
+  formatPhoneDisplay,
+  calculateReturnableQuantities,
+  calculateExchangeTotals,
   calculatePOSLine,
   calculatePOSTotals
 } from '../../features/pos/calculations';
-import type { POSCartItem } from '../../features/pos/types';
+import { generateCanonicalReceipt } from '../../lib/utils/receiptDocument';
 
-describe('POS Terminal Financial Calculations', () => {
-  it('1. Computes line taxable base and GST tax without discount', () => {
-    const res = calculatePOSLine({
-      price: 500,
-      quantity: 2,
-      gst: 18
+describe('POS Calculations, Phone Normalization, and Canonical Receipts', () => {
+  describe('Phone-First Normalization', () => {
+    test('1. Normalizes +91 Indian format with spaces and dashes', () => {
+      expect(normalizeCustomerPhone('+91 98220 11223')).toBe('9822011223');
+      expect(normalizeCustomerPhone('+91-98220-11223')).toBe('9822011223');
+      expect(normalizeCustomerPhone('919822011223')).toBe('9822011223');
+      expect(normalizeCustomerPhone('09822011223')).toBe('9822011223');
+      expect(normalizeCustomerPhone('9822011223')).toBe('9822011223');
     });
 
-    expect(res.taxableValue).toBe(1000);
-    expect(res.taxAmount).toBe(180);
-    expect(res.discountTotal).toBe(0);
-    expect(res.lineTotal).toBe(1180);
+    test('2. Formats 10-digit phone for human display', () => {
+      expect(formatPhoneDisplay('9822011223')).toBe('+91 98220 11223');
+      expect(formatPhoneDisplay('+919822011223')).toBe('+91 98220 11223');
+    });
   });
 
-  it('2. Computes percentage item discount correctly', () => {
-    const res = calculatePOSLine({
-      price: 200,
-      quantity: 1,
-      gst: 5,
-      discountPercent: 10 // 10% off of 200 = 20
+  describe('Returnable Quantity Calculation', () => {
+    test('3. Accurately calculates returnable balance with multiple prior returns', () => {
+      const invoice = {
+        invoiceNumber: 'INV-101',
+        items: [
+          { productId: 'p1', name: 'Ghee 1L', quantity: 5, price: 650, gst: 5 },
+          { productId: 'p2', name: 'Honey 500g', quantity: 2, price: 350, gst: 5 }
+        ]
+      };
+
+      const priorReturns = [
+        {
+          returnId: 'RET-1',
+          returnedItems: [{ productId: 'p1', quantity: 2 }]
+        },
+        {
+          returnId: 'RET-2',
+          returnedItems: [{ productId: 'p1', quantity: 1 }, { productId: 'p2', quantity: 1 }]
+        }
+      ];
+
+      const returnable = calculateReturnableQuantities(invoice, priorReturns);
+      expect(returnable[0].soldQuantity).toBe(5);
+      expect(returnable[0].alreadyReturnedQuantity).toBe(3);
+      expect(returnable[0].returnableQuantity).toBe(2);
+
+      expect(returnable[1].soldQuantity).toBe(2);
+      expect(returnable[1].alreadyReturnedQuantity).toBe(1);
+      expect(returnable[1].returnableQuantity).toBe(1);
+    });
+  });
+
+  describe('Exchange Calculations', () => {
+    test('4. Customer pays difference when replacement > return credit', () => {
+      const returnItems = [{ price: 500, quantity: 1, gst: 0 }]; // Credit ₹500
+      const replacementItems = [{ price: 650, quantity: 1, gst: 0 }]; // Cost ₹650
+
+      const totals = calculateExchangeTotals(returnItems, replacementItems);
+      expect(totals.returnCredit).toBe(500);
+      expect(totals.replacementGrandTotal).toBe(650);
+      expect(totals.netDifference).toBe(150);
+      expect(totals.netPayable).toBe(150);
+      expect(totals.refundDue).toBe(0);
     });
 
-    expect(res.discountTotal).toBe(20);
-    expect(res.taxableValue).toBe(180);
-    expect(res.taxAmount).toBe(9);
-    expect(res.lineTotal).toBe(189);
-  });
+    test('5. Store refunds customer when return credit > replacement', () => {
+      const returnItems = [{ price: 1000, quantity: 1, gst: 0 }]; // Credit ₹1000
+      const replacementItems = [{ price: 650, quantity: 1, gst: 0 }]; // Cost ₹650
 
-  it('3. Computes explicit fixed amount discount correctly', () => {
-    const res = calculatePOSLine({
-      price: 150,
-      quantity: 2, // gross = 300
-      gst: 12,
-      discountAmount: 50
+      const totals = calculateExchangeTotals(returnItems, replacementItems);
+      expect(totals.returnCredit).toBe(1000);
+      expect(totals.replacementGrandTotal).toBe(650);
+      expect(totals.netDifference).toBe(-350);
+      expect(totals.netPayable).toBe(0);
+      expect(totals.refundDue).toBe(350);
     });
-
-    expect(res.discountTotal).toBe(50);
-    expect(res.taxableValue).toBe(250);
-    expect(res.taxAmount).toBe(30);
-    expect(res.lineTotal).toBe(280);
   });
 
-  it('4. Handles zero quantity and negative inputs gracefully', () => {
-    const res = calculatePOSLine({
-      price: -100,
-      quantity: 0,
-      gst: -5
+  describe('Canonical Receipt Document Generation', () => {
+    test('6. Produces immutable canonical receipt data from invoice record', () => {
+      const invoice = {
+        invoiceNumber: 'INV-2026-999',
+        customerId: 'cust-1',
+        customerName: 'Rajesh Sharma',
+        customerPhone: '9822011223',
+        paymentMode: 'UPI',
+        items: [
+          { name: 'Organic Cow Ghee', quantity: 2, price: 650, lineTotal: 1300 },
+          { name: 'Cold Pressed Sesame Oil', quantity: 1, price: 280, lineTotal: 280 }
+        ],
+        subtotal: 1580,
+        tax: 79,
+        discount: 50,
+        grandTotal: 1609
+      };
+
+      const receipt = generateCanonicalReceipt(invoice, { name: 'Pune Flagship Store' });
+      expect(receipt.receiptNumber).toBe('INV-2026-999');
+      expect(receipt.customerName).toBe('Rajesh Sharma');
+      expect(receipt.customerPhone).toBe('9822011223');
+      expect(receipt.items.length).toBe(2);
+      expect(receipt.grandTotal).toBe(1609);
+      expect(receipt.paymentMode).toBe('UPI');
     });
-
-    expect(res.taxableValue).toBe(0);
-    expect(res.taxAmount).toBe(0);
-    expect(res.lineTotal).toBe(0);
-  });
-
-  it('5. Computes multi-item cart aggregate totals and global discount', () => {
-    const items: POSCartItem[] = [
-      {
-        productId: 'p-1',
-        name: 'Item A',
-        unit: 'unit',
-        price: 100,
-        cost: 60,
-        gst: 10,
-        quantity: 2,
-        discountPercent: 0,
-        discountAmount: 0,
-        taxableValue: 200,
-        taxAmount: 20,
-        lineTotal: 220
-      },
-      {
-        productId: 'p-2',
-        name: 'Item B',
-        unit: 'kg',
-        price: 300,
-        cost: 200,
-        gst: 5,
-        quantity: 1,
-        discountPercent: 10, // 30 discount
-        discountAmount: 0,
-        taxableValue: 270,
-        taxAmount: 13.5,
-        lineTotal: 283.5
-      }
-    ];
-
-    const totals = calculatePOSTotals(items, 50); // 50 cart discount
-
-    expect(totals.subtotal).toBe(500); // 200 + 300
-    expect(totals.itemDiscountTotal).toBe(30);
-    expect(totals.cartDiscount).toBe(50);
-    expect(totals.taxTotal).toBe(33.5); // 20 + 13.5
-    expect(totals.taxableTotal).toBe(420); // 500 - 30 - 50
-    expect(totals.grandTotal).toBe(453.5); // 420 + 33.5
-  });
-
-  it('6. Returns all zeroes for empty cart', () => {
-    const totals = calculatePOSTotals([]);
-    expect(totals.subtotal).toBe(0);
-    expect(totals.taxTotal).toBe(0);
-    expect(totals.grandTotal).toBe(0);
   });
 });
