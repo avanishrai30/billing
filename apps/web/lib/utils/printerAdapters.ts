@@ -1,14 +1,13 @@
 import {
   type LabelDocument,
   type LabelElement,
+  calculateBarcodeElementRenderMetrics,
   mmToDots
 } from './labelDocument';
 import {
   type LabelProfile,
-  calculateLabelGeometry,
-  calculateLabelTypography
+  calculateLabelGeometry
 } from './labelProfiles';
-import { generateBarcodeSvg } from './barcode';
 
 export interface LabelPrinterAdapter {
   id: string;
@@ -38,8 +37,6 @@ export class TSPLAdapter implements LabelPrinterAdapter {
     const widthMm = profile.widthMm;
     const heightMm = profile.heightMm;
     const gapMm = profile.gapMm !== undefined ? profile.gapMm : 2;
-    const marginLeftDots = mmToDots(profile.marginLeftMm || 2, dpi);
-    const marginTopDots = mmToDots(profile.marginTopMm || 2, dpi);
     const xOffsetDots = mmToDots(profile.xOffsetMm || 0, dpi);
     const yOffsetDots = mmToDots(profile.yOffsetMm || 0, dpi);
 
@@ -69,8 +66,8 @@ export class TSPLAdapter implements LabelPrinterAdapter {
     // 5. Render Label Elements
     for (const el of doc.elements) {
       if (el.type === 'text') {
-        const textX = marginLeftDots + mmToDots(el.xMm, dpi);
-        const textY = marginTopDots + mmToDots(el.yMm, dpi);
+        const textX = mmToDots(el.xMm, dpi);
+        const textY = mmToDots(el.yMm, dpi);
         const escaped = el.value.replace(/"/g, '\\["');
 
         // Map font size to TSPL bitmap multiplier or font code
@@ -85,13 +82,16 @@ export class TSPLAdapter implements LabelPrinterAdapter {
           fontCode = '2'; // 10x16 bitmap font
         }
 
+        const rotation = normalizePrinterRotation((el as LabelElement & { rotation?: number }).rotation);
+
         // TSPL TEXT command: TEXT x,y,"font",rotation,x-multi,y-multi,"content"
-        commands.push(`TEXT ${textX},${textY},"${fontCode}",0,${xMulti},${yMulti},"${escaped}"`);
+        commands.push(`TEXT ${textX},${textY},"${fontCode}",${rotation},${xMulti},${yMulti},"${escaped}"`);
       } else if (el.type === 'barcode') {
-        const barcodeX = marginLeftDots + mmToDots(el.xMm, dpi);
-        const barcodeY = marginTopDots + mmToDots(el.yMm, dpi);
-        const barHeightDots = mmToDots(el.heightMm - (el.showHumanReadableText ? 4 : 0), dpi);
-        const narrowDots = Math.max(1, Math.round(mmToDots(el.moduleWidthMm || 0.25, dpi)));
+        const barcodeX = mmToDots(el.xMm, dpi);
+        const barcodeY = mmToDots(el.yMm, dpi);
+        const metrics = calculateBarcodeElementRenderMetrics(el, dpi);
+        const barHeightDots = metrics.barHeightDots;
+        const narrowDots = metrics.moduleDots;
         const wideDots = narrowDots * 2;
         const readable = el.showHumanReadableText ? 1 : 0;
 
@@ -100,7 +100,7 @@ export class TSPLAdapter implements LabelPrinterAdapter {
         else if (el.format === 'EAN8') tsplBarcodeType = 'EAN8';
         else if (el.format === 'UPC') tsplBarcodeType = 'UPCA';
 
-        const rotation = el.rotation ?? 0;
+        const rotation = normalizePrinterRotation(el.rotation);
 
         // TSPL BARCODE command: BARCODE x,y,"type",height,human_readable,rotation,narrow,wide,"content"
         commands.push(
@@ -180,9 +180,6 @@ export class ZPLAdapter implements LabelPrinterAdapter {
     const dpi = profile.dpi || 203;
     const widthDots = mmToDots(profile.widthMm, dpi);
     const heightDots = mmToDots(profile.heightMm, dpi);
-    const marginLeftDots = mmToDots(profile.marginLeftMm || 2, dpi);
-    const marginTopDots = mmToDots(profile.marginTopMm || 2, dpi);
-
     const commands: string[] = ['^XA', `^PW${widthDots}`, `^LL${heightDots}`];
 
     if (profile.sensorMode === 'CONTINUOUS') {
@@ -195,16 +192,18 @@ export class ZPLAdapter implements LabelPrinterAdapter {
 
     for (const el of doc.elements) {
       if (el.type === 'text') {
-        const x = marginLeftDots + mmToDots(el.xMm, dpi);
-        const y = marginTopDots + mmToDots(el.yMm, dpi);
+        const x = mmToDots(el.xMm, dpi);
+        const y = mmToDots(el.yMm, dpi);
         const fontHeight = Math.max(16, mmToDots(el.fontSizeMm, dpi));
-        commands.push(`^FO${x},${y}^A0N,${fontHeight},${Math.round(fontHeight * 0.85)}^FD${el.value}^FS`);
+        const orientation = zplOrientation((el as LabelElement & { rotation?: number }).rotation);
+        commands.push(`^FO${x},${y}^A0${orientation},${fontHeight},${Math.round(fontHeight * 0.85)}^FD${el.value}^FS`);
       } else if (el.type === 'barcode') {
-        const x = marginLeftDots + mmToDots(el.xMm, dpi);
-        const y = marginTopDots + mmToDots(el.yMm, dpi);
-        const barHeight = mmToDots(el.heightMm - (el.showHumanReadableText ? 4 : 0), dpi);
-        const moduleDots = Math.max(1, Math.round(mmToDots(el.moduleWidthMm || 0.25, dpi)));
-        const orientation = el.rotation === 90 ? 'R' : el.rotation === 180 ? 'I' : el.rotation === 270 ? 'B' : 'N';
+        const x = mmToDots(el.xMm, dpi);
+        const y = mmToDots(el.yMm, dpi);
+        const metrics = calculateBarcodeElementRenderMetrics(el, dpi);
+        const barHeight = metrics.barHeightDots;
+        const moduleDots = metrics.moduleDots;
+        const orientation = zplOrientation(el.rotation);
         commands.push(`^FO${x},${y}^BY${moduleDots},2.5,${barHeight}^BC${orientation},${barHeight},${el.showHumanReadableText ? 'Y' : 'N'},N,N^FD${el.value}^FS`);
       }
     }
@@ -260,8 +259,9 @@ export class EPLAdapter implements LabelPrinterAdapter {
       } else if (el.type === 'barcode') {
         const x = mmToDots(el.xMm, dpi);
         const y = mmToDots(el.yMm, dpi);
-        const barHeight = mmToDots(el.heightMm, dpi);
-        const rotation = el.rotation === 90 ? 1 : el.rotation === 180 ? 2 : el.rotation === 270 ? 3 : 0;
+        const metrics = calculateBarcodeElementRenderMetrics(el, dpi);
+        const barHeight = metrics.barHeightDots;
+        const rotation = eplRotation(el.rotation);
         commands.push(`B${x},${y},${rotation},1,2,4,${barHeight},B,"${el.value}"`);
       }
     }
@@ -318,6 +318,27 @@ export const REGISTERED_PRINTER_ADAPTERS: LabelPrinterAdapter[] = [
   new EPLAdapter(),
   new BrowserPrintAdapter()
 ];
+
+function normalizePrinterRotation(rotation?: number): 0 | 90 | 180 | 270 {
+  const snapped = Math.round((rotation || 0) / 90) * 90;
+  return (((snapped % 360) + 360) % 360) as 0 | 90 | 180 | 270;
+}
+
+function zplOrientation(rotation?: number): 'N' | 'R' | 'I' | 'B' {
+  const normalized = normalizePrinterRotation(rotation);
+  if (normalized === 90) return 'R';
+  if (normalized === 180) return 'I';
+  if (normalized === 270) return 'B';
+  return 'N';
+}
+
+function eplRotation(rotation?: number): 0 | 1 | 2 | 3 {
+  const normalized = normalizePrinterRotation(rotation);
+  if (normalized === 90) return 1;
+  if (normalized === 180) return 2;
+  if (normalized === 270) return 3;
+  return 0;
+}
 
 /**
  * Select the appropriate native printer adapter for a given profile.

@@ -39,6 +39,8 @@ export type LabelDesignElement = {
   visible?: boolean;
   lockAspectRatio?: boolean;
   autoFit?: boolean;
+  showBarcodeText?: boolean;
+  barcodeTextSizeMm?: number;
   barcodeFormat?: Exclude<BarcodeFormat, 'AUTO'> | 'CODE128' | 'EAN13' | 'EAN8' | 'UPC';
   moduleWidthMm?: number;
   quietZoneModules?: number;
@@ -99,11 +101,29 @@ export function mmToScreen(point: Point, transform: CanvasTransform): Point {
 }
 
 export function getElementBounds(element: LabelDesignElement): Bounds {
+  const rotation = ((element.rotation % 360) + 360) % 360;
+  if (rotation === 0) {
+    return {
+      xMm: element.xMm,
+      yMm: element.yMm,
+      widthMm: element.widthMm,
+      heightMm: element.heightMm
+    };
+  }
+
+  const radians = rotation * Math.PI / 180;
+  const cos = Math.abs(Math.cos(radians));
+  const sin = Math.abs(Math.sin(radians));
+  const widthMm = roundMm(element.widthMm * cos + element.heightMm * sin);
+  const heightMm = roundMm(element.widthMm * sin + element.heightMm * cos);
+  const centerX = element.xMm + element.widthMm / 2;
+  const centerY = element.yMm + element.heightMm / 2;
+
   return {
-    xMm: element.xMm,
-    yMm: element.yMm,
-    widthMm: element.widthMm,
-    heightMm: element.heightMm
+    xMm: roundMm(centerX - widthMm / 2),
+    yMm: roundMm(centerY - heightMm / 2),
+    widthMm,
+    heightMm
   };
 }
 
@@ -271,31 +291,13 @@ export function createDefaultLabelDesign(input: {
       visible: true,
       lockAspectRatio: true,
       autoFit: true,
+      showBarcodeText: profile.showBarcodeValue,
+      barcodeTextSizeMm: typography.barcodeValueFontMm,
       barcodeFormat: barcodeFit.format,
       moduleWidthMm: pxToMm(barcodeFit.moduleWidthPx, profile.dpi || 203),
       quietZoneModules: barcodeFit.quietZoneModules
     });
     y += heightMm + typography.rowGapMm * 0.25;
-
-    if (profile.showBarcodeValue) {
-      const fontSizeMm = typography.skuFontMm;
-      elements.push({
-        id: 'barcodeValue',
-        type: 'barcodeValue',
-        xMm: x,
-        yMm: placeY(fontSizeMm * 1.15),
-        widthMm: contentWidth,
-        heightMm: fontSizeMm * 1.15,
-        fontSizeMm,
-        fontWeight: 'semibold',
-        alignment: 'center',
-        lineHeightMm: fontSizeMm * 1.15,
-        letterSpacingMm: 0.05,
-        rotation: 0,
-        visible: true
-      });
-      y += fontSizeMm * 1.15 + typography.rowGapMm * 0.35;
-    }
   }
 
   if (showPrice && profile.showPrice) {
@@ -377,9 +379,10 @@ export function validateLabelDesign(design: LabelDesign, profile: LabelProfile):
   const warnings: string[] = [];
   for (const element of design.elements) {
     if (element.visible === false) continue;
-    if (element.xMm < 0 || element.yMm < 0) warnings.push(`${element.id} is outside the printable origin.`);
-    if (element.xMm + element.widthMm > geometry.widthMm + 0.1) warnings.push(`${element.id} exceeds label width.`);
-    if (element.yMm + element.heightMm > geometry.heightMm + 0.1) warnings.push(`${element.id} exceeds label height.`);
+    const bounds = getElementBounds(element);
+    if (bounds.xMm < 0 || bounds.yMm < 0) warnings.push(`${element.id} is outside the printable origin.`);
+    if (bounds.xMm + bounds.widthMm > geometry.widthMm + 0.1) warnings.push(`${element.id} exceeds label width.`);
+    if (bounds.yMm + bounds.heightMm > geometry.heightMm + 0.1) warnings.push(`${element.id} exceeds label height.`);
   }
   return warnings;
 }
@@ -391,10 +394,12 @@ export function detectCollisions(elements: LabelDesignElement[]): Array<[string,
     for (let j = i + 1; j < visible.length; j += 1) {
       const a = visible[i];
       const b = visible[j];
-      const overlaps = a.xMm < b.xMm + b.widthMm &&
-        a.xMm + a.widthMm > b.xMm &&
-        a.yMm < b.yMm + b.heightMm &&
-        a.yMm + a.heightMm > b.yMm;
+      const aBounds = getElementBounds(a);
+      const bBounds = getElementBounds(b);
+      const overlaps = aBounds.xMm < bBounds.xMm + bBounds.widthMm &&
+        aBounds.xMm + aBounds.widthMm > bBounds.xMm &&
+        aBounds.yMm < bBounds.yMm + bBounds.heightMm &&
+        aBounds.yMm + aBounds.heightMm > bBounds.yMm;
       if (overlaps) collisions.push([a.id, b.id]);
     }
   }
@@ -558,4 +563,3 @@ export function isDpiSupported(dpi: number, profile?: LabelProfile | null): bool
   const supported = getPrinterSupportedDpis(profile);
   return supported.includes(dpi);
 }
-

@@ -34,7 +34,6 @@ import {
   Badge,
   useToast
 } from '../../../components/ui';
-import { generateBarcodeSvg } from '../../../lib/utils/barcode';
 import {
   calculateBarcodeFit,
   calculateLabelGeometry,
@@ -50,7 +49,12 @@ import {
   type LabelProfile
 } from '../../../lib/utils/labelProfiles';
 import { calculatePreviewFit } from '../../../lib/utils/previewFit';
-import { buildProductLabelDocument } from '../../../lib/utils/labelDocument';
+import {
+  buildProductLabelDocument,
+  calculateBarcodeElementRenderMetrics,
+  renderBarcodeElementSvg,
+  renderBrowserPrintDocumentHtml
+} from '../../../lib/utils/labelDocument';
 import {
   LABEL_DESIGN_STORAGE_KEY,
   SCREEN_PX_PER_MM,
@@ -97,14 +101,6 @@ export interface ProductPrintBarcodeDialogProps {
   onClose: () => void;
   product: ProductDoc | null;
 }
-
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 
 const roundMm = (val: number) => Math.round(val * 100) / 100;
 
@@ -957,104 +953,17 @@ export function ProductPrintBarcodeDialog({
       showLotExpiry
     });
 
-    const renderPrintElement = (element: typeof printLabelDoc.elements[number]) => {
-      if (element.type === 'barcode') {
-        const svg = generateBarcodeSvg(element.value, {
-          width: barcodeFit.moduleWidthPx,
-          height: barcodeFit.barHeightPx,
-          includeText: element.showHumanReadableText,
-          fontSize: barcodeFit.fontSizePx,
-          quietZone: element.quietZoneModules ?? barcodeFit.quietZoneModules
-        });
-        return `<div class="label-element label-barcode-element" style="left:${element.xMm}mm;top:${element.yMm}mm;width:${element.widthMm}mm;height:${element.heightMm}mm;transform:rotate(${element.rotation || 0}deg);">${svg}</div>`;
-      }
-      if (element.type === 'text') {
-        return `<div class="label-element label-text-element" style="left:${element.xMm}mm;top:${element.yMm}mm;width:${element.widthMm}mm;height:${element.heightMm}mm;font-size:${element.fontSizeMm}mm;line-height:${element.lineHeightMm || element.fontSizeMm * 1.15}mm;text-align:${element.align};font-weight:${element.weight || 'normal'};">${escapeHtml(element.value)}</div>`;
-      }
-      return '';
-    };
-
-    let labelCardsHtml = '';
-    for (let i = 0; i < labelCount; i++) {
-      labelCardsHtml += `
-        <div class="print-label-card ${i === labelCount - 1 ? 'is-last' : ''}">
-          ${printLabelDoc.elements.map(renderPrintElement).join('')}
-        </div>
-      `;
-    }
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toastError('Popup Blocked', 'Please allow popups to open the print document.');
       return;
     }
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Print Labels - ${product.name}</title>
-        <meta charset="utf-8">
-        <style>
-          @page {
-            size: ${labelGeometry.widthMm}mm ${labelGeometry.heightMm}mm;
-            margin: 0;
-          }
-          * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-          }
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #fff;
-            color: #000;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .print-label-card {
-            width: ${labelGeometry.widthMm}mm;
-            height: ${labelGeometry.heightMm}mm;
-            page-break-after: always;
-            break-after: page;
-            position: relative;
-            overflow: hidden;
-            background: #fff;
-          }
-          .print-label-card.is-last {
-            page-break-after: auto;
-            break-after: auto;
-          }
-          .label-element {
-            position: absolute;
-            display: flex;
-            align-items: center;
-            overflow: hidden;
-          }
-          .label-barcode-element svg {
-            width: 100%;
-            height: 100%;
-            display: block;
-          }
-          .label-text-element {
-            word-break: break-word;
-          }
-        </style>
-      </head>
-      <body>
-        ${labelCardsHtml}
-        <script>
-          window.onload = function() {
-            window.focus();
-            window.print();
-            window.onafterprint = function() {
-              window.close();
-            };
-          };
-        </script>
-      </body>
-      </html>
-    `);
+    printWindow.document.write(renderBrowserPrintDocumentHtml({
+      doc: printLabelDoc,
+      copies: labelCount,
+      title: `Print Labels - ${product.name}`
+    }));
     printWindow.document.close();
     success('Print Initiated', `Dispatched ${labelCount} label(s) for ${product.name}`);
   };
@@ -1116,16 +1025,6 @@ export function ProductPrintBarcodeDialog({
   ]);
 
   if (!product) return null;
-
-  const livePreviewSvg = hasAssignedBarcode
-    ? generateBarcodeSvg(assignedBarcode, {
-        width: barcodeFit.moduleWidthPx,
-        height: barcodeFit.barHeightPx,
-        includeText: effectiveProfile.showBarcodeValue,
-        fontSize: barcodeFit.fontSizePx,
-        quietZone: barcodeFit.quietZoneModules
-      })
-    : '';
 
   const previewOuterStyle: React.CSSProperties = {
     width: `${previewFit.widthPx}px`,
@@ -1341,6 +1240,23 @@ export function ProductPrintBarcodeDialog({
     );
 
     if (element.type === 'barcode') {
+      const previewElement = {
+        type: 'barcode' as const,
+        id: element.id,
+        value: assignedBarcode,
+        format: element.barcodeFormat || barcodeFit.format,
+        xMm: element.xMm,
+        yMm: element.yMm,
+        widthMm: element.widthMm,
+        heightMm: element.heightMm,
+        showHumanReadableText: element.showBarcodeText ?? effectiveProfile.showBarcodeValue,
+        quietZoneModules: element.quietZoneModules ?? barcodeFit.quietZoneModules,
+        moduleWidthMm: element.moduleWidthMm,
+        barcodeTextSizeMm: element.barcodeTextSizeMm ?? labelTypography.barcodeValueFontMm,
+        rotation: Math.round(element.rotation / 90) * 90 as 0 | 90 | 180 | 270
+      };
+      const barcodePreviewMetrics = calculateBarcodeElementRenderMetrics(previewElement, designDpi);
+      const barcodePreviewSvg = renderBarcodeElementSvg(previewElement, designDpi);
       return (
         <div
           key={element.id}
@@ -1357,12 +1273,14 @@ export function ProductPrintBarcodeDialog({
         >
           <div
             data-testid="barcode-svg-content"
-            className="h-full w-full [&_svg]:h-full [&_svg]:w-full"
+            className="[&_svg]:block [&_svg]:h-full [&_svg]:w-full"
             style={{
               transform: `rotate(${element.rotation}deg)`,
-              transformOrigin: 'center'
+              transformOrigin: 'center',
+              width: mmToPx(barcodePreviewMetrics.widthMm, 96),
+              height: mmToPx(barcodePreviewMetrics.heightMm, 96)
             }}
-            dangerouslySetInnerHTML={{ __html: livePreviewSvg }}
+            dangerouslySetInnerHTML={{ __html: barcodePreviewSvg }}
           />
           {selectionChrome}
         </div>
@@ -2528,6 +2446,27 @@ export function ProductPrintBarcodeDialog({
                             value={assignedBarcode}
                             readOnly
                             className="h-7 text-xs bg-slate-50"
+                          />
+                        </label>
+                        <label className="flex items-center justify-between gap-2 text-[10px] text-slate-600 cursor-pointer">
+                          Show Text
+                          <input
+                            aria-label="Show Barcode Text"
+                            type="checkbox"
+                            checked={selectedElement.showBarcodeText ?? effectiveProfile.showBarcodeValue}
+                            onChange={(event) => updateElement(selectedElement.id, { showBarcodeText: event.target.checked })}
+                            className="rounded text-blue-600"
+                          />
+                        </label>
+                        <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">
+                          Text Size
+                          <Input
+                            aria-label="Barcode Text Size"
+                            type="number"
+                            value={selectedElement.barcodeTextSizeMm ?? labelTypography.barcodeValueFontMm}
+                            step="0.1"
+                            onChange={(event) => updateElement(selectedElement.id, { barcodeTextSizeMm: Number(event.target.value) })}
+                            className="h-7 text-xs"
                           />
                         </label>
                         <label className="grid grid-cols-[70px_1fr] items-center gap-2 text-[10px] text-slate-500">

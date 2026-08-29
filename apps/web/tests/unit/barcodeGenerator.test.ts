@@ -450,9 +450,11 @@ describe('Canonical Label Expiry Date Formatter', () => {
 
 describe('Universal Thermal Printing Engine & Printer Adapters', () => {
   const {
+    calculateBarcodeElementRenderMetrics,
     mmToDots,
     dotsToMm,
     buildProductLabelDocument,
+    renderBrowserPrintDocumentHtml,
     validateDocumentBounds
   } = require('../../lib/utils/labelDocument');
   const {
@@ -687,7 +689,169 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
     fetchMock.mockRestore();
   });
 
-  it('10. Custom label normalization keeps physical media synced with custom dimensions', () => {
+  it('10. Canonical design owns barcode human text without a default duplicate barcodeValue element', () => {
+    const design = createDefaultLabelDesign({
+      profile: TVS_LP46_DLITE_PROFILE,
+      product: {
+        id: 'prd-1',
+        name: 'A2 Ghee',
+        sku: 'GHEE-1',
+        barcode: '8906095290642',
+        sellingPrice: 500,
+        purchasePrice: 350
+      },
+      selectedBatch: null,
+      effectiveExpiry: '25/08/2026',
+      showPrice: true,
+      showBrand: true,
+      showLotExpiry: true
+    });
+
+    expect(design.elements.some((element) => element.type === 'barcodeValue')).toBe(false);
+
+    const doc = buildProductLabelDocument({
+      product: {
+        id: 'prd-1',
+        name: 'A2 Ghee',
+        sku: 'GHEE-1',
+        barcode: '8906095290642',
+        sellingPrice: 500,
+        purchasePrice: 350
+      },
+      profile: TVS_LP46_DLITE_PROFILE,
+      design
+    });
+
+    const barcodeElements = doc.elements.filter((element: any) => element.type === 'barcode');
+    expect(barcodeElements).toHaveLength(1);
+    expect(barcodeElements[0].showHumanReadableText).toBe(true);
+
+    const html = renderBrowserPrintDocumentHtml({
+      doc,
+      copies: 1,
+      title: 'test'
+    });
+    expect((html.match(/8906095290642/g) || [])).toHaveLength(1);
+  });
+
+  it('11. Browser and TSPL print use edited physical barcode geometry exactly', () => {
+    const product = {
+      id: 'prd-1',
+      name: 'A2 Ghee',
+      sku: 'GHEE-1',
+      barcode: '8906095290642',
+      sellingPrice: 500,
+      purchasePrice: 350
+    };
+    const design = createDefaultLabelDesign({
+      profile: TVS_LP46_DLITE_PROFILE,
+      product,
+      selectedBatch: null,
+      effectiveExpiry: '25/08/2026',
+      showPrice: true,
+      showBrand: true,
+      showLotExpiry: true
+    });
+
+    const barcode = design.elements.find((element) => element.type === 'barcode')!;
+    const editedDesign = {
+      ...design,
+      elements: design.elements.map((element) => element.id === barcode.id
+        ? {
+            ...element,
+            xMm: 15,
+            yMm: 12,
+            widthMm: 34,
+            heightMm: 13,
+            rotation: 90,
+            showBarcodeText: false
+          }
+        : element
+      )
+    };
+
+    const doc = buildProductLabelDocument({
+      product,
+      profile: TVS_LP46_DLITE_PROFILE,
+      design: editedDesign
+    });
+    const printBarcode = doc.elements.find((element: any) => element.type === 'barcode');
+    expect(printBarcode).toMatchObject({
+      xMm: 15,
+      yMm: 12,
+      widthMm: 34,
+      heightMm: 13,
+      rotation: 90,
+      showHumanReadableText: false
+    });
+
+    const html = renderBrowserPrintDocumentHtml({ doc, copies: 2, title: 'test' });
+    expect(html).toContain('@page');
+    expect(html).toContain('size: 58mm 40mm');
+    expect(html).toContain('left:15mm;top:12mm;width:34mm;height:13mm;transform:rotate(90deg)');
+    expect((html.match(/print-label-card/g) || [])).toHaveLength(4);
+
+    const tspl = new TSPLAdapter().render(doc, TVS_LP46_DLITE_PROFILE, 2);
+    expect(tspl).toContain(`BARCODE ${mmToDots(15, 203)},${mmToDots(12, 203)}`);
+    expect(tspl).toContain(`,${calculateBarcodeElementRenderMetrics(printBarcode, 203).barHeightDots},0,90,`);
+    expect(tspl).toContain('PRINT 2,1');
+  });
+
+  it('12. Legacy standalone barcode text disables barcode-internal text to prevent double human-readable output', () => {
+    const product = {
+      id: 'prd-1',
+      name: 'A2 Ghee',
+      sku: 'GHEE-1',
+      barcode: '8906095290642',
+      sellingPrice: 500,
+      purchasePrice: 350
+    };
+    const design = createDefaultLabelDesign({
+      profile: TVS_LP46_DLITE_PROFILE,
+      product,
+      selectedBatch: null,
+      effectiveExpiry: '25/08/2026',
+      showPrice: true,
+      showBrand: true,
+      showLotExpiry: true
+    });
+    const legacyDesign = {
+      ...design,
+      elements: [
+        ...design.elements,
+        {
+          id: 'barcodeValue',
+          type: 'barcodeValue' as const,
+          xMm: 2.5,
+          yMm: 25,
+          widthMm: 53,
+          heightMm: 3,
+          fontSizeMm: 2,
+          fontWeight: 'semibold' as const,
+          alignment: 'center' as const,
+          lineHeightMm: 2.3,
+          letterSpacingMm: 0,
+          rotation: 0,
+          visible: true
+        }
+      ]
+    };
+
+    const doc = buildProductLabelDocument({
+      product,
+      profile: TVS_LP46_DLITE_PROFILE,
+      design: legacyDesign
+    });
+    const barcode = doc.elements.find((element: any) => element.type === 'barcode');
+    const textCopies = doc.elements.filter((element: any) =>
+      element.type === 'text' && element.value === '8906095290642'
+    );
+
+    expect(barcode.showHumanReadableText).toBe(false);
+    expect(textCopies).toHaveLength(1);
+  });
+
+  it('13. Custom label normalization keeps physical media synced with custom dimensions', () => {
     const custom = normalizeLabelProfile({
       ...TVS_LP46_DLITE_PROFILE,
       id: 'custom',
@@ -708,7 +872,7 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
     expect(geometry.heightMm).toBe(35);
   });
 
-  it('11. deleteElement removes element by ID and returns new design', () => {
+  it('14. deleteElement removes element by ID and returns new design', () => {
     const design = createDefaultLabelDesign({
       profile: TVS_LP46_DLITE_PROFILE,
       product: {
@@ -735,7 +899,7 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
     expect(updated.elements.find(e => e.id === priceEl!.id)).toBeUndefined();
   });
 
-  it('12. duplicateElement clones element with offset and returns new element ID', () => {
+  it('15. duplicateElement clones element with offset and returns new element ID', () => {
     const design = createDefaultLabelDesign({
       profile: TVS_LP46_DLITE_PROFILE,
       product: {
@@ -767,7 +931,7 @@ describe('Universal Thermal Printing Engine & Printer Adapters', () => {
     expect(clone!.yMm).toBe(Math.min(40 - clone!.heightMm, productEl!.yMm + 2));
   });
 
-  it('13. getPrinterSupportedDpis returns only [203] for TVS LP-46 Dlite and all standard DPIs for custom/generic', () => {
+  it('16. getPrinterSupportedDpis returns only [203] for TVS LP-46 Dlite and all standard DPIs for custom/generic', () => {
     const tvsDpis = getPrinterSupportedDpis(TVS_LP46_DLITE_PROFILE);
     expect(tvsDpis).toEqual([203]);
 
