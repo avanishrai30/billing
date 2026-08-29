@@ -64,6 +64,7 @@ const settingsRouter = require('./modules/settings');
 const systemRouter = require('./modules/system');
 const dashboardRouter = require('./modules/dashboard');
 const adminCleanupRouter = require('./modules/adminCleanup');
+const { resolveJwtSecret } = require('./services/startupConfig');
 
 const realtimeService = require('./services/realtimeService');
 const databaseIndexService = require('./services/databaseIndexService');
@@ -80,7 +81,7 @@ const io = socketIo(server, {
 
 const activePresences = new Map();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'vc_organic_master_jwt_secret_2026';
+const JWT_SECRET = resolveJwtSecret(process.env);
 
 // 5. Authenticate Socket.IO connections via JWT & MongoDB active session validation
 io.use(async (socket, next) => {

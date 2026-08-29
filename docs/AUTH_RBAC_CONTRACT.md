@@ -13,7 +13,8 @@ This document specifies the authoritative security architecture, JWT token lifec
   - If a legacy account has plaintext `user.password` and null `passwordHash`, successful authentication automatically generates `passwordHash`, increments `tokenVersion`, and unsets the plaintext `password` field via `$unset` ([modules/auth.js:44-67](file:///Users/avanish/Documents/billing%20system/modules/auth.js#L44-L67)).
 
 ### 1.2 JWT Token Architecture
-- **Secret:** `process.env.JWT_SECRET || 'vc_organic_master_jwt_secret_2026'`
+- **Production Secret:** `process.env.JWT_SECRET` is required when `NODE_ENV=production`; startup fails clearly if it is missing.
+- **Local/Test Secret:** development and test environments may use the documented local fallback from `services/startupConfig.js`.
 - **Expiration:** 24 Hours (`expiresIn: '24h'`)
 - **Token Payload Schema:**
   ```json
