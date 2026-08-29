@@ -539,6 +539,7 @@ export function ProductModal({
             control={control}
             render={({ field }) => (
               <ProductImageUploader
+                productId={product?.id}
                 value={field.value}
                 onChange={field.onChange}
                 disabled={isSubmitting}

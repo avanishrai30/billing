@@ -1,29 +1,40 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Image as ImageIcon, Upload, X, Loader2 } from 'lucide-react';
 import { normalizePublicAssetUrl } from '../../../lib/utils/media';
 import { productsApi } from '../api';
+import { PRODUCT_KEYS } from '../hooks';
 import { Button } from '../../../components/ui';
 
 export interface ProductImageUploaderProps {
+  productId?: string;
   value?: string;
   onChange: (imagePath: string) => void;
   disabled?: boolean;
 }
 
 export function ProductImageUploader({
+  productId,
   value,
   onChange,
   disabled = false
 }: ProductImageUploaderProps) {
+  const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canUpload = !!productId && !disabled && !isUploading;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!productId) {
+      setUploadError('Save the Product Master before uploading its image.');
+      return;
+    }
 
     if (!file.type.startsWith('image/')) {
       setUploadError('Please select a valid image file (JPG, PNG, WebP).');
@@ -44,9 +55,11 @@ export function ProductImageUploader({
       reader.onload = async () => {
         const base64Data = reader.result as string;
         try {
-          const res = await productsApi.uploadProductImage(file.name, base64Data);
+          const res = await productsApi.uploadProductImage(productId, file.name, base64Data);
           if (res.success && res.imagePath) {
             onChange(res.imagePath);
+            queryClient.invalidateQueries({ queryKey: PRODUCT_KEYS.all });
+            queryClient.invalidateQueries({ queryKey: PRODUCT_KEYS.detail(productId) });
           } else {
             setUploadError('Failed to optimize and upload product image.');
           }
@@ -115,7 +128,7 @@ export function ProductImageUploader({
             onChange={handleFileChange}
             accept="image/*"
             className="hidden"
-            disabled={disabled || isUploading}
+            disabled={!canUpload}
           />
 
           <div className="flex items-center gap-2">
@@ -124,7 +137,7 @@ export function ProductImageUploader({
               variant="secondary"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || isUploading}
+              disabled={!canUpload}
               leftIcon={<Upload className="w-3.5 h-3.5" />}
             >
               {value ? 'Replace Image' : 'Upload Image'}
@@ -146,6 +159,7 @@ export function ProductImageUploader({
 
           <p className="text-[11px] text-slate-600">
             JPG, PNG or WebP. Auto-compressed to 800x800 WebP with sharp optimization.
+            {!productId ? ' Save the Product Master before uploading its image.' : ''}
           </p>
 
           {uploadError && (

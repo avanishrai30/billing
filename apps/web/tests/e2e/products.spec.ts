@@ -484,4 +484,117 @@ test.describe('Phase 20 Product Master Catalog Migration E2E Suite', () => {
     await expect(page.getByTestId('access-denied-state')).toBeVisible();
     await expect(page.getByText('Product Master Restricted')).toBeVisible();
   });
+
+  test('4. Product image upload associates with Product Master and persists after refresh', async ({ page }) => {
+    let currentProducts = mockProducts.map(product => ({ ...product }));
+    let uploadRequestUrl = '';
+
+    await page.route('**/api/v1/upload?type=products**', async (route) => {
+      uploadRequestUrl = route.request().url();
+      const url = new URL(uploadRequestUrl);
+      const productId = url.searchParams.get('productId');
+      const imagePath = '/uploads/products/a2-gir-cow-cultured-ghee-500ml.webp';
+
+      currentProducts = currentProducts.map(product =>
+        product.id === productId
+          ? { ...product, image: imagePath, imageId: 'img-product-1' }
+          : product
+      );
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          imagePath,
+          imageId: 'img-product-1',
+          productId
+        })
+      });
+    });
+
+    await page.route('**/uploads/products/*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          'base64'
+        )
+      });
+    });
+
+    await page.route(/\/api\/v1\/products/, async (route) => {
+      const url = new URL(route.request().url());
+      const method = route.request().method();
+
+      if (method === 'GET') {
+        const id = url.pathname.split('/api/v1/products/')[1];
+        if (id) {
+          const product = currentProducts.find(item => item.id === id);
+          await route.fulfill({
+            status: product ? 200 : 404,
+            contentType: 'application/json',
+            body: JSON.stringify(product || { message: 'Not found' })
+          });
+          return;
+        }
+
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(currentProducts)
+        });
+        return;
+      }
+
+      if (method === 'POST') {
+        const body = JSON.parse(route.request().postData() || '{}');
+        currentProducts = currentProducts.map(product =>
+          product.id === body.id ? { ...product, ...body } : product
+        );
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, product: body })
+        });
+        return;
+      }
+
+      await route.continue();
+    });
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/products');
+    await page.waitForLoadState('networkidle');
+
+    const editBtn = page.getByRole('table').getByLabel('Edit A2 Gir Cow Cultured Ghee 500ml');
+    await editBtn.click();
+    const editModal = page.getByRole('dialog');
+    await expect(editModal).toBeVisible();
+
+    await editModal.locator('input[type="file"]').setInputFiles({
+      name: 'ghee.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      )
+    });
+
+    await expect
+      .poll(() => uploadRequestUrl)
+      .toContain('productId=prd-101');
+
+    await editModal.getByRole('button', { name: 'Save Product Changes' }).click();
+    await expect(editModal).not.toBeVisible();
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    const uploadedImage = page
+      .getByRole('table')
+      .getByRole('img', { name: 'A2 Gir Cow Cultured Ghee 500ml' });
+    await expect(uploadedImage).toHaveAttribute('src', /\/uploads\/products\/a2-gir-cow-cultured-ghee-500ml\.webp/);
+  });
 });

@@ -20,6 +20,39 @@ router.post('/', verifyJWT, async (req, res) => {
   const safeType = allowedTypes.includes(uploadType) ? uploadType : 'products';
 
   const { db, UPLOAD_SUBDIRS } = getContext();
+  const productId = typeof req.query.productId === 'string' ? req.query.productId.trim() : '';
+
+  if (safeType === 'products') {
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'PRODUCT_ID_REQUIRED', message: 'productId is required when uploading a product image' },
+        message: 'productId is required when uploading a product image'
+      });
+    }
+
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        error: { code: 'DATABASE_UNAVAILABLE', message: 'Database context is required for product image uploads' },
+        message: 'Database context is required for product image uploads'
+      });
+    }
+
+    const product = await db.collection('products').findOne({
+      $or: [{ id: productId }, { _id: productId }, { sku: productId }],
+      isArchived: { $ne: true }
+    });
+
+    if (!product) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'PRODUCT_MASTER_NOT_FOUND', message: `Product Master not found for '${productId}'` },
+        message: `Product Master not found for '${productId}'`
+      });
+    }
+  }
+
   const targetDir = (UPLOAD_SUBDIRS && UPLOAD_SUBDIRS[safeType]) || path.join(process.cwd(), 'uploads', safeType);
 
   if (!fs.existsSync(targetDir)) {
@@ -55,10 +88,10 @@ router.post('/', verifyJWT, async (req, res) => {
     const imagePath = `/uploads/${safeType}/${outputFileName}`;
     const imageId = `img-${Date.now()}`;
 
-    if (safeType === 'products' && db) {
+    if (safeType === 'products') {
       await db.collection('product_images').insertOne({
         id: imageId,
-        productId: req.query.productId || "",
+        productId,
         filename: outputFileName,
         filepath: targetPath,
         webpPath: imagePath,
@@ -69,9 +102,20 @@ router.post('/', verifyJWT, async (req, res) => {
         uploadedBy: req.user ? req.user.username : "system",
         createdAt: new Date().toISOString()
       });
+
+      await db.collection('products').updateOne(
+        { id: productId },
+        {
+          $set: {
+            image: imagePath,
+            imageId,
+            updatedAt: new Date().toISOString()
+          }
+        }
+      );
     }
 
-    res.json({ success: true, imagePath, imageId });
+    res.json({ success: true, imagePath, imageId, productId: safeType === 'products' ? productId : undefined });
   } catch (err) {
     console.error("Image upload failed:", err);
     res.status(500).json({ success: false, message: "Failed to optimize and upload image" });

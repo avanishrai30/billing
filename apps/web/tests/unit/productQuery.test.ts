@@ -71,4 +71,29 @@ describe('Product API Client Unit Suite', () => {
     expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/products/prd-123');
     expect(res.success).toBe(true);
   });
+
+  it('4. uploadProductImage includes canonical Product Master ID', async () => {
+    const mockRes = {
+      success: true,
+      imagePath: '/uploads/products/a2-ghee.webp',
+      imageId: 'img-1',
+      productId: 'prod-ghee-1'
+    };
+    (apiClient.post as jest.Mock).mockResolvedValueOnce(mockRes);
+
+    const res = await productsApi.uploadProductImage(
+      'prod-ghee-1',
+      'A2 Ghee.png',
+      'data:image/png;base64,1234'
+    );
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/api/v1/upload?type=products&productId=prod-ghee-1',
+      {
+        fileName: 'A2 Ghee.png',
+        base64Data: 'data:image/png;base64,1234'
+      }
+    );
+    expect(res.productId).toBe('prod-ghee-1');
+  });
 });

@@ -79,11 +79,18 @@ export const productsApi = {
   /**
    * Upload product image (Base64 WebP optimization).
    */
-  async uploadProductImage(fileName: string, base64Data: string): Promise<{ success: boolean; imagePath: string; id: string }> {
-    return apiClient.post<{ success: boolean; imagePath: string; id: string }>('/api/v1/upload?type=products', {
+  async uploadProductImage(
+    productId: string,
+    fileName: string,
+    base64Data: string
+  ): Promise<{ success: boolean; imagePath: string; imageId: string; productId: string }> {
+    return apiClient.post<{ success: boolean; imagePath: string; imageId: string; productId: string }>(
+      `/api/v1/upload?type=products&productId=${encodeURIComponent(productId)}`,
+      {
       fileName,
       base64Data
-    });
+      }
+    );
   },
 
   /**
