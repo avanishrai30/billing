@@ -43,7 +43,6 @@ const PDFDocument = require('pdfkit');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
-require('dotenv').config();
 
 const { setupContext, verifyJWT } = require('./modules/context');
 const authRouter = require('./modules/auth');
@@ -64,6 +63,7 @@ const settingsRouter = require('./modules/settings');
 const systemRouter = require('./modules/system');
 const dashboardRouter = require('./modules/dashboard');
 const adminCleanupRouter = require('./modules/adminCleanup');
+const { loadRuntimeEnvironment } = require('./services/runtimeConfig');
 const { resolveJwtSecret } = require('./services/startupConfig');
 
 const realtimeService = require('./services/realtimeService');
@@ -81,6 +81,7 @@ const io = socketIo(server, {
 
 const activePresences = new Map();
 
+loadRuntimeEnvironment();
 const JWT_SECRET = resolveJwtSecret(process.env);
 
 // 5. Authenticate Socket.IO connections via JWT & MongoDB active session validation

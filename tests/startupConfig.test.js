@@ -15,6 +15,12 @@ describe('Startup JWT configuration validation', () => {
     );
   });
 
+  test('staging runtime without JWT_SECRET fails even when NODE_ENV is production', () => {
+    expect(() => resolveJwtSecret({ NODE_ENV: 'production', APP_RUNTIME_ENV: 'staging' })).toThrow(
+      /APP_RUNTIME_ENV=staging\|production/
+    );
+  });
+
   test('development and test may use the documented local fallback', () => {
     expect(resolveJwtSecret({ NODE_ENV: 'development' })).toBe(LOCAL_JWT_SECRET);
     expect(resolveJwtSecret({ NODE_ENV: 'test' })).toBe(LOCAL_JWT_SECRET);
