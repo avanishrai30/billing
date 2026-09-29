@@ -27,6 +27,9 @@ export interface POSProduct {
   sellingMode?: string;
   stock?: number;
   inventory?: number;
+  available?: number;
+  locationId?: string;
+  rawMasterStock?: number;
   reorderLevel?: number;
   isArchived?: boolean;
 }
@@ -82,6 +85,15 @@ export interface POSCheckoutItem {
   tax: number;
   gst: number;
   lineTotal: number;
+}
+
+export interface POSStore {
+  id: string;
+  name: string;
+  code?: string;
+  isWarehouse?: boolean;
+  locationType?: string;
+  status?: string;
 }
 
 export interface POSCheckoutPayload {

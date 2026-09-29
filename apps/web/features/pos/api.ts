@@ -8,7 +8,7 @@ import type {
 
 export const posApi = {
   /**
-   * Fetches active product catalog with optional query filters
+   * Fetches active product catalog with optional query filters and location-aware stock
    * GET /api/v1/products
    */
   async getProducts(params?: {
@@ -16,13 +16,15 @@ export const posApi = {
     category?: string;
     brand?: string;
     limit?: number;
+    locationId?: string;
   }): Promise<POSProduct[]> {
     const queryParams: Record<string, string | number | undefined> = {
       status: 'active',
       limit: params?.limit || 200,
       ...(params?.search ? { search: params.search } : {}),
       ...(params?.category && params.category !== 'ALL' ? { category: params.category } : {}),
-      ...(params?.brand && params.brand !== 'ALL' ? { brand: params.brand } : {})
+      ...(params?.brand && params.brand !== 'ALL' ? { brand: params.brand } : {}),
+      ...(params?.locationId && params.locationId !== 'all' ? { locationId: params.locationId } : {})
     };
 
     const res = await apiClient.get<POSProduct[] | { success: boolean; products: POSProduct[] }>(
@@ -36,13 +38,14 @@ export const posApi = {
   },
 
   /**
-   * Exact Barcode Resolver
+   * Exact Barcode Resolver with optional location-aware stock
    * GET /api/v1/products/by-barcode/:barcode
    */
-  async getProductByBarcode(barcode: string): Promise<POSProduct | null> {
+  async getProductByBarcode(barcode: string, locationId?: string): Promise<POSProduct | null> {
     try {
+      const query = locationId && locationId !== 'all' ? `?locationId=${encodeURIComponent(locationId)}` : '';
       const res = await apiClient.get<POSProduct>(
-        `/api/v1/products/by-barcode/${encodeURIComponent(barcode.trim())}`
+        `/api/v1/products/by-barcode/${encodeURIComponent(barcode.trim())}${query}`
       );
       return res || null;
     } catch {
@@ -51,13 +54,14 @@ export const posApi = {
   },
 
   /**
-   * Exact SKU Lookup
+   * Exact SKU Lookup with optional location-aware stock
    * GET /api/v1/products/by-sku/:sku
    */
-  async getProductBySku(sku: string): Promise<POSProduct | null> {
+  async getProductBySku(sku: string, locationId?: string): Promise<POSProduct | null> {
     try {
+      const query = locationId && locationId !== 'all' ? `?locationId=${encodeURIComponent(locationId)}` : '';
       const res = await apiClient.get<POSProduct>(
-        `/api/v1/products/by-sku/${encodeURIComponent(sku.trim())}`
+        `/api/v1/products/by-sku/${encodeURIComponent(sku.trim())}${query}`
       );
       return res || null;
     } catch {
@@ -110,7 +114,7 @@ export const posApi = {
    * Fetches active store outlets
    * GET /api/v1/stores
    */
-  async getStores(): Promise<Array<{ id: string; name: string; code?: string }>> {
+  async getStores(): Promise<import('./types').POSStore[]> {
     try {
       const res = await apiClient.get<any>('/api/v1/stores');
       if (Array.isArray(res)) return res;

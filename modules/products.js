@@ -89,7 +89,8 @@ router.get('/', verifyJWT, requirePermission('products.view'), async (req, res) 
       type,
       status,
       limit,
-      page = 1
+      page = 1,
+      locationId
     } = req.query;
 
     const filter = {};
@@ -166,17 +167,50 @@ router.get('/', verifyJWT, requirePermission('products.view'), async (req, res) 
 
     const products = await query.toArray();
 
+    // When locationId is provided, left-join authoritative inventory by productId + locationId
+    const cleanLocationId = locationId && String(locationId).trim() && String(locationId).trim() !== 'all'
+      ? String(locationId).trim()
+      : null;
+
+    let inventoryMap = new Map();
+    if (cleanLocationId && products.length > 0) {
+      const productIds = products.map(p => p.id).filter(Boolean);
+      if (productIds.length > 0) {
+        const invRecords = await db.collection('inventory').find({
+          productId: { $in: productIds },
+          $or: [{ locationId: cleanLocationId }, { storeId: cleanLocationId }]
+        }).toArray();
+        for (const rec of invRecords) {
+          inventoryMap.set(rec.productId, rec);
+        }
+      }
+    }
+
     // Standardize canonical and legacy fields
-    const normalized = products.map(prod => ({
-      ...prod,
-      price: prod.sellingPrice !== undefined ? prod.sellingPrice : (prod.price || 0),
-      cost: prod.purchasePrice !== undefined ? prod.purchasePrice : (prod.costPrice !== undefined ? prod.costPrice : (prod.cost || 0)),
-      sellingPrice: prod.sellingPrice !== undefined ? prod.sellingPrice : (prod.price || 0),
-      purchasePrice: prod.purchasePrice !== undefined ? prod.purchasePrice : (prod.costPrice !== undefined ? prod.costPrice : (prod.cost || 0)),
-      type: (prod.type || 'OWN').toUpperCase(),
-      sellingMode: prod.sellingMode || 'packaged',
-      status: prod.status || 'active'
-    }));
+    const normalized = products.map(prod => {
+      const base = {
+        ...prod,
+        price: prod.sellingPrice !== undefined ? prod.sellingPrice : (prod.price || 0),
+        cost: prod.purchasePrice !== undefined ? prod.purchasePrice : (prod.costPrice !== undefined ? prod.costPrice : (prod.cost || 0)),
+        sellingPrice: prod.sellingPrice !== undefined ? prod.sellingPrice : (prod.price || 0),
+        purchasePrice: prod.purchasePrice !== undefined ? prod.purchasePrice : (prod.costPrice !== undefined ? prod.costPrice : (prod.cost || 0)),
+        type: (prod.type || 'OWN').toUpperCase(),
+        sellingMode: prod.sellingMode || 'packaged',
+        status: prod.status || 'active'
+      };
+
+      if (cleanLocationId) {
+        const invRec = inventoryMap.get(prod.id);
+        const locStock = invRec ? (parseFloat(invRec.quantity) || 0) : 0;
+        base.rawMasterStock = prod.stock;
+        base.stock = locStock;
+        base.inventory = locStock;
+        base.available = locStock;
+        base.locationId = cleanLocationId;
+      }
+
+      return base;
+    });
 
     res.json(normalized); // Return array directly for backward compatibility
   } catch (err) {
@@ -194,6 +228,24 @@ router.get('/by-sku/:sku', verifyJWT, requirePermission('products.view'), async 
       isArchived: { $ne: true }
     });
     if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+
+    const cleanLocationId = req.query.locationId && String(req.query.locationId).trim() && String(req.query.locationId).trim() !== 'all'
+      ? String(req.query.locationId).trim()
+      : null;
+
+    if (cleanLocationId) {
+      const invRecord = await db.collection('inventory').findOne({
+        productId: product.id,
+        $or: [{ locationId: cleanLocationId }, { storeId: cleanLocationId }]
+      });
+      const locStock = invRecord ? (parseFloat(invRecord.quantity) || 0) : 0;
+      product.rawMasterStock = product.stock;
+      product.stock = locStock;
+      product.inventory = locStock;
+      product.available = locStock;
+      product.locationId = cleanLocationId;
+    }
+
     res.json(product);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch product by SKU" });
@@ -231,6 +283,24 @@ router.get('/by-barcode/:barcode', verifyJWT, requirePermission('products.view')
     }
 
     if (!product) return res.status(404).json({ success: false, message: "Barcode not found" });
+
+    const cleanLocationId = req.query.locationId && String(req.query.locationId).trim() && String(req.query.locationId).trim() !== 'all'
+      ? String(req.query.locationId).trim()
+      : null;
+
+    if (cleanLocationId) {
+      const invRecord = await db.collection('inventory').findOne({
+        productId: product.id,
+        $or: [{ locationId: cleanLocationId }, { storeId: cleanLocationId }]
+      });
+      const locStock = invRecord ? (parseFloat(invRecord.quantity) || 0) : 0;
+      product.rawMasterStock = product.stock;
+      product.stock = locStock;
+      product.inventory = locStock;
+      product.available = locStock;
+      product.locationId = cleanLocationId;
+    }
+
     res.json(product);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch product by barcode" });

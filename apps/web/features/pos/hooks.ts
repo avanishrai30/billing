@@ -8,9 +8,10 @@ import { useRealtime } from '../../hooks/useRealtime';
 import type { POSCheckoutPayload, POSCustomer } from './types';
 
 export const posQueryKeys = {
-  products: (params?: { category?: string; search?: string }) => [
+  products: (params?: { locationId?: string; category?: string; search?: string }) => [
     'pos',
     'products',
+    params?.locationId || 'all',
     params?.category || 'ALL',
     params?.search || ''
   ],
@@ -18,7 +19,7 @@ export const posQueryKeys = {
   stores: () => ['pos', 'stores']
 };
 
-export function usePOSProductsQuery(params?: { category?: string; search?: string }) {
+export function usePOSProductsQuery(params?: { locationId?: string; category?: string; search?: string }) {
   const queryClient = useQueryClient();
   const { subscribe } = useRealtime();
 
@@ -34,16 +35,23 @@ export function usePOSProductsQuery(params?: { category?: string; search?: strin
       queryClient.invalidateQueries({ queryKey: ['pos', 'products'] });
     });
 
-    const unsubInventoryUpdated = subscribe('inventory_updated', () => {
-      queryClient.invalidateQueries({ queryKey: ['pos', 'products'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics'] });
-    });
+    const handleInventoryUpdated = (payload?: any) => {
+      const eventLocationId = payload?.locationId || payload?.storeId || payload?.data?.locationId || payload?.data?.storeId;
+      if (!eventLocationId || !params?.locationId || eventLocationId === params.locationId) {
+        queryClient.invalidateQueries({ queryKey: ['pos', 'products'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard', 'metrics'] });
+      }
+    };
+
+    const unsubInventoryUpdatedDot = subscribe('inventory.updated', handleInventoryUpdated);
+    const unsubInventoryUpdatedUnderscore = subscribe('inventory_updated', handleInventoryUpdated);
 
     return () => {
       unsubProductUpdated();
-      unsubInventoryUpdated();
+      unsubInventoryUpdatedDot();
+      unsubInventoryUpdatedUnderscore();
     };
-  }, [subscribe, queryClient]);
+  }, [subscribe, queryClient, params?.locationId]);
 
   return query;
 }

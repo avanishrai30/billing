@@ -28,11 +28,20 @@ export function ProductCard({
   const resolvedImageUrl = normalizePublicAssetUrl(rawImage);
   const showImage = !!resolvedImageUrl && !imgFailed;
 
-  const stock = typeof product.stock === 'number' ? product.stock : (product.inventory ?? null);
-  const isOutOfStock = stock !== null && stock <= 0;
+  const availableStock = typeof product.available === 'number'
+    ? product.available
+    : typeof product.inventory === 'number'
+      ? product.inventory
+      : typeof product.stock === 'number'
+        ? product.stock
+        : null;
+  const isOutOfStock = availableStock !== null && availableStock <= 0;
 
   const handlePlusClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (availableStock !== null && cartQuantity >= availableStock) {
+      return;
+    }
     if (onIncrement) {
       onIncrement(product.id);
     } else {
@@ -111,11 +120,29 @@ export function ProductCard({
         <div className="mt-auto pt-2 border-t border-slate-100 flex flex-col gap-2">
           {/* Price section: full-width, no clipping, green emphasis */}
           <div className="w-full min-w-0" data-testid={`product-price-${product.id}`}>
-            <div className="text-sm sm:text-base font-extrabold font-mono text-emerald-700 tabular-nums leading-tight overflow-visible">
-              ₹{price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className="flex items-baseline justify-between gap-1">
+              <div className="text-sm sm:text-base font-extrabold font-mono text-emerald-700 tabular-nums leading-tight overflow-visible">
+                ₹{price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] font-mono tabular-nums text-right">
+                {isOutOfStock ? (
+                  <span className="text-rose-600 font-semibold" data-testid={`product-stock-${product.id}`}>
+                    Stock: 0
+                  </span>
+                ) : (
+                  <span className="text-slate-600 font-medium" data-testid={`product-stock-${product.id}`}>
+                    Stock: {availableStock !== null ? availableStock : '—'}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="text-[11px] text-slate-500 leading-tight truncate mt-0.5">
-              per {product.unit || 'pack'}
+            <div className="flex items-center justify-between text-[11px] text-slate-500 leading-tight truncate mt-0.5">
+              <span>per {product.unit || 'pack'}</span>
+              {isOutOfStock && (
+                <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider">
+                  Out of Stock
+                </span>
+              )}
             </div>
           </div>
 
@@ -140,8 +167,9 @@ export function ProductCard({
                 <button
                   type="button"
                   onClick={handlePlusClick}
+                  disabled={availableStock !== null && cartQuantity >= availableStock}
                   aria-label={`Increase quantity of ${product.name}`}
-                  className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition-colors text-sm font-bold cursor-pointer shadow-2xs"
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm font-bold cursor-pointer shadow-2xs"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -153,11 +181,11 @@ export function ProductCard({
                 size="md"
                 disabled={isOutOfStock}
                 onClick={() => onAddToCart(product)}
-                aria-label={`Add ${product.name} to cart`}
-                className="w-full !h-10 !px-3 font-semibold text-xs sm:text-sm whitespace-nowrap overflow-visible flex items-center justify-center gap-2 shadow-2xs hover:border-slate-300 active:scale-[0.98]"
-                leftIcon={<Plus className="w-4 h-4 shrink-0 text-slate-600" />}
+                aria-label={isOutOfStock ? `${product.name} is out of stock` : `Add ${product.name} to cart`}
+                className="w-full !h-10 !px-3 font-semibold text-xs sm:text-sm whitespace-nowrap overflow-visible flex items-center justify-center gap-2 shadow-2xs hover:border-slate-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                leftIcon={!isOutOfStock ? <Plus className="w-4 h-4 shrink-0 text-slate-600" /> : undefined}
               >
-                Add
+                {isOutOfStock ? 'Out of Stock' : 'Add'}
               </Button>
             )}
           </div>

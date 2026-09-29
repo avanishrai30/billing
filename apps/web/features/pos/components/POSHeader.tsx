@@ -10,6 +10,10 @@ export interface POSHeaderProps {
   itemCount: number;
   onOpenMobileCart?: () => void;
   onOpenReturnStudio?: () => void;
+  stores?: Array<{ id: string; name: string; isWarehouse?: boolean; locationType?: string; status?: string }>;
+  selectedLocationId?: string;
+  onSelectLocation?: (locationId: string) => void;
+  isLocationLocked?: boolean;
 }
 
 export function POSHeader({
@@ -17,8 +21,17 @@ export function POSHeader({
   cashierName,
   itemCount,
   onOpenMobileCart,
-  onOpenReturnStudio
+  onOpenReturnStudio,
+  stores = [],
+  selectedLocationId,
+  onSelectLocation,
+  isLocationLocked = false
 }: POSHeaderProps) {
+  // Retail stores only for retail POS sales; warehouse excluded unless specifically active
+  const selectableStores = stores.filter(
+    (s) => s.status !== 'inactive' && (!s.isWarehouse || s.id === selectedLocationId)
+  );
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
       <div className="flex items-center gap-3">
@@ -33,10 +46,29 @@ export function POSHeader({
             </Badge>
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 mt-1">
-            <span className="flex items-center gap-1">
-              <Store className="w-3.5 h-3.5 text-blue-600" />
-              {storeName}
-            </span>
+            <div className="flex items-center gap-1.5" data-testid="pos-selling-from-container">
+              <span className="text-slate-500 font-medium">Selling From:</span>
+              {isLocationLocked || !onSelectLocation || selectableStores.length <= 1 ? (
+                <span className="font-semibold text-slate-900 flex items-center gap-1" data-testid="pos-active-location-name">
+                  <Store className="w-3.5 h-3.5 text-blue-600" />
+                  {storeName}
+                </span>
+              ) : (
+                <select
+                  data-testid="pos-location-select"
+                  aria-label="Selling From"
+                  value={selectedLocationId}
+                  onChange={(e) => onSelectLocation(e.target.value)}
+                  className="bg-white border border-slate-300 rounded-md px-2 py-0.5 text-xs font-semibold text-slate-900 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {selectableStores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}{s.isWarehouse ? ' (Warehouse)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
             <span className="text-slate-300">/</span>
             <span className="flex items-center gap-1">
               <UserCircle className="w-3.5 h-3.5 text-slate-400" />
